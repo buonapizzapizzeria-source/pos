@@ -1,0 +1,4357 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#b42318"><title>Buona Pizza · POS Pro v11</title>
+<style>
+:root{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;color:#202124;background:#f5f6f8;--red:#b42318;--green:#16794b;--blue:#175cd3;--orange:#b54708;--purple:#5925dc;--line:#e1e4e8}
+*{box-sizing:border-box;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
+body{margin:0}button,input,select,textarea{font:inherit}button{cursor:pointer;border:0;border-radius:10px;padding:10px 14px;font-weight:650;background:var(--red);color:white;transition:0.15s}button.secondary{background:#eceff3;color:#202124}button.green{background:var(--green)}button.blue{background:var(--blue)}button.orange{background:var(--orange)}button.purple{background:var(--purple)}button:disabled{opacity:.5;cursor:not-allowed}
+header{background:#fff;border-bottom:1px solid var(--line);padding:12px 18px;display:flex;align-items:center;justify-content:space-between;gap:10px;position:sticky;top:0;z-index:10;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:10px;font-weight:850;font-size:19px}.logo{background:var(--red);color:#fff;border-radius:12px;padding:8px;display:inline-flex;align-items:center;justify-content:center}
+.wrap{max-width:1320px;margin:auto;padding:18px}.hidden{display:none!important}.muted{color:#667085;font-size:13px}.panel{background:white;border:1px solid var(--line);border-radius:16px;padding:16px;box-shadow:0 2px 8px #10182808}
+h1{font-size:24px;margin:4px 0 14px}h2{font-size:18px;margin:0 0 12px}.grid{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(360px,.95fr);gap:16px}.fields{display:grid;grid-template-columns:1fr 1fr;gap:10px}.field{display:flex;flex-direction:column;gap:5px;position:relative}.field.full{grid-column:1/-1}label{font-size:13px;font-weight:700;color:#475467}input,select,textarea{width:100%;border:1px solid #d0d5dd;border-radius:9px;padding:10px;background:#fff;color:#202124}textarea{min-height:56px;resize:vertical}
+.tabs{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 16px}.tabs button{background:#fff;color:#344054;border:1px solid var(--line);display:flex;align-items:center;gap:6px}.tabs button.active{background:var(--red);color:#fff;border-color:var(--red)}
+
+/* BANNER MODALITÀ MODIFICA ORDINE ESISTENTE */
+.edit-mode-banner{background:linear-gradient(135deg,#fffaeb 0%,#fff4e5 100%);border:2.5px solid var(--orange);border-radius:14px;padding:12px 16px;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;box-shadow:0 6px 18px #b5470820;animation:popIn .2s ease-out}
+.edit-mode-title{font-size:16px;font-weight:900;color:#93370d;display:flex;align-items:center;gap:8px}
+
+/* ================= COSTRUTTORE ORDINE ESCLUSIVO A MENU A TENDINA (100% DROPDOWN POS v11) ================= */
+.dropdown-pos-box{background:linear-gradient(135deg,#fff8f6 0%,#f8f9fb 100%);border:2px solid #fecdca;border-radius:16px;padding:16px;display:grid;gap:14px;box-shadow:0 4px 14px #b423180d}
+.dd-row-2{display:grid;grid-template-columns:1fr 1.45fr;gap:10px}
+.dd-row-3{display:grid;grid-template-columns:1.2fr 0.8fr 1fr;gap:10px;align-items:end}
+.dd-select-big{border:2px solid #d0d5dd!important;font-weight:800!important;font-size:15px!important;padding:11px 12px!important;border-radius:10px!important;cursor:pointer;background:#fff!important}
+.dd-select-big.cat{border-color:var(--red)!important;background:#fff5f5!important;color:#912018!important}
+.dd-select-big.prod{border-color:var(--blue)!important;background:#eff8ff!important;color:#175cd3!important}
+.dd-select-big.senza{border-color:#fecdca!important;background:#fff5f5!important;color:#b42318!important;font-size:13.5px!important}
+.dd-select-big.extra{border-color:#abefc6!important;background:#ecfdf3!important;color:#16794b!important;font-size:13.5px!important}
+.dd-mods-preview{display:flex;gap:6px;flex-wrap:wrap;align-items:center;min-height:36px;padding:7px 11px;background:#fff;border:1.5px dashed #d0d5dd;border-radius:10px}
+.dd-base-info{font-size:13px;color:#344054;font-weight:700;background:#fff;padding:9px 12px;border-radius:10px;border:1px solid #eaecf0;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px}
+.dd-quick-filter{border:1.5px solid #84caff!important;background:#fff!important;padding:8px 11px!important;font-size:13.5px!important;font-weight:700}
+
+/* ANTEPRIMA IMMAGINE ORDINE CARICATA */
+.img-preview-bar{display:flex;align-items:center;gap:10px;background:#fff;border:2px solid var(--orange);border-radius:10px;padding:8px 12px;font-size:12.5px;font-weight:750}
+.img-preview-bar img{width:54px;height:54px;object-fit:cover;border-radius:7px;border:1px solid #d0d5dd}
+
+/* RUBRICA CLIENTI & VIE AUTOCOMPLETE DROPDOWN */
+.auto-suggest-box{position:absolute;top:100%;left:0;right:0;z-index:40;background:#fff;border:2px solid var(--blue);border-radius:12px;box-shadow:0 10px 26px #10182830;max-height:255px;overflow-y:auto;margin-top:3px}
+.auto-item{padding:9px 12px;border-bottom:1px solid #eaecf0;cursor:pointer;display:flex;flex-direction:column;gap:2px;transition:0.1s}
+.auto-item:last-child{border-bottom:0}
+.auto-item:hover{background:#eff8ff}
+.auto-item-top{display:flex;justify-content:space-between;align-items:center;gap:6px;font-size:13.5px;font-weight:850;color:#101828}
+.auto-item-sub{font-size:12px;color:#475467;font-weight:650;display:flex;gap:8px;flex-wrap:wrap}
+.auto-tag{background:#ecfdf3;color:#16794b;border:1px solid #abefc6;padding:1px 6px;border-radius:99px;font-size:10.5px;font-weight:800}
+.auto-tag.street{background:#eff8ff;color:#175cd3;border-color:#b2ddff}
+.crm-bar{background:#f8f9fb;border:1px solid var(--line);border-radius:10px;padding:7px 11px;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;font-size:12px}
+
+/* BOX RIPETI ULTIMO ORDINE DEL CLIENTE */
+.last-order-banner{background:linear-gradient(135deg,#f4f3ff 0%,#eff8ff 100%);border:2px solid #84caff;border-radius:12px;padding:10px 12px;margin-bottom:12px;display:flex;flex-direction:column;gap:7px;animation:popIn .2s ease-out}
+.last-order-top{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.last-order-title{font-size:13px;font-weight:850;color:#175cd3;display:flex;align-items:center;gap:5px}
+.last-order-items{font-size:12.5px;color:#101828;font-weight:700;background:#fff;border:1px solid #b2ddff;border-radius:8px;padding:6px 9px;line-height:1.4}
+
+/* RADAR URGENZE & CONTO ALLA ROVESCIA ORARI */
+.urgency-radar-banner{background:linear-gradient(135deg,#fff5f5 0%,#fffaeb 100%);border:2px solid #fecdca;border-radius:14px;padding:12px 16px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;box-shadow:0 4px 12px #b4231812}
+.urgency-radar-banner.critical{background:linear-gradient(135deg,#fee4e2 0%,#fff5f5 100%);border-color:var(--red)}
+.order.urg-overdue{border:2px solid var(--red)!important;border-left:7px solid var(--red)!important;background:#fffbfb!important;box-shadow:0 4px 16px #b423181f}
+.order.urg-soon{border:2px solid #fdb022!important;border-left:7px solid var(--orange)!important;background:#fffdf9!important}
+.pill.urg-badge-overdue{background:#d92d20;color:#fff;font-weight:900;animation:pulseUrg 1.2s infinite;border:1px solid #912018}
+.pill.urg-badge-soon{background:#fffaeb;color:#b54708;border:1.5px solid #fdb022;font-weight:900}
+.pill.urg-badge-asap{background:#eff8ff;color:#175cd3;border:1.5px solid #84caff;font-weight:900}
+.pill.urg-badge-scheduled{background:#f2f4f7;color:#344054;border:1px solid #d0d5dd;font-weight:800}
+@keyframes pulseUrg{0%{transform:scale(1)}50%{transform:scale(1.05)}100%{transform:scale(1)}}
+.sort-toggle-bar{display:inline-flex;background:#fff;border:1px solid var(--line);border-radius:10px;padding:3px;gap:4px}
+.sort-toggle-bar button{padding:6px 11px;font-size:12.5px;border-radius:7px;background:transparent;color:#475467;font-weight:750}
+.sort-toggle-bar button.active{background:var(--red);color:#fff}
+
+/* MENU TOOLS & CATEGORY DROPDOWN */
+.cat-select{border:2px solid var(--red)!important;background:#fff5f5!important;color:#912018!important;font-weight:800!important;font-size:14px;cursor:pointer}
+.cat-select:focus{outline:none;box-shadow:0 0 0 3px #b4231825}
+
+/* TWO-COLUMN TIME SELECTOR (LEFT: HOUR, RIGHT: QUARTERS) */
+.time-two-cols{display:grid;grid-template-columns:1.15fr 1fr;gap:8px;background:#fffcf5;border:2px solid #fdb022;border-radius:11px;padding:8px}
+.time-two-cols select{border:1px solid #fedf89!important;background:#fff!important;font-weight:800!important;color:#93370d!important;padding:8px 10px;font-size:13.5px}
+.time-col-label{font-size:11px;font-weight:800;color:#b54708;display:block;margin-bottom:3px}
+
+/* AUTOMATIC CUSTOMER CALCULATION & RESTO BOX */
+.calc-box{background:linear-gradient(135deg,#f8f9fb 0%,#ecfdf3 100%);border:1.5px solid #abefc6;border-radius:12px;padding:12px;margin-top:12px;display:grid;gap:10px}
+.calc-row{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.quick-cash-btns{display:flex;gap:5px;flex-wrap:wrap;margin-top:4px}
+.quick-cash-btns button{padding:5px 10px;font-size:12px;font-weight:800;border-radius:7px;background:#fff;color:#16794b;border:1px solid #abefc6}
+.quick-cash-btns button:hover{background:var(--green);color:#fff}
+.resto-banner{background:#16794b;color:#fff;padding:9px 12px;border-radius:9px;display:flex;justify-content:space-between;align-items:center;font-weight:850;font-size:15px}
+.resto-banner.insufficient{background:#b42318}
+
+/* VOICE, TEXT & IMAGE ORDER ASSISTANT BAR */
+.voice-box{background:linear-gradient(135deg,#fff5f5 0%,#eff8ff 100%);border:2px solid #fecdca;border-radius:14px;padding:12px 14px;margin-bottom:14px;display:flex;flex-direction:column;gap:9px}
+.voice-box.listening{border-color:var(--red);background:linear-gradient(135deg,#fee4e2 0%,#fff5f5 100%);box-shadow:0 0 0 4px #b4231820}
+.voice-top{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.voice-actions-bar{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.voice-btn{display:inline-flex;align-items:center;gap:5px;padding:8px 12px;border-radius:99px;font-size:12px;font-weight:800;background:var(--red);color:#fff;box-shadow:0 3px 8px #b4231830}
+.voice-btn.listening{background:#d92d20;animation:pulseMic 1.1s infinite}
+.voice-btn.photo-btn{background:var(--orange);box-shadow:0 3px 8px #b5470830}
+.voice-btn.file-btn{background:var(--blue);box-shadow:0 3px 8px #175cd325}
+.voice-btn.rec-btn{background:var(--purple);box-shadow:0 3px 8px #5925dc25}
+.voice-btn.rec-btn.recording{background:#d92d20;animation:pulseMic 1s infinite}
+@keyframes pulseMic{0%{transform:scale(1)}50%{transform:scale(1.05)}100%{transform:scale(1)}}
+.voice-input-row{display:flex;gap:6px;align-items:center}
+.voice-input-row textarea{flex:1;border:2px solid #84caff;background:#fff;font-weight:650;font-size:13.5px;padding:9px 12px;min-height:58px;max-height:120px}
+.voice-input-row textarea:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 3px #175cd320}
+.ai-key-box{background:#ffffffc9;border:1px dashed #84caff;border-radius:10px;padding:8px 10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:12px}
+.ai-key-box input{flex:1;min-width:200px;padding:6px 10px;font-size:12.5px}
+
+/* Live New Order Toast Banner */
+.live-toast{position:fixed;top:70px;right:18px;z-index:50;background:linear-gradient(135deg,#16794b 0%,#0f5132 100%);color:#fff;padding:14px 18px;border-radius:14px;box-shadow:0 10px 28px #10182840;display:flex;align-items:center;gap:12px;max-width:390px;animation:popIn .25s ease-out}
+@keyframes popIn{from{transform:translateY(-10px);opacity:0}to{transform:translateY(0);opacity:1}}
+.sound-btn{padding:7px 11px;border-radius:99px;font-size:12.5px;font-weight:800;border:1px solid var(--line);background:#ecfdf3;color:var(--green)}
+.sound-btn.off{background:#fee4e2;color:var(--red)}
+
+.p-ing-badges{display:flex;gap:5px;flex-wrap:wrap;margin-top:3px}
+.p-ing-pill{display:inline-flex;align-items:center;background:#f8f9fb;border:1px solid #eaecf0;border-radius:7px;padding:2px 7px;font-size:11.5px;color:#344054;font-weight:650}
+
+/* Cart */
+.cartrow{display:grid;grid-template-columns:1fr auto;gap:8px;padding:11px 0;border-bottom:1px solid var(--line)}
+.qty{display:flex;align-items:center;gap:7px}.qty button{padding:4px 10px;background:#eef0f3;color:#202124;border-radius:7px}
+.cart-mods{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+.cart-mod-btn{background:#eff8ff;color:var(--blue);border:1px solid #b2ddff;padding:4px 8px;font-size:11.5px;font-weight:700;border-radius:6px;display:inline-flex;align-items:center;gap:4px}
+.subtotals-box{border-top:1px solid var(--line);padding-top:10px;margin-top:8px;display:grid;gap:5px;font-size:14px;color:#475467;font-weight:700}
+.subtotals-row{display:flex;justify-content:space-between}
+.total{display:flex;justify-content:space-between;font-size:23px;font-weight:900;padding:10px 0 14px;color:#101828;border-top:2px dashed var(--line);margin-top:6px}.actions{display:flex;gap:8px;flex-wrap:wrap}.actions button{flex:1}
+
+/* Ingredient Chips */
+.ing-chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:7px;align-items:center}
+.ing-chip{display:inline-flex;align-items:center;gap:5px;background:#f2f4f7;color:#344054;border:1px solid #d0d5dd;border-radius:99px;padding:3px 9px;font-size:12px;font-weight:650}
+.ing-chip.senza{background:#fee4e2;color:#b42318;border-color:#fecdca}
+.ing-chip.extra{background:#ecfdf3;color:#16794b;border-color:#abefc6}
+.ing-chip button{background:transparent;color:#912018;padding:0 2px;font-size:14px;line-height:1;border-radius:0;font-weight:900}
+
+/* SMART DELIVERY ROUTE BUILDER */
+.route-builder{background:linear-gradient(135deg,#eff8ff 0%,#f4f3ff 100%);border:2px solid #84caff;border-radius:16px;padding:15px;margin-bottom:16px;box-shadow:0 4px 14px #175cd314}
+.route-header{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:10px}
+.route-title{font-size:17px;font-weight:850;color:#175cd3;display:flex;align-items:center;gap:8px}
+.route-stops{display:grid;gap:7px;margin:10px 0}
+.route-stop-item{background:#fff;border:1px solid #b2ddff;border-radius:10px;padding:8px 12px;display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:13.5px}
+.route-stop-num{background:var(--blue);color:#fff;font-weight:900;border-radius:99px;width:24px;height:24px;display:inline-flex;align-items:center;justify-content:center;font-size:12px;margin-right:8px}
+.route-stop-controls{display:flex;gap:4px}
+.route-stop-controls button{padding:4px 8px;font-size:12px;background:#f2f4f7;color:#344054;border-radius:6px}
+.route-select-btn{padding:6px 11px;border-radius:8px;font-size:12.5px;font-weight:750;background:#eff8ff;color:var(--blue);border:1px solid #84caff;display:inline-flex;align-items:center;gap:5px}
+.route-select-btn.selected{background:var(--blue);color:#fff;border-color:var(--blue)}
+
+/* CHIUSURA CASSA & STATISTICHE GIORNALIERE */
+.cassa-locked-box{text-align:center;padding:42px 20px;max-width:480px;margin:20px auto}
+.cassa-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px;margin-bottom:18px}
+.cassa-card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:15px;box-shadow:0 2px 6px #10182808;border-top:4px solid var(--line)}
+.cassa-card.tot{border-top-color:var(--red);background:linear-gradient(180deg,#fff5f5 0%,#fff 100%)}
+.cassa-card.cash{border-top-color:var(--green)}
+.cassa-card.card{border-top-color:var(--blue)}
+.cassa-card.deliv{border-top-color:var(--purple)}
+.cassa-card.asp{border-top-color:var(--orange)}
+.cassa-card .c-label{font-size:13px;font-weight:750;color:#475467;display:flex;align-items:center;gap:6px}
+.cassa-card .c-val{font-size:25px;font-weight:900;color:#101828;margin:6px 0 3px}
+.cassa-card .c-sub{font-size:12px;color:#667085;font-weight:650}
+
+/* Orders */
+.status-filters{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}.status-filters button{background:#fff;color:#344054;border:1px solid var(--line);padding:8px 12px;font-size:13px;display:flex;align-items:center;gap:6px}.status-filters button.active{background:#202124;color:#fff;border-color:#202124}.badge-count{background:#eef2f6;color:#344054;border-radius:99px;padding:2px 7px;font-size:11px;font-weight:800}.tabs button.active .badge-count,.status-filters button.active .badge-count{background:#ffffff26;color:#fff}
+.orders{display:grid;gap:12px}.order{display:grid;grid-template-columns:1fr auto;gap:14px;align-items:start;border-left:5px solid var(--line)}
+.order.st-nuovo{border-left-color:var(--blue)}.order.st-prep{border-left-color:var(--orange)}.order.st-pronto{border-left-color:var(--green)}.order.st-consegna{border-left-color:var(--purple)}.order.st-completato{border-left-color:#667085}.order.st-annullato{border-left-color:var(--red)}
+.order.route-picked{box-shadow:0 0 0 2px var(--blue);background:#f8fbff}
+.pill{display:inline-block;border-radius:99px;background:#eef2f6;padding:4px 10px;font-size:12px;font-weight:750}
+.pill.st-nuovo{background:#eff8ff;color:var(--blue)}.pill.st-prep{background:#fffaeb;color:var(--orange)}.pill.st-pronto{background:#ecfdf3;color:var(--green)}.pill.st-consegna{background:#f4f3ff;color:var(--purple)}.pill.st-annullato{background:#fee4e2;color:var(--red)}
+.pill.time-badge{background:#fffaeb;color:#93370d;border:1px solid #fdb022;font-weight:850}
+.pill.resto-pill{background:#ecfdf3;color:#16794b;border:1px solid #abefc6;font-weight:850}
+.order h3{margin:0 0 6px;font-size:17px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}.order p{margin:4px 0;color:#475467;font-size:13.5px}.order a{color:inherit;text-decoration:underline}
+.order-items-box{margin:10px 0;padding:10px 12px;background:#f8f9fb;border:1px solid #eaecf0;border-radius:10px;font-size:14px}
+.order-item-line{display:flex;justify-content:space-between;gap:8px;padding:4px 0;border-bottom:1px dashed #e4e7ec}.order-item-line:last-child{border-bottom:0}
+.order-note{background:#fff8eb;border:1px solid #fedf89;color:#93370d;padding:7px 10px;border-radius:8px;font-size:13px;margin-top:6px;font-weight:600}
+.status-bar{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px;padding-top:10px;border-top:1px solid #eaecf0}
+.status-btn{padding:7px 11px;font-size:12.5px;border-radius:8px;background:#f2f4f7;color:#344054;border:1px solid #d0d5dd;font-weight:700}
+.status-btn:hover{background:#e4e7ec}
+.status-btn.active-Nuovo{background:var(--blue);color:#fff;border-color:var(--blue)}
+.status-btn.active-In-preparazione{background:var(--orange);color:#fff;border-color:var(--orange)}
+.status-btn.active-Pronto{background:var(--green);color:#fff;border-color:var(--green)}
+.status-btn.active-In-consegna{background:var(--purple);color:#fff;border-color:var(--purple)}
+.status-btn.active-Completato{background:#344054;color:#fff;border-color:#344054}
+.status-btn.active-Annullato{background:var(--red);color:#fff;border-color:var(--red)}
+.order-right{text-align:right;display:flex;flex-direction:column;gap:7px;min-width:170px}.order-right strong{display:block;font-size:20px}
+.btn-sm{padding:8px 12px;font-size:13px;border-radius:8px}
+
+/* Menu Manager */
+.stats-bar{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:16px}
+.stat-box{background:#fff;border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+.stat-box span{font-size:12px;color:#667085;font-weight:700;display:block}
+.stat-box strong{font-size:22px;color:#101828}
+.menu-admin-list{display:grid;gap:10px}
+.menu-admin-row{background:#fff;border:1px solid var(--line);border-radius:12px;padding:12px 14px;display:grid;grid-template-columns:1.6fr auto auto;gap:12px;align-items:center}
+.menu-admin-row.inactive{opacity:.6;background:#f9fafb}
+.price-inputs{display:flex;gap:8px;align-items:center}
+.price-inputs .mini-field{display:flex;flex-direction:column;gap:3px;width:92px}
+.price-inputs .mini-field span{font-size:11px;color:#667085;font-weight:700}
+.price-inputs input{padding:7px 8px;font-size:13.5px;font-weight:700;text-align:center}
+.admin-actions{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.toggle-pill{padding:6px 10px;border-radius:99px;font-size:12px;font-weight:750;border:1px solid transparent}
+.toggle-pill.on{background:#ecfdf3;color:var(--green);border-color:#abefc6}
+.toggle-pill.off{background:#fee4e2;color:var(--red);border-color:#fecdca}
+
+/* Modals & Login */
+.login{max-width:440px;margin:5vh auto;padding:0 16px}.login .panel{padding:24px}
+.modal-backdrop{position:fixed;inset:0;background:#10182880;display:flex;align-items:center;justify-content:center;padding:16px;z-index:20}
+.modal{background:#fff;border-radius:16px;max-width:540px;width:100%;padding:20px;box-shadow:0 10px 30px #10182830;max-height:92vh;overflow-y:auto}
+.modal h3{margin:0 0 12px;font-size:20px}
+.notice{padding:10px 12px;border-radius:10px;background:#fff4e5;color:#8a4b08;font-size:13px;margin-bottom:12px}.success{background:#e8f7ee;color:#17663d}.error{background:#fee4e2;color:#912018}.topline{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+
+/* ================= DESIGN SCONTRINO / COMANDA PROFESSIONALE v11 ================= */
+.receipt-card{border:2px solid #101828;border-radius:14px;overflow:hidden;background:#fff;color:#000;box-shadow:0 6px 20px #10182815;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+.rc-header{background:#101828;color:#fff;padding:14px 16px;text-align:center;border-bottom:2px solid #000}
+.rc-header .rc-brand{font-size:23px;font-weight:900;letter-spacing:.8px;text-transform:uppercase}
+.rc-header .rc-sub{font-size:12px;opacity:.9;margin-top:2px;font-weight:650}
+.rc-meta-strip{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:#f8f9fb;border-bottom:2px dashed #101828}
+.rc-order-num{font-size:24px;font-weight:950;color:#000;line-height:1}
+.rc-type-box{text-align:right}
+.rc-type-pill{display:inline-block;padding:4px 10px;border-radius:6px;font-size:13.5px;font-weight:900;text-transform:uppercase;border:2px solid #000;background:#fff;color:#000}
+.rc-time-hero{background:#fff8eb;border-bottom:2px solid #101828;padding:10px 14px;display:flex;align-items:center;justify-content:space-between;gap:8px}
+.rc-time-hero .t-lbl{font-size:12.5px;font-weight:850;text-transform:uppercase;color:#7a2e0e}
+.rc-time-hero .t-val{font-size:20px;font-weight:950;color:#000;background:#fff;padding:2px 10px;border-radius:6px;border:2px solid #000}
+.rc-customer-box{padding:11px 14px;background:#fff;border-bottom:2px solid #101828;display:grid;gap:5px;font-size:14px}
+.rc-customer-row{display:flex;align-items:flex-start;gap:6px;color:#000;line-height:1.3}
+.rc-customer-row strong.lbl{min-width:78px;font-weight:800;color:#344054}
+.rc-items-section{padding:10px 14px}
+.rc-table-head{display:flex;justify-content:space-between;font-size:11.5px;font-weight:900;text-transform:uppercase;color:#344054;border-bottom:1.5px solid #000;padding-bottom:5px;margin-bottom:6px}
+.rc-item{padding:8px 0;border-bottom:1px dashed #98a2b3}
+.rc-item:last-child{border-bottom:0}
+.rc-item-top{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
+.rc-qty-badge{background:#000;color:#fff;font-weight:900;padding:1px 7px;border-radius:5px;font-size:14.5px;display:inline-block;margin-right:5px}
+.rc-item-name{font-size:15.5px;font-weight:900;color:#000}
+.rc-size-tag{display:inline-block;padding:1px 6px;border-radius:5px;font-size:11px;font-weight:850;margin-left:5px;border:1.5px solid #000;text-transform:uppercase}
+.rc-size-tag.maxi{background:#000;color:#fff}
+.rc-size-tag.normale{background:#fff;color:#000}
+.rc-item-price{font-size:15px;font-weight:900;color:#000;white-space:nowrap}
+.rc-mods-list{display:flex;flex-direction:column;gap:3px;margin-top:5px;padding-left:10px}
+.rc-mod-line{font-size:13px;font-weight:850;color:#000;display:flex;align-items:center;gap:4px}
+.rc-mod-line.senza{color:#b42318}
+.rc-mod-line.extra{color:#16794b}
+.rc-note-alert{margin:4px 14px 12px;padding:9px 12px;background:#fff8eb;border:2px dashed #000;border-radius:8px;color:#000;font-size:13.5px;font-weight:800}
+.rc-summary-box{border-top:2px solid #101828;background:#f8f9fb;padding:10px 14px;display:grid;gap:5px;font-size:13.5px;font-weight:800}
+.rc-summary-row{display:flex;justify-content:space-between}
+.rc-resto-highlight{background:#ecfdf3;border:2px solid #000;border-radius:7px;padding:6px 10px;margin-top:3px;display:flex;justify-content:space-between;font-size:14.5px;font-weight:950;color:#000}
+.rc-total-bar{background:#101828;color:#fff;padding:13px 16px;display:flex;justify-content:space-between;align-items:center;border-top:2px solid #000}
+.rc-total-bar .rc-tot-label{font-size:15px;font-weight:850;text-transform:uppercase;letter-spacing:.5px}
+.rc-total-bar .rc-tot-val{font-size:24px;font-weight:950;color:#fff}
+.rc-footer{background:#fff;padding:10px 14px;text-align:center;font-size:12px;color:#344054;font-weight:700;border-top:1px solid #d0d5dd}
+
+@media(max-width:850px){.grid{grid-template-columns:1fr}.wrap{padding:12px}.fields{grid-template-columns:1fr 1fr}header{padding:12px}.brand{font-size:17px}.menu-admin-row{grid-template-columns:1fr}}
+@media(max-width:520px){.fields,.dd-row-2,.dd-row-3{grid-template-columns:1fr}.field.full{grid-column:auto}.order{grid-template-columns:1fr}.order-right{text-align:left;flex-direction:row;align-items:center;flex-wrap:wrap;justify-content:space-between;border-top:1px solid var(--line);padding-top:10px}.order-right strong{margin:0}.price-inputs{justify-content:flex-start}.admin-actions{justify-content:flex-start}}
+
+@media print{
+  body *{visibility:hidden}
+  #detailsModal, #detailsModal *{visibility:visible}
+  #detailsModal{position:absolute;left:0;top:0;width:100%;background:transparent!important;padding:0!important;display:block!important}
+  #detailsModal .modal{box-shadow:none!important;max-width:100%!important;width:100%!important;padding:0!important;max-height:none!important;overflow:visible!important}
+  .no-print, .p-ing-badges{display:none!important}
+  .receipt-card{border:2px solid #000!important;box-shadow:none!important;page-break-inside:avoid}
+}
+</style>
+</head>
+<body>
+<header class="no-print">
+  <div class="brand"><span class="logo">🍕</span><span>Buona Pizza <span class="muted">· POS Pro v11</span></span></div>
+  <div id="userBar" class="hidden" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+    <button type="button" id="soundToggleBtn" onclick="toggleSoundAlert()" class="sound-btn" title="Attiva/Disattiva suono nuovo ordine">🔔 Audio ON</button>
+    <button type="button" onclick="playOrderChime(true)" class="secondary btn-sm" title="Prova suono campanello">🔊 Test</button>
+    <span id="userEmail" class="muted"></span>
+    <button type="button" onclick="doLogout()" class="secondary btn-sm">Esci</button>
+  </div>
+</header>
+
+<!-- BANNER NOTIFICA NUOVO ORDINE O URGENZA IN TEMPO REALE -->
+<div id="liveOrderToast" class="live-toast hidden no-print">
+  <div style="font-size:28px">🔔</div>
+  <div style="flex:1">
+    <strong id="toastTitle" style="display:block;font-size:15.5px">Nuovo Ordine Ricevuto!</strong>
+    <span id="toastSub" style="font-size:13px;opacity:.92"></span>
+  </div>
+  <button type="button" onclick="el('liveOrderToast').classList.add('hidden')" class="secondary btn-sm">OK</button>
+</div>
+
+<!-- LOGIN SCREEN (SENZA EMAIL PERSONALE - PRONTO PER ACCESSO RAPIDO STAFF) -->
+<section id="loginScreen" class="login no-print">
+  <div class="panel">
+    <div style="text-align:center;margin-bottom:14px">
+      <div style="font-size:42px;margin-bottom:4px">🍕</div>
+      <h1 style="margin:0">Buona Pizza · Cassa POS</h1>
+      <p class="muted" style="margin:4px 0 0">Lodi Vecchio · Sistema Gestione Ordini & Consegne</p>
+    </div>
+
+    <div id="loginMsg" class="notice" style="text-align:center">Premi il pulsante verde per entrare subito in Cassa.</div>
+
+    <button type="button" onclick="doDirectEnter()" class="green" style="width:100%;padding:14px;font-size:16.5px;font-weight:900;margin-bottom:14px;box-shadow:0 4px 12px #16794b35">🚀 Entra in Cassa (Accesso Diretto)</button>
+
+    <div style="text-align:center">
+      <button type="button" onclick="el('advancedLoginBox').classList.toggle('hidden')" class="secondary btn-sm" style="font-size:12px">⚙️ Accesso con Account / Configurazione Server</button>
+    </div>
+
+    <div id="advancedLoginBox" class="hidden" style="margin-top:14px;padding-top:14px;border-top:1px solid var(--line)">
+      <div class="field"><label>Email Operatore (opzionale)</label><input id="email" type="email" autocomplete="off" placeholder="Inserisci email operatore..."></div>
+      <div class="field" style="margin-top:10px"><label>Password</label><input id="password" type="password" autocomplete="current-password" placeholder="Inserisci password..."></div>
+      <div class="actions" style="margin-top:12px">
+        <button type="button" onclick="doSignIn()">🔑 Accedi con Password</button>
+        <button type="button" onclick="doSignUp()" class="secondary">Crea account</button>
+      </div>
+      <hr style="border:0;border-top:1px solid var(--line);margin:14px 0">
+      <div class="field"><label>Supabase Project URL</label><input id="sbUrl"></div>
+      <div class="field" style="margin-top:8px"><label>Supabase Anon Key</label><input id="sbKey"></div>
+      <div style="display:flex;gap:8px;margin-top:10px">
+        <button type="button" onclick="doSaveConfig()" class="secondary" style="flex:1">💾 Salva configurazione</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- MAIN APP -->
+<main id="app" class="wrap hidden no-print">
+  <div class="tabs">
+    <button type="button" class="active" data-tab="new" id="tabBtnNew" onclick="switchTab('new')">＋ Nuovo ordine</button>
+    <button type="button" data-tab="orders" onclick="switchTab('orders')">📋 Ordini aperti <span id="openCountBadge" class="badge-count">0</span></button>
+    <button type="button" data-tab="menu" onclick="switchTab('menu')">🍕 Gestione Menu <span id="menuCountBadge" class="badge-count">0</span></button>
+    <button type="button" data-tab="all" onclick="switchTab('all')">🕒 Storico ordini</button>
+    <button type="button" data-tab="cassa" onclick="switchTab('cassa')">💰 Cassa & Incassi</button>
+  </div>
+
+  <!-- TAB 1: NUOVO ORDINE / MODIFICA ORDINE ESISTENTE -->
+  <div id="newTab">
+    <!-- BANNER MODALITÀ MODIFICA ORDINE ESISTENTE -->
+    <div id="editingOrderBanner" class="edit-mode-banner hidden">
+      <div>
+        <div class="edit-mode-title">✏️ MODALITÀ MODIFICA ORDINE #<span id="editingOrderIdLbl"></span></div>
+        <span class="muted" style="color:#7a2e0e;font-weight:700">Aggiungi, rimuovi o cambia pizze, ingredienti, orario o indirizzo e premi <strong>"💾 Aggiorna Ordine"</strong>.</span>
+      </div>
+      <button type="button" onclick="cancelEditOrderMode()" class="secondary btn-sm" style="border:1.5px solid #93370d;color:#93370d;font-weight:850">✖ Annulla Modifica</button>
+    </div>
+
+    <div class="grid">
+      <section class="panel">
+        <!-- ASSISTENTE INTELLIGENTE: TESTO, FOTO/IMMAGINE, AUDIO WHATSAPP E VOCE -->
+        <div id="voiceOrderBox" class="voice-box">
+          <div class="voice-top">
+            <div>
+              <strong style="font-size:15px;color:#101828;display:flex;align-items:center;gap:6px">🤖 Estrattore Ordini da Testo 📝, Foto/Immagine 📷, Vocale 🎙️ (v11)</strong>
+              <span class="muted" style="font-size:12px">Compila in automatico: <strong>Cliente, Via, Telefono, ⏰ Orario, Pizze/Panini/Piadine, Ingredienti (+/-) e Resto</strong></span>
+            </div>
+            <div class="voice-actions-bar">
+              <button type="button" onclick="el('imageOrderInput').click()" class="voice-btn photo-btn" title="Scatta foto a foglio/biglietto o carica screenshot WhatsApp">📷 Foto / Immagine</button>
+              <button type="button" id="voiceOrderBtn" onclick="toggleVoiceOrder()" class="voice-btn" title="Ascolto vocale continuo">🎙️ Parla Ora</button>
+              <button type="button" id="recCallBtn" onclick="toggleCallRecorder()" class="voice-btn rec-btn" title="Registra chiamata o nota vocale">🔴 Registra</button>
+              <button type="button" onclick="el('audioFileInput').click()" class="voice-btn file-btn" title="Carica vocale WhatsApp">📂 Audio</button>
+              <button type="button" onclick="el('aiKeyBox').classList.toggle('hidden')" class="secondary btn-sm" style="padding:7px 10px" title="Impostazioni AI Gemini">⚙️ AI</button>
+              <input type="file" id="imageOrderInput" accept="image/*" class="hidden" onchange="handleImageOrderUpload(this)">
+              <input type="file" id="audioFileInput" accept="audio/*,.ogg,.opus,.mp3,.m4a,.wav,.aac,.webm" class="hidden" onchange="handleAudioFileUpload(this)">
+            </div>
+          </div>
+
+          <div id="aiKeyBox" class="ai-key-box hidden">
+            <span>🤖 <strong>Gemini API Key</strong> (per analizzare Foto/Immagini, Vocali WhatsApp e Testi complessi):</span>
+            <input type="password" id="geminiApiKey" placeholder="Incolla qui la tua Gemini API Key (AIzaSy...)" onchange="saveGeminiKey()">
+            <button type="button" onclick="saveGeminiKey()" class="blue btn-sm" style="padding:6px 10px">💾 Salva</button>
+          </div>
+
+          <!-- Barra anteprima se viene caricata o incollata una foto -->
+          <div id="imagePreviewBar" class="img-preview-bar hidden">
+            <img id="orderImgThumb" src="" alt="Anteprima foto ordine">
+            <div style="flex:1">
+              <strong style="color:#b54708;display:block">📷 Immagine Ordine Caricata</strong>
+              <span id="orderImgStatus" class="muted">Analisi ed estrazione automatica dei dati in corso...</span>
+            </div>
+            <button type="button" onclick="el('imagePreviewBar').classList.add('hidden')" class="secondary btn-sm">✖</button>
+          </div>
+
+          <div class="voice-input-row">
+            <textarea id="voiceSmartInput" placeholder="📝 Incolla qui un testo WhatsApp, usa il microfono 🎤 o incolla una foto (Ctrl+V). Es: 'Marco, via Roma 10 Lodi Vecchio, tel 3331234567, per le 20:30 consegna 2 Margherita, 1 Panino Kebab senza cipolla più patatine pago con 50 euro'"></textarea>
+            <div style="display:flex;flex-direction:column;gap:5px">
+              <button type="button" onclick="runFullOrderExtraction(false)" class="green btn-sm" style="padding:9px 12px;white-space:nowrap">⚡ Estrai Veloce</button>
+              <button type="button" onclick="runFullOrderExtraction(true)" class="blue btn-sm" style="padding:7px 12px;white-space:nowrap" title="Usa AI Gemini per testi complessi o in arabo/italiano">🤖 Estrai con AI</button>
+              <button type="button" onclick="el('voiceSmartInput').value='';el('voiceTranscriptBar').classList.add('hidden')" class="secondary btn-sm" style="padding:5px 10px">✖ Pulisci</button>
+            </div>
+          </div>
+
+          <div id="voiceTranscriptBar" class="notice hidden" style="margin:0;font-weight:700"></div>
+        </div>
+
+        <!-- ================= SEZIONE 1: ESCLUSIVAMENTE A MENU A TENDINA (CATEGORIA, PRODOTTI & INGREDIENTI +/-) ================= -->
+        <div class="topline" style="margin-bottom:10px">
+          <h2 style="margin:0">1. Selezione Prodotti & Ingredienti (Menu a Tendina)</h2>
+          <span class="muted">Scegli Categoria, Prodotto e Ingredienti (+/-)</span>
+        </div>
+
+        <div class="dropdown-pos-box">
+          <!-- FILTRO ISTANTANEO PER CERCARE NEL MENU A TENDINA -->
+          <div class="field">
+            <label>🔍 Ricerca Rapida nel Menu a Tendina <span class="muted">(opzionale: scrivi es. "diav", "keb", "coca" per filtrare la lista)</span></label>
+            <input id="ddQuickFilterInput" class="dd-quick-filter" oninput="populateProductDropdown()" placeholder="🔍 Digita per filtrare istantaneamente il menu a tendina dei prodotti...">
+          </div>
+
+          <!-- RIGA 1: MENU A TENDINA CATEGORIA + MENU A TENDINA PRODOTTO -->
+          <div class="dd-row-2">
+            <div class="field">
+              <label>📂 1. Categoria (Pizze, Panini, Piadine...)</label>
+              <select id="categorySelect" class="dd-select-big cat" onchange="onCategoryDropdownChange(this.value)"></select>
+            </div>
+            <div class="field">
+              <label>🍕 2. Prodotto (Pizze, Panini, Piadine, Bibite...)</label>
+              <select id="productDropdownSelect" class="dd-select-big prod" onchange="onProductDropdownChange()"></select>
+            </div>
+          </div>
+
+          <!-- INFO INGREDIENTI BASE DEL PRODOTTO SELEZIONATO -->
+          <div id="ddBaseIngredientsBar" class="dd-base-info">
+            <span>📋 <strong>Ingredienti del prodotto:</strong> <span id="ddBaseIngText" class="muted">Seleziona un prodotto...</span></span>
+            <span id="ddPricePreviewBadge" class="pill st-pronto" style="font-size:14px;padding:5px 12px">€ 0,00</span>
+          </div>
+
+          <!-- RIGA 2: FORMATO (NORMALE/MAXI), QUANTITÀ E SUPPLEMENTO EXTRA -->
+          <div class="dd-row-3">
+            <div class="field">
+              <label>📏 3. Formato (Normale / Maxi)</label>
+              <select id="ddSizeSelect" class="dd-select-big" onchange="updateDropdownBuilderPrice()"></select>
+            </div>
+            <div class="field">
+              <label>🔢 Quantità</label>
+              <select id="ddQtySelect" class="dd-select-big" onchange="updateDropdownBuilderPrice()">
+                <option value="1">1 ×</option>
+                <option value="2">2 ×</option>
+                <option value="3">3 ×</option>
+                <option value="4">4 ×</option>
+                <option value="5">5 ×</option>
+                <option value="6">6 ×</option>
+                <option value="7">7 ×</option>
+                <option value="8">8 ×</option>
+                <option value="9">9 ×</option>
+                <option value="10">10 ×</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>💶 Supplemento Extra (€)</label>
+              <select id="ddExtraPriceSelect" class="dd-select-big" onchange="updateDropdownBuilderPrice()">
+                <option value="0">+ € 0,00 (Standard)</option>
+                <option value="0.5">+ € 0,50</option>
+                <option value="1">+ € 1,00</option>
+                <option value="1.5">+ € 1,50</option>
+                <option value="2">+ € 2,00</option>
+                <option value="2.5">+ € 2,50</option>
+                <option value="3">+ € 3,00</option>
+                <option value="4">+ € 4,00</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- RIGA 3: MENU A TENDINA INGREDIENTI DA TOGLIERE (SENZA) & DA AGGIUNGERE (EXTRA) -->
+          <div class="dd-row-2">
+            <div class="field">
+              <label style="color:var(--red)">🚫 4. Togli Ingrediente (Menu a Tendina SENZA)</label>
+              <select id="ddRemoveIngSelect" class="dd-select-big senza" onchange="onSelectRemoveIngDropdown(this)">
+                <option value="">🚫 Scegli ingrediente da togliere (Senza)...</option>
+              </select>
+            </div>
+            <div class="field">
+              <label style="color:var(--green)">➕ 5. Aggiungi Ingrediente (Menu a Tendina EXTRA)</label>
+              <select id="ddAddIngSelect" class="dd-select-big extra" onchange="onSelectAddIngDropdown(this)">
+                <option value="">➕ Scegli ingrediente extra da aggiungere...</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- RIEPILOGO MODIFICHE SELEZIONATE PER QUESTO PRODOTTO + PULSANTE AGGIUNGI -->
+          <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding-top:4px">
+            <div id="ddSelectedModsBox" class="dd-mods-preview" style="flex:1">
+              <span class="muted" style="font-size:12.5px">Nessuna modifica ingrediente (prodotto standard).</span>
+            </div>
+            <button type="button" onclick="resetDropdownBuilderMods()" class="secondary btn-sm" title="Azzera modifiche ingredienti">↺ Reset Modifiche</button>
+            <button type="button" onclick="addFromDropdownBuilderToCart()" class="green" style="padding:13px 24px;font-size:15.5px;font-weight:900">＋ Aggiungi al Carrello</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="topline" style="margin-bottom:6px">
+          <h2 style="margin:0">2. Dati Cliente, Via & Orario</h2>
+          <button type="button" onclick="clearCustomerFields()" class="secondary btn-sm" style="padding:4px 9px;font-size:11.5px">🧹 Pulisci campi</button>
+        </div>
+
+        <!-- BARRA MEMORIA INTELLIGENTE CLIENTI & VIE -->
+        <div class="crm-bar">
+          <span>📒 <strong>Memoria Clienti & Vie attiva:</strong> (<span id="crmCountBadge">0</span> salvati)</span>
+          <span class="muted" style="font-size:11.5px">Scrivi <strong>Nome, Telefono o Via</strong> per compilare tutto!</span>
+        </div>
+
+        <!-- BANNER ULTIMO ORDINE DEL CLIENTE (RIPETI IN 1 CLICK) -->
+        <div id="customerLastOrderBanner" class="last-order-banner hidden">
+          <div class="last-order-top">
+            <span class="last-order-title">🕒 Ultimo ordine di questo cliente (<span id="lastOrderDateLbl"></span>):</span>
+            <div style="display:flex;gap:5px">
+              <button type="button" id="repeatLastOrderBtn" class="purple btn-sm" style="padding:5px 10px;font-size:12px">🔄 Ripeti nel Carrello</button>
+              <button type="button" onclick="el('customerLastOrderBanner').classList.add('hidden')" class="secondary btn-sm" style="padding:4px 8px;font-size:11.5px">✖</button>
+            </div>
+          </div>
+          <div id="lastOrderItemsPreview" class="last-order-items"></div>
+        </div>
+
+        <div class="fields">
+          <div class="field">
+            <label>👤 Nome cliente / Citofono</label>
+            <input id="customer" autocomplete="off" oninput="onCustomerFieldInput('name')" onfocus="onCustomerFieldInput('name')" placeholder="🔍 Scrivi nome o citofono...">
+            <div id="suggestCustomer" class="auto-suggest-box hidden"></div>
+          </div>
+
+          <div class="field">
+            <label>📞 Telefono</label>
+            <input id="phone" type="tel" autocomplete="off" oninput="onCustomerFieldInput('phone')" onfocus="onCustomerFieldInput('phone')" placeholder="🔍 Scrivi telefono...">
+            <div id="suggestPhone" class="auto-suggest-box hidden"></div>
+          </div>
+
+          <div id="addressField" class="field full">
+            <label>📍 Indirizzo / Via di consegna <span class="muted">(Cerca per Via per trovare cliente e telefono)</span></label>
+            <input id="address" autocomplete="off" oninput="onCustomerFieldInput('address')" onfocus="onCustomerFieldInput('address')" placeholder="🔍 Scrivi Via (es. Via Roma, Manzoni, Libertà...) o scegli cliente">
+            <div id="suggestAddress" class="auto-suggest-box hidden"></div>
+          </div>
+
+          <div class="field">
+            <label>Tipo ordine</label>
+            <select id="type" onchange="toggleAddress()">
+              <option value="Consegna">🛵 Consegna a domicilio</option>
+              <option value="Asporto">🛍️ Asporto (Ritiro in pizzeria)</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label>Metodo di Pagamento</label>
+            <select id="payment" onchange="onPaymentMethodChange()">
+              <option value="Contanti">💵 Contanti</option>
+              <option value="Carta">💳 Carta / POS</option>
+              <option value="Altro">💰 Altro / Già Pagato</option>
+            </select>
+          </div>
+
+          <!-- ORARIO SU 2 COLONNE: SINISTRA ORA (11:00 - 23:00), DESTRA MINUTI (:00, :15, :30, :45) -->
+          <div class="field full">
+            <label>⏰ Orario richiesto (Sinistra: Ora 11:00-23:00 · Destra: Esatta / Quarto / Mezza / Meno un quarto)</label>
+            <div class="time-two-cols">
+              <div>
+                <span class="time-col-label">👈 1. Ora (11 AM - 11 PM)</span>
+                <select id="deliveryHour" onchange="onTimeHourChange()"></select>
+              </div>
+              <div id="deliveryMinuteWrap">
+                <span class="time-col-label">👉 2. Minuti (Esatta / Quarto / Mezza)</span>
+                <select id="deliveryMinute">
+                  <option value="00">:00 · Esatta (بالضبط)</option>
+                  <option value="15">:15 · E un quarto (وربع)</option>
+                  <option value="30">:30 · E mezza (ونصف)</option>
+                  <option value="45">:45 · Meno un quarto (إلا ربع)</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <div class="field full">
+            <label>Note aggiuntive ordine</label>
+            <textarea id="notes" placeholder="🎤 Es. citofono, scala, ben cotta..."></textarea>
+          </div>
+        </div>
+
+        <h2 style="margin-top:18px">Carrello & Calcolo Automatico Cliente</h2>
+        <div id="cart"><p class="muted">Usa i menu a tendina qui a sinistra o l'estrattore da Testo/Foto 📞📷.</p></div>
+
+        <!-- BOX CALCOLO AUTOMATICO CONSEGNA E RESTO CLIENTE -->
+        <div class="calc-box">
+          <div id="deliveryFeeRow" class="calc-row">
+            <label style="margin:0;color:#101828">🛵 Supplemento Consegna (€):</label>
+            <select id="deliveryFeeSelect" onchange="onDeliveryFeeChange()" style="width:145px;padding:6px 10px;font-weight:800">
+              <option value="0">€ 0,00 (Gratis)</option>
+              <option value="1">€ 1,00</option>
+              <option value="1.5">€ 1,50</option>
+              <option value="2">€ 2,00</option>
+              <option value="2.5">€ 2,50</option>
+              <option value="3">€ 3,00</option>
+            </select>
+          </div>
+
+          <div id="cashCalcArea" style="border-top:1px dashed #abefc6;padding-top:8px">
+            <div class="calc-row">
+              <label style="margin:0;color:#101828">💶 Contanti ricevuti dal cliente (€):</label>
+              <input type="number" id="cashGivenInput" step="0.50" min="0" placeholder="Es. 20 o 50" oninput="renderCart()" style="width:130px;padding:6px 10px;font-weight:900;text-align:center;border:2px solid #16794b">
+            </div>
+            <div class="quick-cash-btns">
+              <button type="button" onclick="setCashGiven(10)">💶 10 €</button>
+              <button type="button" onclick="setCashGiven(20)">💶 20 €</button>
+              <button type="button" onclick="setCashGiven(30)">💶 30 €</button>
+              <button type="button" onclick="setCashGiven(50)">💶 50 €</button>
+              <button type="button" onclick="setCashGiven(100)">💶 100 €</button>
+              <button type="button" onclick="setCashGiven(0)" style="color:#667085;border-color:#d0d5dd">✖ Esatto</button>
+            </div>
+            <div id="restoResultBanner" class="resto-banner hidden" style="margin-top:8px">
+              <span id="restoLabel">💰 Resto da dare al cliente:</span>
+              <span id="restoValue" style="font-size:19px">€ 0,00</span>
+            </div>
+          </div>
+        </div>
+
+        <div id="subtotalsBox" class="subtotals-box"></div>
+        <div class="total"><span>Totale Cliente</span><span id="total">€ 0,00</span></div>
+
+        <div class="actions">
+          <button type="button" id="saveOrder" onclick="doSaveOrder()">💾 Salva ordine</button>
+          <button type="button" id="cancelEditBtn" onclick="cancelEditOrderMode()" class="orange hidden">✖ Annulla Modifica</button>
+          <button type="button" onclick="doClearCart()" class="secondary">Svuota</button>
+        </div>
+        <div id="orderMsg" class="muted" style="margin-top:10px"></div>
+      </section>
+    </div>
+  </div>
+
+  <!-- TAB 2: ORDINI APERTI + ORDINAMENTO ORARIO & RADAR URGENZE -->
+  <div id="ordersTab" class="hidden">
+    <div class="topline">
+      <div>
+        <h1 style="margin:0">Ordini aperti & Consegne</h1>
+        <span class="muted">Ordinati automaticamente per <strong>⏰ Orario di Consegna/Ritiro</strong> (clicca <strong>✏️ Modifica</strong> per cambiare un ordine)</span>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+        <div class="sort-toggle-bar">
+          <button type="button" id="sortTimeBtn" class="active" onclick="setOpenOrdersSort('time')">⏰ Per Orario Consegna</button>
+          <button type="button" id="sortCreatedBtn" onclick="setOpenOrdersSort('created')">🆕 Per Ora Inserimento</button>
+        </div>
+        <button type="button" onclick="selectReadyDeliveries()" class="blue btn-sm">🛵 Seleziona Consegne (per Orario)</button>
+        <button type="button" onclick="loadOrders()" class="secondary btn-sm">🔄 Aggiorna</button>
+      </div>
+    </div>
+
+    <!-- BANNER RADAR URGENZE (ORDINI IN SCADENZA O IN RITARDO) -->
+    <div id="urgencyRadarBanner" class="urgency-radar-banner hidden">
+      <div style="display:flex;align-items:center;gap:10px">
+        <span style="font-size:26px">🚨</span>
+        <div>
+          <strong id="urgencyBannerTitle" style="font-size:15px;color:#912018;display:block">Attenzione: Ordini in scadenza o in ritardo!</strong>
+          <span id="urgencyBannerSub" style="font-size:13px;color:#475467;font-weight:650"></span>
+        </div>
+      </div>
+      <div style="display:flex;gap:6px">
+        <button type="button" onclick="statusFilter='Urgenti';renderOrders()" class="orange btn-sm">🔥 Mostra Solo Urgenti</button>
+        <button type="button" onclick="statusFilter='Tutti';renderOrders()" class="secondary btn-sm">Mostra Tutti</button>
+      </div>
+    </div>
+
+    <div id="routeBuilderBox" class="route-builder hidden">
+      <div class="route-header">
+        <div>
+          <div class="route-title">🗺️ Giro Consegne Intelligente (<span id="routeCount">0</span> tappe ordinate per orario)</div>
+          <div class="muted" style="margin-top:2px">Partenza e ritorno: <strong>Pizzeria Buona Pizza, Lodi Vecchio</strong> (riordina con ⬆️⬇️)</div>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button type="button" onclick="openGoogleMapsMultiRoute()" class="green btn-sm">🗺️ Apri Giro su Google Maps</button>
+          <button type="button" onclick="markRouteInConsegna()" class="purple btn-sm">🛵 Segna tutti "In consegna"</button>
+          <button type="button" onclick="clearRouteSelection()" class="secondary btn-sm">✖ Svuota giro</button>
+        </div>
+      </div>
+      <div id="routeStopsList" class="route-stops"></div>
+    </div>
+
+    <div id="statusFilters" class="status-filters"></div>
+    <div id="openOrders" class="orders"></div>
+  </div>
+
+  <!-- TAB 3: CHIUSURA CASSA & INCASSI -->
+  <div id="cassaTab" class="hidden">
+    <div id="cassaLockedView" class="panel cassa-locked-box">
+      <div style="font-size:48px;margin-bottom:10px">🔒💰</div>
+      <h2 style="margin-bottom:6px">Riepilogo Cassa & Incassi Protetto</h2>
+      <p class="muted" style="margin-bottom:18px">I totali della cassa e gli incassi giornalieri sono nascosti per privacy. Premi il pulsante qui sotto solo quando vuoi consultarli.</p>
+      <button type="button" onclick="unlockCassaView()" class="green" style="padding:12px 24px;font-size:15px">👁️ Mostra Cassa & Incassi</button>
+    </div>
+
+    <div id="cassaUnlockedView" class="hidden">
+      <div class="topline">
+        <h1>💰 Chiusura Cassa & Riepilogo Giornata</h1>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <input type="date" id="cassaDate" onchange="renderCassaReport()" style="width:auto;padding:8px 12px;font-weight:700">
+          <button type="button" onclick="setCassaToday()" class="secondary btn-sm">📅 Oggi</button>
+          <button type="button" onclick="printCassaSummary()" class="green btn-sm">🖨️ Stampa Chiusura Cassa</button>
+          <button type="button" onclick="lockCassaView()" class="secondary btn-sm">🙈 Nascondi Cassa</button>
+        </div>
+      </div>
+
+      <div id="cassaCards" class="cassa-grid"></div>
+
+      <div class="grid">
+        <section class="panel">
+          <h2>🏆 Prodotti più venduti nella giornata</h2>
+          <div id="cassaTopProducts"></div>
+        </section>
+        <section class="panel">
+          <h2>📊 Dettaglio per Stato & Pagamento</h2>
+          <div id="cassaBreakdown"></div>
+        </section>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB 4: GESTIONE MENU -->
+  <div id="menuTab" class="hidden">
+    <div class="topline">
+      <h1>Gestione Categorie, Prodotti & Ingredienti</h1>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button type="button" onclick="openCategoryModal()" class="blue">📁 + Nuova Categoria</button>
+        <button type="button" onclick="openProductModal(null)" class="green">+ Nuovo Prodotto</button>
+        <button type="button" onclick="loadMenu()" class="secondary">🔄 Ricarica</button>
+      </div>
+    </div>
+
+    <div id="menuStats" class="stats-bar"></div>
+
+    <div class="panel" style="margin-bottom:16px">
+      <div class="fields" style="grid-template-columns:1fr 1.2fr 210px">
+        <div>
+          <select id="adminCategorySelect" class="cat-select" onchange="onAdminCategoryDropdownChange(this.value)"></select>
+        </div>
+        <div>
+          <input id="adminSearch" oninput="renderAdminMenu()" placeholder="🔍 Cerca prodotto o ingrediente da modificare...">
+        </div>
+        <div>
+          <select id="adminStatusFilter" onchange="renderAdminMenu()">
+            <option value="all">Tutti gli stati</option>
+            <option value="active">✅ Solo Attivi</option>
+            <option value="inactive">🚫 Solo Esauriti / Nascosti</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <div id="adminMenuList" class="menu-admin-list"></div>
+  </div>
+
+  <!-- TAB 5: STORICO ORDINI -->
+  <div id="allTab" class="hidden">
+    <div class="topline"><h1>Storico ordini</h1><button type="button" onclick="loadOrders()" class="secondary">🔄 Aggiorna</button></div>
+    <div id="allOrders" class="orders"></div>
+  </div>
+</main>
+
+<!-- MODAL RICEVUTA / COMANDA -->
+<div id="detailsModal" class="modal-backdrop hidden">
+  <div class="modal" style="max-width:480px;padding:16px">
+    <div id="receiptContainer"></div>
+    <div class="actions no-print" style="margin-top:14px">
+      <button type="button" onclick="printReceiptWindow('80mm')" class="green">🖨️ Stampa Termica (80mm)</button>
+      <button type="button" onclick="printReceiptWindow('A4')" class="blue">🖨️ Stampa A4 / Comanda</button>
+      <button type="button" onclick="closeDetailsModal()" class="secondary">Chiudi</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL AGGIUNGI / MODIFICA PRODOTTO E INGREDIENTI (CON MENU A TENDINA INGREDIENTI) -->
+<div id="productModal" class="modal-backdrop hidden no-print">
+  <div class="modal">
+    <h3 id="prodModalTitle">Nuovo Prodotto</h3>
+    <input type="hidden" id="prodId">
+    <div class="fields">
+      <div class="field full">
+        <label>Nome Prodotto *</label>
+        <input id="prodName" placeholder="Es. Pizza Margherita, Panino Kebab, Piadina...">
+      </div>
+      <div class="field full">
+        <label>Categoria * <span class="muted">(scegli dal menu a tendina o scrivi nuova)</span></label>
+        <div style="display:flex;gap:6px">
+          <select id="prodCatSelect" onchange="if(this.value)el('prodCat').value=this.value" style="flex:1;font-weight:750">
+            <option value="">📂 Scegli categoria esistente...</option>
+          </select>
+          <input id="prodCat" list="catSuggestions" placeholder="O scrivi nuova (es. Piadine)" style="flex:1">
+        </div>
+        <datalist id="catSuggestions"></datalist>
+      </div>
+
+      <div class="field full" style="background:#f8f9fb;padding:12px;border-radius:10px;border:1px solid var(--line)">
+        <label>Ingredienti del prodotto (Scegli dal Menu a Tendina o scrivi)</label>
+        <div id="modalIngChips" class="ing-chips" style="margin-bottom:10px"></div>
+        <div class="fields" style="grid-template-columns:1.1fr 1fr">
+          <div>
+            <select id="modalIngDropdown" onchange="onModalIngDropdownSelect(this)" style="font-weight:750;border:2px solid var(--blue);background:#eff8ff">
+              <option value="">📋 + Scegli ingrediente dalla lista...</option>
+            </select>
+          </div>
+          <div style="display:flex;gap:6px">
+            <input id="newIngInput" placeholder="O scrivi nuovo..." onkeydown="if(event.key==='Enter'){event.preventDefault();addModalIng();}">
+            <button type="button" onclick="addModalIng()" class="blue btn-sm">＋</button>
+          </div>
+        </div>
+        <input type="hidden" id="prodDesc">
+      </div>
+
+      <div class="field">
+        <label>Prezzo Normale (€) *</label>
+        <input id="prodPriceNorm" type="number" step="0.10" min="0" placeholder="Es. 6.50">
+      </div>
+      <div class="field">
+        <label>Prezzo Maxi (€) <span class="muted">(opzionale)</span></label>
+        <input id="prodPriceMaxi" type="number" step="0.10" min="0" placeholder="Lascia vuoto se non c'è">
+      </div>
+      <div class="field full" style="flex-direction:row;align-items:center;gap:8px;margin-top:4px">
+        <input type="checkbox" id="prodActive" checked style="width:18px;height:18px">
+        <label for="prodActive" style="margin:0;cursor:pointer">Prodotto disponibile nel menu cassa</label>
+      </div>
+    </div>
+    <div id="prodModalMsg" class="muted" style="margin-top:10px"></div>
+    <div class="actions" style="margin-top:16px">
+      <button type="button" id="saveProductBtn" onclick="doSaveProduct()" class="green">💾 Salva Prodotto</button>
+      <button type="button" id="deleteProductBtn" onclick="doDeleteProduct()" class="secondary hidden" style="color:var(--red)">🗑️ Elimina</button>
+      <button type="button" onclick="closeProductModal()" class="secondary">Annulla</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL GESTIONE CATEGORIA -->
+<div id="categoryModal" class="modal-backdrop hidden no-print">
+  <div class="modal">
+    <h3>📁 Gestione Categorie</h3>
+    <p class="muted">Crea una nuova categoria con il suo primo prodotto, oppure rinomina una categoria esistente.</p>
+    <div class="field">
+      <label>Azione</label>
+      <select id="catActionType" onchange="toggleCatModalMode()">
+        <option value="new">➕ Crea Nuova Categoria</option>
+        <option value="rename">✏️ Rinomina Categoria Esistente</option>
+      </select>
+    </div>
+
+    <div id="catNewBox" style="margin-top:12px" class="fields">
+      <div class="field full">
+        <label>Nome Nuova Categoria *</label>
+        <input id="newCatName" placeholder="Es. Panini, Piadine, Pizze, Fritti, Bibite...">
+      </div>
+      <div class="field full">
+        <label>Primo Prodotto in questa categoria *</label>
+        <input id="newCatFirstProd" placeholder="Es. Panino Kebab">
+      </div>
+      <div class="field">
+        <label>Prezzo Normale (€) *</label>
+        <input id="newCatPrice" type="number" step="0.10" min="0" placeholder="Es. 5.00">
+      </div>
+      <div class="field">
+        <label>Ingredienti (opzionale)</label>
+        <input id="newCatDesc" placeholder="Es. Carne kebab, insalata, pomodori">
+      </div>
+    </div>
+
+    <div id="catRenameBox" style="margin-top:12px" class="fields hidden">
+      <div class="field full">
+        <label>Scegli Categoria da rinominare</label>
+        <select id="oldCatSelect"></select>
+      </div>
+      <div class="field full">
+        <label>Nuovo Nome Categoria *</label>
+        <input id="renameCatInput" placeholder="Scrivi il nuovo nome...">
+      </div>
+    </div>
+
+    <div id="catModalMsg" class="muted" style="margin-top:10px"></div>
+    <div class="actions" style="margin-top:16px">
+      <button type="button" onclick="doSaveCategory()" class="green">💾 Salva Categoria</button>
+      <button type="button" onclick="el('categoryModal').classList.add('hidden')" class="secondary">Chiudi</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL PERSONALIZZA INGREDIENTI NEL CARRELLO (CON MENU A TENDINA) -->
+<div id="cartIngModal" class="modal-backdrop hidden no-print">
+  <div class="modal">
+    <h3 id="cartIngTitle">Personalizza Ingredienti</h3>
+    <p class="muted" style="margin-top:-6px">Usa i menu a tendina per togliere ingredienti (🚫 Senza) o aggiungere extra (➕).</p>
+    
+    <div class="fields" style="margin-top:12px">
+      <div class="field full">
+        <label style="color:var(--red)">🚫 1. Togli Ingrediente Base (Menu a Tendina SENZA):</label>
+        <select id="modalCartRemoveSelect" class="dd-select-big senza" onchange="onModalCartRemoveSelect(this)">
+          <option value="">🚫 Scegli ingrediente da togliere...</option>
+        </select>
+      </div>
+
+      <div class="field full" style="margin-top:6px">
+        <label style="color:var(--green)">➕ 2. Aggiungi Ingrediente Extra (Menu a Tendina EXTRA):</label>
+        <select id="modalCartExtraSelect" class="dd-select-big extra" onchange="onModalCartExtraSelect(this)">
+          <option value="">➕ Scegli ingrediente extra da aggiungere...</option>
+        </select>
+        <div style="display:flex;gap:6px;margin-top:6px">
+          <input id="customExtraInput" placeholder="O scrivi altro extra / nota (es. Ben cotta, Doppio formaggio)...">
+          <button type="button" onclick="addCustomExtraToCartItem()" class="blue btn-sm">＋ Aggiungi</button>
+        </div>
+      </div>
+    </div>
+
+    <div style="margin-top:12px">
+      <label>Riepilogo modifiche selezionate (tocca × per annullare):</label>
+      <div id="cartModalModsChips" class="dd-mods-preview" style="margin-top:6px"></div>
+    </div>
+
+    <div class="field" style="margin-top:14px">
+      <label>Supplemento prezzo per Extra (€)</label>
+      <select id="cartExtraPrice" style="font-weight:800">
+        <option value="0">€ 0,00 (Nessun supplemento)</option>
+        <option value="0.5">€ 0,50</option>
+        <option value="1">€ 1,00</option>
+        <option value="1.5">€ 1,50</option>
+        <option value="2">€ 2,00</option>
+        <option value="2.5">€ 2,50</option>
+        <option value="3">€ 3,00</option>
+        <option value="4">€ 4,00</option>
+      </select>
+    </div>
+
+    <div class="actions" style="margin-top:16px">
+      <button type="button" onclick="saveCartIngCustomization()" class="green">✅ Conferma Modifiche</button>
+      <button type="button" onclick="el('cartIngModal').classList.add('hidden')" class="secondary">Annulla</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+function el(id){return document.getElementById(id);}
+
+const FALLBACK_URL = 'https://jfgizazsjjgzyhqfngnl.supabase.co';
+const FALLBACK_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpmZ2l6YXpzampnenlocWZuZ25sIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTE3ODI0ODEsImV4cCI6MjEwNzM1ODQ4MX0.Tp_bFfR-G55OaK5i3A0fi5gF6g7pc-a3LO_IDCpsuhE';
+const PIZZERIA_ORIGIN = 'Pizzeria Buona Pizza, Lodi Vecchio LO, Italia';
+
+const COMMON_INGREDIENTS = [
+  'Pomodoro','Mozzarella','Mozzarella di Bufala','Salame piccante','Prosciutto cotto','Prosciutto crudo',
+  'Funghi','Carciofi','Olive','Cipolla','Tonno','Acciughe','Kebab','Patatine','Wurstel',
+  'Gorgonzola','Rucola','Grana','Peperoni','Salsiccia','Origano','Nutella',
+  'Insalata','Salsa piccante','Salsa yogurt','Maionese','Ketchup','Uova','Pollo','Pancetta','Melanzane','Zucchine','Bresaola','Gamberetti','Salmone','Panna','Scamorza','Brie','Speck','Ben cotta','Tagliata'
+];
+
+const DEFAULT_LODI_VECCHIO_STREETS = [
+  'Via Libertà, Lodi Vecchio',
+  'Via Roma, Lodi Vecchio',
+  'Via IV Novembre, Lodi Vecchio',
+  'Via Alessandro Manzoni, Lodi Vecchio',
+  'Via Giuseppe Garibaldi, Lodi Vecchio',
+  'Via Giuseppe Mazzini, Lodi Vecchio',
+  'Via Dante Alighieri, Lodi Vecchio',
+  'Via Giacomo Matteotti, Lodi Vecchio',
+  'Via San Bassiano, Lodi Vecchio',
+  'Via Guglielmo Marconi, Lodi Vecchio',
+  'Via Enrico Fermi, Lodi Vecchio',
+  'Via Leonardo da Vinci, Lodi Vecchio',
+  'Via Sandro Pertini, Lodi Vecchio',
+  'Via Aldo Moro, Lodi Vecchio',
+  'Via Fratelli Cervi, Lodi Vecchio',
+  'Via Papa Giovanni XXIII, Lodi Vecchio',
+  'Via Alcide De Gasperi, Lodi Vecchio',
+  'Via Vittorio Veneto, Lodi Vecchio',
+  'Via Piave, Lodi Vecchio',
+  'Via Monte Grappa, Lodi Vecchio',
+  'Via Verdi, Lodi Vecchio',
+  'Via Cavour, Lodi Vecchio',
+  'Piazza Vittorio Emanuele II, Lodi Vecchio',
+  'Piazza Santa Maria, Lodi Vecchio',
+  'Viale Europa, Lodi Vecchio',
+  'Via Lodi, Lodi Vecchio',
+  'Via Pandina, Lodi Vecchio'
+];
+
+let sb=null, allMenu=[], cart=new Map(), category='Tutti', adminCategory='Tutti', orders=[], itemsByOrder=new Map(), statusFilter='Tutti';
+let openOrdersSortMode = 'time';
+let alertedUrgentOrderIds = new Set();
+let urgencyInterval = null;
+
+/* STATO MODIFICA ORDINE ESISTENTE (EDIT ORDER MODE) */
+let editingOrderId = null;
+
+/* STATO DEL COSTRUTTORE RAPIDO A MENU A TENDINA (DROPDOWN BUILDER) */
+let ddRemovedIngs = new Set();
+let ddAddedIngs = new Set();
+
+let modalIngArray = [];
+let activeCartKey = null, tempRemovedIngs = new Set(), tempAddedIngs = new Set();
+let selectedRouteOrderIds = [];
+let soundEnabled = localStorage.getItem('bp_sound_off') !== '1';
+let knownOrderIds = new Set();
+let firstOrdersLoadDone = false;
+let audioCtx = null;
+let voiceRec = null, isListeningOrder = false;
+let mediaRecorder = null, recordedChunks = [], isRecordingCall = false;
+
+let customerDirectory = [];
+let knownStreets = new Set(DEFAULT_LODI_VECCHIO_STREETS);
+
+const ALL_STATUSES=['Nuovo','In preparazione','Pronto','In consegna','Completato','Annullato'];
+const euro=n=>new Intl.NumberFormat('it-IT',{style:'currency',currency:'EUR'}).format(Number(n||0));
+
+function toLocalDateStr(d){
+  let dt = d ? new Date(d) : new Date();
+  let y = dt.getFullYear();
+  let m = String(dt.getMonth()+1).padStart(2,'0');
+  let day = String(dt.getDate()).padStart(2,'0');
+  return `${y}-${m}-${day}`;
+}
+
+/* ================= FUNZIONE MODIFICA ORDINE APERTO / ESISTENTE (EDIT MODE v11) ================= */
+async function startEditOrder(o){
+  if(!o) return;
+  let items = itemsByOrder.get(o.id);
+  if(!items || !items.length){
+    let {data} = await sb.from('order_items').select('*').eq('order_id', o.id);
+    items = data || [];
+    itemsByOrder.set(o.id, items);
+  }
+
+  editingOrderId = o.id;
+  el('editingOrderIdLbl').textContent = o.id;
+  el('editingOrderBanner').classList.remove('hidden');
+  el('cancelEditBtn').classList.remove('hidden');
+  el('saveOrder').textContent = `💾 Aggiorna Ordine #${o.id}`;
+  el('saveOrder').className = 'orange';
+  el('tabBtnNew').innerHTML = `✏️ Modifica #${o.id}`;
+
+  el('customer').value = o.customer_name || '';
+  el('phone').value = o.phone || '';
+  el('type').value = (o.order_type && ['Consegna','Asporto'].includes(o.order_type)) ? o.order_type : 'Consegna';
+  toggleAddress();
+  el('address').value = o.address || '';
+  el('payment').value = (o.payment_method && ['Contanti','Carta','Altro'].includes(o.payment_method)) ? o.payment_method : 'Contanti';
+  onPaymentMethodChange();
+
+  let parsedNotes = splitTimeAndNotes(o.notes);
+  setDeliveryTimeDropdown(parsedNotes.time || 'Prima possibile');
+  el('notes').value = parsedNotes.cleanNotes || '';
+
+  el('cashGivenInput').value = '';
+  if(parsedNotes.cashInfo){
+    let cm = parsedNotes.cashInfo.match(/Paga con\s*[^\d]*(\d+(?:[.,]\d+)?)/i);
+    if(cm) el('cashGivenInput').value = cm[1].replace(',','.');
+  }
+
+  cart.clear();
+  let delivServiceItem = items.find(i => i.product_name === 'Supplemento Consegna');
+  if(delivServiceItem && el('deliveryFeeSelect')){
+    let feeVal = String(Number(delivServiceItem.unit_price || 0));
+    if([...el('deliveryFeeSelect').options].some(opt => opt.value === feeVal)){
+      el('deliveryFeeSelect').value = feeVal;
+    }
+  }
+
+  let foodItems = items.filter(i => i.product_name !== 'Supplemento Consegna');
+  let activeMenu = getActiveMenu();
+
+  foodItems.forEach((i, idx) => {
+    let parsed = splitProductAndMods(i.product_name);
+    let baseLow = parsed.baseName.toLowerCase();
+    let matchedProd = activeMenu.find(p => p.name.toLowerCase() === baseLow);
+
+    let removedArr = [];
+    let addedArr = [];
+    parsed.mods.forEach(m => {
+      if(/^senza\s+/i.test(m)) removedArr.push(m.replace(/^senza\s+/i,'').trim());
+      else if(/^\+\s*/.test(m)) addedArr.push(m.replace(/^\+\s*/,'').trim());
+      else addedArr.push(m.trim());
+    });
+
+    let size = i.size || 'Normale';
+    let qty = Number(i.quantity || 1);
+    let unitPrice = Number(i.unit_price || 0);
+
+    if(matchedProd){
+      let basePrice = (size === 'Maxi' && matchedProd.price_maxi != null && Number(matchedProd.price_maxi)>0)
+        ? Number(matchedProd.price_maxi)
+        : Number(matchedProd.price_normal || unitPrice);
+      let extraPrice = Math.max(0, unitPrice - basePrice);
+      let modSig = [...removedArr, ...addedArr, extraPrice > 0 ? `ext${extraPrice}` : ''].filter(Boolean).join('_') || 'base';
+      let key = `${matchedProd.id}-${size}-${modSig}`;
+      let existing = cart.get(key);
+      if(existing){
+        existing.qty += qty;
+      }else{
+        cart.set(key, {
+          menu_id: matchedProd.id,
+          name: matchedProd.name,
+          category: matchedProd.category || '',
+          baseDesc: matchedProd.description || '',
+          size,
+          basePrice,
+          extraPrice,
+          price: unitPrice || basePrice,
+          qty,
+          removedIngs: removedArr,
+          addedIngs: addedArr,
+          itemNote: ''
+        });
+      }
+    }else{
+      let key = `edit-${idx}-${Date.now()}`;
+      cart.set(key, {
+        menu_id: null,
+        name: parsed.baseName,
+        category: 'Menu',
+        baseDesc: '',
+        size,
+        basePrice: unitPrice,
+        extraPrice: 0,
+        price: unitPrice,
+        qty,
+        removedIngs: removedArr,
+        addedIngs: addedArr,
+        itemNote: ''
+      });
+    }
+  });
+
+  renderCart();
+  switchTab('new');
+  window.scrollTo({top: 0, behavior: 'smooth'});
+  setMsg('orderMsg', `✏️ Stai modificando l'Ordine #${o.id}. Aggiungi o cambia i prodotti e premi "💾 Aggiorna Ordine #${o.id}".`, '');
+}
+
+function cancelEditOrderMode(){
+  editingOrderId = null;
+  el('editingOrderBanner').classList.add('hidden');
+  el('cancelEditBtn').classList.add('hidden');
+  el('saveOrder').textContent = '💾 Salva ordine';
+  el('saveOrder').className = '';
+  el('tabBtnNew').innerHTML = '＋ Nuovo ordine';
+  cart.clear();
+  el('cashGivenInput').value = '';
+  ['customer','phone','address','notes','voiceSmartInput'].forEach(id=>{if(el(id))el(id).value='';});
+  el('deliveryHour').value = 'Prima possibile';
+  onTimeHourChange();
+  el('customerLastOrderBanner').classList.add('hidden');
+  renderCart();
+  setMsg('orderMsg', 'Modifica annullata. Pronto per un nuovo ordine.', '');
+}
+
+/* ================= COSTRUTTORE PRODOTTI E INGREDIENTI ESCLUSIVO A MENU A TENDINA ================= */
+function getAllKnownIngredients(){
+  let set = new Set(COMMON_INGREDIENTS);
+  allMenu.forEach(p => {
+    parseIngredients(p.description).forEach(ing => set.add(ing));
+  });
+  return [...set];
+}
+
+function populateProductDropdown(){
+  let activeMenu = getActiveMenu();
+  let q = (el('ddQuickFilterInput')?.value || '').toLowerCase().trim();
+  let filtered = activeMenu.filter(x => {
+    if(category !== 'Tutti' && x.category !== category) return false;
+    if(!q) return true;
+    return (`${x.name} ${x.description||''} ${x.category||''}`).toLowerCase().includes(q);
+  });
+
+  let prodSel = el('productDropdownSelect');
+  if(!prodSel) return;
+
+  if(!filtered.length){
+    prodSel.innerHTML = `<option value="">Nessun prodotto trovato</option>`;
+    onProductDropdownChange();
+    return;
+  }
+
+  prodSel.innerHTML = filtered.map(p => {
+    let pNorm = p.price_normal != null ? euro(p.price_normal) : '';
+    let pMaxi = (p.price_maxi != null && Number(p.price_maxi) > 0) ? ` · Maxi ${euro(p.price_maxi)}` : '';
+    let catPrefix = category === 'Tutti' ? `[${p.category||'Menu'}] ` : '';
+    return `<option value="${p.id}">${esc(catPrefix + p.name)} — ${pNorm}${pMaxi}</option>`;
+  }).join('');
+
+  onProductDropdownChange();
+}
+
+function getSelectedDropdownProduct(){
+  let idVal = el('productDropdownSelect')?.value;
+  if(!idVal) return null;
+  return getActiveMenu().find(p => String(p.id) === String(idVal)) || null;
+}
+
+function onProductDropdownChange(){
+  ddRemovedIngs.clear();
+  ddAddedIngs.clear();
+  if(el('ddQtySelect')) el('ddQtySelect').value = '1';
+  if(el('ddExtraPriceSelect')) el('ddExtraPriceSelect').value = '0';
+
+  let p = getSelectedDropdownProduct();
+  let sizeSel = el('ddSizeSelect');
+  let remSel = el('ddRemoveIngSelect');
+  let addSel = el('ddAddIngSelect');
+  let baseText = el('ddBaseIngText');
+
+  if(!p){
+    if(sizeSel) sizeSel.innerHTML = `<option value="Normale">Normale</option>`;
+    if(remSel) remSel.innerHTML = `<option value="">🚫 Nessun ingrediente</option>`;
+    if(addSel) addSel.innerHTML = `<option value="">➕ Scegli extra...</option>`;
+    if(baseText) baseText.textContent = 'Seleziona un prodotto dal menu a tendina...';
+    renderDropdownBuilderMods();
+    updateDropdownBuilderPrice();
+    return;
+  }
+
+  let baseIngs = parseIngredients(p.description);
+  if(baseText){
+    baseText.textContent = baseIngs.length ? baseIngs.join(', ') : 'Nessun ingrediente base registrato';
+  }
+
+  let sizeHtml = '';
+  if(p.price_normal != null){
+    sizeHtml += `<option value="Normale">Normale (${euro(p.price_normal)})</option>`;
+  }
+  if(p.price_maxi != null && Number(p.price_maxi) > 0){
+    sizeHtml += `<option value="Maxi">Maxi Famiglia (${euro(p.price_maxi)})</option>`;
+  }
+  if(sizeSel) sizeSel.innerHTML = sizeHtml || `<option value="Normale">Normale</option>`;
+
+  let removePool = baseIngs.length ? baseIngs : getAllKnownIngredients();
+  if(remSel){
+    remSel.innerHTML = `<option value="">🚫 Togli ingrediente (Senza)... (${baseIngs.length ? 'del prodotto' : 'lista'})</option>` +
+      removePool.map(ing => `<option value="${esc(ing)}">🚫 Senza ${esc(ing)}</option>`).join('');
+  }
+
+  let allExtras = getAllKnownIngredients();
+  if(addSel){
+    addSel.innerHTML = `<option value="">➕ Aggiungi ingrediente Extra...</option>` +
+      allExtras.map(ing => `<option value="${esc(ing)}">➕ Extra ${esc(ing)}</option>`).join('');
+  }
+
+  renderDropdownBuilderMods();
+  updateDropdownBuilderPrice();
+}
+
+function onSelectRemoveIngDropdown(sel){
+  let val = sel.value.trim();
+  if(!val) return;
+  ddRemovedIngs.add(val);
+  sel.value = '';
+  renderDropdownBuilderMods();
+}
+
+function onSelectAddIngDropdown(sel){
+  let val = sel.value.trim();
+  if(!val) return;
+  ddAddedIngs.add(val);
+  sel.value = '';
+  renderDropdownBuilderMods();
+}
+
+function resetDropdownBuilderMods(){
+  ddRemovedIngs.clear();
+  ddAddedIngs.clear();
+  if(el('ddExtraPriceSelect')) el('ddExtraPriceSelect').value = '0';
+  renderDropdownBuilderMods();
+  updateDropdownBuilderPrice();
+}
+
+function renderDropdownBuilderMods(){
+  let box = el('ddSelectedModsBox');
+  if(!box) return;
+  if(!ddRemovedIngs.size && !ddAddedIngs.size){
+    box.innerHTML = `<span class="muted" style="font-size:12.5px">Nessuna modifica ingrediente (prodotto standard).</span>`;
+    return;
+  }
+  let html = '';
+  ddRemovedIngs.forEach(r => {
+    html += `<span class="ing-chip senza">🚫 Senza ${esc(r)} <button type="button" data-dd-rem="${esc(r)}">×</button></span>`;
+  });
+  ddAddedIngs.forEach(a => {
+    html += `<span class="ing-chip extra">➕ Extra ${esc(a)} <button type="button" data-dd-add="${esc(a)}">×</button></span>`;
+  });
+  box.innerHTML = html;
+
+  box.querySelectorAll('[data-dd-rem]').forEach(btn => {
+    btn.onclick = () => {
+      ddRemovedIngs.delete(btn.getAttribute('data-dd-rem'));
+      renderDropdownBuilderMods();
+    };
+  });
+  box.querySelectorAll('[data-dd-add]').forEach(btn => {
+    btn.onclick = () => {
+      ddAddedIngs.delete(btn.getAttribute('data-dd-add'));
+      renderDropdownBuilderMods();
+    };
+  });
+}
+
+function updateDropdownBuilderPrice(){
+  let p = getSelectedDropdownProduct();
+  let badge = el('ddPricePreviewBadge');
+  if(!badge) return;
+  if(!p){
+    badge.textContent = '€ 0,00';
+    return;
+  }
+  let size = el('ddSizeSelect')?.value || 'Normale';
+  let qty = Number(el('ddQtySelect')?.value || 1);
+  let extraP = Number(el('ddExtraPriceSelect')?.value || 0);
+  let baseP = (size === 'Maxi' && p.price_maxi != null && Number(p.price_maxi) > 0)
+    ? Number(p.price_maxi)
+    : Number(p.price_normal || 0);
+  let unit = baseP + extraP;
+  badge.textContent = `${qty} × ${euro(unit)} = ${euro(unit * qty)}`;
+}
+
+function addFromDropdownBuilderToCart(){
+  let p = getSelectedDropdownProduct();
+  if(!p){
+    alert('Seleziona un prodotto dal menu a tendina!');
+    return;
+  }
+  let size = el('ddSizeSelect')?.value || 'Normale';
+  let qty = Number(el('ddQtySelect')?.value || 1);
+  let extraPrice = Number(el('ddExtraPriceSelect')?.value || 0);
+  let basePrice = (size === 'Maxi' && p.price_maxi != null && Number(p.price_maxi) > 0)
+    ? Number(p.price_maxi)
+    : Number(p.price_normal || 0);
+  let finalUnitPrice = basePrice + extraPrice;
+
+  let remArr = [...ddRemovedIngs];
+  let addArr = [...ddAddedIngs];
+  let modSig = [...remArr, ...addArr, extraPrice > 0 ? `ext${extraPrice}` : ''].filter(Boolean).join('_') || 'base';
+  let key = `${p.id}-${size}-${modSig}`;
+
+  let existing = cart.get(key);
+  if(existing){
+    existing.qty += qty;
+  }else{
+    cart.set(key, {
+      menu_id: p.id,
+      name: p.name,
+      category: p.category || '',
+      baseDesc: p.description || '',
+      size,
+      basePrice,
+      extraPrice,
+      price: finalUnitPrice,
+      qty,
+      removedIngs: remArr,
+      addedIngs: addArr,
+      itemNote: ''
+    });
+  }
+
+  resetDropdownBuilderMods();
+  el('ddQtySelect').value = '1';
+  updateDropdownBuilderPrice();
+  renderCart();
+}
+
+/* ================= ESTRAZIONE ORDINI DA IMMAGINE / FOTO (OCR + AI VISION) & TESTO ================= */
+document.addEventListener('paste', async (e) => {
+  if(el('loginScreen') && !el('loginScreen').classList.contains('hidden')) return;
+  const items = e.clipboardData?.items;
+  if(!items) return;
+  for(let item of items){
+    if(item.type && item.type.startsWith('image/')){
+      e.preventDefault();
+      let blob = item.getAsFile();
+      if(blob) await processUploadedOrderImage(blob);
+      return;
+    }
+  }
+});
+
+async function handleImageOrderUpload(input){
+  let file = input.files && input.files[0];
+  if(!file) return;
+  await processUploadedOrderImage(file);
+  input.value = '';
+}
+
+function compressImageToBase64(file, maxWidth=1400){
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const img = new Image();
+      img.onload = () => {
+        let w = img.width, h = img.height;
+        if(w > maxWidth){
+          h = Math.round(h * (maxWidth / w));
+          w = maxWidth;
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, w, h);
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+        resolve({
+          dataUrl,
+          base64: dataUrl.split(',')[1],
+          mimeType: 'image/jpeg'
+        });
+      };
+      img.onerror = reject;
+      img.src = ev.target.result;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+async function processUploadedOrderImage(file){
+  let apiKey = (el('geminiApiKey')?.value || localStorage.getItem('bp_gemini_key') || '').trim();
+  let compressed = await compressImageToBase64(file);
+
+  el('orderImgThumb').src = compressed.dataUrl;
+  el('imagePreviewBar').classList.remove('hidden');
+
+  if(!apiKey){
+    el('aiKeyBox').classList.remove('hidden');
+    el('geminiApiKey').focus();
+    el('orderImgStatus').textContent = '🔑 Inserisci la tua Gemini API Key qui sopra per leggere la foto!';
+    setVoiceMsg('🔑 Per leggere gli ordini da una <strong>Foto / Immagine</strong>, incolla la tua <strong>Gemini API Key</strong> nella casella ⚙️ AI qui sopra e ricarica la foto!', 'error');
+    return;
+  }
+
+  el('orderImgStatus').textContent = '⏳ Lettura immagine e compilazione campi in corso...';
+  await analyzeMediaOrTextWithGemini({
+    type: 'image',
+    base64: compressed.base64,
+    mimeType: compressed.mimeType
+  }, apiKey);
+}
+
+/* ================= CALCOLO URGENZA & ORDINAMENTO AUTOMATICO PER ORARIO DI CONSEGNA ================= */
+function getOrderUrgencyMeta(o){
+  let parsed = splitTimeAndNotes(o.notes);
+  let tStr = parsed.time || 'Prima possibile';
+  let st = normStatus(o.status);
+  let isDone = ['Completato','Annullato'].includes(st);
+
+  let now = new Date();
+  let nowMins = now.getHours() * 60 + now.getMinutes();
+
+  let m = tStr.match(/^(\d{1,2}):(\d{2})$/);
+  if(!m){
+    let createdDate = o.created_at ? new Date(o.created_at) : now;
+    let waitMins = Math.max(0, Math.round((now - createdDate) / 60000));
+    let isLateAsap = !isDone && st !== 'In consegna' && waitMins >= 25;
+    return {
+      type: 'asap',
+      timeLabel: 'Prima possibile',
+      sortMinutes: nowMins - 5 - Math.min(waitMins, 60),
+      diffMinutes: 0,
+      waitMins,
+      isUrgent: true,
+      isOverdue: isLateAsap,
+      cardClass: isLateAsap ? 'urg-overdue' : 'urg-soon',
+      badgeClass: isLateAsap ? 'urg-badge-overdue' : 'urg-badge-asap',
+      badgeText: isLateAsap ? `🚨 SUBITO (attesa ${waitMins} min)` : `⚡ SUBITO (${waitMins} min fa)`
+    };
+  }
+
+  let targetMins = Number(m[1]) * 60 + Number(m[2]);
+  let diff = targetMins - nowMins;
+
+  if(isDone){
+    return {
+      type: 'done',
+      timeLabel: tStr,
+      sortMinutes: targetMins,
+      diffMinutes: diff,
+      isUrgent: false,
+      isOverdue: false,
+      cardClass: '',
+      badgeClass: 'time-badge',
+      badgeText: `⏰ ${tStr}`
+    };
+  }
+
+  if(diff < 0){
+    let lateMins = Math.abs(diff);
+    return {
+      type: 'overdue',
+      timeLabel: tStr,
+      sortMinutes: targetMins - 1000,
+      diffMinutes: diff,
+      isUrgent: true,
+      isOverdue: true,
+      cardClass: 'urg-overdue',
+      badgeClass: 'urg-badge-overdue',
+      badgeText: `🚨 ${tStr} · IN RITARDO DI ${lateMins} MIN`
+    };
+  }
+
+  if(diff <= 25){
+    return {
+      type: 'soon',
+      timeLabel: tStr,
+      sortMinutes: targetMins,
+      diffMinutes: diff,
+      isUrgent: true,
+      isOverdue: false,
+      cardClass: 'urg-soon',
+      badgeClass: 'urg-badge-soon',
+      badgeText: diff === 0 ? `🔥 ${tStr} · ADESSO!` : `🔥 ${tStr} · tra ${diff} min`
+    };
+  }
+
+  return {
+    type: 'scheduled',
+    timeLabel: tStr,
+    sortMinutes: targetMins,
+    diffMinutes: diff,
+    isUrgent: false,
+    isOverdue: false,
+    cardClass: '',
+    badgeClass: 'urg-badge-scheduled',
+    badgeText: `⏰ ${tStr} (tra ${diff} min)`
+  };
+}
+
+function sortOpenOrdersList(list){
+  let copy = [...list];
+  if(openOrdersSortMode === 'created'){
+    return copy.sort((a,b) => new Date(b.created_at) - new Date(a.created_at));
+  }
+  return copy.sort((a,b) => {
+    let ua = getOrderUrgencyMeta(a);
+    let ub = getOrderUrgencyMeta(b);
+    if(ua.sortMinutes !== ub.sortMinutes) return ua.sortMinutes - ub.sortMinutes;
+    return new Date(a.created_at) - new Date(b.created_at);
+  });
+}
+
+function setOpenOrdersSort(mode){
+  openOrdersSortMode = mode;
+  el('sortTimeBtn').classList.toggle('active', mode === 'time');
+  el('sortCreatedBtn').classList.toggle('active', mode === 'created');
+  renderOrders();
+}
+
+function checkUrgentOrdersAlert(openList){
+  let banner = el('urgencyRadarBanner');
+  if(!banner) return;
+
+  let overdueList = [];
+  let soonList = [];
+
+  openList.forEach(o => {
+    let st = normStatus(o.status);
+    if(st === 'In consegna') return;
+    let u = getOrderUrgencyMeta(o);
+    if(u.isOverdue) overdueList.push({order: o, meta: u});
+    else if(u.type === 'soon' && u.diffMinutes <= 20) soonList.push({order: o, meta: u});
+  });
+
+  if(!overdueList.length && !soonList.length){
+    banner.classList.add('hidden');
+    return;
+  }
+
+  banner.classList.remove('hidden');
+  banner.classList.toggle('critical', overdueList.length > 0);
+
+  let parts = [];
+  if(overdueList.length){
+    parts.push(`🚨 ${overdueList.length} in ritardo (${overdueList.map(x=>`#${x.order.id} ore ${x.meta.timeLabel}`).join(', ')})`);
+  }
+  if(soonList.length){
+    parts.push(`🔥 ${soonList.length} in consegna entro 20 min (${soonList.map(x=>`#${x.order.id} ore ${x.meta.timeLabel}`).join(', ')})`);
+  }
+
+  el('urgencyBannerTitle').textContent = overdueList.length
+    ? `🚨 ATTENZIONE: ${overdueList.length} ordini hanno superato l'orario richiesto!`
+    : `🔥 Hai ${soonList.length} ordini in scadenza nei prossimi 20 minuti!`;
+  el('urgencyBannerSub').textContent = parts.join('  ·  ');
+
+  let newlyCritical = [...overdueList, ...soonList.filter(x=>x.meta.diffMinutes <= 15)]
+    .filter(x => !alertedUrgentOrderIds.has(x.order.id));
+
+  if(newlyCritical.length){
+    newlyCritical.forEach(x => alertedUrgentOrderIds.add(x.order.id));
+    playOrderChime(false);
+    let first = newlyCritical[0];
+    el('toastTitle').textContent = `⏰ Ordine #${first.order.id} in scadenza (${first.meta.timeLabel})!`;
+    el('toastSub').textContent = `${first.order.customer_name||'Cliente'} · ${first.meta.badgeText}`;
+    el('liveOrderToast').classList.remove('hidden');
+    setTimeout(()=>{el('liveOrderToast').classList.add('hidden');}, 8000);
+  }
+}
+
+/* ================= RUBRICA AUTOMATICA CLIENTI, TELEFONI, VIE & ULTIMO ORDINE ================= */
+function loadSavedCustomerDirectory(){
+  try{
+    let raw = localStorage.getItem('bp_crm_customers_v7');
+    if(raw){
+      let arr = JSON.parse(raw);
+      if(Array.isArray(arr)) customerDirectory = arr;
+    }
+    let rawStreets = localStorage.getItem('bp_crm_streets_v7');
+    if(rawStreets){
+      let sArr = JSON.parse(rawStreets);
+      if(Array.isArray(sArr)) sArr.forEach(s => knownStreets.add(s));
+    }
+  }catch(e){}
+  updateCrmCountBadge();
+}
+
+function saveCustomerDirectoryToStorage(){
+  try{
+    localStorage.setItem('bp_crm_customers_v7', JSON.stringify(customerDirectory.slice(0, 600)));
+    localStorage.setItem('bp_crm_streets_v7', JSON.stringify([...knownStreets].slice(0, 400)));
+  }catch(e){}
+  updateCrmCountBadge();
+}
+
+function updateCrmCountBadge(){
+  let b = el('crmCountBadge');
+  if(b) b.textContent = customerDirectory.length;
+}
+
+function normalizePhoneKey(p){
+  return String(p||'').replace(/\D+/g,'').replace(/^39(\d{9,10})$/,'$1');
+}
+
+function extractStreetBaseName(addr){
+  let s = String(addr||'').trim();
+  let m = s.match(/^((?:via|viale|piazza|corso|vicolo|cascina|frazione|strada)\s+[a-zA-ZàèéìòùÀÈÉÌÒÙ'\s]+?)(?:\s+\d+|\s*,|$)/i);
+  return m ? m[1].trim() : '';
+}
+
+function upsertCustomerProfile(name, phone, address, incrementCount=false, lastOrderId=null){
+  let cName = String(name||'').trim();
+  let cPhone = String(phone||'').trim();
+  let cAddr = String(address||'').trim();
+
+  if(!cName && !cPhone && !cAddr) return;
+  if(cName.toLowerCase() === 'cliente' || cName.toLowerCase() === 'cliente al banco') cName = '';
+
+  if(cAddr.length > 4){
+    knownStreets.add(cAddr);
+    let baseSt = extractStreetBaseName(cAddr);
+    if(baseSt.length > 5) knownStreets.add(baseSt + ', Lodi Vecchio');
+  }
+
+  let phoneKey = normalizePhoneKey(cPhone);
+  let nameKey = cName.toLowerCase();
+  let addrKey = cAddr.toLowerCase();
+
+  let existing = customerDirectory.find(c => {
+    if(phoneKey && phoneKey.length >= 6 && normalizePhoneKey(c.phone) === phoneKey) return true;
+    if(nameKey && addrKey && c.name.toLowerCase() === nameKey && c.address.toLowerCase() === addrKey) return true;
+    if(nameKey && nameKey.length >= 3 && c.name.toLowerCase() === nameKey && (!phoneKey || !c.phone)) return true;
+    if(addrKey && addrKey.length >= 6 && c.address.toLowerCase() === addrKey && (!nameKey || !c.name)) return true;
+    return false;
+  });
+
+  if(existing){
+    if(cName && (!existing.name || cName.length >= existing.name.length)) existing.name = cName;
+    if(cPhone && (!existing.phone || cPhone.length >= existing.phone.length)) existing.phone = cPhone;
+    if(cAddr && (!existing.address || cAddr.length >= existing.address.length)) existing.address = cAddr;
+    if(incrementCount) existing.ordersCount = (existing.ordersCount || 1) + 1;
+    if(lastOrderId) existing.lastOrderId = lastOrderId;
+    existing.lastSeen = Date.now();
+  }else{
+    customerDirectory.unshift({
+      name: cName,
+      phone: cPhone,
+      address: cAddr,
+      ordersCount: 1,
+      lastOrderId: lastOrderId,
+      lastSeen: Date.now()
+    });
+  }
+}
+
+function rebuildCustomerDirectoryFromOrders(ordersList){
+  let chronological = [...(ordersList||[])].reverse();
+  chronological.forEach(o => {
+    upsertCustomerProfile(o.customer_name, o.phone, o.address, true, o.id);
+  });
+  customerDirectory.sort((a,b) => (b.lastSeen||0) - (a.lastSeen||0));
+  saveCustomerDirectoryToStorage();
+}
+
+/* ================= TROVA E RIPETI ULTIMO ORDINE DEL CLIENTE ================= */
+function findLastOrderForCustomer(name, phone, address){
+  let pKey = normalizePhoneKey(phone);
+  let nKey = String(name||'').trim().toLowerCase();
+  let aKey = String(address||'').trim().toLowerCase();
+
+  for(let o of orders){
+    if(normStatus(o.status) === 'Annullato') continue;
+    if(editingOrderId && o.id === editingOrderId) continue;
+    let items = (itemsByOrder.get(o.id) || []).filter(i => i.product_name !== 'Supplemento Consegna');
+    if(!items.length) continue;
+
+    let oPhone = normalizePhoneKey(o.phone);
+    let oName = String(o.customer_name||'').trim().toLowerCase();
+    let oAddr = String(o.address||'').trim().toLowerCase();
+
+    if(pKey && pKey.length >= 6 && oPhone === pKey) return { order: o, items };
+    if(nKey && nKey.length >= 3 && oName === nKey) return { order: o, items };
+    if(aKey && aKey.length >= 6 && oAddr === aKey) return { order: o, items };
+  }
+  return null;
+}
+
+function checkAndShowLastOrderBanner(){
+  if(editingOrderId){
+    el('customerLastOrderBanner')?.classList.add('hidden');
+    return;
+  }
+  let name = el('customer').value;
+  let phone = el('phone').value;
+  let addr = el('address').value;
+  let banner = el('customerLastOrderBanner');
+  if(!banner) return;
+
+  let found = findLastOrderForCustomer(name, phone, addr);
+  if(!found){
+    banner.classList.add('hidden');
+    return;
+  }
+
+  let { order, items } = found;
+  let dateStr = new Date(order.created_at).toLocaleDateString('it-IT',{day:'2-digit',month:'2-digit'});
+  el('lastOrderDateLbl').textContent = `#${order.id} del ${dateStr}`;
+  el('lastOrderItemsPreview').innerHTML = items.map(i => `🍕 <strong>${i.quantity}× ${esc(i.product_name)}</strong> <span class="muted">(${esc(i.size||'Normale')})</span>`).join(' &nbsp;·&nbsp; ');
+  el('repeatLastOrderBtn').onclick = () => repeatOrderIntoCart(order, items, false);
+  banner.classList.remove('hidden');
+}
+
+function repeatOrderIntoCart(order, items, alsoFillCustomer=false){
+  if(alsoFillCustomer){
+    cancelEditOrderMode();
+    if(order){
+      if(order.customer_name) el('customer').value = order.customer_name;
+      if(order.phone) el('phone').value = order.phone;
+      if(order.order_type && ['Consegna','Asporto'].includes(order.order_type)){
+        el('type').value = order.order_type;
+        toggleAddress();
+      }
+      if(order.address){
+        el('type').value = 'Consegna';
+        toggleAddress();
+        el('address').value = order.address;
+      }
+      if(order.payment_method && ['Contanti','Carta','Altro'].includes(order.payment_method)){
+        el('payment').value = order.payment_method;
+        onPaymentMethodChange();
+      }
+    }
+  }
+
+  let foodItems = (items || []).filter(i => i.product_name !== 'Supplemento Consegna');
+  if(!foodItems.length){
+    alert('Nessun articolo trovato in questo ordine.');
+    return;
+  }
+
+  let activeMenu = getActiveMenu();
+  foodItems.forEach(i => {
+    let parsed = splitProductAndMods(i.product_name);
+    let baseLow = parsed.baseName.toLowerCase();
+    let matchedProd = activeMenu.find(p => p.name.toLowerCase() === baseLow);
+
+    let removedArr = [];
+    let addedArr = [];
+    parsed.mods.forEach(m => {
+      if(/^senza\s+/i.test(m)) removedArr.push(m.replace(/^senza\s+/i,'').trim());
+      else if(/^\+\s*/.test(m)) addedArr.push(m.replace(/^\+\s*/,'').trim());
+      else addedArr.push(m.trim());
+    });
+
+    let size = i.size || 'Normale';
+    let qty = Number(i.quantity || 1);
+    let unitPrice = Number(i.unit_price || 0);
+
+    if(matchedProd){
+      let basePrice = size === 'Maxi' && matchedProd.price_maxi != null ? Number(matchedProd.price_maxi) : Number(matchedProd.price_normal || unitPrice);
+      let extraPrice = Math.max(0, unitPrice - basePrice);
+      let modSig = [...removedArr, ...addedArr].join('_') || 'base';
+      let key = `${matchedProd.id}-${size}-${modSig}`;
+      let existing = cart.get(key);
+      if(existing){
+        existing.qty += qty;
+      }else{
+        cart.set(key, {
+          menu_id: matchedProd.id,
+          name: matchedProd.name,
+          category: matchedProd.category || '',
+          baseDesc: matchedProd.description || '',
+          size,
+          basePrice,
+          extraPrice,
+          price: unitPrice || basePrice,
+          qty,
+          removedIngs: removedArr,
+          addedIngs: addedArr,
+          itemNote: ''
+        });
+      }
+    }else{
+      let key = `custom-${parsed.baseName}-${size}-${Date.now()}-${Math.random()}`;
+      cart.set(key, {
+        menu_id: null,
+        name: parsed.baseName,
+        category: 'Menu',
+        baseDesc: '',
+        size,
+        basePrice: unitPrice,
+        extraPrice: 0,
+        price: unitPrice,
+        qty,
+        removedIngs: removedArr,
+        addedIngs: addedArr,
+        itemNote: ''
+      });
+    }
+  });
+
+  renderCart();
+  playOrderChime(true);
+  if(alsoFillCustomer){
+    switchTab('new');
+    checkAndShowLastOrderBanner();
+  }
+  setMsg('orderMsg', `🔄 Articoli dell'ordine #${order.id} caricati nel carrello!`, 'success');
+}
+
+function hideAllAutoSuggest(){
+  ['suggestCustomer','suggestPhone','suggestAddress'].forEach(id=>{
+    let box = el(id);
+    if(box) box.classList.add('hidden');
+  });
+}
+
+function applyCustomerSuggestion(profile){
+  if(profile.name) el('customer').value = profile.name;
+  if(profile.phone) el('phone').value = profile.phone;
+  if(profile.address){
+    el('address').value = profile.address;
+    el('type').value = 'Consegna';
+    toggleAddress();
+  }
+  hideAllAutoSuggest();
+  checkAndShowLastOrderBanner();
+}
+
+function applyStreetOnlySuggestion(streetStr){
+  el('address').value = streetStr;
+  el('type').value = 'Consegna';
+  toggleAddress();
+  hideAllAutoSuggest();
+  el('address').focus();
+}
+
+function clearCustomerFields(){
+  el('customer').value = '';
+  el('phone').value = '';
+  el('address').value = '';
+  el('customerLastOrderBanner').classList.add('hidden');
+  hideAllAutoSuggest();
+}
+
+function onCustomerFieldInput(sourceField){
+  hideAllAutoSuggest();
+  checkAndShowLastOrderBanner();
+
+  let qName = el('customer').value.trim().toLowerCase();
+  let qPhone = normalizePhoneKey(el('phone').value);
+  let qAddr = el('address').value.trim().toLowerCase();
+
+  let targetBoxId = sourceField === 'name' ? 'suggestCustomer' : (sourceField === 'phone' ? 'suggestPhone' : 'suggestAddress');
+  let box = el(targetBoxId);
+  if(!box) return;
+
+  let query = sourceField === 'name' ? qName : (sourceField === 'phone' ? qPhone : qAddr);
+  if(!query || query.length < 1){
+    box.classList.add('hidden');
+    return;
+  }
+
+  let matchedProfiles = customerDirectory.filter(c => {
+    let nMatch = c.name && c.name.toLowerCase().includes(query);
+    let pMatch = c.phone && (normalizePhoneKey(c.phone).includes(query) || c.phone.toLowerCase().includes(query));
+    let aMatch = c.address && c.address.toLowerCase().includes(query);
+    if(sourceField === 'phone') return pMatch || nMatch;
+    if(sourceField === 'address') return aMatch || nMatch || pMatch;
+    return nMatch || aMatch || pMatch;
+  }).slice(0, 7);
+
+  let streetSuggestions = [];
+  if(sourceField === 'address'){
+    streetSuggestions = [...knownStreets]
+      .filter(st => st.toLowerCase().includes(query) && !matchedProfiles.some(p => (p.address||'').toLowerCase() === st.toLowerCase()))
+      .slice(0, 5);
+  }
+
+  if(!matchedProfiles.length && !streetSuggestions.length){
+    box.classList.add('hidden');
+    return;
+  }
+
+  let html = '';
+  matchedProfiles.forEach((p, idx) => {
+    let lastOrd = findLastOrderForCustomer(p.name, p.phone, p.address);
+    let lastItemsStr = lastOrd
+      ? lastOrd.items.slice(0,3).map(i => `${i.quantity}× ${splitProductAndMods(i.product_name).baseName}`).join(', ')
+      : '';
+    html += `
+      <div class="auto-item" data-profile-idx="${idx}">
+        <div class="auto-item-top">
+          <span>👤 ${esc(p.name || 'Cliente salvato')} ${p.phone ? `<span class="muted">· 📞 ${esc(p.phone)}</span>` : ''}</span>
+          <span class="auto-tag">✓ Compila Tutto</span>
+        </div>
+        <div class="auto-item-sub">
+          ${p.address ? `<span>📍 <strong>${esc(p.address)}</strong></span>` : '<span class="muted">Nessun indirizzo</span>'}
+          ${lastItemsStr ? `<span style="color:#5925dc">· 🍕 Ultimo: ${esc(lastItemsStr)}</span>` : ''}
+        </div>
+      </div>
+    `;
+  });
+
+  streetSuggestions.forEach((st, idx) => {
+    html += `
+      <div class="auto-item" data-street-idx="${idx}">
+        <div class="auto-item-top">
+          <span>🛣️ ${esc(st)}</span>
+          <span class="auto-tag street">📍 Usa Via</span>
+        </div>
+        <div class="auto-item-sub">
+          <span class="muted">Tocca per inserire la via e aggiungere il numero civico</span>
+        </div>
+      </div>
+    `;
+  });
+
+  box.innerHTML = html;
+  box.classList.remove('hidden');
+
+  box.querySelectorAll('[data-profile-idx]').forEach(itemEl => {
+    itemEl.onmousedown = (e) => {
+      e.preventDefault();
+      let p = matchedProfiles[Number(itemEl.getAttribute('data-profile-idx'))];
+      if(p) applyCustomerSuggestion(p);
+    };
+  });
+
+  box.querySelectorAll('[data-street-idx]').forEach(itemEl => {
+    itemEl.onmousedown = (e) => {
+      e.preventDefault();
+      let st = streetSuggestions[Number(itemEl.getAttribute('data-street-idx'))];
+      if(st) applyStreetOnlySuggestion(st);
+    };
+  });
+}
+
+document.addEventListener('click', (e) => {
+  if(!e.target.closest('.field')) hideAllAutoSuggest();
+});
+
+function enrichFieldsFromCustomerDirectory(){
+  let curName = el('customer').value.trim();
+  let curPhone = normalizePhoneKey(el('phone').value);
+  let curAddr = el('address').value.trim();
+
+  if(curPhone.length >= 6){
+    let foundByPhone = customerDirectory.find(c => normalizePhoneKey(c.phone) === curPhone);
+    if(foundByPhone){
+      if(!curName && foundByPhone.name) el('customer').value = foundByPhone.name;
+      if(!curAddr && foundByPhone.address){
+        el('address').value = foundByPhone.address;
+        el('type').value = 'Consegna';
+        toggleAddress();
+      }
+      checkAndShowLastOrderBanner();
+      return;
+    }
+  }
+
+  if(curAddr.length >= 5){
+    let foundByAddr = customerDirectory.find(c => c.address && c.address.toLowerCase() === curAddr.toLowerCase());
+    if(foundByAddr){
+      if(!curName && foundByAddr.name) el('customer').value = foundByAddr.name;
+      if(!curPhone && foundByAddr.phone) el('phone').value = foundByAddr.phone;
+      checkAndShowLastOrderBanner();
+      return;
+    }
+  }
+
+  if(curName.length >= 3){
+    let foundByName = customerDirectory.find(c => c.name && c.name.toLowerCase() === curName.toLowerCase());
+    if(foundByName){
+      if(!curPhone && foundByName.phone) el('phone').value = foundByName.phone;
+      if(!curAddr && foundByName.address){
+        el('address').value = foundByName.address;
+        el('type').value = 'Consegna';
+        toggleAddress();
+      }
+      checkAndShowLastOrderBanner();
+    }
+  }
+}
+
+/* ================= SELETTORE ORARIO SU 2 COLONNE (11:00 AM -> 11:00 PM) ================= */
+function populateDeliveryTimeSlots(){
+  const hSel = el('deliveryHour');
+  if(!hSel) return;
+  let html = `<option value="Prima possibile">⚡ Prima possibile (Subito)</option>`;
+  for(let h = 11; h <= 23; h++){
+    let hPad = String(h).padStart(2,'0');
+    let ampm = h < 12 ? `${h}:00 AM` : (h === 12 ? `12:00 PM` : `${h-12}:00 PM`);
+    html += `<option value="${hPad}">🕒 Ore ${hPad}:00 (${ampm})</option>`;
+  }
+  hSel.innerHTML = html;
+  onTimeHourChange();
+}
+
+function onTimeHourChange(){
+  let hVal = el('deliveryHour').value;
+  let mSel = el('deliveryMinute');
+  let mWrap = el('deliveryMinuteWrap');
+  if(!mSel || !mWrap) return;
+  if(hVal === 'Prima possibile'){
+    mSel.disabled = true;
+    mWrap.style.opacity = '0.45';
+  }else{
+    mSel.disabled = false;
+    mWrap.style.opacity = '1';
+  }
+}
+
+function getSelectedDeliveryTime(){
+  let hVal = el('deliveryHour')?.value || 'Prima possibile';
+  if(hVal === 'Prima possibile') return 'Prima possibile';
+  let mVal = el('deliveryMinute')?.value || '00';
+  return `${hVal}:${mVal}`;
+}
+
+function setDeliveryTimeDropdown(timeStr){
+  if(!timeStr) return;
+  let hSel = el('deliveryHour');
+  let mSel = el('deliveryMinute');
+  if(!hSel || !mSel) return;
+  let clean = String(timeStr).trim();
+  if(/subito|prima possibile|adesso|ora/i.test(clean)){
+    hSel.value = 'Prima possibile';
+    onTimeHourChange();
+    return;
+  }
+  let m = clean.match(/(\d{1,2})(?:[:.](\d{2}))?/);
+  if(m){
+    let hh = Number(m[1]);
+    let mm = m[2] ? Number(m[2]) : 0;
+    if(hh >= 1 && hh <= 10) hh += 12;
+    if(hh < 11) hh = 11;
+    if(hh > 23) hh = 23;
+
+    let quarters = [0, 15, 30, 45];
+    let bestQ = quarters.reduce((prev, curr) => Math.abs(curr - mm) < Math.abs(prev - mm) ? curr : prev);
+    hSel.value = String(hh).padStart(2,'0');
+    onTimeHourChange();
+    mSel.value = String(bestQ).padStart(2,'0');
+  }
+}
+
+function parseSpokenTimeSlot(text){
+  let s = String(text||'').toLowerCase();
+  if(/\b(subito|prima possibile|il prima possibile|adesso|اسرع وقت|حالا)\b/i.test(s)){
+    return 'Prima possibile';
+  }
+  const wordHours = {
+    'undici':11,'dodici':12,'una':13,'due':14,'tre':15,'quattro':16,'cinque':17,'sei':18,'sette':19,'otto':20,'nove':21,'dieci':22,
+    'tredici':13,'quattordici':14,'quindici':15,'sedici':16,'diciassette':17,'diciotto':18,'diciannove':19,'venti':20,'ventuno':21,'ventidue':22,'ventitre':23,
+    'حداشر':11,'اتناشر':12,'واحده':13,'واحدة':13,'سبعه':19,'سبعة':19,'ثمانيه':20,'ثمانية':20,'تمانيه':20,'تسعه':21,'تسعة':21,'عشره':22,'عشرة':22
+  };
+  for(let [w, hVal] of Object.entries(wordHours)){
+    let rx = new RegExp(`(?:per\\s+le|alle\\s+ore|alle|entro\\s+le|verso\\s+le|orario|الساعة|ساعة)\\s*${w}(?:\\s+(?:e\\s+mezza|e\\s+mezzo|e\\s+un\\s+quarto|e\\s+tre\\s+quarti|meno\\s+un\\s+quarto|in\\s+punto|esatte|esatta|ونص|وربع|الا\\s+ربع|بالضبط|\\d{1,2}))?`, 'i');
+    let m = s.match(rx);
+    if(m){
+      let fullMatch = m[0].toLowerCase();
+      let hh = hVal;
+      let mins = '00';
+      if(fullMatch.includes('meno un quarto') || fullMatch.includes('الا ربع')){
+        hh = Math.max(11, hh - 1);
+        mins = '45';
+      }else if(fullMatch.includes('mezz') || fullMatch.includes('ونص')) mins = '30';
+      else if(fullMatch.includes('tre quarti')) mins = '45';
+      else if(fullMatch.includes('quarto') || fullMatch.includes('وربع')) mins = '15';
+      return `${String(hh).padStart(2,'0')}:${mins}`;
+    }
+  }
+
+  let numRx = /(?:per\s+le|alle\s+ore|alle|entro\s+le|verso\s+le|orario|ore|الساعة|ساعة)\s*(\d{1,2})(?:[:.\s](\d{2}))?(?:\s*(e\s*mezza|e\s*mezzo|e\s*un\s*quarto|e\s*tre\s*quarti|meno\s*un\s*quarto|ونص|وربع|الا\s*ربع|بالضبط))?/i;
+  let nm = s.match(numRx);
+  if(nm){
+    let hh = Number(nm[1]);
+    if(hh >= 1 && hh <= 10) hh += 12;
+    let mm = nm[2] ? nm[2] : '00';
+    let tail = (nm[3]||'').toLowerCase();
+    if(tail.includes('meno un quarto') || tail.includes('الا ربع')){
+      hh = Math.max(11, hh - 1);
+      mm = '45';
+    }else if(tail.includes('mezz') || tail.includes('ونص')) mm = '30';
+    else if(tail.includes('tre quarti')) mm = '45';
+    else if(tail.includes('quarto') || tail.includes('وربع')) mm = '15';
+    if(hh >= 11 && hh <= 23){
+      return `${String(hh).padStart(2,'0')}:${mm}`;
+    }
+  }
+  return null;
+}
+
+function splitTimeAndNotes(rawNotes){
+  let str = String(rawNotes||'').trim();
+  let time = 'Prima possibile';
+  let m = str.match(/^\[⏰\s*([^\]]+)\]\s*(.*)$/);
+  if(m){
+    time = m[1].trim();
+    str = m[2].trim();
+  }
+  let cashInfo = null;
+  let cm = str.match(/\[💶\s*([^\]]+)\]\s*(.*)$/);
+  if(cm){
+    cashInfo = cm[1].trim();
+    str = cm[2].trim();
+  }
+  return { time, cashInfo, cleanNotes: str };
+}
+
+/* ================= CALCOLO AUTOMATICO CONSEGNA E RESTO CLIENTE ================= */
+function getActiveDeliveryFee(){
+  if(el('type')?.value !== 'Consegna') return 0;
+  return Number(el('deliveryFeeSelect')?.value || 0);
+}
+
+function getItemsSubtotal(){
+  return [...cart.values()].reduce((s,x)=>s+x.price*x.qty, 0);
+}
+
+function getGrandTotal(){
+  let itemsSub = getItemsSubtotal();
+  if(itemsSub === 0 && !cart.size) return 0;
+  return itemsSub + getActiveDeliveryFee();
+}
+
+function onDeliveryFeeChange(){
+  localStorage.setItem('bp_deliv_fee', el('deliveryFeeSelect').value);
+  renderCart();
+}
+
+function onPaymentMethodChange(){
+  let isCash = el('payment').value === 'Contanti';
+  el('cashCalcArea').classList.toggle('hidden', !isCash);
+  renderCart();
+}
+
+function setCashGiven(val){
+  el('cashGivenInput').value = val > 0 ? val : '';
+  renderCart();
+}
+
+function updateRestoUI(grandTotal){
+  let banner = el('restoResultBanner');
+  let valIn = Number(el('cashGivenInput')?.value || 0);
+  if(!banner || el('payment')?.value !== 'Contanti' || !valIn || grandTotal <= 0){
+    if(banner) banner.classList.add('hidden');
+    return;
+  }
+  banner.classList.remove('hidden');
+  let diff = valIn - grandTotal;
+  if(diff >= 0){
+    banner.classList.remove('insufficient');
+    el('restoLabel').textContent = `💰 Resto da dare (su ${euro(valIn)}):`;
+    el('restoValue').textContent = euro(diff);
+  }else{
+    banner.classList.add('insufficient');
+    el('restoLabel').textContent = `⚠️ Mancano ancora:`;
+    el('restoValue').textContent = euro(Math.abs(diff));
+  }
+}
+
+/* ================= ESTRATTORE UNIVERSALE DA IMMAGINE, AUDIO & TESTO (AI + LOCAL) v11 ================= */
+function saveGeminiKey(){
+  let k = el('geminiApiKey').value.trim();
+  localStorage.setItem('bp_gemini_key', k);
+  setVoiceMsg('✅ Chiave AI Gemini salvata! Ora puoi estrarre ordini da Foto/Immagini 📷, Vocali WhatsApp e Testi.', 'success');
+}
+
+function getSpeechRecognition(){
+  return window.SpeechRecognition || window.webkitSpeechRecognition || null;
+}
+
+function setVoiceMsg(msg, kind=''){
+  let bar = el('voiceTranscriptBar');
+  if(!bar) return;
+  bar.classList.remove('hidden','success','error');
+  if(kind) bar.classList.add(kind);
+  bar.innerHTML = msg;
+}
+
+async function toggleCallRecorder(){
+  let btn = el('recCallBtn');
+  if(isRecordingCall && mediaRecorder){
+    mediaRecorder.stop();
+    if(voiceRec) try{voiceRec.stop();}catch(e){}
+    return;
+  }
+  try{
+    const stream = await navigator.mediaDevices.getUserMedia({audio: true});
+    recordedChunks = [];
+    mediaRecorder = new MediaRecorder(stream);
+    mediaRecorder.ondataavailable = e => { if(e.data && e.data.size > 0) recordedChunks.push(e.data); };
+    mediaRecorder.onstop = async () => {
+      isRecordingCall = false;
+      btn.classList.remove('recording');
+      btn.textContent = '🔴 Registra';
+      stream.getTracks().forEach(t=>t.stop());
+      const audioBlob = new Blob(recordedChunks, {type: mediaRecorder.mimeType || 'audio/webm'});
+      let apiKey = (el('geminiApiKey')?.value || localStorage.getItem('bp_gemini_key') || '').trim();
+      if(apiKey){
+        let b64 = await blobToBase64(audioBlob);
+        await analyzeMediaOrTextWithGemini({type:'audio', base64: b64, mimeType: audioBlob.type || 'audio/webm'}, apiKey);
+      }else if(el('voiceSmartInput').value.trim()){
+        await runFullOrderExtraction(false);
+      }else{
+        setVoiceMsg('💡 Registrazione completata! Inserisci la Gemini API Key (⚙️ AI) o usa il pulsante 🎙️ Parla Ora.', '');
+        el('aiKeyBox').classList.remove('hidden');
+      }
+    };
+
+    mediaRecorder.start();
+    isRecordingCall = true;
+    btn.classList.add('recording');
+    btn.textContent = '⏹️ Stop & Estrai';
+    setVoiceMsg('🔴 Registrazione audio in corso... Parla pure e premi <strong>Stop & Estrai</strong> quando hai finito.', '');
+
+    const SR = getSpeechRecognition();
+    if(SR){
+      try{
+        voiceRec = new SR();
+        voiceRec.lang = 'it-IT';
+        voiceRec.continuous = true;
+        voiceRec.interimResults = true;
+        voiceRec.onresult = (ev)=>{
+          let txt = '';
+          for(let i=0;i<ev.results.length;i++) txt += ev.results[i][0].transcript + ' ';
+          el('voiceSmartInput').value = txt.trim();
+        };
+        voiceRec.start();
+      }catch(e){}
+    }
+  }catch(err){
+    setVoiceMsg('❌ Impossibile accedere al microfono: ' + esc(err.message), 'error');
+  }
+}
+
+async function handleAudioFileUpload(input){
+  let file = input.files && input.files[0];
+  if(!file) return;
+  let apiKey = (el('geminiApiKey')?.value || localStorage.getItem('bp_gemini_key') || '').trim();
+  if(!apiKey){
+    el('aiKeyBox').classList.remove('hidden');
+    el('geminiApiKey').focus();
+    setVoiceMsg('🔑 Per estrarre l\'ordine da un file audio WhatsApp, incolla la tua <strong>Gemini API Key</strong> nella casella qui sopra!', '');
+    input.value = '';
+    return;
+  }
+  let b64 = await blobToBase64(file);
+  await analyzeMediaOrTextWithGemini({type:'audio', base64: b64, mimeType: file.type || 'audio/mp3'}, apiKey);
+  input.value = '';
+}
+
+function blobToBase64(blob){
+  return new Promise((resolve,reject)=>{
+    const reader = new FileReader();
+    reader.onloadend = () => resolve(String(reader.result).split(',')[1]);
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
+}
+
+async function getAvailableGeminiModels(apiKey){
+  let defaultList = [
+    'gemini-2.5-flash',
+    'gemini-2.5-pro',
+    'gemini-2.0-flash',
+    'gemini-1.5-flash'
+  ];
+  try{
+    let r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${encodeURIComponent(apiKey)}`);
+    let d = await r.json();
+    if(d && Array.isArray(d.models)){
+      let apiModels = d.models
+        .filter(m => Array.isArray(m.supportedGenerationMethods) && m.supportedGenerationMethods.includes('generateContent'))
+        .map(m => String(m.name||'').replace(/^models\//,''))
+        .filter(n => n.startsWith('gemini-') && !n.includes('embedding') && !n.includes('imagen') && !n.includes('veo') && !n.includes('tts'));
+      return [...new Set([...defaultList, ...apiModels])];
+    }
+  }catch(e){}
+  return defaultList;
+}
+
+const waitMs = ms => new Promise(res => setTimeout(res, ms));
+
+async function analyzeMediaOrTextWithGemini(payloadObj, apiKey){
+  try{
+    let modeLabel = payloadObj.type === 'image' ? '📷 Analisi Foto/Immagine AI' : (payloadObj.type === 'audio' ? '🎙️ Analisi Audio AI' : '📝 Analisi Testo AI');
+    setVoiceMsg(`⏳ ${modeLabel} in corso...`, '');
+
+    const menuNames = getActiveMenu().map(p=>`${p.name} [${p.category||'Menu'}] (Normale €${p.price_normal}${p.price_maxi?`, Maxi €${p.price_maxi}`:''})`).join('; ');
+
+    const prompt = `Sei l'assistente cassa ufficiale della Pizzeria "Buona Pizza" a Lodi Vecchio.
+Analizza attentamente questo ordine (può essere una FOTO di un biglietto scritto a mano, uno screenshot WhatsApp, un vocale o un testo in italiano o arabo) ed estrai TUTTI i dati per metterli al posto giusto.
+Menu ufficiale della pizzeria: ${menuNames}.
+REGOLE IMPORTANTI:
+1. Non inserire mai parole di cibo o condimenti nel campo customerName. Se non c'è il nome o cognome del cliente, lascia customerName "".
+2. Se c'è un orario richiesto (es. "20:30", "otto e mezza", "19:45"), convertilo in formato 24h "HH:MM" (con minuti 00, 15, 30 o 45) in deliveryTime. Altrimenti metti "Prima possibile".
+3. Se il cliente indica con quale banconota paga per il resto (es. "resto da 50", "pago con 20€"), metti il numero in cashGiven (es. 50).
+4. Abbina ogni prodotto richiesto (Pizza, Panino, Piadina, Bibita, Fritti) al nome più vicino presente nel Menu ufficiale qui sopra.
+Restituisci ESCLUSIVAMENTE un oggetto JSON valido con questa struttura:
+{
+  "transcript": "testo completo letto dalla foto, dall'audio o dal messaggio",
+  "customerName": "nome del cliente o cognome sul citofono",
+  "phone": "numero di telefono se presente",
+  "orderType": "Consegna oppure Asporto",
+  "deliveryTime": "HH:MM (es. 20:30) oppure Prima possibile",
+  "paymentMethod": "Contanti oppure Carta",
+  "cashGiven": 0,
+  "address": "indirizzo completo di via, numero civico e città se presente",
+  "notes": "altre note come citofono, scala, ben cotta, tagliata",
+  "items": [
+    {
+      "name": "nome esatto del prodotto dal menu",
+      "size": "Normale oppure Maxi",
+      "quantity": 1,
+      "removed": ["ingrediente tolto senza la parola senza"],
+      "added": ["ingrediente extra aggiunto"]
+    }
+  ]
+}`;
+
+    let parts = [{text: prompt}];
+    if(payloadObj.type === 'image' || payloadObj.type === 'audio'){
+      parts.push({inline_data: {mime_type: payloadObj.mimeType, data: payloadObj.base64}});
+    }else if(payloadObj.type === 'text'){
+      parts.push({text: `TESTO DELL'ORDINE DA ANALIZZARE:\n${payloadObj.text}`});
+    }
+
+    let candidateModels = await getAvailableGeminiModels(apiKey);
+    let lastError = null;
+    let parsed = null;
+
+    for(let attempt = 1; attempt <= 2; attempt++){
+      for(let modelName of candidateModels){
+        try{
+          setVoiceMsg(`⏳ ${modeLabel} con <strong>${esc(modelName)}</strong>...`, '');
+          const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${encodeURIComponent(apiKey)}`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+              contents: [{ parts }],
+              generationConfig: {response_mime_type: 'application/json'}
+            })
+          });
+
+          const data = await resp.json();
+          if(data.error){
+            lastError = data.error.message || '';
+            if(/no longer available|not found|not supported/i.test(lastError)){
+              candidateModels = candidateModels.filter(m => m !== modelName);
+            }
+            continue;
+          }
+
+          const rawJson = data.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
+          parsed = JSON.parse(rawJson);
+          if(parsed) break;
+        }catch(netErr){
+          lastError = netErr.message;
+        }
+      }
+      if(parsed) break;
+      await waitMs(1000);
+    }
+
+    if(!parsed){
+      if(payloadObj.type === 'text' && el('voiceSmartInput').value.trim()){
+        extractCustomerAndDeliveryFromText(el('voiceSmartInput').value.trim());
+        processSpokenOrder(el('voiceSmartInput').value.trim(), false);
+        return;
+      }
+      throw new Error(lastError || 'Server AI momentaneamente occupato.');
+    }
+
+    if(payloadObj.type === 'image'){
+      el('orderImgStatus').textContent = '✅ Foto letta con successo! Tutti i dati sono stati inseriti.';
+    }
+    applyExtractedOrderObject(parsed);
+  }catch(e){
+    if(payloadObj.type === 'image'){
+      el('orderImgStatus').textContent = '❌ Errore lettura foto: ' + e.message;
+    }
+    setVoiceMsg('❌ Errore AI: ' + esc(e.message), 'error');
+  }
+}
+
+function applyExtractedOrderObject(parsed){
+  if(!parsed) return;
+  if(parsed.transcript) el('voiceSmartInput').value = parsed.transcript;
+  let infoLog = [];
+
+  if(parsed.customerName){ el('customer').value = parsed.customerName; }
+  if(parsed.phone){ el('phone').value = parsed.phone; }
+  if(parsed.address){
+    el('type').value = 'Consegna';
+    toggleAddress();
+    el('address').value = parsed.address;
+  }
+
+  enrichFieldsFromCustomerDirectory();
+  checkAndShowLastOrderBanner();
+
+  if(el('customer').value) infoLog.push(`👤 <strong>${esc(el('customer').value)}</strong>`);
+  if(el('phone').value) infoLog.push(`📞 ${esc(el('phone').value)}`);
+  if(el('address').value) infoLog.push(`📍 <strong>${esc(el('address').value)}</strong>`);
+
+  if(parsed.orderType && ['Consegna','Asporto'].includes(parsed.orderType)){
+    el('type').value = parsed.orderType;
+    toggleAddress();
+    infoLog.push(`🛵 ${parsed.orderType}`);
+  }
+  if(parsed.deliveryTime){
+    setDeliveryTimeDropdown(parsed.deliveryTime);
+    infoLog.push(`⏰ <strong>${esc(getSelectedDeliveryTime())}</strong>`);
+  }
+  if(parsed.paymentMethod && ['Contanti','Carta','Altro'].includes(parsed.paymentMethod)){
+    el('payment').value = parsed.paymentMethod;
+    onPaymentMethodChange();
+    infoLog.push(`💳 ${parsed.paymentMethod}`);
+  }
+  if(parsed.cashGiven && Number(parsed.cashGiven) > 0){
+    el('payment').value = 'Contanti';
+    onPaymentMethodChange();
+    el('cashGivenInput').value = Number(parsed.cashGiven);
+    infoLog.push(`💶 Paga con: €${Number(parsed.cashGiven)}`);
+  }
+  if(parsed.notes){
+    el('notes').value = parsed.notes;
+    infoLog.push(`📝 ${esc(parsed.notes)}`);
+  }
+
+  let activeMenu = getActiveMenu();
+  let addedItemsLog = [];
+  if(Array.isArray(parsed.items)){
+    parsed.items.forEach(it=>{
+      let targetName = String(it.name||'').toLowerCase().trim();
+      let cleanTarget = targetName.replace(/^(pizza|panino|piadina|menu)\s+/i,'').trim();
+      let prod = activeMenu.find(p => p.name.toLowerCase() === targetName || p.name.toLowerCase().includes(cleanTarget) || cleanTarget.includes(p.name.toLowerCase().replace(/^(pizza|panino|piadina)\s+/i,'')));
+      if(prod){
+        let isMaxi = String(it.size||'').toLowerCase().includes('maxi') && prod.price_maxi != null && Number(prod.price_maxi)>0;
+        let size = isMaxi ? 'Maxi' : 'Normale';
+        let price = isMaxi ? Number(prod.price_maxi) : Number(prod.price_normal||0);
+        let qty = Number(it.quantity||1);
+        let rem = Array.isArray(it.removed) ? it.removed : [];
+        let add = Array.isArray(it.added) ? it.added : [];
+        addVoiceItemToCart(prod, size, price, qty, rem, add);
+        let modStr = [...rem.map(r=>`🚫 Senza ${r}`), ...add.map(a=>`➕ ${a}`)].join(' ');
+        addedItemsLog.push(`<strong>${qty}× ${esc(prod.name)} (${size})</strong> ${modStr}`);
+      }
+    });
+  }
+
+  renderCart();
+  playOrderChime(true);
+  setVoiceMsg(
+    `✅ <strong>Ordine Estratto e Posizionato nei Campi!</strong><br>` +
+    (infoLog.length ? `📋 Dati Cliente: ${infoLog.join(' · ')}<br>` : '') +
+    (addedItemsLog.length ? `🍕 Nel Carrello: ${addedItemsLog.join(', ')}` : ''),
+    'success'
+  );
+}
+
+async function runFullOrderExtraction(useAi=false){
+  let text = el('voiceSmartInput').value.trim();
+  if(!text){
+    el('voiceSmartInput').focus();
+    setVoiceMsg('💡 Incolla un testo, scatta una <strong>📷 Foto</strong> o premi <strong>🎙️ Parla Ora</strong>!', '');
+    return;
+  }
+
+  let apiKey = (el('geminiApiKey')?.value || localStorage.getItem('bp_gemini_key') || '').trim();
+  if(useAi && apiKey){
+    await analyzeMediaOrTextWithGemini({type:'text', text}, apiKey);
+    return;
+  }
+
+  extractCustomerAndDeliveryFromText(text);
+  let foundLocal = processSpokenOrder(text, false);
+  if(!foundLocal && apiKey){
+    await analyzeMediaOrTextWithGemini({type:'text', text}, apiKey);
+  }
+}
+
+function extractCustomerAndDeliveryFromText(raw){
+  let text = String(raw||'');
+  let extractedSummary = [];
+
+  let spokenTime = parseSpokenTimeSlot(text);
+  if(spokenTime){
+    setDeliveryTimeDropdown(spokenTime);
+    extractedSummary.push(`⏰ ${getSelectedDeliveryTime()}`);
+  }
+
+  let phoneMatch = text.match(/(?:\+?39\s*)?(?:3\d{2}[\s.-]*\d{6,7}|0\d{1,3}[\s.-]*\d{5,8})/);
+  if(phoneMatch){
+    let ph = phoneMatch[0].replace(/[\s.-]+/g,'');
+    el('phone').value = ph;
+  }
+
+  if(/\b(asporto|ritiro|passo io|vengo a prendere|استلام)\b/i.test(text)){
+    el('type').value = 'Asporto';
+    toggleAddress();
+  }else if(/\b(consegna|domicilio|portare|mandare|via|viale|piazza|corso|vicolo|cascina|توصيل|شارع)\b/i.test(text)){
+    el('type').value = 'Consegna';
+    toggleAddress();
+  }
+
+  if(/\b(carta|bancomat|pos|elettronico)\b/i.test(text)){
+    el('payment').value = 'Carta';
+    onPaymentMethodChange();
+  }else if(/\b(contanti|cash|resto)\b/i.test(text)){
+    el('payment').value = 'Contanti';
+    onPaymentMethodChange();
+  }
+
+  let restoMatch = text.match(/(?:resto\s+di|resto\s+da|pago\s+con|banconota\s+da|باقي\s+من|يدفع)\s*(\d+)/i);
+  if(restoMatch){
+    let cashVal = Number(restoMatch[1]);
+    if(cashVal > 0){
+      el('payment').value = 'Contanti';
+      onPaymentMethodChange();
+      el('cashGivenInput').value = cashVal;
+      extractedSummary.push(`💶 Paga con €${cashVal}`);
+    }
+  }
+
+  let addrMatch = text.match(/\b((?:via|viale|piazza|corso|vicolo|cascina|frazione|strada)\s+[a-zA-ZàèéìòùÀÈÉÌÒÙ'\s]+?\s*(?:numero\s+|n\.?\s*)?\d+[a-zA-Z]?(?:\s*,?\s*(?:lodi\s*vecchio|lodi|tavazzano|salerano|borgo\s*san\s*giovanni|pieve|cornegliano|casalmaiocco|sordio|senna|zelo|mulazzano))?)/i);
+  if(addrMatch){
+    let cleanAddr = addrMatch[1]
+      .replace(/\b(numero|n\.?)\s+/i, '')
+      .replace(/\b(per le|alle|telefono|tel|consegna|ordino|vorrei|due|una|tre|pagamento)\b.*$/i,'')
+      .trim();
+    if(cleanAddr.length > 4){
+      el('type').value = 'Consegna';
+      toggleAddress();
+      el('address').value = cleanAddr;
+    }
+  }
+
+  let nameMatch = text.match(/\b(?:sono|mi chiamo|a nome|nome|cliente|citofono|campanello|famiglia|باسم|اسمي)\s+([A-ZÀÈÉÌÒÙa-zàèéìòù\u0600-\u06FF]+(?:\s+[A-ZÀÈÉÌÒÙa-zàèéìòù\u0600-\u06FF]+)?)/i);
+  if(nameMatch){
+    let cleanName = nameMatch[1]
+      .replace(/\b(via|viale|piazza|corso|vorrei|volevo|ordino|telefono|tel|per|alle|abito|in|con|senza|più|extra|pizza|pizze|kebab|piadina|panino|margherita|diavola|salame|cipolla|piccante|normale|maxi|una|un|due|tre|quattro)\b.*$/i,'')
+      .trim();
+    if(cleanName && cleanName.length >= 2){
+      el('customer').value = cleanName;
+    }
+  }
+
+  enrichFieldsFromCustomerDirectory();
+  checkAndShowLastOrderBanner();
+
+  let notesArr = [];
+  let citMatch = text.match(/(?:citofono|campanello|scala|interno|piano)\s+([^,.;\n]+)/i);
+  if(citMatch) notesArr.push(`🔔 ${citMatch[0].trim()}`);
+  if(/\b(ben\s+cotta|ben\s+cotte|tagliata|tagliate|non\s+tagliata)\b/i.test(text)){
+    let m = text.match(/\b(ben\s+cott[ae]|tagliat[ae]|non\s+tagliat[ae])\b/i);
+    if(m) notesArr.push(`🔥 ${m[1]}`);
+  }
+  if(notesArr.length){
+    el('notes').value = notesArr.join(' · ');
+  }
+  renderCart();
+  return extractedSummary;
+}
+
+function toggleVoiceOrder(){
+  const SR = getSpeechRecognition();
+  if(!SR){
+    el('voiceSmartInput').focus();
+    setVoiceMsg('💡 Tocca la casella qui sopra e usa il <strong>microfono 🎤 della tastiera del telefono</strong>!', '');
+    return;
+  }
+  if(isListeningOrder && voiceRec){
+    voiceRec.stop();
+    return;
+  }
+  try{
+    voiceRec = new SR();
+    voiceRec.lang = 'it-IT';
+    voiceRec.continuous = true;
+    voiceRec.interimResults = true;
+    voiceRec.maxAlternatives = 1;
+
+    let finalTranscript = el('voiceSmartInput').value ? (el('voiceSmartInput').value + ' ') : '';
+
+    voiceRec.onstart = ()=>{
+      isListeningOrder = true;
+      el('voiceOrderBox').classList.add('listening');
+      el('voiceOrderBtn').classList.add('listening');
+      el('voiceOrderBtn').textContent = '🛑 Stop & Estrai';
+      setVoiceMsg('🎙️ <strong>Ascolto attivo...</strong> Parla liberamente (Nome, Via, Orario, Pizze, Panini, Resto) e premi <strong>Stop & Estrai</strong>!');
+    };
+
+    voiceRec.onresult = (event)=>{
+      let interim = '';
+      for(let i = event.resultIndex; i < event.results.length; i++){
+        let tr = event.results[i][0].transcript;
+        if(event.results[i].isFinal) finalTranscript += tr + ' ';
+        else interim += tr;
+      }
+      el('voiceSmartInput').value = (finalTranscript + interim).trim();
+    };
+
+    voiceRec.onerror = ()=>{
+      isListeningOrder = false;
+      el('voiceOrderBox').classList.remove('listening');
+      el('voiceOrderBtn').classList.remove('listening');
+      el('voiceOrderBtn').textContent = '🎙️ Parla Ora';
+      if(el('voiceSmartInput').value.trim()) runFullOrderExtraction(false);
+    };
+
+    voiceRec.onend = ()=>{
+      isListeningOrder = false;
+      el('voiceOrderBox').classList.remove('listening');
+      el('voiceOrderBtn').classList.remove('listening');
+      el('voiceOrderBtn').textContent = '🎙️ Parla Ora';
+      if(el('voiceSmartInput').value.trim()){
+        runFullOrderExtraction(false);
+      }
+    };
+
+    voiceRec.start();
+  }catch(e){
+    el('voiceSmartInput').focus();
+  }
+}
+
+function parseSpokenQty(text){
+  let s = text.toLowerCase();
+  const map = {
+    'una':1,'un':1,'uno':1,'1':1,'واحد':1,'واحده':1,
+    'due':2,'2':2,'اثنين':2,'اتنين':2,
+    'tre':3,'3':3,'ثلاثه':3,'تلاته':3,
+    'quattro':4,'4':4,'اربعه':4,
+    'cinque':5,'5':5,'خمسه':5,
+    'sei':6,'6':6,
+    'sette':7,'7':7,
+    'otto':8,'8':8,
+    'nove':9,'9':9,
+    'dieci':10,'10':10
+  };
+  let m = s.match(/\b(\d+)\s*x?\b/);
+  if(m && Number(m[1]) >= 1 && Number(m[1]) <= 30) return Number(m[1]);
+  let words = s.split(/\s+/);
+  for(let w of words){
+    if(map[w] != null) return map[w];
+  }
+  return 1;
+}
+
+function extractModsFromSegment(segText){
+  let lower = segText.toLowerCase();
+  let removedSet = new Set(), addedSet = new Set();
+
+  const stopWords = /\b(e|ed|con|senza|più|extra|maxi|normale|una|un|uno|due|tre|quattro|per|alle|via|viale|piazza|telefono|tel|carta|contanti|consegna|asporto|volevo|vorrei|ordine|ordino|favore|grazie|pronto|ciao|sì|si|dimmi|numero|orario|ore|pago|resto)\b.*$/i;
+
+  let senzaRegex = /\b(?:senza|no|بدون|من غير)\s+([a-zàèéìòù\u0600-\u06FF]+(?:\s+[a-zàèéìòù\u0600-\u06FF]+)?)/gi;
+  let m;
+  while((m = senzaRegex.exec(lower)) !== null){
+    let candidate = m[1].replace(stopWords, '').trim();
+    if(candidate && candidate.length >= 3){
+      removedSet.add(candidate);
+    }
+  }
+
+  let extraRegex = /\b(?:più|\+|extra|con\s+aggiunta\s+di|con|مع|زيادة)\s*([a-zàèéìòù\u0600-\u06FF]+(?:\s+[a-zàèéìòù\u0600-\u06FF]+)?)/gi;
+  while((m = extraRegex.exec(lower)) !== null){
+    let candidate = m[1].replace(stopWords, '').trim();
+    if(candidate && candidate.length >= 3 && !removedSet.has(candidate)){
+      addedSet.add(candidate);
+    }
+  }
+
+  return {
+    removed: [...removedSet],
+    added: [...addedSet]
+  };
+}
+
+function processSpokenOrder(transcript, isAuto=false){
+  let raw = String(transcript||'').trim();
+  if(!raw) return false;
+
+  let activeMenu = getActiveMenu();
+  if(!activeMenu.length){
+    setVoiceMsg('Menu non ancora caricato.', 'error');
+    return false;
+  }
+
+  let segments = raw
+    .replace(/\r?\n+/g, ' | ')
+    .replace(/\s+(?:e\s+poi|poi|inoltre)\s+/gi, ' | ')
+    .replace(/\s+e\s+(?=(?:una|un|uno|due|tre|quattro|cinque|sei|1|2|3|4|5|6|pizza|panino|piadina|kebab|calzone)\b)/gi, ' | ')
+    .split(/[|;]+|,\s*(?=(?:una|un|uno|due|tre|quattro|cinque|1|2|3|4|5|pizza|panino|piadina|menu|calzone|coca|acqua|birra)\b)/i)
+    .map(s=>s.trim())
+    .filter(Boolean);
+
+  let sortedMenu = [...activeMenu].sort((a,b)=>b.name.length - a.name.length);
+  let addedSummary = [];
+
+  segments.forEach(seg=>{
+    let segLow = seg.toLowerCase();
+    let matchedProd = null;
+
+    for(let p of sortedMenu){
+      let pNameLow = p.name.toLowerCase().trim();
+      let cleanPName = pNameLow.replace(/^(pizza|panino|piadina)\s+/i,'').trim();
+      if(segLow.includes(pNameLow) || (cleanPName.length >= 3 && segLow.includes(cleanPName))){
+        matchedProd = p;
+        break;
+      }
+    }
+
+    if(matchedProd){
+      let qty = parseSpokenQty(segLow);
+      let isMaxi = /\b(maxi|famiglia|grande|ماكسي)\b/i.test(segLow) && matchedProd.price_maxi != null && Number(matchedProd.price_maxi) > 0;
+      let size = isMaxi ? 'Maxi' : 'Normale';
+      let price = isMaxi ? Number(matchedProd.price_maxi) : Number(matchedProd.price_normal||0);
+      let mods = extractModsFromSegment(segLow);
+
+      addVoiceItemToCart(matchedProd, size, price, qty, mods.removed, mods.added);
+      let modStr = [...mods.removed.map(r=>`🚫 Senza ${r}`), ...mods.added.map(a=>`➕ ${a}`)].join(' ');
+      addedSummary.push(`<strong>${qty}× ${esc(matchedProd.name)} (${size})</strong> ${modStr}`);
+    }
+  });
+
+  let custInfo = [];
+  if(el('customer').value) custInfo.push(`👤 ${esc(el('customer').value)}`);
+  custInfo.push(`⏰ <strong>${esc(getSelectedDeliveryTime())}</strong>`);
+  if(el('address').value) custInfo.push(`📍 ${esc(el('address').value)}`);
+  if(el('phone').value) custInfo.push(`📞 ${esc(el('phone').value)}`);
+  if(el('cashGivenInput').value) custInfo.push(`💶 Contanti: €${esc(el('cashGivenInput').value)}`);
+
+  if(addedSummary.length){
+    playOrderChime(true);
+    setVoiceMsg(
+      `✅ <strong>Ordine Estratto e Posizionato nei Campi:</strong><br>` +
+      (custInfo.length ? `📋 Dati: ${custInfo.join(' · ')}<br>` : '') +
+      `🍕 Carrello: ${addedSummary.join(' · ')}`,
+      'success'
+    );
+    return true;
+  }
+  return false;
+}
+
+function addVoiceItemToCart(p, size, price, qty, removedArr, addedArr){
+  let cleanRem = [...new Set((removedArr||[]).map(x=>String(x).trim().toLowerCase()).filter(x=>x.length>=2))];
+  let cleanAdd = [...new Set((addedArr||[]).map(x=>String(x).trim().toLowerCase()).filter(x=>x.length>=2))];
+  let modSig = [...cleanRem, ...cleanAdd].join('_') || 'base';
+  let key = `${p.id}-${size}-${modSig}`;
+  let it = cart.get(key);
+  if(it){
+    it.qty += qty;
+  }else{
+    cart.set(key,{
+      menu_id: p.id,
+      name: p.name,
+      category: p.category||'',
+      baseDesc: p.description||'',
+      size,
+      basePrice: price,
+      extraPrice: 0,
+      price: price,
+      qty: qty,
+      removedIngs: cleanRem,
+      addedIngs: cleanAdd,
+      itemNote: ''
+    });
+  }
+  renderCart();
+}
+
+/* ================= SISTEMA AUDIO CAMPANELLO CUCINA ================= */
+function updateSoundBtnUI(){
+  let btn = el('soundToggleBtn');
+  if(!btn) return;
+  btn.textContent = soundEnabled ? '🔔 Audio ON' : '🔕 Audio OFF';
+  btn.classList.toggle('off', !soundEnabled);
+}
+
+function toggleSoundAlert(){
+  soundEnabled = !soundEnabled;
+  localStorage.setItem('bp_sound_off', soundEnabled ? '0' : '1');
+  updateSoundBtnUI();
+  if(soundEnabled) playOrderChime(true);
+}
+
+function playOrderChime(forceTest=false){
+  if(!soundEnabled && !forceTest) return;
+  try{
+    if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if(audioCtx.state === 'suspended') audioCtx.resume();
+    const now = audioCtx.currentTime;
+    const notes = [
+      {freq: 783.99, start: 0, dur: 0.18},
+      {freq: 1046.50, start: 0.19, dur: 0.25},
+      {freq: 1318.51, start: 0.46, dur: 0.40}
+    ];
+    notes.forEach(n=>{
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(n.freq, now + n.start);
+      gain.gain.setValueAtTime(0.001, now + n.start);
+      gain.gain.exponentialRampToValueAtTime(0.35, now + n.start + 0.03);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + n.start + n.dur);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start(now + n.start);
+      osc.stop(now + n.start + n.dur + 0.02);
+    });
+  }catch(e){}
+}
+
+function triggerNewOrderNotification(ord){
+  playOrderChime(false);
+  el('toastTitle').textContent = `🔔 Nuovo Ordine #${ord.id}!`;
+  el('toastSub').textContent = `${ord.customer_name||'Cliente'} · ${ord.order_type||'Ordine'} · ${euro(ord.total)}`;
+  el('liveOrderToast').classList.remove('hidden');
+  setTimeout(()=>{el('liveOrderToast').classList.add('hidden');}, 9000);
+}
+
+function setMsg(id,msg,kind=''){
+  const box=el(id);
+  if(!box)return;
+  box.textContent=msg;
+  box.className=kind?('notice '+kind):'notice';
+}
+
+function parseIngredients(desc){
+  return String(desc||'')
+    .split(/[,;·•+]+/)
+    .map(s=>s.trim())
+    .filter(Boolean);
+}
+
+function formatIngredients(arr){
+  return arr.map(s=>s.trim()).filter(Boolean).join(', ');
+}
+
+function cleanCreds(u,k){
+  u = String(u||'').trim();
+  k = String(k||'').trim();
+  if(u.startsWith('Https://')) u = 'https://' + u.slice(8);
+  if(k.startsWith('EyJ')) k = 'e' + k.slice(1);
+  return {url:u, key:k};
+}
+
+function initInputs(){
+  let savedUrl = localStorage.getItem('bp_sb_url') || FALLBACK_URL;
+  let savedKey = localStorage.getItem('bp_sb_key') || FALLBACK_KEY;
+  let c = cleanCreds(savedUrl, savedKey);
+  el('sbUrl').value = c.url;
+  el('sbKey').value = c.key;
+  el('cassaDate').value = toLocalDateStr(new Date());
+  if(el('geminiApiKey')) el('geminiApiKey').value = localStorage.getItem('bp_gemini_key') || '';
+  let savedFee = localStorage.getItem('bp_deliv_fee');
+  if(savedFee != null && el('deliveryFeeSelect')) el('deliveryFeeSelect').value = savedFee;
+  populateDeliveryTimeSlots();
+  loadSavedCustomerDirectory();
+  updateSoundBtnUI();
+}
+initInputs();
+
+function connect(){
+  let c = cleanCreds(el('sbUrl').value, el('sbKey').value);
+  el('sbUrl').value = c.url;
+  el('sbKey').value = c.key;
+  if(!c.url || !c.key){
+    setMsg('loginMsg','Inserisci URL e Chiave Supabase!','error');
+    return false;
+  }
+  if(!window.supabase){
+    setMsg('loginMsg','Libreria Supabase non caricata! Verifica Internet.','error');
+    return false;
+  }
+  try{
+    sb = window.supabase.createClient(c.url, c.key);
+    return true;
+  }catch(e){
+    setMsg('loginMsg','Errore client Supabase: '+e.message,'error');
+    return false;
+  }
+}
+
+function doSaveConfig(){
+  let c = cleanCreds(el('sbUrl').value, el('sbKey').value);
+  localStorage.setItem('bp_sb_url', c.url);
+  localStorage.setItem('bp_sb_key', c.key);
+  if(connect()){
+    setMsg('loginMsg','✅ Configurazione salvata!','success');
+  }
+}
+
+async function doSignIn(){
+  setMsg('loginMsg','⏳ Connessione a Supabase in corso...','');
+  doSaveConfig();
+  if(!connect())return;
+  try{
+    let {data,error} = await sb.auth.signInWithPassword({
+      email: el('email').value.trim(),
+      password: el('password').value
+    });
+    if(error){
+      setMsg('loginMsg','❌ Errore Login: ' + error.message,'error');
+    }else{
+      setMsg('loginMsg','✅ Accesso effettuato!','success');
+      showApp(data.user);
+    }
+  }catch(e){
+    setMsg('loginMsg','❌ Errore di rete (' + e.message + ').','error');
+  }
+}
+
+function doDirectEnter(){
+  doSaveConfig();
+  if(!connect())return;
+  showApp({email: el('email').value.trim() || 'Cassa Staff'});
+}
+
+async function doSignUp(){
+  setMsg('loginMsg','⏳ Creazione account...','');
+  doSaveConfig();
+  if(!connect())return;
+  try{
+    let res = await sb.auth.signUp({
+      email: el('email').value.trim(),
+      password: el('password').value
+    });
+    if(res.error) setMsg('loginMsg','❌ Errore: ' + res.error.message,'error');
+    else setMsg('loginMsg','✅ Account creato! Ora premi Accedi.','success');
+  }catch(e){
+    setMsg('loginMsg','❌ Errore di rete: ' + e.message,'error');
+  }
+}
+
+function showApp(user){
+  el('loginScreen').classList.add('hidden');
+  el('app').classList.remove('hidden');
+  el('userBar').classList.remove('hidden');
+  el('userEmail').textContent = user?.email || 'Cassa Staff';
+  updateSoundBtnUI();
+  loadMenu();
+  loadOrders();
+  if(urgencyInterval) clearInterval(urgencyInterval);
+  urgencyInterval = setInterval(()=>{
+    if(orders.length) renderOrders();
+  }, 30000);
+  try{
+    sb.channel('orders-live')
+      .on('postgres_changes',{event:'*',schema:'public',table:'orders'},(payload)=>{
+        if(payload.eventType === 'INSERT' && payload.new){
+          triggerNewOrderNotification(payload.new);
+        }
+        loadOrders();
+      })
+      .on('postgres_changes',{event:'*',schema:'public',table:'menu'},()=>loadMenu())
+      .subscribe();
+  }catch(e){}
+}
+
+function doLogout(){
+  if(sb)sb.auth.signOut();
+  if(urgencyInterval) clearInterval(urgencyInterval);
+  el('app').classList.add('hidden');
+  el('userBar').classList.add('hidden');
+  el('loginScreen').classList.remove('hidden');
+}
+
+function unlockCassaView(){
+  el('cassaLockedView').classList.add('hidden');
+  el('cassaUnlockedView').classList.remove('hidden');
+  renderCassaReport();
+}
+
+function lockCassaView(){
+  el('cassaUnlockedView').classList.add('hidden');
+  el('cassaLockedView').classList.remove('hidden');
+}
+
+function switchTab(tabName){
+  document.querySelectorAll('[data-tab]').forEach(b=>{
+    b.classList.toggle('active', b.getAttribute('data-tab')===tabName);
+  });
+  const map={'new':'newTab','orders':'ordersTab','cassa':'cassaTab','menu':'menuTab','all':'allTab'};
+  ['newTab','ordersTab','cassaTab','menuTab','allTab'].forEach(id=>{
+    el(id).classList.toggle('hidden', id!==map[tabName]);
+  });
+  if(tabName !== 'cassa'){
+    lockCassaView();
+  }
+  if(tabName==='menu') loadMenu();
+  else if(tabName!=='new') loadOrders();
+}
+
+function toggleAddress(){
+  let isConsegna = el('type').value === 'Consegna';
+  el('addressField').classList.toggle('hidden', !isConsegna);
+  el('deliveryFeeRow').classList.toggle('hidden', !isConsegna);
+  renderCart();
+}
+
+/* ================= CARICAMENTO E MENU A TENDINA CATEGORIE & PRODOTTI ================= */
+async function loadMenu(){
+  if(!sb)return;
+  try{
+    let {data,error}=await sb.from('menu').select('*').order('category').order('name');
+    if(error){
+      if(el('ddBaseIngText')) el('ddBaseIngText').textContent = 'Errore caricamento menu: ' + error.message;
+      return;
+    }
+    allMenu=data||[];
+    el('menuCountBadge').textContent=allMenu.length;
+    renderCategories();
+    populateProductDropdown();
+    renderAdminMenu();
+  }catch(e){}
+}
+
+function getActiveMenu(){return allMenu.filter(x=>x.active!==false);}
+
+function onCategoryDropdownChange(val){
+  category = val || 'Tutti';
+  populateProductDropdown();
+}
+
+function onAdminCategoryDropdownChange(val){
+  adminCategory = val || 'Tutti';
+  renderAdminMenu();
+}
+
+function renderCategories(){
+  let activeMenu = getActiveMenu();
+  let cats = ['Tutti', ...new Set(activeMenu.map(x=>x.category).filter(Boolean))];
+  if(!cats.includes(category)) category = 'Tutti';
+
+  let catSel = el('categorySelect');
+  if(catSel){
+    catSel.innerHTML = cats.map(c => {
+      let cnt = c === 'Tutti' ? activeMenu.length : activeMenu.filter(x=>x.category===c).length;
+      let label = c === 'Tutti' ? `📂 Tutte le Categorie (${cnt})` : `🍽️ ${esc(c)} (${cnt})`;
+      return `<option value="${esc(c)}" ${c===category?'selected':''}>${label}</option>`;
+    }).join('');
+  }
+
+  let allCats = [...new Set(allMenu.map(x=>x.category).filter(Boolean))];
+  el('catSuggestions').innerHTML = allCats.map(c=>`<option value="${esc(c)}">`).join('');
+  el('prodCatSelect').innerHTML = '<option value="">📂 Scegli categoria esistente...</option>' + allCats.map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join('');
+  el('oldCatSelect').innerHTML = allCats.map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join('');
+}
+
+/* ================= CARRELLO E MODIFICA INGREDIENTI A MENU A TENDINA ================= */
+function renderCart(){
+  let box=el('cart');box.innerHTML='';
+  if(!cart.size){box.innerHTML='<p class="muted">Usa i menu a tendina qui a sinistra o l\'estrattore da Testo/Foto 📞📷.</p>';}
+  cart.forEach((it,key)=>{
+    let row=document.createElement('div');
+    row.className='cartrow';
+    let baseIngsHtml = parseIngredients(it.baseDesc).map(ing=>{
+      let isRem = it.removedIngs.includes(ing);
+      return `<span class="p-ing-pill" style="${isRem?'background:#fee4e2;color:#b42318;text-decoration:line-through':''}">${esc(ing)}</span>`;
+    }).join('');
+
+    let modsHtml = [
+      ...it.removedIngs.map(x=>`<span class="pill st-annullato" style="font-size:11px;padding:2px 6px">🚫 Senza ${esc(x)}</span>`),
+      ...it.addedIngs.map(x=>`<span class="pill st-pronto" style="font-size:11px;padding:2px 6px">➕ ${esc(x)}</span>`),
+      it.itemNote ? `<span class="pill st-prep" style="font-size:11px;padding:2px 6px">📝 ${esc(it.itemNote)}</span>` : ''
+    ].filter(Boolean).join(' ');
+
+    row.innerHTML=`
+      <div>
+        <strong>${esc(it.name)}</strong> <span class="pill" style="font-size:11px;padding:2px 7px">${esc(it.size)}</span>
+        <div class="muted">${euro(it.price)} cad. · <strong>${euro(it.price*it.qty)}</strong></div>
+        ${baseIngsHtml?`<div class="p-ing-badges" style="margin-top:4px">${baseIngsHtml}</div>`:''}
+        ${modsHtml?`<div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:5px">${modsHtml}</div>`:''}
+        <div class="cart-mods">
+          <button type="button" class="cart-mod-btn" data-ing-mod>✏️ Ingredienti (+/- Menu Tendina)</button>
+        </div>
+      </div>
+      <div class="qty">
+        <button type="button" data-dec>−</button>
+        <strong>${it.qty}</strong>
+        <button type="button" data-inc>＋</button>
+      </div>`;
+    row.querySelector('[data-dec]').onclick=()=>{it.qty--;if(it.qty<=0)cart.delete(key);renderCart();};
+    row.querySelector('[data-inc]').onclick=()=>{it.qty++;renderCart();};
+    row.querySelector('[data-ing-mod]').onclick=()=>openCartIngModal(key);
+    box.appendChild(row);
+  });
+
+  let itemsSub = getItemsSubtotal();
+  let delivFee = cart.size ? getActiveDeliveryFee() : 0;
+  let grandTotal = cart.size ? (itemsSub + delivFee) : 0;
+
+  let subBox = el('subtotalsBox');
+  if(subBox){
+    if(cart.size && delivFee > 0){
+      subBox.innerHTML = `
+        <div class="subtotals-row"><span>Subtotale Prodotti:</span><span>${euro(itemsSub)}</span></div>
+        <div class="subtotals-row"><span>🛵 Supplemento Consegna:</span><span>+ ${euro(delivFee)}</span></div>
+      `;
+    }else{
+      subBox.innerHTML = '';
+    }
+  }
+
+  el('total').textContent = euro(grandTotal);
+  updateRestoUI(grandTotal);
+}
+
+function openCartIngModal(key){
+  activeCartKey = key;
+  let it = cart.get(key);
+  if(!it)return;
+  el('cartIngTitle').textContent = `Ingredienti · ${it.name} (${it.size})`;
+  tempRemovedIngs = new Set(it.removedIngs||[]);
+  tempAddedIngs = new Set(it.addedIngs||[]);
+  el('cartExtraPrice').value = String(it.extraPrice || 0);
+  el('customExtraInput').value = '';
+  renderCartIngModalContent(it);
+  el('cartIngModal').classList.remove('hidden');
+}
+
+function renderCartIngModalContent(it){
+  let baseList = parseIngredients(it.baseDesc);
+  let removePool = baseList.length ? baseList : getAllKnownIngredients();
+  let remSel = el('modalCartRemoveSelect');
+  if(remSel){
+    remSel.innerHTML = `<option value="">🚫 Scegli ingrediente da togliere (Senza)...</option>` +
+      removePool.map(ing => `<option value="${esc(ing)}">🚫 Senza ${esc(ing)}</option>`).join('');
+  }
+
+  let allExtraOptions = getAllKnownIngredients();
+  let extSel = el('modalCartExtraSelect');
+  if(extSel){
+    extSel.innerHTML = `<option value="">➕ Scegli ingrediente extra da aggiungere...</option>` +
+      allExtraOptions.map(ext => `<option value="${esc(ext)}">➕ Extra ${esc(ext)}</option>`).join('');
+  }
+
+  let chipsBox = el('cartModalModsChips');
+  if(chipsBox){
+    if(!tempRemovedIngs.size && !tempAddedIngs.size){
+      chipsBox.innerHTML = `<span class="muted" style="font-size:12px">Nessuna modifica selezionata.</span>`;
+    }else{
+      let html = '';
+      tempRemovedIngs.forEach(r => {
+        html += `<span class="ing-chip senza">🚫 Senza ${esc(r)} <button type="button" data-m-rem="${esc(r)}">×</button></span>`;
+      });
+      tempAddedIngs.forEach(a => {
+        html += `<span class="ing-chip extra">➕ Extra ${esc(a)} <button type="button" data-m-add="${esc(a)}">×</button></span>`;
+      });
+      chipsBox.innerHTML = html;
+
+      chipsBox.querySelectorAll('[data-m-rem]').forEach(b => {
+        b.onclick = () => {
+          tempRemovedIngs.delete(b.getAttribute('data-m-rem'));
+          renderCartIngModalContent(it);
+        };
+      });
+      chipsBox.querySelectorAll('[data-m-add]').forEach(b => {
+        b.onclick = () => {
+          tempAddedIngs.delete(b.getAttribute('data-m-add'));
+          renderCartIngModalContent(it);
+        };
+      });
+    }
+  }
+}
+
+function onModalCartRemoveSelect(sel){
+  let v = sel.value.trim();
+  if(!v) return;
+  tempRemovedIngs.add(v);
+  sel.value = '';
+  let it = cart.get(activeCartKey);
+  if(it) renderCartIngModalContent(it);
+}
+
+function onModalCartExtraSelect(sel){
+  let v = sel.value.trim();
+  if(!v) return;
+  tempAddedIngs.add(v);
+  sel.value = '';
+  let it = cart.get(activeCartKey);
+  if(it) renderCartIngModalContent(it);
+}
+
+function addCustomExtraToCartItem(){
+  let v = el('customExtraInput').value.trim();
+  if(!v)return;
+  tempAddedIngs.add(v);
+  el('customExtraInput').value = '';
+  let it = cart.get(activeCartKey);
+  if(it) renderCartIngModalContent(it);
+}
+
+function saveCartIngCustomization(){
+  let it = cart.get(activeCartKey);
+  if(!it)return;
+  it.removedIngs = [...tempRemovedIngs];
+  it.addedIngs = [...tempAddedIngs];
+  it.extraPrice = Number(el('cartExtraPrice').value || 0);
+  it.price = it.basePrice + it.extraPrice;
+  el('cartIngModal').classList.add('hidden');
+  renderCart();
+}
+
+function doClearCart(){
+  cart.clear();
+  el('cashGivenInput').value = '';
+  renderCart();
+  setMsg('orderMsg','Carrello svuotato.','');
+}
+
+async function insertOrderItemsForOrder(orderId, items, delivFee){
+  let basePayload = items.map(x=>{
+    let remUnique = [...new Set(x.removedIngs||[])];
+    let addUnique = [...new Set(x.addedIngs||[])];
+    let mods = [...remUnique.map(r=>`Senza ${r}`), ...addUnique.map(a=>`+ ${a}`)].join(', ');
+    let finalName = mods ? `${x.name} (${mods})` : x.name;
+    return {
+      order_id: orderId,
+      product_name: finalName,
+      size: x.size,
+      quantity: x.qty,
+      unit_price: x.price,
+      line_total: x.price * x.qty,
+      _raw_menu_id: x.menu_id
+    };
+  });
+
+  if(delivFee > 0){
+    basePayload.push({
+      order_id: orderId,
+      product_name: 'Supplemento Consegna',
+      size: 'Servizio',
+      quantity: 1,
+      unit_price: delivFee,
+      line_total: delivFee,
+      _raw_menu_id: null
+    });
+  }
+
+  let cleanRows = basePayload.map(({_raw_menu_id, ...rest}) => rest);
+  let result = await sb.from('order_items').insert(cleanRows);
+
+  if(result.error){
+    let rowsWithMenuId = basePayload.map(({_raw_menu_id, ...rest}) => ({...rest, menu_id: _raw_menu_id}));
+    result = await sb.from('order_items').insert(rowsWithMenuId);
+  }
+
+  if(result.error){
+    let rowsWithNullFk = basePayload.map(({_raw_menu_id, ...rest}) => ({...rest, menu_item_id: null}));
+    result = await sb.from('order_items').insert(rowsWithNullFk);
+  }
+  return result;
+}
+
+async function doSaveOrder(){
+  if(!cart.size){setMsg('orderMsg','Aggiungi almeno un prodotto.','error');return;}
+  if(el('type').value==='Consegna'&&!el('address').value.trim()){setMsg('orderMsg','Inserisci l’indirizzo di consegna.','error');return;}
+  let items=[...cart.values()];
+  let delivFee = getActiveDeliveryFee();
+  let total = getGrandTotal();
+
+  el('saveOrder').disabled=true;
+  let {data:userData}=await sb.auth.getUser();
+
+  let selectedTime = getSelectedDeliveryTime();
+  let cashGiven = Number(el('cashGivenInput')?.value || 0);
+  let cashTag = '';
+  if(el('payment').value === 'Contanti' && cashGiven > total){
+    let resto = cashGiven - total;
+    cashTag = `[💶 Paga con ${euro(cashGiven)} · Resto: ${euro(resto)}]`;
+  }
+  let userNotes = el('notes').value.trim();
+  let combinedNotes = `[⏰ ${selectedTime}]` + (cashTag ? ` ${cashTag}` : '') + (userNotes ? ` ${userNotes}` : '');
+
+  let custNameVal = el('customer').value.trim();
+  let phoneVal = el('phone').value.trim();
+  let addrVal = el('type').value==='Consegna' ? el('address').value.trim() : '';
+
+  upsertCustomerProfile(custNameVal, phoneVal, addrVal, !editingOrderId);
+  saveCustomerDirectoryToStorage();
+
+  if(editingOrderId){
+    let targetId = editingOrderId;
+    let {error: updErr} = await sb.from('orders').update({
+      customer_name: custNameVal,
+      phone: phoneVal,
+      order_type: el('type').value,
+      address: addrVal,
+      payment_method: el('payment').value,
+      notes: combinedNotes,
+      total
+    }).eq('id', targetId);
+
+    if(updErr){
+      setMsg('orderMsg', 'Errore aggiornamento ordine: ' + updErr.message, 'error');
+      el('saveOrder').disabled = false;
+      return;
+    }
+
+    await sb.from('order_items').delete().eq('order_id', targetId);
+    let insRes = await insertOrderItemsForOrder(targetId, items, delivFee);
+
+    el('saveOrder').disabled = false;
+    if(insRes.error){
+      setMsg('orderMsg', 'Ordine aggiornato ma errore negli articoli: ' + insRes.error.message, 'error');
+    }else{
+      playOrderChime(false);
+      cancelEditOrderMode();
+      setMsg('orderMsg', `✅ Ordine #${targetId} modificato e aggiornato con successo (⏰ ${selectedTime} · Totale ${euro(total)})!`, 'success');
+      await loadOrders();
+      switchTab('orders');
+    }
+    return;
+  }
+
+  let {data:ord,error}=await sb.from('orders').insert({
+    customer_name: custNameVal,
+    phone: phoneVal,
+    order_type:el('type').value,
+    address: addrVal,
+    payment_method:el('payment').value,
+    status:'Nuovo',
+    notes:combinedNotes,
+    total,
+    created_by:userData?.user?.id||null
+  }).select().single();
+
+  if(error){setMsg('orderMsg','Errore: '+error.message,'error');el('saveOrder').disabled=false;return;}
+  knownOrderIds.add(ord.id);
+
+  let result = await insertOrderItemsForOrder(ord.id, items, delivFee);
+
+  if(result.error){
+    setMsg('orderMsg','Ordine creato ma errore negli articoli: '+result.error.message,'error');
+  }else{
+    playOrderChime(false);
+    setMsg('orderMsg','✅ Ordine #'+ord.id+' salvato (⏰ '+selectedTime+' · Totale '+euro(total)+')!','success');
+    cart.clear();
+    el('cashGivenInput').value = '';
+    el('customerLastOrderBanner').classList.add('hidden');
+    el('imagePreviewBar').classList.add('hidden');
+    renderCart();
+    ['customer','phone','address','notes','voiceSmartInput'].forEach(id=>{if(el(id))el(id).value='';});
+    el('deliveryHour').value = 'Prima possibile';
+    onTimeHourChange();
+    el('voiceTranscriptBar').classList.add('hidden');
+    await loadOrders();
+  }
+  el('saveOrder').disabled=false;
+}
+
+/* ================= CHIUSURA CASSA & INCASSI GIORNALIERI ================= */
+function setCassaToday(){
+  el('cassaDate').value = toLocalDateStr(new Date());
+  renderCassaReport();
+}
+
+function getOrdersForDate(dateStr){
+  return orders.filter(o=>{
+    if(!o.created_at) return false;
+    return toLocalDateStr(o.created_at) === dateStr;
+  });
+}
+
+function computeDayStats(dayOrders){
+  let valid = dayOrders.filter(o=>normStatus(o.status)!=='Annullato');
+  let cancelled = dayOrders.filter(o=>normStatus(o.status)==='Annullato');
+  let totalRevenue = valid.reduce((s,o)=>s+Number(o.total||0),0);
+
+  let cashOrders = valid.filter(o=>String(o.payment_method||'').toLowerCase().includes('contanti'));
+  let cardOrders = valid.filter(o=>!String(o.payment_method||'').toLowerCase().includes('contanti'));
+  let cashTotal = cashOrders.reduce((s,o)=>s+Number(o.total||0),0);
+  let cardTotal = cardOrders.reduce((s,o)=>s+Number(o.total||0),0);
+
+  let delivOrders = valid.filter(o=>String(o.order_type||'').toLowerCase().includes('consegna') || String(o.order_type||'').toLowerCase().includes('domicilio'));
+  let aspOrders = valid.filter(o=>!String(o.order_type||'').toLowerCase().includes('consegna') && !String(o.order_type||'').toLowerCase().includes('domicilio'));
+  let delivTotal = delivOrders.reduce((s,o)=>s+Number(o.total||0),0);
+  let aspTotal = aspOrders.reduce((s,o)=>s+Number(o.total||0),0);
+
+  return {
+    validCount: valid.length,
+    cancelledCount: cancelled.length,
+    totalRevenue,
+    cashCount: cashOrders.length,
+    cashTotal,
+    cardCount: cardOrders.length,
+    cardTotal,
+    delivCount: delivOrders.length,
+    delivTotal,
+    aspCount: aspOrders.length,
+    aspTotal,
+    validOrders: valid
+  };
+}
+
+function renderCassaReport(){
+  if(el('cassaUnlockedView').classList.contains('hidden')) return;
+  let todayStr = toLocalDateStr(new Date());
+  let targetDate = el('cassaDate').value || todayStr;
+  let dayOrders = getOrdersForDate(targetDate);
+  let st = computeDayStats(dayOrders);
+
+  el('cassaCards').innerHTML = `
+    <div class="cassa-card tot">
+      <div class="c-label">💰 TOTALE INCASSO NETTO</div>
+      <div class="c-val">${euro(st.totalRevenue)}</div>
+      <div class="c-sub">✅ ${st.validCount} ordini validi · ❌ ${st.cancelledCount} annullati</div>
+    </div>
+    <div class="cassa-card cash">
+      <div class="c-label">💵 INCASSO CONTANTI (CASSA)</div>
+      <div class="c-val" style="color:var(--green)">${euro(st.cashTotal)}</div>
+      <div class="c-sub">🧾 ${st.cashCount} ordini pagati in contanti</div>
+    </div>
+    <div class="cassa-card card">
+      <div class="c-label">💳 INCASSO CARTA / POS</div>
+      <div class="c-val" style="color:var(--blue)">${euro(st.cardTotal)}</div>
+      <div class="c-sub">🧾 ${st.cardCount} ordini con Carta / Altro</div>
+    </div>
+    <div class="cassa-card deliv">
+      <div class="c-label">🛵 TOTALE CONSEGNE A DOMICILIO</div>
+      <div class="c-val" style="color:var(--purple)">${euro(st.delivTotal)}</div>
+      <div class="c-sub">🛵 ${st.delivCount} consegne effettuate</div>
+    </div>
+    <div class="cassa-card asp">
+      <div class="c-label">🛍️ TOTALE ASPORTO / BANCO</div>
+      <div class="c-val" style="color:var(--orange)">${euro(st.aspTotal)}</div>
+      <div class="c-sub">🛍️ ${st.aspCount} ordini d'asporto</div>
+    </div>
+  `;
+
+  let prodCounts = new Map();
+  st.validOrders.forEach(o=>{
+    let items = itemsByOrder.get(o.id) || [];
+    items.forEach(i=>{
+      if(i.product_name === 'Supplemento Consegna') return;
+      let base = splitProductAndMods(i.product_name).baseName;
+      let key = `${base} (${i.size||'Normale'})`;
+      let cur = prodCounts.get(key) || {qty:0, tot:0, base};
+      cur.qty += Number(i.quantity||1);
+      cur.tot += Number(i.line_total||0);
+      prodCounts.set(key, cur);
+    });
+  });
+
+  let topArr = [...prodCounts.entries()].sort((a,b)=>b[1].qty - a[1].qty).slice(0,12);
+  el('cassaTopProducts').innerHTML = topArr.length
+    ? topArr.map(([name, info], idx)=>`
+        <div class="order-item-line" style="padding:7px 0">
+          <span><strong>#${idx+1} · ${esc(name)}</strong></span>
+          <span><span class="pill">${info.qty} pz</span> <strong>${euro(info.tot)}</strong></span>
+        </div>
+      `).join('')
+    : '<p class="muted">Nessun prodotto venduto in questa data.</p>';
+
+  let byStatus = ALL_STATUSES.map(s=>{
+    let cnt = dayOrders.filter(o=>normStatus(o.status)===s).length;
+    let sum = dayOrders.filter(o=>normStatus(o.status)===s).reduce((a,b)=>a+Number(b.total||0),0);
+    return `<div class="order-item-line" style="padding:7px 0"><span><strong>${esc(s)}</strong></span><span>${cnt} ordini · <strong>${euro(sum)}</strong></span></div>`;
+  }).join('');
+  el('cassaBreakdown').innerHTML = byStatus;
+}
+
+function printCassaSummary(){
+  let targetDate = el('cassaDate').value || toLocalDateStr(new Date());
+  let st = computeDayStats(getOrdersForDate(targetDate));
+  let html = `
+    <div class="receipt-card">
+      <div class="rc-header">
+        <div class="rc-brand">BUONA PIZZA</div>
+        <div class="rc-sub">REPORT CHIUSURA CASSA GIORNALIERA</div>
+      </div>
+      <div class="rc-customer-box">
+        <div><strong>Data:</strong> ${esc(targetDate)}</div>
+        <div><strong>Ordini Validi:</strong> ${st.validCount} (Annullati: ${st.cancelledCount})</div>
+      </div>
+      <div class="rc-items-section">
+        <div class="rc-item"><div class="rc-item-top"><span>💵 <strong>Contanti (${st.cashCount} ordini)</strong></span><strong>${euro(st.cashTotal)}</strong></div></div>
+        <div class="rc-item"><div class="rc-item-top"><span>💳 <strong>Carta / Altro (${st.cardCount} ordini)</strong></span><strong>${euro(st.cardTotal)}</strong></div></div>
+        <div class="rc-item"><div class="rc-item-top"><span>🛵 <strong>Consegne (${st.delivCount} ordini)</strong></span><strong>${euro(st.delivTotal)}</strong></div></div>
+        <div class="rc-item"><div class="rc-item-top"><span>🛍️ <strong>Asporto (${st.aspCount} ordini)</strong></span><strong>${euro(st.aspTotal)}</strong></div></div>
+      </div>
+      <div class="rc-total-bar">
+        <span class="rc-tot-label">TOTALE GIORNATA</span>
+        <span class="rc-tot-val">${euro(st.totalRevenue)}</span>
+      </div>
+      <div class="rc-footer">Stampato il ${new Date().toLocaleString('it-IT')}</div>
+    </div>
+  `;
+  el('receiptContainer').innerHTML = html;
+  el('detailsModal').classList.remove('hidden');
+}
+
+/* ================= GESTIONE MENU, CATEGORIE & INGREDIENTI (ADMIN) ================= */
+function renderAdminMenu(){
+  let total=allMenu.length;
+  let activeCount=allMenu.filter(x=>x.active!==false).length;
+  let catsCount=new Set(allMenu.map(x=>x.category).filter(Boolean)).size;
+  el('menuStats').innerHTML=`
+    <div class="stat-box"><span>Totale Prodotti</span><strong>${total}</strong></div>
+    <div class="stat-box"><span>Prodotti Attivi</span><strong style="color:var(--green)">${activeCount}</strong></div>
+    <div class="stat-box"><span>Esauriti / Nascosti</span><strong style="color:var(--red)">${total-activeCount}</strong></div>
+    <div class="stat-box"><span>Categorie</span><strong>${catsCount}</strong></div>
+  `;
+
+  let cats=['Tutti',...new Set(allMenu.map(x=>x.category).filter(Boolean))];
+  if(!cats.includes(adminCategory))adminCategory='Tutti';
+  let adminCatSel = el('adminCategorySelect');
+  if(adminCatSel){
+    adminCatSel.innerHTML = cats.map(c=>{
+      let count = c==='Tutti' ? allMenu.length : allMenu.filter(x=>x.category===c).length;
+      let label = c==='Tutti' ? `📂 Tutte le Categorie (${count})` : `🍽️ ${esc(c)} (${count})`;
+      return `<option value="${esc(c)}" ${c===adminCategory?'selected':''}>${label}</option>`;
+    }).join('');
+  }
+
+  let q=el('adminSearch').value.toLowerCase().trim();
+  let stFilter=el('adminStatusFilter').value;
+  let filtered=allMenu.filter(x=>{
+    if(adminCategory!=='Tutti' && x.category!==adminCategory)return false;
+    if(stFilter==='active' && x.active===false)return false;
+    if(stFilter==='inactive' && x.active!==false)return false;
+    return `${x.name} ${x.description||''} ${x.category||''}`.toLowerCase().includes(q);
+  });
+
+  let listEl=el('adminMenuList');listEl.innerHTML='';
+  if(!filtered.length){
+    listEl.innerHTML='<div class="panel muted">Nessun prodotto trovato con questi filtri.</div>';
+    return;
+  }
+
+  let allIngOptions = getAllKnownIngredients().map(i=>`<option value="${esc(i)}">+ ${esc(i)}</option>`).join('');
+
+  filtered.forEach(p=>{
+    let isActive=p.active!==false;
+    let ingList = parseIngredients(p.description);
+    let row=document.createElement('div');
+    row.className=`menu-admin-row ${isActive?'':'inactive'}`;
+
+    let chipsHtml = ingList.map((ing,idx)=>`
+      <span class="ing-chip">
+        <span>${esc(ing)}</span>
+        <button type="button" title="Rimuovi ingrediente" data-rem-ing="${idx}">×</button>
+      </span>
+    `).join('');
+
+    row.innerHTML=`
+      <div>
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+          <strong style="font-size:16px">${esc(p.name)}</strong>
+          <span class="pill">${esc(p.category||'Senza categoria')}</span>
+        </div>
+        <div class="ing-chips">
+          ${chipsHtml || '<span class="muted" style="font-size:12px">Nessun ingrediente</span>'}
+          <select data-add-ing-select style="width:auto;padding:4px 8px;font-size:12px;font-weight:750;border-radius:99px;background:#eff8ff;color:var(--blue);border:1px dashed #84caff">
+            <option value="">＋ Aggiungi Ingrediente...</option>
+            ${allIngOptions}
+          </select>
+        </div>
+      </div>
+      <div class="price-inputs">
+        <div class="mini-field">
+          <span>Normale (€)</span>
+          <input type="number" step="0.10" min="0" data-pnorm value="${p.price_normal!=null?p.price_normal:''}">
+        </div>
+        <div class="mini-field">
+          <span>Maxi (€)</span>
+          <input type="number" step="0.10" min="0" data-pmaxi placeholder="—" value="${p.price_maxi!=null?p.price_maxi:''}">
+        </div>
+        <button type="button" class="btn-sm blue hidden" data-save-price>💾 Salva</button>
+      </div>
+      <div class="admin-actions">
+        <button type="button" class="toggle-pill ${isActive?'on':'off'}" data-toggle>${isActive?'✅ Attivo':'🚫 Esaurito'}</button>
+        <button type="button" class="secondary btn-sm" data-edit>✏️ Modifica</button>
+      </div>
+    `;
+
+    row.querySelectorAll('[data-rem-ing]').forEach(btn=>{
+      btn.onclick=async()=>{
+        let idx = Number(btn.getAttribute('data-rem-ing'));
+        let updated = ingList.filter((_,i)=>i!==idx);
+        let newDesc = formatIngredients(updated);
+        let {error} = await sb.from('menu').update({description:newDesc}).eq('id',p.id);
+        if(error) alert('Errore rimozione ingrediente:\n'+error.message);
+        else await loadMenu();
+      };
+    });
+
+    row.querySelector('[data-add-ing-select]').onchange=async(ev)=>{
+      let newIng = ev.target.value;
+      if(!newIng) return;
+      let updated = [...new Set([...ingList, newIng])];
+      let newDesc = formatIngredients(updated);
+      let {error} = await sb.from('menu').update({description:newDesc}).eq('id',p.id);
+      if(error) alert('Errore aggiunta ingrediente:\n'+error.message);
+      else await loadMenu();
+    };
+
+    let inNorm=row.querySelector('[data-pnorm]');
+    let inMaxi=row.querySelector('[data-pmaxi]');
+    let saveBtn=row.querySelector('[data-save-price]');
+    let showSave=()=>saveBtn.classList.remove('hidden');
+    inNorm.oninput=showSave;
+    inMaxi.oninput=showSave;
+
+    saveBtn.onclick=async()=>{
+      saveBtn.disabled=true;
+      saveBtn.textContent='...';
+      let vNorm=inNorm.value!==''?Number(inNorm.value):0;
+      let vMaxi=inMaxi.value!==''?Number(inMaxi.value):null;
+      let {error}=await sb.from('menu').update({price_normal:vNorm,price_maxi:vMaxi}).eq('id',p.id);
+      if(error){alert('Errore salvataggio prezzo:\n'+error.message);saveBtn.disabled=false;saveBtn.textContent='💾 Salva';}
+      else{await loadMenu();}
+    };
+
+    row.querySelector('[data-toggle]').onclick=async()=>{
+      let {error}=await sb.from('menu').update({active:!isActive}).eq('id',p.id);
+      if(error)alert('Errore cambio stato:\n'+error.message);
+      else await loadMenu();
+    };
+
+    row.querySelector('[data-edit]').onclick=()=>openProductModal(p);
+    listEl.appendChild(row);
+  });
+}
+
+/* ================= MODAL PRODOTTO & INGREDIENTI (CON MENU A TENDINA) ================= */
+function renderModalIngChips(){
+  let wrap = el('modalIngChips');
+  wrap.innerHTML = '';
+  if(!modalIngArray.length){
+    wrap.innerHTML = '<span class="muted" style="font-size:12px">Nessun ingrediente aggiunto.</span>';
+  }else{
+    modalIngArray.forEach((ing,idx)=>{
+      let s = document.createElement('span');
+      s.className = 'ing-chip';
+      s.innerHTML = `<span>${esc(ing)}</span> <button type="button">×</button>`;
+      s.querySelector('button').onclick = ()=>{
+        modalIngArray.splice(idx,1);
+        renderModalIngChips();
+      };
+      wrap.appendChild(s);
+    });
+  }
+  el('prodDesc').value = formatIngredients(modalIngArray);
+
+  let dd = el('modalIngDropdown');
+  if(dd){
+    let available = getAllKnownIngredients().filter(item => !modalIngArray.map(x=>x.toLowerCase()).includes(item.toLowerCase()));
+    dd.innerHTML = `<option value="">📋 + Scegli ingrediente dalla lista (${available.length})...</option>` +
+      available.map(item => `<option value="${esc(item)}">+ ${esc(item)}</option>`).join('');
+  }
+}
+
+function onModalIngDropdownSelect(sel){
+  let val = sel.value.trim();
+  if(!val) return;
+  if(!modalIngArray.includes(val)) modalIngArray.push(val);
+  sel.value = '';
+  renderModalIngChips();
+}
+
+function addModalIng(){
+  let val = el('newIngInput').value.trim();
+  if(!val)return;
+  parseIngredients(val).forEach(x=>{
+    if(!modalIngArray.includes(x)) modalIngArray.push(x);
+  });
+  el('newIngInput').value = '';
+  renderModalIngChips();
+}
+
+function openProductModal(p){
+  setMsg('prodModalMsg','','');
+  el('prodModalMsg').className='muted';
+  el('newIngInput').value='';
+  if(p){
+    el('prodModalTitle').textContent='✏️ Modifica Prodotto & Ingredienti';
+    el('prodId').value=p.id;
+    el('prodName').value=p.name||'';
+    el('prodCat').value=p.category||'';
+    el('prodCatSelect').value=p.category||'';
+    modalIngArray = parseIngredients(p.description||'');
+    el('prodPriceNorm').value=p.price_normal!=null?p.price_normal:'';
+    el('prodPriceMaxi').value=p.price_maxi!=null?p.price_maxi:'';
+    el('prodActive').checked=p.active!==false;
+    el('deleteProductBtn').classList.remove('hidden');
+  }else{
+    el('prodModalTitle').textContent='Nuovo Prodotto';
+    el('prodId').value='';
+    el('prodName').value='';
+    let defaultCat = adminCategory!=='Tutti'?adminCategory:(category!=='Tutti'?category:'Pizze');
+    el('prodCat').value=defaultCat;
+    el('prodCatSelect').value=defaultCat;
+    modalIngArray = [];
+    el('prodPriceNorm').value='';
+    el('prodPriceMaxi').value='';
+    el('prodActive').checked=true;
+    el('deleteProductBtn').classList.add('hidden');
+  }
+  renderModalIngChips();
+  el('productModal').classList.remove('hidden');
+}
+
+function closeProductModal(){el('productModal').classList.add('hidden');}
+
+async function doSaveProduct(){
+  if(el('newIngInput').value.trim()) addModalIng();
+  let id=el('prodId').value;
+  let name=el('prodName').value.trim();
+  let cat=el('prodCat').value.trim()||'Altro';
+  let desc=formatIngredients(modalIngArray);
+  let pNorm=el('prodPriceNorm').value!==''?Number(el('prodPriceNorm').value):null;
+  let pMaxi=el('prodPriceMaxi').value!==''?Number(el('prodPriceMaxi').value):null;
+  let active=el('prodActive').checked;
+
+  if(!name || pNorm===null){
+    setMsg('prodModalMsg','Inserisci almeno Nome e Prezzo Normale.','error');
+    return;
+  }
+
+  el('saveProductBtn').disabled=true;
+  let payload={name,category:cat,description:desc,price_normal:pNorm,price_maxi:pMaxi,active};
+  let res = id
+    ? await sb.from('menu').update(payload).eq('id',id)
+    : await sb.from('menu').insert(payload);
+
+  el('saveProductBtn').disabled=false;
+  if(res.error){
+    setMsg('prodModalMsg','Errore Supabase: '+res.error.message,'error');
+  }else{
+    closeProductModal();
+    await loadMenu();
+  }
+}
+
+async function doDeleteProduct(){
+  let id=el('prodId').value;
+  if(!id)return;
+  if(!confirm('Vuoi davvero eliminare definitivamente questo prodotto dal menu?'))return;
+  let {error}=await sb.from('menu').delete().eq('id',id);
+  if(error){
+    setMsg('prodModalMsg','Impossibile eliminare (disattivalo invece!): '+error.message,'error');
+  }else{
+    closeProductModal();
+    await loadMenu();
+  }
+}
+
+/* ================= MODAL CATEGORIE ================= */
+function openCategoryModal(){
+  setMsg('catModalMsg','','');
+  el('catModalMsg').className='muted';
+  el('newCatName').value='';
+  el('newCatFirstProd').value='';
+  el('newCatPrice').value='';
+  el('newCatDesc').value='';
+  el('renameCatInput').value='';
+  el('categoryModal').classList.remove('hidden');
+}
+
+function toggleCatModalMode(){
+  let mode = el('catActionType').value;
+  el('catNewBox').classList.toggle('hidden', mode!=='new');
+  el('catRenameBox').classList.toggle('hidden', mode!=='rename');
+}
+
+async function doSaveCategory(){
+  let mode = el('catActionType').value;
+  if(mode==='new'){
+    let catName = el('newCatName').value.trim();
+    let prodName = el('newCatFirstProd').value.trim();
+    let price = el('newCatPrice').value!==''?Number(el('newCatPrice').value):null;
+    let desc = el('newCatDesc').value.trim();
+    if(!catName || !prodName || price===null){
+      setMsg('catModalMsg','Compila Nome Categoria, Primo Prodotto e Prezzo!','error');
+      return;
+    }
+    let {error} = await sb.from('menu').insert({
+      name:prodName,
+      category:catName,
+      description:desc,
+      price_normal:price,
+      active:true
+    });
+    if(error){setMsg('catModalMsg','Errore: '+error.message,'error');return;}
+    adminCategory = catName;
+    category = catName;
+    el('categoryModal').classList.add('hidden');
+    await loadMenu();
+  }else{
+    let oldCat = el('oldCatSelect').value;
+    let newCat = el('renameCatInput').value.trim();
+    if(!oldCat || !newCat){
+      setMsg('catModalMsg','Inserisci il nuovo nome della categoria!','error');
+      return;
+    }
+    let {error} = await sb.from('menu').update({category:newCat}).eq('category',oldCat);
+    if(error){setMsg('catModalMsg','Errore: '+error.message,'error');return;}
+    adminCategory = newCat;
+    category = newCat;
+    el('categoryModal').classList.add('hidden');
+    await loadMenu();
+  }
+}
+
+/* ================= MAPPA CONSEGNE MULTI-STOP (GOOGLE MAPS) ================= */
+function normalizeDeliveryAddress(rawAddr){
+  let a = String(rawAddr||'').trim();
+  if(!a) return '';
+  let lower = a.toLowerCase();
+  let knownCities = ['lodi','tavazzano','salerano','borgo san giovanni','pieve fissiraga','cornegliano','casalmaiocco','sordio','melegnano','mulazzano','cervignano','zelo','senna'];
+  let hasCity = knownCities.some(c => lower.includes(c));
+  if(!hasCity) return `${a}, Lodi Vecchio LO, Italia`;
+  if(!lower.includes('italia')) return `${a}, Italia`;
+  return a;
+}
+
+function toggleOrderInRoute(orderId){
+  let idx = selectedRouteOrderIds.indexOf(orderId);
+  if(idx >= 0) selectedRouteOrderIds.splice(idx, 1);
+  else selectedRouteOrderIds.push(orderId);
+  renderOrders();
+}
+
+function selectReadyDeliveries(){
+  let openDeliveries = orders.filter(o=>{
+    let st = normStatus(o.status);
+    let isCons = String(o.order_type||'').toLowerCase().includes('consegna') || String(o.order_type||'').toLowerCase().includes('domicilio');
+    return isCons && o.address && ['Pronto','In consegna','In preparazione','Nuovo'].includes(st) && !['Completato','Annullato'].includes(st);
+  });
+  let readyOnly = openDeliveries.filter(o=>['Pronto','In consegna'].includes(normStatus(o.status)));
+  let targetList = readyOnly.length ? readyOnly : openDeliveries;
+  if(!targetList.length){
+    alert('Nessun ordine di consegna con indirizzo trovato tra gli ordini aperti.');
+    return;
+  }
+  let sortedTargets = sortOpenOrdersList(targetList);
+  selectedRouteOrderIds = sortedTargets.map(o=>o.id);
+  renderOrders();
+}
+
+function clearRouteSelection(){
+  selectedRouteOrderIds = [];
+  renderOrders();
+}
+
+function moveRouteStop(idx, dir){
+  let targetIdx = idx + dir;
+  if(targetIdx < 0 || targetIdx >= selectedRouteOrderIds.length) return;
+  let tmp = selectedRouteOrderIds[idx];
+  selectedRouteOrderIds[idx] = selectedRouteOrderIds[targetIdx];
+  selectedRouteOrderIds[targetIdx] = tmp;
+  renderOrders();
+}
+
+function renderRouteBuilder(){
+  selectedRouteOrderIds = selectedRouteOrderIds.filter(id => orders.some(o=>o.id===id && o.address));
+  let box = el('routeBuilderBox');
+  if(!selectedRouteOrderIds.length){
+    box.classList.add('hidden');
+    return;
+  }
+  box.classList.remove('hidden');
+  el('routeCount').textContent = selectedRouteOrderIds.length;
+
+  let listEl = el('routeStopsList');
+  listEl.innerHTML = '';
+  selectedRouteOrderIds.forEach((id, idx)=>{
+    let o = orders.find(x=>x.id===id);
+    if(!o) return;
+    let u = getOrderUrgencyMeta(o);
+    let row = document.createElement('div');
+    row.className = 'route-stop-item';
+    row.innerHTML = `
+      <div>
+        <span class="route-stop-num">${idx+1}</span>
+        <strong>#${o.id} · ${esc(o.customer_name||'Cliente')}</strong>
+        <span class="pill ${u.badgeClass}" style="margin-left:6px">${esc(u.badgeText)}</span>
+        <span class="muted"> — 📍 ${esc(o.address)} (${euro(o.total)})</span>
+      </div>
+      <div class="route-stop-controls">
+        <button type="button" title="Sposta su" ${idx===0?'disabled':''} data-up>⬆️</button>
+        <button type="button" title="Sposta giù" ${idx===selectedRouteOrderIds.length-1?'disabled':''} data-down>⬇️</button>
+        <button type="button" title="Rimuovi dal giro" style="color:var(--red)" data-rem>✖</button>
+      </div>
+    `;
+    row.querySelector('[data-up]').onclick = ()=>moveRouteStop(idx, -1);
+    row.querySelector('[data-down]').onclick = ()=>moveRouteStop(idx, 1);
+    row.querySelector('[data-rem]').onclick = ()=>toggleOrderInRoute(id);
+    listEl.appendChild(row);
+  });
+}
+
+function openGoogleMapsMultiRoute(){
+  let stops = selectedRouteOrderIds
+    .map(id => orders.find(x=>x.id===id))
+    .filter(Boolean)
+    .map(o => normalizeDeliveryAddress(o.address))
+    .filter(Boolean);
+
+  if(!stops.length){
+    alert('Seleziona almeno un ordine con indirizzo di consegna!');
+    return;
+  }
+
+  let origin = encodeURIComponent(PIZZERIA_ORIGIN);
+  let destination = encodeURIComponent(PIZZERIA_ORIGIN);
+  let waypoints = stops.map(s => encodeURIComponent(s)).join('|');
+  let mapsUrl = `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${destination}&waypoints=${waypoints}&travelmode=driving`;
+  window.open(mapsUrl, '_blank');
+}
+
+async function markRouteInConsegna(){
+  if(!selectedRouteOrderIds.length) return;
+  let {error} = await sb.from('orders').update({status:'In consegna'}).in('id', selectedRouteOrderIds);
+  if(error) alert('Errore aggiornamento stato: ' + error.message);
+  else await loadOrders();
+}
+
+/* ================= GESTIONE ORDINI ================= */
+async function loadOrders(){
+  if(!sb)return;
+  try{
+    let {data,error}=await sb.from('orders').select('*').order('created_at',{ascending:false}).limit(250);
+    if(error){console.error(error);return;}
+    let incoming = data||[];
+    if(firstOrdersLoadDone){
+      let newOnes = incoming.filter(o => !knownOrderIds.has(o.id));
+      if(newOnes.length) triggerNewOrderNotification(newOnes[0]);
+    }
+    incoming.forEach(o => knownOrderIds.add(o.id));
+    firstOrdersLoadDone = true;
+
+    orders = incoming;
+    let ids=orders.map(o=>o.id);
+    itemsByOrder.clear();
+    if(ids.length){
+      let {data:allItems}=await sb.from('order_items').select('*').in('order_id',ids);
+      (allItems||[]).forEach(it=>{
+        if(!itemsByOrder.has(it.order_id))itemsByOrder.set(it.order_id,[]);
+        itemsByOrder.get(it.order_id).push(it);
+      });
+    }
+    rebuildCustomerDirectoryFromOrders(orders);
+    renderOrders();
+    renderCassaReport();
+  }catch(e){}
+}
+
+function normStatus(s){
+  let v=String(s||'Nuovo').trim().toLowerCase();
+  if(v.includes('prep'))return 'In preparazione';
+  if(v.includes('pront'))return 'Pronto';
+  if(v.includes('consegn'))return 'In consegna';
+  if(v.includes('complet'))return 'Completato';
+  if(v.includes('annull'))return 'Annullato';
+  return 'Nuovo';
+}
+
+function statusClass(s){
+  let v=normStatus(s);
+  if(v==='Nuovo')return 'st-nuovo';
+  if(v==='In preparazione')return 'st-prep';
+  if(v==='Pronto')return 'st-pronto';
+  if(v==='In consegna')return 'st-consegna';
+  if(v==='Completato')return 'st-completato';
+  if(v==='Annullato')return 'st-annullato';
+  return '';
+}
+
+function renderStatusFilters(openList){
+  let urgentCount = openList.filter(o => {
+    let u = getOrderUrgencyMeta(o);
+    return u.isOverdue || u.type === 'soon' || u.type === 'asap';
+  }).length;
+
+  let counts={
+    'Tutti':openList.length,
+    'Urgenti':urgentCount,
+    'Nuovo':openList.filter(o=>normStatus(o.status)==='Nuovo').length,
+    'In preparazione':openList.filter(o=>normStatus(o.status)==='In preparazione').length,
+    'Pronto':openList.filter(o=>normStatus(o.status)==='Pronto').length,
+    'In consegna':openList.filter(o=>normStatus(o.status)==='In consegna').length
+  };
+  let defs=[
+    {id:'Tutti',label:'Tutti'},
+    {id:'Urgenti',label:'🔥 Urgenti / Subito'},
+    {id:'Nuovo',label:'🔵 Nuovi'},
+    {id:'In preparazione',label:'🟠 In preparazione'},
+    {id:'Pronto',label:'🟢 Pronti'},
+    {id:'In consegna',label:'🟣 In consegna'}
+  ];
+  let wrap=el('statusFilters');wrap.innerHTML='';
+  defs.forEach(f=>{
+    let b=document.createElement('button');
+    b.type='button';
+    b.className=statusFilter===f.id?'active':'';
+    b.innerHTML=`<span>${f.label}</span><span class="badge-count">${counts[f.id]||0}</span>`;
+    b.onclick=()=>{statusFilter=f.id;renderOrders();};
+    wrap.appendChild(b);
+  });
+}
+
+function renderOrders(){
+  let rawOpenList = orders.filter(o=>!['Completato','Annullato'].includes(normStatus(o.status)));
+  let sortedOpenList = sortOpenOrdersList(rawOpenList);
+
+  el('openCountBadge').textContent = sortedOpenList.length;
+  checkUrgentOrdersAlert(sortedOpenList);
+  renderRouteBuilder();
+  renderStatusFilters(sortedOpenList);
+
+  let filteredOpen = sortedOpenList.filter(o=>{
+    let st = normStatus(o.status);
+    if(statusFilter === 'Tutti') return true;
+    if(statusFilter === 'Urgenti'){
+      let u = getOrderUrgencyMeta(o);
+      return u.isOverdue || u.type === 'soon' || u.type === 'asap';
+    }
+    return st === statusFilter;
+  });
+
+  renderOrderList('openOrders', filteredOpen, true);
+  renderOrderList('allOrders', orders, false);
+}
+
+function renderOrderItemLineWithIcons(i){
+  let parsed = splitProductAndMods(i.product_name);
+  let modsHtml = parsed.mods.map(m=>{
+    let ml = m.toLowerCase();
+    if(ml.startsWith('senza')){
+      let ingName = m.replace(/^senza\s+/i,'').trim();
+      return `<span class="pill st-annullato" style="font-size:11px;padding:1px 6px">🚫 Senza ${esc(ingName)}</span>`;
+    }
+    if(ml.startsWith('+')){
+      let ingName = m.replace(/^\+\s*/,'').trim();
+      return `<span class="pill st-pronto" style="font-size:11px;padding:1px 6px">➕ ${esc(ingName)}</span>`;
+    }
+    return `<span class="pill st-prep" style="font-size:11px;padding:1px 6px">${esc(m)}</span>`;
+  }).join(' ');
+
+  return `
+    <div class="order-item-line">
+      <div>
+        <strong>${i.quantity} × ${esc(parsed.baseName)}</strong> <span class="muted">(${esc(i.size)})</span>
+        ${modsHtml ? `<div style="margin-top:3px;display:flex;gap:4px;flex-wrap:wrap">${modsHtml}</div>` : ''}
+      </div>
+      <span>${euro(i.line_total)}</span>
+    </div>
+  `;
+}
+
+function renderOrderList(id, list, isOpenTab=false){
+  let box=el(id);box.innerHTML='';
+  if(!list.length){box.innerHTML='<div class="panel muted">Nessun ordine da mostrare in questa sezione.</div>';return;}
+  list.forEach(o=>{
+    let st=normStatus(o.status);
+    let stCls=statusClass(st);
+    let u = getOrderUrgencyMeta(o);
+    let isPicked = selectedRouteOrderIds.includes(o.id);
+    let routeStopIndex = selectedRouteOrderIds.indexOf(o.id) + 1;
+    let d=document.createElement('div');
+    d.className=`panel order ${stCls} ${isOpenTab ? u.cardClass : ''} ${isPicked?'route-picked':''}`;
+    let when=new Date(o.created_at).toLocaleString('it-IT',{dateStyle:'short',timeStyle:'short'});
+    let parsedNotes = splitTimeAndNotes(o.notes);
+
+    let items=itemsByOrder.get(o.id)||[];
+    let itemsHtml=items.length
+      ? `<div class="order-items-box">${items.map(i=>renderOrderItemLineWithIcons(i)).join('')}</div>`
+      : `<div class="muted" style="margin:6px 0">Nessun articolo caricato · clicca Ricevuta</div>`;
+    let phoneHtml=o.phone?`<a href="tel:${esc(o.phone)}">📞 ${esc(o.phone)}</a>`:'';
+    let addrHtml=o.address?`<a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(normalizeDeliveryAddress(o.address))}" target="_blank">📍 ${esc(o.address)}</a>`:'';
+    let contactLine=[phoneHtml,addrHtml].filter(Boolean).join(' · ');
+    let noteHtml=parsedNotes.cleanNotes?`<div class="order-note">📝 ${esc(parsedNotes.cleanNotes)}</div>`:'';
+
+    let statusButtonsHtml=ALL_STATUSES.map(s=>{
+      let activeCls=(s===st)?`active-${s.replace(/\s+/g,'-')}`:'';
+      let icons={'Nuovo':'🔵','In preparazione':'👨‍🍳','Pronto':'✅','In consegna':'🛵','Completato':'🏁','Annullato':'❌'};
+      return `<button type="button" class="status-btn ${activeCls}" data-set-status="${s}">${icons[s]||''} ${s}</button>`;
+    }).join('');
+
+    let canAddRoute = Boolean(o.address && String(o.address).trim());
+    let routeBtnHtml = canAddRoute
+      ? `<button type="button" class="route-select-btn ${isPicked?'selected':''}" data-route-toggle>
+           ${isPicked ? `🗺️ Tappa #${routeStopIndex} nel Giro ✓` : `🛵 + Includi nel Giro Mappa`}
+         </button>`
+      : '';
+
+    d.innerHTML=`
+      <div>
+        <h3>
+          Ordine #${o.id} · ${esc(o.customer_name||'Cliente')}
+          <span class="pill ${stCls}">${esc(st)}</span>
+          <span class="pill ${u.badgeClass}">${esc(u.badgeText)}</span>
+          ${parsedNotes.cashInfo ? `<span class="pill resto-pill">💶 ${esc(parsedNotes.cashInfo)}</span>` : ''}
+        </h3>
+        <p>🕒 Creato: ${when} · <strong>${esc(o.order_type)}</strong> · 💳 ${esc(o.payment_method)}</p>
+        ${contactLine?`<p>${contactLine}</p>`:''}
+        ${itemsHtml}
+        ${noteHtml}
+        <div class="status-bar">${statusButtonsHtml}</div>
+      </div>
+      <div class="order-right">
+        <strong>${euro(o.total)}</strong>
+        ${routeBtnHtml}
+        <div style="display:flex;gap:5px">
+          <button type="button" class="orange btn-sm" style="flex:1" data-modifica title="Modifica questo ordine (aggiungi/togli pizze o cambia orario)">✏️ Modifica</button>
+          <button type="button" class="purple btn-sm" style="flex:1" data-riordina title="Crea un nuovo ordine identico">🔄 Copia</button>
+        </div>
+        <button type="button" class="blue btn-sm" data-dettagli>🧾 Comanda / Stampa</button>
+      </div>`;
+
+    let rBtn = d.querySelector('[data-route-toggle]');
+    if(rBtn) rBtn.onclick = ()=>toggleOrderInRoute(o.id);
+
+    d.querySelector('[data-modifica]').onclick = ()=>startEditOrder(o);
+    d.querySelector('[data-riordina]').onclick = ()=>repeatOrderIntoCart(o, items, true);
+
+    d.querySelectorAll('[data-set-status]').forEach(btn=>{
+      btn.onclick=async()=>{
+        let targetStatus=btn.getAttribute('data-set-status');
+        if(targetStatus===st)return;
+        d.querySelectorAll('[data-set-status]').forEach(b=>b.disabled=true);
+        await updateOrderStatus(o.id,targetStatus);
+      };
+    });
+
+    d.querySelector('[data-dettagli]').onclick=()=>showDetails(o);
+    box.appendChild(d);
+  });
+}
+
+async function updateOrderStatus(orderId,newStatus){
+  let target=orders.find(x=>x.id===orderId);
+  let oldStatus=target?target.status:'Nuovo';
+  if(target){target.status=newStatus;renderOrders();}
+  let {data,error}=await sb.from('orders').update({status:newStatus}).eq('id',orderId).select();
+  if(error){
+    if(target)target.status=oldStatus;
+    renderOrders();
+    alert('Errore aggiornamento stato su Supabase:\n'+error.message);
+  }else{
+    await loadOrders();
+  }
+}
+
+/* ================= COSTRUZIONE RICEVUTA / COMANDA PROFESSIONALE v11 ================= */
+function splitProductAndMods(rawName){
+  let str = String(rawName||'');
+  let match = str.match(/^(.*?)\s*\((.*)\)$/);
+  if(!match) return {baseName: str, mods: []};
+  let baseName = match[1].trim();
+  let modsRaw = match[2].split(',').map(x=>x.trim()).filter(Boolean);
+  return {baseName, mods: modsRaw};
+}
+
+function buildReceiptHtml(o, items){
+  let when = new Date(o.created_at).toLocaleString('it-IT',{dateStyle:'short',timeStyle:'short'});
+  let isConsegna = String(o.order_type||'').toLowerCase().includes('consegna');
+  let typeLabel = isConsegna ? '🛵 CONSEGNA DOMICILIO' : '🛍️ RITIRO ASPORTO';
+  let payMethod = o.payment_method || 'Contanti';
+  let parsedNotes = splitTimeAndNotes(o.notes);
+  let foodItems = items.filter(i=>i.product_name !== 'Supplemento Consegna');
+  let totalQty = foodItems.reduce((s,i)=>s+Number(i.quantity||1), 0);
+
+  let itemsHtml = items.length ? items.map(i=>{
+    let parsed = splitProductAndMods(i.product_name);
+    let isService = i.product_name === 'Supplemento Consegna' || String(i.size||'').toLowerCase() === 'servizio';
+    let isMaxi = String(i.size||'').toLowerCase()==='maxi';
+    let sizeTag = isService ? '' : (isMaxi
+      ? `<span class="rc-size-tag maxi">MAXI</span>`
+      : `<span class="rc-size-tag normale">Normale</span>`);
+
+    let modsLines = parsed.mods.map(m=>{
+      let ml = m.toLowerCase();
+      if(ml.startsWith('senza')){
+        let ingName = m.replace(/^senza\s+/i,'').trim();
+        return `<div class="rc-mod-line senza">🚫 SENZA: ${esc(ingName.toUpperCase())}</div>`;
+      }
+      if(ml.startsWith('+')){
+        let ingName = m.replace(/^\+\s*/,'').trim();
+        return `<div class="rc-mod-line extra">➕ EXTRA: ${esc(ingName.toUpperCase())}</div>`;
+      }
+      return `<div class="rc-mod-line">📝 ${esc(m)}</div>`;
+    }).join('');
+
+    return `
+      <div class="rc-item">
+        <div class="rc-item-top">
+          <div>
+            <span class="rc-qty-badge">${i.quantity}×</span>
+            <span class="rc-item-name">${esc(parsed.baseName)}</span>
+            ${sizeTag}
+          </div>
+          <div class="rc-item-price">${euro(i.line_total)}</div>
+        </div>
+        ${modsLines ? `<div class="rc-mods-list">${modsLines}</div>` : ''}
+      </div>
+    `;
+  }).join('') : '<p class="muted">Nessun prodotto registrato.</p>';
+
+  return `
+    <div class="receipt-card" id="printableReceiptCard">
+      <div class="rc-header">
+        <div class="rc-brand">🍕 BUONA PIZZA</div>
+        <div class="rc-sub">Lodi Vecchio · Pizzeria & Kebap · Comanda</div>
+      </div>
+
+      <div class="rc-meta-strip">
+        <div>
+          <div class="rc-order-num">ORDINE #${o.id}</div>
+          <div style="font-size:11.5px;font-weight:750;color:#475467;margin-top:2px">Reg: ${when}</div>
+        </div>
+        <div class="rc-type-box">
+          <span class="rc-type-pill">${typeLabel}</span>
+        </div>
+      </div>
+
+      <div class="rc-time-hero">
+        <span class="t-lbl">⏰ ORARIO RICHIESTO:</span>
+        <span class="t-val">${esc(parsedNotes.time)}</span>
+      </div>
+
+      <div class="rc-customer-box">
+        <div class="rc-customer-row"><strong class="lbl">👤 Cliente:</strong> <span style="font-weight:900;font-size:15px">${esc(o.customer_name||'Cliente al banco')}</span></div>
+        ${o.phone ? `<div class="rc-customer-row"><strong class="lbl">📞 Telefono:</strong> <span style="font-weight:800">${esc(o.phone)}</span></div>` : ''}
+        ${o.address ? `<div class="rc-customer-row"><strong class="lbl">📍 Indirizzo:</strong> <span style="font-weight:900;text-decoration:underline">${esc(o.address)}</span></div>` : ''}
+      </div>
+
+      <div class="rc-items-section">
+        <div class="rc-table-head">
+          <span>Q.tà & Articolo</span>
+          <span>Importo</span>
+        </div>
+        ${itemsHtml}
+      </div>
+
+      ${parsedNotes.cleanNotes ? `<div class="rc-note-alert">📝 <strong>NOTE ORDINE:</strong> ${esc(parsedNotes.cleanNotes)}</div>` : ''}
+
+      <div class="rc-summary-box">
+        <div class="rc-summary-row">
+          <span>Totale Articoli:</span>
+          <strong>${totalQty} pz</strong>
+        </div>
+        <div class="rc-summary-row">
+          <span>Metodo di Pagamento:</span>
+          <strong>💳 ${esc(payMethod.toUpperCase())}</strong>
+        </div>
+        ${parsedNotes.cashInfo ? `<div class="rc-resto-highlight"><span>💶 CALCOLO RESTO:</span><span>${esc(parsedNotes.cashInfo)}</span></div>` : ''}
+      </div>
+
+      <div class="rc-total-bar">
+        <span class="rc-tot-label">TOTALE CLIENTE</span>
+        <span class="rc-tot-val">${euro(o.total)}</span>
+      </div>
+
+      <div class="rc-footer">
+        Grazie per aver scelto <strong>Buona Pizza</strong> · Buon Appetito!
+      </div>
+    </div>
+  `;
+}
+
+async function showDetails(o){
+  let items=itemsByOrder.get(o.id);
+  if(!items||!items.length){
+    let {data,error}=await sb.from('order_items').select('*').eq('order_id',o.id);
+    if(error){alert(error.message);return;}
+    items=data||[];
+    itemsByOrder.set(o.id,items);
+  }
+  el('receiptContainer').innerHTML = buildReceiptHtml(o, items);
+  el('detailsModal').classList.remove('hidden');
+}
+
+/* ================= STAMPA NITIDA ECO-INK (80mm & A4) ================= */
+function printReceiptWindow(format){
+  let content = el('receiptContainer').innerHTML;
+  let widthCss = format === '80mm' ? 'max-width: 76mm; margin: 0 auto;' : 'max-width: 440px; margin: 0 auto;';
+  let win = window.open('', '_blank', 'width=600,height=800');
+  if(!win){
+    window.print();
+    return;
+  }
+  let styles = document.querySelector('style').innerHTML;
+  win.document.write(`
+    <!doctype html>
+    <html lang="it">
+    <head>
+      <meta charset="utf-8">
+      <title>Stampa Comanda - Buona Pizza</title>
+      <style>
+        ${styles}
+        @page { margin: 4mm; size: auto; }
+        body { background: #fff !important; color: #000 !important; margin: 0; padding: 2px; font-family: system-ui, -apple-system, sans-serif; }
+        .print-wrap { ${widthCss} }
+        .receipt-card { border: 2px solid #000 !important; border-radius: 6px !important; box-shadow: none !important; page-break-inside: avoid; }
+        .rc-header { background: #fff !important; color: #000 !important; border-bottom: 2px solid #000 !important; padding: 8px !important; }
+        .rc-header .rc-brand { font-size: 20px !important; color: #000 !important; }
+        .rc-header .rc-sub { font-size: 11px !important; color: #000 !important; }
+        .rc-meta-strip { background: #fff !important; border-bottom: 1.5px dashed #000 !important; padding: 8px 10px !important; }
+        .rc-order-num { font-size: 20px !important; color: #000 !important; }
+        .rc-type-pill { font-size: 12px !important; padding: 3px 8px !important; border: 1.5px solid #000 !important; }
+        .rc-time-hero { background: #fff !important; border-bottom: 2px solid #000 !important; padding: 7px 10px !important; }
+        .rc-time-hero .t-lbl { color: #000 !important; font-size: 12px !important; }
+        .rc-time-hero .t-val { font-size: 18px !important; border: 2px solid #000 !important; padding: 1px 8px !important; }
+        .rc-customer-box { padding: 8px 10px !important; border-bottom: 1.5px solid #000 !important; font-size: 13px !important; }
+        .rc-customer-row strong.lbl { color: #000 !important; }
+        .rc-items-section { padding: 8px 10px !important; }
+        .rc-item { padding: 6px 0 !important; border-bottom: 1px dashed #000 !important; page-break-inside: avoid; }
+        .rc-qty-badge { background: #fff !important; color: #000 !important; border: 1.5px solid #000 !important; padding: 0 5px !important; font-size: 13.5px !important; }
+        .rc-item-name { font-size: 14.5px !important; color: #000 !important; }
+        .rc-size-tag { border: 1.5px solid #000 !important; background: #fff !important; color: #000 !important; font-size: 10.5px !important; }
+        .rc-mod-line { color: #000 !important; font-size: 12.5px !important; }
+        .rc-note-alert { background: #fff !important; color: #000 !important; border: 2px dashed #000 !important; margin: 6px 10px !important; padding: 6px 8px !important; }
+        .rc-summary-box { background: #fff !important; border-top: 1.5px solid #000 !important; padding: 6px 10px !important; font-size: 12.5px !important; }
+        .rc-resto-highlight { background: #fff !important; border: 2px solid #000 !important; color: #000 !important; }
+        .rc-total-bar { background: #fff !important; color: #000 !important; border-top: 2.5px solid #000 !important; padding: 8px 10px !important; }
+        .rc-total-bar .rc-tot-label, .rc-total-bar .rc-tot-val { color: #000 !important; font-size: 19px !important; }
+        .rc-footer { background: #fff !important; color: #000 !important; border-top: 1px solid #000 !important; padding: 6px !important; font-size: 10.5px !important; }
+      </style>
+    </head>
+    <body>
+      <div class="print-wrap">${content}</div>
+      <script>
+        window.onload = function(){
+          setTimeout(function(){ window.print(); }, 200);
+        };
+      <\/script>
+    </body>
+    </html>
+  `);
+  win.document.close();
+}
+
+function closeDetailsModal(){el('detailsModal').classList.add('hidden');}
+
+function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+
+(async()=>{
+  if(connect()){
+    try{
+      let {data}=await sb.auth.getSession();
+      if(data?.session)showApp(data.session.user);
+    }catch(e){}
+  }
+})();
+</script>
+</body></html>
