@@ -243,12 +243,52 @@ h1{font-size:24px;margin:4px 0 14px}h2{font-size:18px;margin:0 0 12px}.grid{disp
 @media(max-width:520px){.fields,.dd-row-2,.dd-row-3{grid-template-columns:1fr}.field.full{grid-column:auto}.order{grid-template-columns:1fr}.order-right{text-align:left;flex-direction:row;align-items:center;flex-wrap:wrap;justify-content:space-between;border-top:1px solid var(--line);padding-top:10px}.order-right strong{margin:0}.price-inputs{justify-content:flex-start}.admin-actions{justify-content:flex-start}}
 
 @media print{
-  body *{visibility:hidden}
-  #detailsModal, #detailsModal *{visibility:visible}
-  #detailsModal{position:absolute;left:0;top:0;width:100%;background:transparent!important;padding:0!important;display:block!important}
-  #detailsModal .modal{box-shadow:none!important;max-width:100%!important;width:100%!important;padding:0!important;max-height:none!important;overflow:visible!important}
-  .no-print, .p-ing-badges{display:none!important}
-  .receipt-card{border:2px solid #000!important;box-shadow:none!important;page-break-inside:avoid}
+  header, #loginScreen, #app, #liveOrderToast, #productModal, #categoryModal, #cartIngModal, .no-print, .p-ing-badges {
+    display: none !important;
+  }
+  html, body {
+    background: #fff !important;
+    color: #000 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    height: auto !important;
+    overflow: visible !important;
+  }
+  #detailsModal {
+    position: static !important;
+    display: block !important;
+    background: #fff !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    width: 100% !important;
+  }
+  #detailsModal .modal {
+    box-shadow: none !important;
+    max-width: 100% !important;
+    width: 100% !important;
+    padding: 0 !important;
+    margin: 0 auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+    border: none !important;
+  }
+  #receiptContainer {
+    width: 100% !important;
+    margin: 0 auto !important;
+  }
+  .receipt-card, .receipt-card * {
+    color: #000 !important;
+    background: #fff !important;
+    box-shadow: none !important;
+  }
+  .receipt-card {
+    border: 2px solid #000 !important;
+  }
+  .rc-header, .rc-total-bar, .rc-qty-badge, .rc-size-tag.maxi {
+    background: #fff !important;
+    color: #000 !important;
+    border: 1.5px solid #000 !important;
+  }
 }
 </style>
 </head>
@@ -1333,8 +1373,7 @@ function addFromDropdownBuilderToCart(){
   updateDropdownBuilderPrice();
   renderCart();
 }
-
-/* ================= ESTRAZIONE ORDINI DA IMMAGINE / FOTO (OCR + AI VISION) & TESTO ================= */
+  /* ================= ESTRAZIONE ORDINI DA IMMAGINE / FOTO (OCR + AI VISION) & TESTO ================= */
 document.addEventListener('paste', async (e) => {
   if(el('loginScreen') && !el('loginScreen').classList.contains('hidden')) return;
   const items = e.clipboardData?.items;
@@ -4281,64 +4320,15 @@ async function showDetails(o){
   el('detailsModal').classList.remove('hidden');
 }
 
-/* ================= STAMPA NITIDA ECO-INK (80mm & A4) ================= */
+/* ================= STAMPA DIRETTA SENZA PAGINA BIANCA (80mm & A4) ================= */
 function printReceiptWindow(format){
-  let content = el('receiptContainer').innerHTML;
-  let widthCss = format === '80mm' ? 'max-width: 76mm; margin: 0 auto;' : 'max-width: 440px; margin: 0 auto;';
-  let win = window.open('', '_blank', 'width=600,height=800');
-  if(!win){
-    window.print();
-    return;
+  let container = el('receiptContainer');
+  if(format === '80mm'){
+    container.style.maxWidth = '76mm';
+  } else {
+    container.style.maxWidth = '100%';
   }
-  let styles = document.querySelector('style').innerHTML;
-  win.document.write(`
-    <!doctype html>
-    <html lang="it">
-    <head>
-      <meta charset="utf-8">
-      <title>Stampa Comanda - Buona Pizza</title>
-      <style>
-        ${styles}
-        @page { margin: 4mm; size: auto; }
-        body { background: #fff !important; color: #000 !important; margin: 0; padding: 2px; font-family: system-ui, -apple-system, sans-serif; }
-        .print-wrap { ${widthCss} }
-        .receipt-card { border: 2px solid #000 !important; border-radius: 6px !important; box-shadow: none !important; page-break-inside: avoid; }
-        .rc-header { background: #fff !important; color: #000 !important; border-bottom: 2px solid #000 !important; padding: 8px !important; }
-        .rc-header .rc-brand { font-size: 20px !important; color: #000 !important; }
-        .rc-header .rc-sub { font-size: 11px !important; color: #000 !important; }
-        .rc-meta-strip { background: #fff !important; border-bottom: 1.5px dashed #000 !important; padding: 8px 10px !important; }
-        .rc-order-num { font-size: 20px !important; color: #000 !important; }
-        .rc-type-pill { font-size: 12px !important; padding: 3px 8px !important; border: 1.5px solid #000 !important; }
-        .rc-time-hero { background: #fff !important; border-bottom: 2px solid #000 !important; padding: 7px 10px !important; }
-        .rc-time-hero .t-lbl { color: #000 !important; font-size: 12px !important; }
-        .rc-time-hero .t-val { font-size: 18px !important; border: 2px solid #000 !important; padding: 1px 8px !important; }
-        .rc-customer-box { padding: 8px 10px !important; border-bottom: 1.5px solid #000 !important; font-size: 13px !important; }
-        .rc-customer-row strong.lbl { color: #000 !important; }
-        .rc-items-section { padding: 8px 10px !important; }
-        .rc-item { padding: 6px 0 !important; border-bottom: 1px dashed #000 !important; page-break-inside: avoid; }
-        .rc-qty-badge { background: #fff !important; color: #000 !important; border: 1.5px solid #000 !important; padding: 0 5px !important; font-size: 13.5px !important; }
-        .rc-item-name { font-size: 14.5px !important; color: #000 !important; }
-        .rc-size-tag { border: 1.5px solid #000 !important; background: #fff !important; color: #000 !important; font-size: 10.5px !important; }
-        .rc-mod-line { color: #000 !important; font-size: 12.5px !important; }
-        .rc-note-alert { background: #fff !important; color: #000 !important; border: 2px dashed #000 !important; margin: 6px 10px !important; padding: 6px 8px !important; }
-        .rc-summary-box { background: #fff !important; border-top: 1.5px solid #000 !important; padding: 6px 10px !important; font-size: 12.5px !important; }
-        .rc-resto-highlight { background: #fff !important; border: 2px solid #000 !important; color: #000 !important; }
-        .rc-total-bar { background: #fff !important; color: #000 !important; border-top: 2.5px solid #000 !important; padding: 8px 10px !important; }
-        .rc-total-bar .rc-tot-label, .rc-total-bar .rc-tot-val { color: #000 !important; font-size: 19px !important; }
-        .rc-footer { background: #fff !important; color: #000 !important; border-top: 1px solid #000 !important; padding: 6px !important; font-size: 10.5px !important; }
-      </style>
-    </head>
-    <body>
-      <div class="print-wrap">${content}</div>
-      <script>
-        window.onload = function(){
-          setTimeout(function(){ window.print(); }, 200);
-        };
-      <\/script>
-    </body>
-    </html>
-  `);
-  win.document.close();
+  window.print();
 }
 
 function closeDetailsModal(){el('detailsModal').classList.add('hidden');}
