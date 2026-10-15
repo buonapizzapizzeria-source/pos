@@ -2,7 +2,7 @@
 <html lang="it">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#b42318"><title>Buona Pizza · POS Pro v25</title>
+<meta name="theme-color" content="#b42318"><title>Buona Pizza · POS Pro v26</title>
 <style>
 :root{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;color:#202124;background:#f5f6f8;--red:#b42318;--green:#16794b;--blue:#175cd3;--orange:#b54708;--purple:#5925dc;--line:#e1e4e8}
 *{box-sizing:border-box;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
@@ -633,7 +633,7 @@ html:not(.x) body :is(button,select,input:not([type=checkbox])){min-height:44px}
 </head>
 <body>
 <header class="no-print">
-  <div class="brand"><span class="logo">🍕</span><span>Buona Pizza <span class="muted">· POS Pro v25</span></span></div>
+  <div class="brand"><span class="logo">🍕</span><span>Buona Pizza <span class="muted">· POS Pro v26</span></span></div>
   <div id="userBar" class="hidden" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
     <button type="button" id="soundToggleBtn" onclick="toggleSoundAlert()" class="sound-btn" title="Attiva/Disattiva suono nuovo ordine">🔔 Audio ON</button>
     <button type="button" onclick="playOrderChime(true)" class="secondary btn-sm" title="Prova suono campanello">🔊 Test</button>
@@ -6567,7 +6567,7 @@ button{overflow-wrap:anywhere}
     var email = (el('email').value || localStorage.getItem('bp_staff_email') || '').trim();
     if(!pin){
       if(localStorage.getItem('bp_require_pin') === '1'){ setMsg('loginMsg', 'Inserisci il PIN staff.', 'error'); return; }
-      showApp({email: 'Cassa Staff'}); return;
+      setMsg('loginMsg', 'Inserisci il PIN staff per entrare.', 'error'); return;
     }
     if(!email){ setMsg('loginMsg', "Imposta l'email staff in ⚙️ Accesso con Account / Configurazione Server.", 'error'); return; }
     setMsg('loginMsg', '⏳ Verifica PIN...', '');
@@ -6725,6 +6725,274 @@ button{overflow-wrap:anywhere}
   if(window.__bp25sw) return; window.__bp25sw = true;
   var ok = location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1';
   if('serviceWorker' in navigator && ok){ navigator.serviceWorker.register('sw.js').catch(function(){}); }
+})();
+</script>
+<script>
+/* v26-offline: work without internet (cache + local order queue + auto sync) */
+(function(){
+  if(window.__bp26off) return; window.__bp26off = true;
+  var QK = 'bp_q_orders', SK = 'bp_q_status', CM = 'bp_c_menu', CO = 'bp_c_orders';
+  var online = navigator.onLine !== false, flushing = false, lastProbe = 0;
+  window.__bpOnline = online;
+  function jget(k, d){ try{ var v = JSON.parse(localStorage.getItem(k)); return v == null ? d : v; }catch(e){ return d; } }
+  function jset(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); return true; }catch(e){ return false; } }
+  function toast(t, s){ try{ if(typeof rdToast === 'function') rdToast(t, s); }catch(e){} }
+  function isIdNum(k){ return /^\d+$/.test(String(k)); }
+
+  var ban = document.createElement('div'); ban.id = 'bpOffBanner'; ban.className = 'hidden no-print';
+  ban.style.cssText = 'position:sticky;top:0;z-index:35;background:#b54708;color:#fff;padding:8px 14px;font-weight:850;text-align:center;font-size:14px';
+  ban.textContent = '📴 Offline — gli ordini nuovi restano sul dispositivo e partono appena torna la connessione';
+  document.body.insertBefore(ban, document.body.firstChild);
+  ban.classList.toggle('hidden', online);
+
+  /* ---------- caches (menu + recent orders) ---------- */
+  function saveCaches(){
+    try{
+      if(allMenu.length) jset(CM, allMenu);
+      if(orders.length){
+        var o = orders.slice(0, 120), its = {};
+        o.forEach(function(x){ var a = itemsByOrder.get(x.id); if(a) its[x.id] = a; });
+        jset(CO, {orders: o, items: its, ts: Date.now()});
+      }
+    }catch(e){}
+  }
+  function hydrate(){
+    try{
+      if(!allMenu.length){
+        var m = jget(CM, null);
+        if(m && m.length){ allMenu = m; var b = el('menuCountBadge'); if(b) b.textContent = allMenu.length; renderCategories(); populateProductDropdown(); renderAdminMenu(); }
+      }
+      if(!orders.length){
+        var c = jget(CO, null);
+        if(c && c.orders && c.orders.length){
+          orders = c.orders; itemsByOrder.clear();
+          Object.keys(c.items || {}).forEach(function(k){ itemsByOrder.set(isIdNum(k) ? Number(k) : k, c.items[k]); });
+          renderOrders();
+        }
+      }
+    }catch(e){}
+  }
+  var lm = loadMenu;
+  loadMenu = async function(){ await lm(); if(!allMenu.length){ if(!online) hydrate(); } else saveCaches(); };
+  var lo = loadOrders;
+  loadOrders = async function(){ await lo(); if(!orders.length){ if(!online) hydrate(); } else saveCaches(); };
+
+  /* ---------- local order queue ---------- */
+  function qGet(){ return jget(QK, []); }
+  function qSet(a){ jset(QK, a); renderQueue(); }
+  function rowsFor(q){
+    var rows = q.items.map(function(x){
+      var m = [...new Set(x.removedIngs || [])].map(function(r){ return 'Senza ' + r; }).concat([...new Set(x.addedIngs || [])].map(function(a){ return '+ ' + a; })).join(', ');
+      return {product_name: m ? x.name + ' (' + m + ')' : x.name, size: x.size, quantity: x.qty, unit_price: x.price, line_total: Math.round(x.price * x.qty * 100) / 100};
+    });
+    if(q.delivFee > 0) rows.push({product_name: 'Supplemento Consegna', size: 'Servizio', quantity: 1, unit_price: q.delivFee, line_total: q.delivFee});
+    return rows;
+  }
+  function localOrder(q){
+    itemsByOrder.set(q.local_id, rowsFor(q));
+    return {id: q.local_id, created_at: q.created_at, customer_name: q.customer_name, phone: q.phone, order_type: q.order_type, address: q.address, payment_method: q.payment_method, status: 'Nuovo', notes: q.notes, total: q.total};
+  }
+  function buildFromForm(){
+    var items = [...cart.values()].map(function(x){ return JSON.parse(JSON.stringify(x)); });
+    var total = getGrandTotal(), delivFee = getActiveDeliveryFee(), selectedTime = getSelectedDeliveryTime();
+    var cashGiven = Number(el('cashGivenInput').value || 0), cashTag = '';
+    if(el('payment').value === 'Contanti' && cashGiven > total){
+      cashTag = '[💶 Paga con ' + euro(cashGiven) + ' · Resto: ' + euro(Math.round((cashGiven - total) * 100) / 100) + ']';
+    }
+    var userNotes = el('notes').value.trim();
+    return {
+      local_id: 'OFF-' + Date.now().toString(36).toUpperCase().slice(-5),
+      created_at: new Date().toISOString(),
+      customer_name: el('customer').value.trim(), phone: el('phone').value.trim(),
+      order_type: el('type').value, address: el('type').value === 'Consegna' ? el('address').value.trim() : '',
+      payment_method: el('payment').value,
+      notes: '[⏰ ' + selectedTime + ']' + (cashTag ? ' ' + cashTag : '') + (userNotes ? ' ' + userNotes : ''),
+      total: total, items: items, delivFee: delivFee
+    };
+  }
+  function enqueueCurrent(){
+    var q = buildFromForm(), arr = qGet(); arr.push(q); qSet(arr);
+    try{ upsertCustomerProfile(q.customer_name, q.phone, q.address, true); saveCustomerDirectoryToStorage(); }catch(e){}
+    try{ playOrderChime(false); }catch(e){}
+    cart.clear(); el('cashGivenInput').value = '';
+    try{ el('customerLastOrderBanner').classList.add('hidden'); el('imagePreviewBar').classList.add('hidden'); }catch(e){}
+    renderCart();
+    ['customer', 'phone', 'address', 'notes', 'voiceSmartInput'].forEach(function(id){ if(el(id)) el(id).value = ''; });
+    el('deliveryHour').value = 'Prima possibile'; onTimeHourChange();
+    try{ el('voiceTranscriptBar').classList.add('hidden'); }catch(e){}
+    setMsg('orderMsg', '📴 Ordine ' + q.local_id + ' salvato OFFLINE (' + euro(q.total) + '). Sarà inviato appena torna la connessione.', 'success');
+    return q.local_id;
+  }
+  var ds = doSaveOrder;
+  doSaveOrder = async function(){
+    if(!cart.size) return ds();
+    if(editingOrderId && !online){ setMsg('orderMsg', '📴 Modifica non disponibile offline: riprova quando torna la connessione.', 'error'); return null; }
+    if(!editingOrderId && !online){
+      if(el('type').value === 'Consegna' && !el('address').value.trim()) return ds();
+      return enqueueCurrent();
+    }
+    var r = await ds();
+    if(cart.size && !editingOrderId && /fetch|network|load failed|timeout|ERR_/i.test((el('orderMsg').textContent || ''))){
+      check();
+      return enqueueCurrent();
+    }
+    return r;
+  };
+  var spb = el('savePrintOrderBtn');
+  if(spb) spb.onclick = async function(){
+    if(!cart.size){ setMsg('orderMsg', 'Aggiungi almeno un prodotto.', 'error'); return; }
+    spb.disabled = true;
+    var id = await doSaveOrder();
+    spb.disabled = false;
+    if(!id) return;
+    var ord = null;
+    if(typeof id === 'string' && id.indexOf('OFF-') === 0){
+      var q = qGet().filter(function(x){ return x.local_id === id; })[0]; if(q) ord = localOrder(q);
+    } else {
+      ord = orders.find(function(x){ return x.id === id; });
+      if(!ord && sb){ try{ var rr = await sb.from('orders').select('*').eq('id', id).maybeSingle(); ord = rr.data; }catch(e){} }
+    }
+    if(ord){ await showDetails(ord); setTimeout(function(){ printReceiptWindow('80mm'); }, 250); }
+  };
+
+  /* ---------- queue panel in "Ordini aperti" ---------- */
+  function qBox(){
+    var b = el('bpQueueBox'); if(b) return b;
+    var anchor = el('statusFilters'); if(!anchor || !anchor.parentNode) return null;
+    b = document.createElement('div'); b.id = 'bpQueueBox'; b.className = 'panel hidden';
+    b.style.cssText = 'border:2px solid #fdb022;background:#fffaeb;margin-bottom:12px';
+    anchor.parentNode.insertBefore(b, anchor);
+    b.onclick = function(e){
+      var t = e.target.closest('[data-q]'); if(!t) return;
+      var act = t.getAttribute('data-q'), i = Number(t.getAttribute('data-i')), arr = qGet();
+      if(act === 'sync'){ syncPending(true); return; }
+      if(act === 'print' && arr[i]){ showDetails(localOrder(arr[i])); return; }
+      if(act === 'del' && arr[i]){ if(confirm('Eliminare questo ordine non ancora inviato?')){ arr.splice(i, 1); qSet(arr); } }
+    };
+    return b;
+  }
+  function renderQueue(){
+    var b = qBox(); if(!b) return;
+    var arr = qGet(); b.classList.toggle('hidden', !arr.length); if(!arr.length) return;
+    b.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap"><strong>📴 In attesa di invio (' + arr.length + ')</strong><button type="button" class="blue btn-sm" data-q="sync">📤 Invia ora</button></div>' +
+      arr.map(function(q, i){
+        var t = splitTimeAndNotes(q.notes).time;
+        return '<div class="order-item-line" style="align-items:center"><span><strong>' + esc(q.local_id) + '</strong> · ' + esc(q.customer_name || 'Cliente') + ' · ⏰ ' + esc(t) + ' · <b>' + euro(q.total) + '</b></span><span style="display:flex;gap:6px"><button type="button" class="secondary btn-sm" data-q="print" data-i="' + i + '">🖨️</button><button type="button" class="secondary btn-sm" data-q="del" data-i="' + i + '">🗑️</button></span></div>';
+      }).join('');
+  }
+
+  /* ---------- status changes while offline ---------- */
+  var us = updateOrderStatus;
+  updateOrderStatus = async function(id, st){
+    if(!online){
+      var p = jget(SK, {}); p[id] = st; jset(SK, p);
+      var t = orders.find(function(x){ return x.id === id; }); if(t) t.status = st;
+      renderOrders(); toast('📴 Stato salvato offline', 'Verrà inviato appena torna la connessione'); return;
+    }
+    return us(id, st);
+  };
+
+  /* ---------- sync ---------- */
+  async function flushStatus(){
+    var p = jget(SK, {}), ids = Object.keys(p); if(!ids.length || !sb) return;
+    for(var i = 0; i < ids.length; i++){
+      try{
+        var r = await sb.from('orders').update({status: p[ids[i]]}).eq('id', isIdNum(ids[i]) ? Number(ids[i]) : ids[i]);
+        if(r.error) throw r.error; delete p[ids[i]];
+      }catch(e){ break; }
+    }
+    jset(SK, p);
+  }
+  async function flushQueue(){
+    if(flushing || !sb) return 0;
+    var arr = qGet(); if(!arr.length) return 0;
+    flushing = true; var sent = 0;
+    try{
+      var uid = null; try{ var ud = await sb.auth.getUser(); uid = ud && ud.data && ud.data.user ? ud.data.user.id : null; }catch(e){}
+      for(var i = 0; i < arr.length; i++){
+        var q = arr[i];
+        try{
+          var ex = await sb.from('orders').select('id').eq('created_at', q.created_at).limit(1);
+          if(ex.error) throw ex.error;
+          var oid = null;
+          if(ex.data && ex.data.length){
+            oid = ex.data[0].id;
+            var has = await sb.from('order_items').select('id').eq('order_id', oid).limit(1);
+            if(has.data && has.data.length){ sent++; arr[i] = null; continue; }
+          } else {
+            var ins = await sb.from('orders').insert({customer_name: q.customer_name, phone: q.phone, order_type: q.order_type, address: q.address, payment_method: q.payment_method, status: 'Nuovo', notes: q.notes, total: q.total, created_by: uid, created_at: q.created_at}).select().single();
+            if(ins.error) throw ins.error;
+            oid = ins.data.id; knownOrderIds.add(oid);
+          }
+          var ir = await insertOrderItemsForOrder(oid, q.items, q.delivFee);
+          if(ir.error) throw ir.error;
+          sent++; arr[i] = null;
+        }catch(e){ break; }
+      }
+    } finally { qSet(arr.filter(Boolean)); flushing = false; }
+    return sent;
+  }
+  async function syncPending(manual){
+    if(!sb){ try{ connect(); }catch(e){} }
+    if(!sb) return;
+    try{ await sb.auth.getSession(); }catch(e){}
+    await flushStatus();
+    var n = await flushQueue();
+    if(n){ toast('✅ ' + n + ' ordini inviati', 'Sincronizzazione completata'); try{ await loadOrders(); }catch(e){} }
+    else if(manual){ toast('Nessun ordine inviato', qGet().length ? 'Connessione non ancora disponibile' : 'Coda vuota'); }
+  }
+
+  /* ---------- connectivity ---------- */
+  async function probe(){
+    var base = ((el('sbUrl') && el('sbUrl').value) || FALLBACK_URL).trim().replace(/\/$/, '');
+    var ctl = typeof AbortController !== 'undefined' ? new AbortController() : null;
+    var tm = ctl ? setTimeout(function(){ ctl.abort(); }, 4000) : null;
+    try{ await fetch(base + '/auth/v1/health', {mode: 'no-cors', cache: 'no-store', signal: ctl ? ctl.signal : undefined}); return true; }
+    catch(e){ return false; }
+    finally{ if(tm) clearTimeout(tm); }
+  }
+  async function setOnline(ok){
+    lastProbe = Date.now();
+    if(ok === online) return;
+    online = ok; window.__bpOnline = ok; ban.classList.toggle('hidden', ok);
+    if(!ok){ hydrate(); toast('📴 Offline', 'Gli ordini nuovi verranno salvati sul dispositivo'); return; }
+    toast('✅ Connessione ripristinata', 'Sincronizzazione in corso…');
+    await syncPending(false);
+    try{ await loadOrders(); await loadMenu(); }catch(e){}
+  }
+  async function check(){ await setOnline(await probe()); }
+  window.addEventListener('online', check); window.addEventListener('offline', check);
+  setInterval(check, 15000);
+  setInterval(function(){ if(online && (qGet().length || Object.keys(jget(SK, {})).length)) syncPending(false); }, 25000);
+
+  /* ---------- enter the app without internet (saved login on this device) ---------- */
+  function storedSession(){
+    try{
+      for(var i = 0; i < localStorage.length; i++){
+        var k = localStorage.key(i);
+        if(/^sb-.*-auth-token$/.test(k)){
+          var v = JSON.parse(localStorage.getItem(k));
+          if(v && v.user) return v;
+          if(v && v.currentSession && v.currentSession.user) return v.currentSession;
+        }
+      }
+    }catch(e){}
+    return null;
+  }
+  var dde = doDirectEnter;
+  doDirectEnter = async function(){
+    if(Date.now() - lastProbe > 8000) await check();
+    if(!online){
+      var s = storedSession();
+      if(s){ showApp({email: (s.user && s.user.email) || 'Cassa (offline)'}); hydrate(); return; }
+      setMsg('loginMsg', '📴 Nessuna connessione e nessun accesso salvato su questo dispositivo: collegati almeno una volta online con il PIN.', 'error');
+      return;
+    }
+    return dde();
+  };
+
+  window.__bpOff = {check: check, setOnline: setOnline, flush: flushQueue, syncPending: syncPending, qGet: qGet, hydrate: hydrate, saveCaches: saveCaches, jget: jget};
+  renderQueue(); if(!online) hydrate(); check();
 })();
 </script>
 </body></html>
