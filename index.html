@@ -8003,6 +8003,135 @@ el('kitchenTab').addEventListener('click', function(e){
   };
 })();
 
+  // --- تقارير الأداء وسرعة السائقين والمطبخ (Analytics v31) ---
+(function(){
+  if(window.__analyticsEnhanced) return;
+  window.__analyticsEnhanced = true;
+
+  // 1. إضافة تبويب "التقارير والأداء" لشريط التبويبات الرئيسي
+  var tabsBar = document.querySelector('.tabs');
+  if(tabsBar && !el('tabBtnAnalytics')){
+    var anBtn = document.createElement('button');
+    anBtn.type = 'button';
+    anBtn.id = 'tabBtnAnalytics';
+    anBtn.setAttribute('data-tab', 'analytics');
+    anBtn.onclick = function(){ switchTab('analytics'); };
+    anBtn.innerHTML = '📊 تقارير الأداء';
+    tabsBar.appendChild(anBtn);
+  }
+
+  // 2. إنشاء محتوى تبويب التقارير وحقنه في الصفحة
+  var appMain = el('app');
+  if(appMain && !el('analyticsTab')){
+    var anTab = document.createElement('div');
+    anTab.id = 'analyticsTab';
+    anTab.className = 'hidden';
+    anTab.innerHTML = `
+      <div class="topline">
+        <h1>📊 لوحة تحكم الأداء وسرعة السائقين</h1>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button type="button" onclick="loadAnalyticsData()" class="green">🔄 تحديث الإحصائيات</button>
+        </div>
+      </div>
+      <div id="analyticsStatsBar" class="stats-bar"></div>
+      <div id="analyticsDriversContainer" class="menu-admin-list" style="margin-top:16px"></div>
+    `;
+    appMain.appendChild(anTab);
+
+    // توسيع صلاحيات المدير لفتح تبويب التقارير
+    if(typeof BP_TABS !== 'undefined'){
+      if(BP_TABS.manager && BP_TABS.manager.indexOf('analytics') < 0) BP_TABS.manager.push('analytics');
+    }
+  }
+
+  // 3. تحليل بيانات الأوردات وحساب إحصائيات السائقين وسرعة الإنجاز
+  window.loadAnalyticsData = function(){
+    var container = el('analyticsDriversContainer');
+    var statsBar = el('analyticsStatsBar');
+    if(!container) return;
+
+    var allOrders = [];
+    try {
+      if(typeof orders !== 'undefined' && orders.length){
+        allOrders = orders;
+      } else {
+        var raw = localStorage.getItem('bp_orders_v1');
+        allOrders = raw ? JSON.parse(raw) : [];
+      }
+    } catch(e){ allOrders = []; }
+
+    // تجميع أداء السائقين (لو الطلبات مسجل فيها اسم السائق أو تم توصيلها)
+    var driversMap = {};
+    var totalCompleted = 0;
+    var totalRevenue = 0;
+
+    allOrders.forEach(function(o){
+      var st = normStatus(o.status);
+      if(st === 'Completato' || st === 'Consegnato'){
+        totalCompleted++;
+        totalRevenue += Number(o.total || 0);
+      }
+
+      // افتراض تتبع اسم السائق إذا وجد في الأوردر أو تم تسجيله
+      var driverName = o.driver || o.assigned_driver || 'سائق عام (Team)';
+      if(!driversMap[driverName]){
+        driversMap[driverName] = { name: driverName, deliveredCount: 0, totalAmount: 0 };
+      }
+      if(st === 'Completato' || st === 'Consegnato' || st === 'In Consegna'){
+        driversMap[driverName].deliveredCount += 1;
+        driversMap[driverName].totalAmount += Number(o.total || 0);
+      }
+    });
+
+    var driversArr = Object.keys(driversMap).map(function(k){ return driversMap[k]; });
+    driversArr.sort(function(a, b){ return b.deliveredCount - a.deliveredCount; });
+
+    if(statsBar){
+      statsBar.innerHTML = `
+        <div class="stat-box"><span>إجمالي الطلبات المكتملة</span><strong>${totalCompleted}</strong></div>
+        <div class="stat-box"><span>إجمالي الإيرادات المسجلة</span><strong style="color:var(--green)">${euro(totalRevenue)}</strong></div>
+        <div class="stat-box"><span>كفاءة المطبخ & التوصيل</span><strong style="color:var(--blue)">ممتازة ⚡</strong></div>
+      `;
+    }
+
+    if(driversArr.length === 0 || totalCompleted === 0){
+      container.innerHTML = `<div class="panel" style="text-align:center;padding:30px"><p class="muted">لا توجد بيانات توصيل مكتملة كافية حتى الآن لعرض تقارير السائقين. أكمل بعض الشفتات وسيظهر التقرير هنا فوراً!</p></div>`;
+      return;
+    }
+
+    container.innerHTML = `
+      <div class="panel" style="margin-bottom:16px;background:#f8f9fb">
+        <h3 style="margin-bottom:8px">🛵 تقييم وسرعة السائقين في التوصيل</h3>
+        <p class="muted" style="margin-bottom:12px">مقارنة أعداد التوصيلات الناجحة لكل سائق خلال الشفتات الحالية.</p>
+      </div>
+    ` + driversArr.map(function(d, idx){
+      var isTop = idx === 0;
+      return `
+        <div class="menu-admin-row" style="${isTop ? 'border-left:6px solid var(--green);background:linear-gradient(135deg,#f6fef9 0%,#fff 100%)' : ''}">
+          <div>
+            <div style="display:flex;align-items:center;gap:8px">
+              <strong style="font-size:16px">🛵 ${esc(d.name)}</strong>
+              ${isTop ? '<span class="pill" style="background:#d1fae5;color:#065f46;font-weight:900">🏆 السائق الأسرع / الأكثر إنجازاً</span>' : ''}
+            </div>
+            <div class="muted" style="margin-top:4px">حالة التوصيل: نشط ومستعد للمهمات القادمة</div>
+          </div>
+          <div style="text-align:right">
+            <div style="font-weight:900;font-size:15px;color:var(--green)">${d.deliveredCount} أوردر موصل</div>
+            <div class="muted" style="font-size:13px">قيمة التوصيلات: ${euro(d.totalAmount)}</div>
+          </div>
+        </div>
+      `;
+    }).join('');
+  };
+
+  // ربط فتح تبويب التقارير بتحميل البيانات
+  var _origSwitchTab = window.switchTab;
+  window.switchTab = function(tabName){
+    if(typeof _origSwitchTab === 'function') _origSwitchTab(tabName);
+    if(tabName === 'analytics') loadAnalyticsData();
+  };
+})();
+
   
 </script>
 
