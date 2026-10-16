@@ -7373,7 +7373,66 @@ el('kitchenTab').addEventListener('click', function(e){
 });
 }catch(e){ console.error("[bp] sezione non caricata: ruoli/storia/cucina", e); }
 
+// --- تفعيل وضع السائق السريع وتحديث العهدة النقدية (Driver Mode Pro) ---
+(function(){
+  if(window.__driverModeEnhanced) return;
+  window.__driverModeEnhanced = true;
+
+  var _origApplyRole = window.bpApplyRole;
+  window.bpApplyRole = function(role){
+    if(typeof _origApplyRole === 'function') _origApplyRole(role);
+    if(role === 'driver'){
+      setTimeout(function(){
+        switchTab('orders');
+        // تفعيل شاشة Giro Consegna تلقائياً للسائق
+        var routeBox = el('routeBuilderBox');
+        if(routeBox) routeBox.classList.remove('hidden');
+        
+        // تعديل العنوان ليشعر السائق أنه في وضع التوصيل
+        var brandTitle = document.querySelector('.brand span:nth-child(2)');
+        if(brandTitle) brandTitle.innerHTML = 'Buona Pizza <span class="muted">· 🛵 Modalità Autista</span>';
+      }, 300);
+    }
+  };
+
+  // حقن زر "تم التوصيل بلمسة واحدة" مباشرة في كروت الأوردات عند فتح الحساب كسايق
+  var _origRenderOrders = window.renderOrders;
+  if(typeof _origRenderOrders === 'function'){
+    window.renderOrders = function(){
+      _origRenderOrders.apply(this, arguments);
+      if(typeof BP_ROLE !== 'undefined' && BP_ROLE === 'driver'){
+        document.querySelectorAll('#openOrders .order').forEach(function(card){
+          var h3 = card.querySelector('h3');
+          if(!h3) return;
+          var m = /#(\d+)/.exec(h3.textContent);
+          if(!m) return;
+          var ordId = Number(m[1]);
+          var rightBox = card.querySelector('.order-right');
+          if(rightBox && !card.querySelector('.driver-done-btn')){
+            var doneBtn = document.createElement('button');
+            doneBtn.type = 'button';
+            doneBtn.className = 'green btn-sm driver-done-btn';
+            doneBtn.style.cssText = 'width:100%;margin-top:6px;font-weight:900;background:linear-gradient(135deg,#16794b,#0f5132);padding:10px';
+            doneBtn.innerHTML = '✅ Consegnato & Incassato';
+            doneBtn.onclick = async function(){
+              doneBtn.disabled = true;
+              doneBtn.textContent = '⏳ Aggiornamento...';
+              await updateOrderStatus(ordId, 'Completato');
+              // إزالة التقمص من التوصيل وتحديث الجدول
+              selectedRouteOrderIds = selectedRouteOrderIds.filter(function(id){ return id !== ordId; });
+              await loadOrders();
+            };
+            rightBox.insertBefore(doneBtn, rightBox.firstChild);
+          }
+        });
+      }
+    };
+  }
+})();
+
+  
 </script>
+
 
 
 
