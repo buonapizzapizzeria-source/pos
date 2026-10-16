@@ -7702,6 +7702,168 @@ el('kitchenTab').addEventListener('click', function(e){
   }
 })();
 
+
+  // --- نظام إدارة المخزون الذكي والتنبيهات (Inventory & Stock v31) ---
+(function(){
+  if(window.__inventoryEnhanced) return;
+  window.__inventoryEnhanced = true;
+
+  // 1. إضافة تبويب "المخزون" لشريط التبويبات الرئيسي (للمدير فقط أو المتاح للكل حسب الصلاحية)
+  var tabsBar = document.querySelector('.tabs');
+  if(tabsBar && !el('tabBtnInventory')){
+    var invBtn = document.createElement('button');
+    invBtn.type = 'button';
+    invBtn.id = 'tabBtnInventory';
+    invBtn.setAttribute('data-tab', 'inventory');
+    invBtn.onclick = function(){ switchTab('inventory'); };
+    invBtn.innerHTML = '📦 المخزون <span id="invAlertBadge" class="badge-count" style="background:var(--red);color:#fff">0</span>';
+    tabsBar.appendChild(invBtn);
+  }
+
+  // 2. إنشاء محتوى تبويب المخزون وحقنه في الصفحة الرئيسية
+  var appMain = el('app');
+  if(appMain && !el('inventoryTab')){
+    var invTab = document.createElement('div');
+    invTab.id = 'inventoryTab';
+    invTab.className = 'hidden';
+    invTab.innerHTML = `
+      <div class="topline">
+        <h1>📦 إدارة المخزون & المواد الخام</h1>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button type="button" onclick="openInventoryModal()" class="green">＋ إضافة مادة خام جديدة</button>
+          <button type="button" onclick="loadInventoryData()" class="secondary">🔄 تحديث</button>
+        </div>
+      </div>
+      <div id="inventoryStatsBar" class="stats-bar"></div>
+      <div id="inventoryListContainer" class="menu-admin-list"></div>
+    `;
+    appMain.appendChild(invTab);
+
+    // توسيع صلاحيات المدير لفتح تبويب المخزون
+    if(typeof BP_TABS !== 'undefined'){
+      if(BP_TABS.manager && BP_TABS.manager.indexOf('inventory') < 0) BP_TABS.manager.push('inventory');
+      if(BP_TABS.cashier && BP_TABS.cashier.indexOf('inventory') < 0) BP_TABS.cashier.push('inventory');
+    }
+  }
+
+  // قاعدة بيانات محلية افتراضية للمخزون في حال لم يوجد جدول في Supabase
+  var DEFAULT_INVENTORY = [
+    {id: 1, name: 'Farina (الدقيق)', unit: 'Kg', stock: 45, min_alert: 10},
+    {id: 2, name: 'Mozzarella (جبنة موزاريلا)', unit: 'Kg', stock: 12, min_alert: 5},
+    {id: 3, name: 'Pomodoro (صوص طماطم)', unit: 'Litri', stock: 25, min_alert: 8},
+    {id: 4, name: 'Carne Kebab (لحم كباب)', unit: 'Kg', stock: 8, min_alert: 3},
+    {id: 5, name: 'Scatole Pizza (علب بيتزا)', unit: 'Pz', stock: 120, min_alert: 30},
+    {id: 6, name: 'Bibite Lattine (كنز بيبسي/كوكا)', unit: 'Pz', stock: 48, min_alert: 12}
+  ];
+
+  window.loadInventoryData = function(){
+    var items = [];
+    try{
+      var raw = localStorage.getItem('bp_inventory_db_v1');
+      items = raw ? JSON.parse(raw) : DEFAULT_INVENTORY;
+    }catch(e){ items = DEFAULT_INVENTORY; }
+    renderInventoryUI(items);
+  };
+
+  window.renderInventoryUI = function(items){
+    var listContainer = el('inventoryListContainer');
+    var statsBar = el('inventoryStatsBar');
+    var badge = el('invAlertBadge');
+    if(!listContainer) return;
+
+    var lowStockCount = items.filter(function(i){ return Number(i.stock) <= Number(i.min_alert); }).length;
+    if(badge) badge.textContent = lowStockCount;
+
+    if(statsBar){
+      statsBar.innerHTML = `
+        <div class="stat-box"><span>إجمالي المواد</span><strong>${items.length}</strong></div>
+        <div class="stat-box"><span>مواد منخفضة / ناقصة</span><strong style="color:${lowStockCount > 0 ? 'var(--red)' : 'var(--green)'}">${lowStockCount}</strong></div>
+      `;
+    }
+
+    listContainer.innerHTML = items.map(function(item, idx){
+      var isLow = Number(item.stock) <= Number(item.min_alert);
+      return `
+        <div class="menu-admin-row ${isLow ? 'inactive' : ''}" style="${isLow ? 'border-left:6px solid var(--red)' : ''}">
+          <div>
+            <div style="display:flex;align-items:center;gap:8px">
+              <strong style="font-size:16px">${esc(item.name)}</strong>
+              ${isLow ? '<span class="pill st-annullato">⚠️ كمية منخفضة!</span>' : ''}
+            </div>
+            <div class="muted" style="margin-top:2px">الحد الأدنى للتنبيه: ${item.min_alert} ${item.unit}</div>
+          </div>
+          <div class="price-inputs">
+            <div class="mini-field" style="width:120px">
+              <span>المخزون الحالي</span>
+              <input type="number" step="1" value="${item.stock}" onchange="updateStockValue(${idx}, this.value)">
+            </div>
+            <span style="font-weight:800;color:#475467">${item.unit}</span>
+          </div>
+          <div class="admin-actions">
+            <button type="button" class="secondary btn-sm" onclick="adjustStock(${idx}, 10)">＋10</button>
+            <button type="button" class="secondary btn-sm" onclick="adjustStock(${idx}, -5)">−5</button>
+            <button type="button" class="secondary btn-sm" style="color:var(--red)" onclick="deleteInventoryItem(${idx})">🗑️</button>
+          </div>
+        </div>
+      `;
+    }).join('');
+  };
+
+  window.updateStockValue = function(idx, val){
+    try{
+      var raw = localStorage.getItem('bp_inventory_db_v1');
+      var items = raw ? JSON.parse(raw) : DEFAULT_INVENTORY;
+      items[idx].stock = Number(val);
+      localStorage.setItem('bp_inventory_db_v1', JSON.stringify(items));
+      loadInventoryData();
+    }catch(e){}
+  };
+
+  window.adjustStock = function(idx, delta){
+    try{
+      var raw = localStorage.getItem('bp_inventory_db_v1');
+      var items = raw ? JSON.parse(raw) : DEFAULT_INVENTORY;
+      items[idx].stock = Math.max(0, Number(items[idx].stock || 0) + delta);
+      localStorage.setItem('bp_inventory_db_v1', JSON.stringify(items));
+      loadInventoryData();
+    }catch(e){}
+  };
+
+  window.deleteInventoryItem = function(idx){
+    if(!confirm('هل تريد حذف هذه المادة من المخزون؟')) return;
+    try{
+      var raw = localStorage.getItem('bp_inventory_db_v1');
+      var items = raw ? JSON.parse(raw) : DEFAULT_INVENTORY;
+      items.splice(idx, 1);
+      localStorage.setItem('bp_inventory_db_v1', JSON.stringify(items));
+      loadInventoryData();
+    }catch(e){}
+  };
+
+  window.openInventoryModal = function(){
+    var name = prompt('اسم المادة الخام الجديدة (مثال: طماطم، جبنة، علب):');
+    if(!name) return;
+    var unit = prompt('وحدة القياس (Kg, Litri, Pz):', 'Kg') || 'Kg';
+    var stock = Number(prompt('الكمية الحالية في المخزون:', '20') || 0);
+    var minAlert = Number(prompt('الحد الأدنى للتنبيه عند النقص:', '5') || 5);
+
+    try{
+      var raw = localStorage.getItem('bp_inventory_db_v1');
+      var items = raw ? JSON.parse(raw) : DEFAULT_INVENTORY;
+      items.push({id: Date.now(), name: name, unit: unit, stock: stock, min_alert: minAlert});
+      localStorage.setItem('bp_inventory_db_v1', JSON.stringify(items));
+      loadInventoryData();
+    }catch(e){}
+  };
+
+  // ربط فتح تبويب المخزون بتحميل البيانات
+  var _origSwitchTab = window.switchTab;
+  window.switchTab = function(tabName){
+    if(typeof _origSwitchTab === 'function') _origSwitchTab(tabName);
+    if(tabName === 'inventory') loadInventoryData();
+  };
+})();
+
   
 </script>
 
