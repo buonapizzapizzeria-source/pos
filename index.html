@@ -7430,6 +7430,89 @@ el('kitchenTab').addEventListener('click', function(e){
   }
 })();
 
+// --- إغلاق الصندوق الاحترافي وتعديل النقدية الفعلية (Chiusura Cassa Pro) ---
+(function(){
+  if(window.__cassaProEnhanced) return;
+  window.__cassaProEnhanced = true;
+
+  // حقن واجهة عداد النقدية ومقارنة العجز/الزيادة داخل تبويب الكassa
+  var _origRenderCassaReport = window.renderCassaReport;
+  if(typeof _origRenderCassaReport === 'function'){
+    window.renderCassaReport = async function(){
+      await _origRenderCassaReport.apply(this, arguments);
+      var unlockedView = el('cassaUnlockedView');
+      if(!unlockedView || unlockedView.classList.contains('hidden')) return;
+
+      var proBox = el('bpCassaProBox');
+      if(!proBox){
+        proBox = document.createElement('div');
+        proBox.id = 'bpCassaProBox';
+        proBox.className = 'panel';
+        proBox.style.cssText = 'margin-top:16px;border:2px solid var(--green);background:linear-gradient(135deg,#f6fef9 0%,#fff 100%);';
+        unlockedView.appendChild(proBox);
+      }
+
+      // حساب إجمالي الكassa المتوقع نقداً من البيانات الحالية
+      var cashExpected = 0;
+      if(typeof cassaDayOrders !== 'undefined' && cassaDayOrders.length){
+        cashExpected = cassaDayOrders
+          .filter(function(o){ return normStatus(o.status) !== 'Annullato' && String(o.payment_method||'').toLowerCase().includes('contanti'); })
+          .reduce(function(s,o){ return s + Number(o.total||0); }, 0);
+      }
+
+      var savedCounted = localStorage.getItem('bp_counted_cash_' + el('cassaDate').value) || '';
+
+      proBox.innerHTML = `
+        <h2 style="color:var(--green);display:flex;align-items:center;gap:8px">🧮 مطابقة الصندوق الفعلية (Chiusura Cassa)</h2>
+        <p class="muted">أدخل إجمالي الأموال النقدية الموجودة فعلياً في الدرج لمقارنتها مع مبيعات الكاش المتوقعة.</p>
+        <div class="fields" style="grid-template-columns:repeat(auto-fit,minmax(200px,1fr));align-items:end;margin-top:10px">
+          <div class="field">
+            <label>💵 الكاش المتوقع في النظام</label>
+            <input type="text" readonly value="${euro(cashExpected)}" style="font-weight:900;background:#eef2f6">
+          </div>
+          <div class="field">
+            <label>🪙 النقدية الفعلية في الدرج (€)</label>
+            <input type="number" step="0.50" id="actualCashCounted" placeholder="أدخل المبلغ الفعلي..." value="${savedCounted}" oninput="calcCassaDifference(${cashExpected})" style="font-weight:900;border:2px solid var(--green)">
+          </div>
+          <div class="field">
+            <label>⚖️ الفارق (عجز / زيادة)</label>
+            <input type="text" id="cassaDiffResult" readonly value="—" style="font-weight:900">
+          </div>
+        </div>
+      `;
+
+      if(savedCounted !== ''){
+        calcCassaDifference(cashExpected);
+      }
+    };
+  }
+
+  window.calcCassaDifference = function(expected){
+    var inp = el('actualCashCounted');
+    var res = el('cassaDiffResult');
+    if(!inp || !res) return;
+    var val = Number(inp.value);
+    if(isNaN(inp.value) || inp.value.trim() === ''){
+      res.value = '—';
+      res.style.color = '#101828';
+      return;
+    }
+    var diff = Math.round((val - expected) * 100) / 100;
+    try{ localStorage.setItem('bp_counted_cash_' + el('cassaDate').value, inp.value); }catch(e){}
+
+    if(diff === 0){
+      res.value = '✅ الصندوق مضبوط تماماً (0 €)';
+      res.style.color = 'var(--green)';
+    } else if(diff > 0){
+      res.value = `📈 زيادة في الصندوق (+ ${euro(diff)})`;
+      res.style.color = 'var(--blue)';
+    } else {
+      res.value = `📉 عجز في الصندوق (${euro(diff)})`;
+      res.style.color = 'var(--red)';
+    }
+  };
+})();
+
   
 </script>
 
