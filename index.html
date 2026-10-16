@@ -6995,4 +6995,145 @@ button{overflow-wrap:anywhere}
   renderQueue(); if(!online) hydrate(); check();
 })();
 </script>
+  <!-- ===== v27 ULTRA SPEED & OFFLINE FIX PATCH (FOR POS v26) START ===== -->
+<style id="bpV27css">
+  .bp27-time-pills { display:flex; gap:6px; flex-wrap:wrap; margin-top:6px; }
+  .bp27-tpill { flex:1 1 auto; min-height:38px!important; padding:4px 10px!important; border-radius:99px!important; background:#fffcf5!important; color:#93370d!important; border:1.5px solid #fdb022!important; font-size:13px!important; font-weight:850!important; }
+  .bp27-tpill:active, .bp27-tpill.on { background:#b54708!important; color:#fff!important; border-color:#b54708!important; }
+  .bp27-pay-switch { cursor:pointer; padding:2px 8px; border-radius:8px; background:#f2f4f7; border:1px dashed #98a2b3; display:inline-block; transition:0.15s; font-weight:850; }
+  .bp27-pay-switch:active { transform:scale(0.95); background:#eff8ff; border-color:#175cd3; }
+</style>
+<script>
+(function initBpV27Patch(){
+  if(window.__bpV27) return;
+  window.__bpV27 = true;
+
+  /* 1. تحميل فوري للمنيو والطلبات من الكاش (0 ثانية عند الفتح) */
+  if(window.__bpOff && typeof window.__bpOff.hydrate === 'function'){
+    try{ window.__bpOff.hydrate(); }catch(e){}
+  }
+
+  /* 2. أزرار وقت سريعة بلمسة واحدة تحت زر الوقت مباشرة */
+  function injectQuickTimePills(){
+    var tBtn = el('pkTimeBtn') || el('deliveryHour');
+    if(!tBtn || el('bp27TimePills')) return;
+    var bar = document.createElement('div');
+    bar.id = 'bp27TimePills';
+    bar.className = 'bp27-time-pills';
+    var steps = [
+      {lbl: '⚡ Subito', mins: 0},
+      {lbl: '+15m', mins: 15},
+      {lbl: '+30m', mins: 30},
+      {lbl: '+45m', mins: 45},
+      {lbl: '+1h', mins: 60}
+    ];
+    bar.innerHTML = steps.map(function(s){
+      return '<button type="button" class="bp27-tpill" data-addm="' + s.mins + '">' + s.lbl + '</button>';
+    }).join('');
+    tBtn.parentNode.insertBefore(bar, tBtn.nextSibling);
+
+    bar.onclick = function(e){
+      var b = e.target.closest('[data-addm]');
+      if(!b) return;
+      var m = Number(b.getAttribute('data-addm'));
+      if(m === 0){
+        setDeliveryTimeDropdown('Prima possibile');
+      } else {
+        var d = new Date(Date.now() + m * 60000);
+        var hh = d.getHours(), mm = Math.ceil(d.getMinutes() / 15) * 15;
+        if(mm === 60){ hh++; mm = 0; }
+        if(hh < 11) hh = 11;
+        if(hh > 23) hh = 23;
+        setDeliveryTimeDropdown(String(hh).padStart(2,'0') + ':' + String(mm).padStart(2,'0'));
+      }
+      if(typeof refreshTimeBtn === 'function') refreshTimeBtn();
+      if(typeof rdAccRefresh === 'function') rdAccRefresh();
+      bar.querySelectorAll('.bp27-tpill').forEach(function(x){ x.classList.remove('on'); });
+      b.classList.add('on');
+    };
+  }
+  setTimeout(injectQuickTimePills, 500);
+
+  /* 3. ضبط رسوم التوصيل تلقائياً للقرى خارج Lodi Vecchio */
+  var addrInput = el('address');
+  var OUTER_TOWNS = /tavazzano|salerano|borgo\s*san\s*giovanni|pieve|cornegliano|casalmaiocco|sordio|melegnano|mulazzano|cervignano|zelo|senna|ospedaletto|lodi\b(?!\s*vecchio)/i;
+  if(addrInput){
+    addrInput.addEventListener('input', function(){
+      var val = addrInput.value.trim();
+      var feeSel = el('deliveryFeeSelect');
+      if(!feeSel || !val) return;
+      if(OUTER_TOWNS.test(val) && Number(feeSel.value) < 2){
+        feeSel.value = '2';
+        if(typeof onDeliveryFeeChange === 'function') onDeliveryFeeChange();
+        if(typeof refreshFeeSeg === 'function') refreshFeeSeg();
+      }
+    });
+  }
+
+  /* 4. تحويل حالة الطلب الجديد إلى In preparazione تلقائياً عند الطباعة */
+  var _origShowDetails = window.showDetails;
+  var currentPrintedOrder = null;
+  if(typeof _origShowDetails === 'function'){
+    window.showDetails = async function(o){
+      currentPrintedOrder = o;
+      return await _origShowDetails.apply(this, arguments);
+    };
+  }
+  var _origPrintWin = window.printReceiptWindow;
+  if(typeof _origPrintWin === 'function'){
+    window.printReceiptWindow = function(format){
+      _origPrintWin.apply(this, arguments);
+      if(currentPrintedOrder && /^\d+$/.test(String(currentPrintedOrder.id)) && normStatus(currentPrintedOrder.status) === 'Nuovo'){
+        updateOrderStatus(currentPrintedOrder.id, 'In preparazione');
+      }
+    };
+  }
+
+  /* 5. تبديل طريقة الدفع (Contanti ⇄ Carta) بلمسة واحدة من كارت الطلب المفتوح */
+  document.addEventListener('click', async function(e){
+    var sw = e.target.closest('[data-quick-pay-id]');
+    if(!sw || !window.sb) return;
+    var ordId = Number(sw.getAttribute('data-quick-pay-id'));
+    var ord = (window.orders || []).find(function(x){ return x.id === ordId; });
+    if(!ord) return;
+    var nextPay = String(ord.payment_method || '').toLowerCase().includes('contanti') ? 'Carta' : 'Contanti';
+    ord.payment_method = nextPay;
+    sw.innerHTML = '💳 ' + nextPay + ' 🔁';
+    await sb.from('orders').update({payment_method: nextPay}).eq('id', ordId);
+    if(typeof renderCassaReport === 'function') renderCassaReport();
+  });
+
+  function decoratePaymentSwitches(){
+    if(document.hidden) return;
+    document.querySelectorAll('#openOrders .order').forEach(function(card){
+      var h3 = card.querySelector('h3');
+      if(!h3) return;
+      var m = /#(\d+)/.exec(h3.textContent);
+      if(!m) return;
+      var pLine = card.querySelector('p');
+      if(!pLine || pLine.querySelector('[data-quick-pay-id]')) return;
+      pLine.innerHTML = pLine.innerHTML.replace(/💳\s*([^<·]+)/, '<span class="bp27-pay-switch" data-quick-pay-id="' + m[1] + '" title="اضغط لتبديل كاش / فيزا">💳 $1 🔁</span>');
+    });
+  }
+
+  var _origRenderOrders27 = window.renderOrders;
+  if(typeof _origRenderOrders27 === 'function'){
+    window.renderOrders = function(){
+      _origRenderOrders27.apply(this, arguments);
+      decoratePaymentSwitches();
+    };
+  }
+
+  /* 6. تحسين إرسال طابور الأوفلاين التلقائي وإظهار الخطأ الحقيقي إن وجد */
+  window.addEventListener('online', function(){
+    setTimeout(function(){
+      if(window.__bpOff && typeof window.__bpOff.syncPending === 'function'){
+        window.__bpOff.syncPending(false);
+      }
+    }, 3000);
+  });
+})();
+</script>
+<!-- ===== v27 ULTRA SPEED & OFFLINE FIX PATCH END ===== -->
+
 </body></html>
