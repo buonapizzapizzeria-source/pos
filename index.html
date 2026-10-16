@@ -2,8 +2,9 @@
 <html lang="it">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#b42318"><title>Buona Pizza · POS Pro v26</title>
-<style>
+<meta name="theme-color" content="#b42318"><title>Buona Pizza · POS Pro v31</title>
+<style id="bp-styles">
+/* ---- stile 1 ---- */
 :root{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;color:#202124;background:#f5f6f8;--red:#b42318;--green:#16794b;--blue:#175cd3;--orange:#b54708;--purple:#5925dc;--line:#e1e4e8}
 *{box-sizing:border-box;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
 body{margin:0}button,input,select,textarea{font:inherit}button{cursor:pointer;border:0;border-radius:10px;padding:10px 14px;font-weight:650;background:var(--red);color:white;transition:0.15s}button.secondary{background:#eceff3;color:#202124}button.green{background:var(--green)}button.blue{background:var(--blue)}button.orange{background:var(--orange)}button.purple{background:var(--purple)}button:disabled{opacity:.5;cursor:not-allowed}
@@ -629,11 +630,237 @@ html:not(.x) body :is(button,select,input:not([type=checkbox])){min-height:44px}
 .pk-curtain>.pk-chips{min-height:0;padding-bottom:0}
 .pk-curtain.closed>.pk-chips{padding-top:0;padding-bottom:0}
 @media (prefers-reduced-motion:reduce){.pk-curtain{transition:none}}
+/* ---- stile 2 ---- */
+#cart{max-height:52vh;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-inline-end:2px}
+#bpCartCompactBtn{width:100%;margin:4px 0 6px}
+#cart .cartrow{padding:4px 8px!important;margin-bottom:4px!important;border-radius:12px!important;border-left-width:4px!important;gap:6px!important;box-shadow:none!important}
+#cart .cartrow .muted{font-size:calc(var(--fs) - 6px)!important;margin:0!important}
+#cart .cartrow>div:first-child>strong:first-child{font-size:calc(var(--fs)*1.05)!important}
+#cart .cartrow .cart-mods{margin-top:2px!important}
+#cart .cart-mod-btn{font-size:0!important;padding:0 10px!important;min-height:30px!important;border-radius:99px}
+#cart .cart-mod-btn::after{content:'✏️ Modifica';font-size:calc(var(--fs) - 5px);font-weight:800}
+html:not(.x) body #cart .qty button{width:36px!important;height:36px!important;min-height:36px!important}
+#cart .cartrow .qty strong{font-size:calc(var(--fs)*1.1)!important;min-width:22px}
+#cart .cartrow .pill{font-size:10px!important;padding:1px 6px!important}
+body.bp-cart-ultra #cart{max-height:62vh}
+body.bp-cart-ultra #cart .cartrow{padding:2px 6px!important;margin-bottom:2px!important;border-radius:9px!important}
+body.bp-cart-ultra #cart .cartrow>div:first-child{display:flex;flex-wrap:wrap;align-items:center;gap:2px 8px}
+body.bp-cart-ultra #cart .cartrow>div:first-child>.muted{display:inline!important}
+body.bp-cart-ultra #cart .cartrow>div:first-child>div[style*='flex']{display:inline-flex!important;margin:0!important}
+body.bp-cart-ultra #cart .cart-mods{margin:0!important}
+body.bp-cart-ultra #cart .cart-mod-btn{min-height:26px!important}
+html:not(.x) body.bp-cart-ultra #cart .qty button{width:32px!important;height:32px!important;min-height:32px!important}
+/* ---- stile 3 ---- */
+:root{--fs:calc(clamp(13px,3.3vw + 2px,19px) * var(--ui))}
+html,body{max-width:100%;overflow-x:hidden}
+header{padding:8px 10px!important}
+#userBar{width:100%;gap:6px!important}
+html:not(.x) body #userBar button{flex:1 1 auto;min-width:0;white-space:normal!important;line-height:1.15;font-size:calc(var(--fs)*.8)!important;min-height:40px;padding:6px 8px}
+#userBar #userEmail{display:none}
+#app .tabs{flex-wrap:wrap!important;overflow:visible!important;margin:0 0 12px!important;padding:0!important;gap:6px!important}
+html:not(.x) body #app .tabs button{flex:1 1 calc(33% - 6px)!important;min-width:0!important;justify-content:center;text-align:center;white-space:normal!important;line-height:1.15;padding:6px!important;font-size:calc(var(--fs)*.8)!important;min-height:40px}
+html:not(.x) body #app .voice-btn{font-size:calc(var(--fs)*.85)!important;min-height:48px;padding:6px 8px;white-space:normal!important;line-height:1.15}
+.voice-actions-bar{grid-template-columns:repeat(auto-fit,minmax(105px,1fr))!important}
+#app .voice-input-row>div{flex-wrap:wrap!important;gap:6px!important}
+html:not(.x) body #app .voice-input-row>div button{flex:1 1 90px!important;min-width:0!important;white-space:normal!important;line-height:1.15;padding:8px 6px!important;font-size:calc(var(--fs)*.82)!important;min-height:44px}
+.pk-bigbtn{padding:6px 10px!important;gap:8px!important}
+.pk-bico{font-size:calc(var(--fs)*1.7)!important}
+.pk-btxt{min-width:0}
+.pk-btxt b{font-size:calc(var(--fs)*1.1)!important;overflow-wrap:anywhere}
+.pk-bprice{font-size:calc(var(--fs)*.85);padding:4px 10px}
+.rd-acc>summary{flex-wrap:nowrap}
+.rd-acc>summary>span:first-child{flex:0 1 auto;min-width:0}
+.rd-acc-sum{min-width:0;flex:1 1 0!important}
+.rd-seglist{flex-wrap:wrap}
+.rd-seg{min-width:0}
+.pk-btnrow{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+html:not(.x) body #app .pk-btnrow button{white-space:normal!important;line-height:1.15;padding:4px 6px!important}
+.pk-tabs,.pk-chips,.pk-hours,.pk-quick{flex-wrap:wrap!important;overflow:visible!important}
+html:not(.x) body .pk .pk-tab,html:not(.x) body .pk .pk-chip,html:not(.x) body .pk .pk-qk{flex:1 1 auto!important;min-width:0!important;white-space:normal!important;line-height:1.15;padding:8px 10px!important;font-size:calc(var(--fs)*.85)!important}
+.pk-hours .pk-tab{flex:1 1 48px!important;min-width:48px!important}
+.pk-title{font-size:calc(var(--fs)*.95)}
+button{overflow-wrap:anywhere}
+#app .panel,#app .field,#app input,#app select,#app textarea{max-width:100%;min-width:0}
+/* ---- stile 4 ---- */
+#storBar .sg{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+#storBar .sd{position:relative;min-height:52px;border:1.5px solid #e4e7ec;background:#fff;color:#101828;border-radius:10px;padding:2px;font-weight:800;display:flex;flex-direction:column;align-items:center;justify-content:center}
+#storBar .sd.has{background:#eff8ff;border-color:#84caff}
+#storBar .sd.sel{background:#b42318;color:#fff;border-color:#b42318}
+#storBar .sd b{font-size:.7em;background:#175cd3;color:#fff;border-radius:99px;padding:0 7px;margin-top:2px}
+#storBar .sd.sel b{background:#fff;color:#b42318}
+#storBar .sh{text-align:center;font-weight:800;color:#667085;font-size:.8em}
+#storTotal{margin:10px 0;padding:12px;border-radius:12px;background:#101828;color:#fff;font-weight:900}
+/* ---- stile 5 ---- */
+.bp22-quick-bar{display:flex;gap:6px;overflow-x:auto;padding:8px 4px;margin:4px 0 8px;border-bottom:1.5px dashed #e4e7ec;-webkit-overflow-scrolling:touch}
+.bp22-qbtn{flex:0 0 auto;background:#fff;color:#101828;border:2px solid #d0d5dd;border-radius:12px;padding:6px 11px;font-size:calc(var(--fs)*.82)!important;font-weight:850;display:inline-flex;align-items:center;gap:6px;box-shadow:0 2px 5px #1018280d;min-height:40px!important}
+.bp22-qbtn:active{transform:scale(.96);border-color:#16794b;background:#ecfdf3}
+.bp22-qbtn b{background:#16794b;color:#fff;border-radius:99px;padding:1px 7px;font-size:.85em}
+.bp22-note-chips{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0}
+.bp22-nchip{background:#f8f9fb;color:#344054;border:1.5px solid #d0d5dd;border-radius:99px;padding:4px 10px!important;font-size:calc(var(--fs)*.78)!important;min-height:34px!important;font-weight:800}
+.bp22-nchip.on{background:#fffaeb;color:#b54708;border-color:#fdb022}
+.bp22-kitchen-bar{background:linear-gradient(135deg,#101828 0%,#1d2939 100%);color:#fff;border-radius:16px;padding:12px 16px;margin-bottom:14px;display:flex;flex-direction:column;gap:8px;box-shadow:0 6px 18px #10182826}
+.bp22-k-top{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.bp22-k-badges{display:flex;gap:8px;flex-wrap:wrap}
+.bp22-k-pill{background:#ffffff1a;border:1px solid #ffffff33;color:#fff;border-radius:99px;padding:4px 12px;font-weight:850;font-size:calc(var(--fs)*.85)}
+.bp22-k-details{background:#ffffff12;border-radius:12px;padding:10px;display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:8px;font-size:calc(var(--fs)*.82)}
+.bp22-next-btn{width:100%;background:linear-gradient(135deg,#175cd3,#1570ef)!important;color:#fff!important;border-radius:10px!important;padding:8px 12px!important;font-weight:900!important;box-shadow:0 4px 10px #175cd330}
+.bp22-wa-btn{background:#16a34a!important;color:#fff!important}
+#savePrintOrderBtn{grid-column:1/-1;min-height:54px;background:linear-gradient(135deg,#16794b,#0f5132);border-radius:16px;font-size:calc(var(--fs)*1.05)!important;box-shadow:0 8px 18px #16794b35}
+/* ---- stile 6 ---- */
+  /* 1. مظهر عصري متجانس وتأثيرات ناعمة */
+  :root {
+    --shadow-soft: 0 4px 20px -2px rgba(16, 24, 40, 0.08);
+    --shadow-hover: 0 10px 25px -4px rgba(16, 24, 40, 0.14);
+  }
+  .panel, .order {
+    transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+  }
+  #openOrders .order:hover {
+    box-shadow: var(--shadow-hover);
+  }
+
+  /* شارة الاتصال الحي في الهيدر */
+  .bp23-conn-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    border-radius: 99px;
+    font-size: 12px;
+    font-weight: 800;
+    background: #ecfdf3;
+    color: #16794b;
+    border: 1px solid #abefc6;
+  }
+  .bp23-conn-pill.offline {
+    background: #fee4e2;
+    color: #b42318;
+    border-color: #fecdca;
+  }
+  .bp23-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #16794b;
+    box-shadow: 0 0 0 3px rgba(22, 121, 75, 0.2);
+  }
+  .bp23-conn-pill.offline .bp23-dot {
+    background: #d92d20;
+  }
+
+  /* 2. مؤشر ضغط الفرن داخل نافذة اختيار الوقت */
+  .bp23-slot-load {
+    margin-top: 4px;
+    padding: 2px 8px;
+    border-radius: 99px;
+    font-size: 11.5px !important;
+    font-weight: 900;
+    background: #eff8ff;
+    color: #175cd3;
+    border: 1px solid #b2ddff;
+  }
+  .bp23-slot-load.busy {
+    background: #fffaeb;
+    color: #b54708;
+    border-color: #fdb022;
+  }
+  .bp23-slot-load.full {
+    background: #fee4e2;
+    color: #b42318;
+    border-color: #fecdca;
+    animation: pulseUrg 1.2s infinite;
+  }
+
+  /* 3. ملخص عهدة السائق المالي داخل جولة التوصيل */
+  .bp23-rider-wallet {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 8px;
+    margin: 10px 0;
+    padding: 10px 12px;
+    background: #fff;
+    border: 1.5px solid #84caff;
+    border-radius: 12px;
+  }
+  .bp23-rw-box {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .bp23-rw-box small {
+    font-size: 11px;
+    color: #475467;
+    font-weight: 800;
+    text-transform: uppercase;
+  }
+  .bp23-rw-box strong {
+    font-size: 16px;
+    font-weight: 900;
+    color: #101828;
+  }
+
+  /* 4. تفاعل رادار المطبخ للفلترة السريعة */
+  .bp22-k-pill, .bp22-k-details > div {
+    cursor: pointer;
+    transition: transform 0.12s, background 0.15s;
+    border-radius: 8px;
+    padding: 3px 8px;
+  }
+  .bp22-k-pill:hover, .bp22-k-details > div:hover {
+    background: rgba(255, 255, 255, 0.25);
+  }
+  .bp23-k-active {
+    background: #fdb022 !important;
+    color: #101828 !important;
+    border-color: #fdb022 !important;
+  }
+
+  /* 5. وضع طباعة المطبخ فقط (خط ضخم بدون أسعار) */
+  @media print {
+    body.bp23-kitchen-print .rc-item-price,
+    body.bp23-kitchen-print .rc-summary-box,
+    body.bp23-kitchen-print .rc-total-bar,
+    body.bp23-kitchen-print .rc-footer {
+      display: none !important;
+    }
+    body.bp23-kitchen-print .rc-item-name {
+      font-size: 21px !important;
+    }
+    body.bp23-kitchen-print .rc-qty-badge {
+      font-size: 20px !important;
+      padding: 2px 9px !important;
+    }
+    body.bp23-kitchen-print .rc-mod-line {
+      font-size: 17px !important;
+      font-weight: 950 !important;
+    }
+  }
+/* ---- stile 7 ---- */
+  .bp27-time-pills { display:flex; gap:6px; flex-wrap:wrap; margin-top:6px; }
+  .bp27-tpill { flex:1 1 auto; min-height:38px!important; padding:4px 10px!important; border-radius:99px!important; background:#fffcf5!important; color:#93370d!important; border:1.5px solid #fdb022!important; font-size:13px!important; font-weight:850!important; }
+  .bp27-tpill:active, .bp27-tpill.on { background:#b54708!important; color:#fff!important; border-color:#b54708!important; }
+  .bp27-pay-switch { cursor:pointer; padding:2px 8px; border-radius:8px; background:#f2f4f7; border:1px dashed #98a2b3; display:inline-block; transition:0.15s; font-weight:850; }
+  .bp27-pay-switch:active { transform:scale(0.95); background:#eff8ff; border-color:#175cd3; }
+
+/* ---- v31: cucina, storia, ruoli ---- */
+.kt-top{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px}
+.kt-chip{border-radius:99px;background:#eceff3;color:#202124;padding:10px 16px}.kt-chip.on{background:#b42318;color:#fff}
+.kt-cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr));gap:14px;align-items:start}
+.kt-col{background:#101828;border-radius:18px;padding:12px;color:#fff}.kt-col h2{color:#fff;margin:0 0 10px}.kt-col .muted{color:#98a2b3}
+.kt-card{background:#fff;color:#101828;border-radius:16px;padding:12px;margin-bottom:12px;border-left:8px solid #175cd3}
+.kt-head{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:calc(var(--fs)*1.4)}
+.kt-time{background:#101828;color:#fff;border-radius:10px;padding:2px 12px;font-weight:900;font-size:calc(var(--fs)*1.6)}
+.kt-item{font-size:calc(var(--fs)*1.5);font-weight:900;padding:8px 0;border-bottom:1px dashed #d0d5dd}
+.kt-q{background:#101828;color:#fff;border-radius:8px;padding:0 8px;margin-right:4px}
+.kt-maxi{background:#5925dc;color:#fff;border-radius:8px;padding:0 8px;font-size:.6em}
+.kt-mod{font-size:.7em;font-weight:900}.kt-mod.no{color:#b42318}.kt-mod.ex{color:#16794b}
+.kt-note{background:#fffaeb;border:2px dashed #fdb022;border-radius:10px;padding:8px;font-weight:800;margin-top:8px}
+html:not(.x) body .kt-go{width:100%;min-height:64px;margin-top:10px;font-size:calc(var(--fs)*1.3)!important;background:#16794b;border-radius:14px}
 </style>
 </head>
 <body>
 <header class="no-print">
-  <div class="brand"><span class="logo">🍕</span><span>Buona Pizza <span class="muted">· POS Pro v26</span></span></div>
+  <div class="brand"><span class="logo">🍕</span><span>Buona Pizza <span class="muted">· POS Pro v31</span></span></div>
   <div id="userBar" class="hidden" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
     <button type="button" id="soundToggleBtn" onclick="toggleSoundAlert()" class="sound-btn" title="Attiva/Disattiva suono nuovo ordine">🔔 Audio ON</button>
     <button type="button" onclick="playOrderChime(true)" class="secondary btn-sm" title="Prova suono campanello">🔊 Test</button>
@@ -691,6 +918,7 @@ html:not(.x) body :is(button,select,input:not([type=checkbox])){min-height:44px}
   <div class="tabs">
     <button type="button" class="active" data-tab="new" id="tabBtnNew" onclick="switchTab('new')">＋ Nuovo ordine</button>
     <button type="button" data-tab="orders" onclick="switchTab('orders')">📋 Ordini aperti <span id="openCountBadge" class="badge-count">0</span></button>
+    <button type="button" data-tab="kitchen" onclick="switchTab('kitchen')">👨‍🍳 Cucina <span id="kitchenCountBadge" class="badge-count">0</span></button>
     <button type="button" data-tab="menu" onclick="switchTab('menu')">🍕 Gestione Menu <span id="menuCountBadge" class="badge-count">0</span></button>
     <button type="button" data-tab="all" onclick="switchTab('all')">🕒 Storico ordini</button>
     <button type="button" data-tab="cassa" onclick="switchTab('cassa')">💰 Cassa & Incassi</button>
@@ -1071,6 +1299,13 @@ html:not(.x) body :is(button,select,input:not([type=checkbox])){min-height:44px}
     </div>
   </div>
 
+  <!-- TAB: CUCINA (schermata cucina) -->
+  <div id="kitchenTab" class="hidden">
+    <div class="topline"><h1>👨‍🍳 Cucina</h1></div>
+    <div id="kitchenChips" class="kt-top"></div>
+    <div id="kitchenCols" class="kt-cols"></div>
+  </div>
+
   <!-- TAB 4: GESTIONE MENU -->
   <div id="menuTab" class="hidden">
     <div class="topline">
@@ -1289,7 +1524,31 @@ html:not(.x) body :is(button,select,input:not([type=checkbox])){min-height:44px}
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script>
+<script id="bp-app">
+/* =====================================================================
+ * BUONA PIZZA POS v30  (codice unificato: 1 <style> + 1 <script>)
+ * Sezione 1  : applicazione base (funzioni originali)
+ * Sezioni 2-23: estensioni, ognuna isolata in try/catch (un errore non ferma le altre)
+ * Funzioni ancora "avvolte" da piu sezioni (debito tecnico, da fondere):
+ *   buildReceiptHtml             <- v25-print: 80mm page size + "documento non fiscale" line, v27 ULTRA SPEED & OFFLINE FIX PATCH, v29-updater: show last modifier on the printed ticket
+ *   doDirectEnter                <- v25-pin: staff PIN login (Supabase Auth), session is remembered, v26-offline: work without internet (cache + local order queue + auto sync), blocco 21
+ *   doLogout                     <- blocco 21
+ *   doSaveOrder                  <- v24-a: anti double-save + saved id, v26-offline: work without internet (cache + local order queue + auto sync)
+ *   getGrandTotal                <- v24-d: money math in cents
+ *   getItemsSubtotal             <- v24-d: money math in cents
+ *   getOrderUrgencyMeta          <- v24-c: one consistent, date-aware urgency calculation
+ *   loadMenu                     <- v26-offline: work without internet (cache + local order queue + auto sync)
+ *   loadOrders                   <- v25-debounce: coalesce bursts of loadOrders() into one request, v26-offline: work without internet (cache + local order queue + auto sync)
+ *   printReceiptWindow           <- v25-print: 80mm page size + "documento non fiscale" line
+ *   renderCart                   <- 1. شريط الأصناف السريعة بضغطة واحدة (Quick Tap Top 12)
+ *   renderOrderList              <- blocco 2
+ *   renderOrders                 <- 1. شريط الأصناف السريعة بضغطة واحدة (Quick Tap Top 12)
+ *   showApp                      <- v25-customers: shared customer book from the database (optional table)
+ *   switchTab                    <- blocco 2
+ *   triggerNewOrderNotification  <- v24-e: no toast/chime while logged out, v25-wake: keep screen on, vibrate on new order, unlock audio
+ *   updateOrderStatus            <- v23 ULTRA PRO, v26-offline: work without internet (cache + local order queue + auto sync)
+ * ===================================================================== */
+
 function el(id){return document.getElementById(id);}
 
 const FALLBACK_URL = 'https://jfgizazsjjgzyhqfngnl.supabase.co';
@@ -4100,6 +4359,7 @@ function showApp(user){
   el('app').classList.remove('hidden');
   el('userBar').classList.remove('hidden');
   el('userEmail').textContent = user?.email || 'Cassa Staff';
+  try{ bpAfterLogin(user); }catch(e){}
   updateSoundBtnUI();
   loadMenu();
   loadOrders();
@@ -4147,14 +4407,15 @@ function switchTab(tabName){
   document.querySelectorAll('[data-tab]').forEach(b=>{
     b.classList.toggle('active', b.getAttribute('data-tab')===tabName);
   });
-  const map={'new':'newTab','orders':'ordersTab','cassa':'cassaTab','menu':'menuTab','all':'allTab'};
-  ['newTab','ordersTab','cassaTab','menuTab','allTab'].forEach(id=>{
+  const map={'new':'newTab','orders':'ordersTab','cassa':'cassaTab','menu':'menuTab','all':'allTab','kitchen':'kitchenTab'};
+  ['newTab','ordersTab','cassaTab','menuTab','allTab','kitchenTab'].forEach(id=>{
     el(id).classList.toggle('hidden', id!==map[tabName]);
   });
   if(tabName !== 'cassa'){
     lockCassaView();
   }
   updateMobileCartBar();
+  if(tabName==='kitchen'){ try{ renderKitchen(); }catch(e){} }
   if(tabName==='menu') loadMenu();
   else if(tabName!=='new') loadOrders();
 }
@@ -4562,12 +4823,7 @@ function setCassaToday(){
   renderCassaReport();
 }
 
-function getOrdersForDate(dateStr){
-  return orders.filter(o=>{
-    if(!o.created_at) return false;
-    return toLocalDateStr(o.created_at) === dateStr;
-  });
-}
+/* (rimossa: getOrdersForDate, mai usata) */
 
 function computeDayStats(dayOrders){
   let valid = dayOrders.filter(o=>normStatus(o.status)!=='Annullato');
@@ -5245,6 +5501,7 @@ function renderOrders(){
 
   renderOrderList('openOrders', filteredOpen, true);
   renderOrderList('allOrders', orders, false);
+  try{ renderKitchen(); }catch(e){}
 }
 
 function renderOrderItemLineWithIcons(i){
@@ -5317,7 +5574,7 @@ function renderOrderList(id, list, isOpenTab=false){
           <span class="pill ${u.badgeClass}">${esc(u.badgeText)}</span>
           ${parsedNotes.cashInfo ? `<span class="pill resto-pill">💶 ${esc(parsedNotes.cashInfo)}</span>` : ''}
         </h3>
-        <p>🕒 Creato: ${when} · <strong>${esc(o.order_type)}</strong> · 💳 ${esc(o.payment_method)}</p>
+        <p>🕒 Creato: ${when} · <strong>${esc(o.order_type)}</strong> · 💳 ${esc(o.payment_method)}${o.created_by_email ? ' · 👤 ' + esc(o.created_by_email) : ''}</p>${o.updated_by_email ? '<p>✏️ Ultima modifica: <strong>' + esc(o.updated_by_email) + '</strong>' + (o.updated_at ? ' · ' + new Date(o.updated_at).toLocaleTimeString('it-IT', {hour: '2-digit', minute: '2-digit'}) : '') + '</p>' : ''}
         ${contactLine?`<p>${contactLine}</p>`:''}
         ${itemsHtml}
         ${noteHtml}
@@ -5618,30 +5875,10 @@ function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&l
   place();
 })();
 /* ===== v19 END ===== */
-</script>
 
-
-<!-- ===== v20 START ===== -->
-<style id="bpV20css">#cart{max-height:52vh;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-inline-end:2px}
-#bpCartCompactBtn{width:100%;margin:4px 0 6px}
-#cart .cartrow{padding:4px 8px!important;margin-bottom:4px!important;border-radius:12px!important;border-left-width:4px!important;gap:6px!important;box-shadow:none!important}
-#cart .cartrow .muted{font-size:calc(var(--fs) - 6px)!important;margin:0!important}
-#cart .cartrow>div:first-child>strong:first-child{font-size:calc(var(--fs)*1.05)!important}
-#cart .cartrow .cart-mods{margin-top:2px!important}
-#cart .cart-mod-btn{font-size:0!important;padding:0 10px!important;min-height:30px!important;border-radius:99px}
-#cart .cart-mod-btn::after{content:'✏️ Modifica';font-size:calc(var(--fs) - 5px);font-weight:800}
-html:not(.x) body #cart .qty button{width:36px!important;height:36px!important;min-height:36px!important}
-#cart .cartrow .qty strong{font-size:calc(var(--fs)*1.1)!important;min-width:22px}
-#cart .cartrow .pill{font-size:10px!important;padding:1px 6px!important}
-body.bp-cart-ultra #cart{max-height:62vh}
-body.bp-cart-ultra #cart .cartrow{padding:2px 6px!important;margin-bottom:2px!important;border-radius:9px!important}
-body.bp-cart-ultra #cart .cartrow>div:first-child{display:flex;flex-wrap:wrap;align-items:center;gap:2px 8px}
-body.bp-cart-ultra #cart .cartrow>div:first-child>.muted{display:inline!important}
-body.bp-cart-ultra #cart .cartrow>div:first-child>div[style*='flex']{display:inline-flex!important;margin:0!important}
-body.bp-cart-ultra #cart .cart-mods{margin:0!important}
-body.bp-cart-ultra #cart .cart-mod-btn{min-height:26px!important}
-html:not(.x) body.bp-cart-ultra #cart .qty button{width:32px!important;height:32px!important;min-height:32px!important}</style>
-<script>(function bpV20(){
+/* ---------- SEZIONE 2: blocco 1 ---------- */
+try{
+(function bpV20(){
   if(window.__bpV20) return; window.__bpV20 = true;
   var k = "bp_cart_ultra", u = false;
   try{ u = localStorage.getItem(k) === "1"; }catch(e){}
@@ -5655,53 +5892,11 @@ html:not(.x) body.bp-cart-ultra #cart .qty button{width:32px!important;height:32
   btn.onclick = function(){ u = !u; try{ localStorage.setItem(k, u ? "1" : "0"); }catch(e){} apply(); };
   cart.parentNode.insertBefore(btn, cart);
   apply();
-})();</script>
-<!-- ===== v20 END ===== -->
+})();
+}catch(e){ console.error("[bp] sezione non caricata: blocco 1", e); }
 
-<!-- ===== v21 START ===== -->
-<style id="bpV21css">:root{--fs:calc(clamp(13px,3.3vw + 2px,19px) * var(--ui))}
-html,body{max-width:100%;overflow-x:hidden}
-header{padding:8px 10px!important}
-#userBar{width:100%;gap:6px!important}
-html:not(.x) body #userBar button{flex:1 1 auto;min-width:0;white-space:normal!important;line-height:1.15;font-size:calc(var(--fs)*.8)!important;min-height:40px;padding:6px 8px}
-#userBar #userEmail{display:none}
-#app .tabs{flex-wrap:wrap!important;overflow:visible!important;margin:0 0 12px!important;padding:0!important;gap:6px!important}
-html:not(.x) body #app .tabs button{flex:1 1 calc(33% - 6px)!important;min-width:0!important;justify-content:center;text-align:center;white-space:normal!important;line-height:1.15;padding:6px!important;font-size:calc(var(--fs)*.8)!important;min-height:40px}
-html:not(.x) body #app .voice-btn{font-size:calc(var(--fs)*.85)!important;min-height:48px;padding:6px 8px;white-space:normal!important;line-height:1.15}
-.voice-actions-bar{grid-template-columns:repeat(auto-fit,minmax(105px,1fr))!important}
-#app .voice-input-row>div{flex-wrap:wrap!important;gap:6px!important}
-html:not(.x) body #app .voice-input-row>div button{flex:1 1 90px!important;min-width:0!important;white-space:normal!important;line-height:1.15;padding:8px 6px!important;font-size:calc(var(--fs)*.82)!important;min-height:44px}
-.pk-bigbtn{padding:6px 10px!important;gap:8px!important}
-.pk-bico{font-size:calc(var(--fs)*1.7)!important}
-.pk-btxt{min-width:0}
-.pk-btxt b{font-size:calc(var(--fs)*1.1)!important;overflow-wrap:anywhere}
-.pk-bprice{font-size:calc(var(--fs)*.85);padding:4px 10px}
-.rd-acc>summary{flex-wrap:nowrap}
-.rd-acc>summary>span:first-child{flex:0 1 auto;min-width:0}
-.rd-acc-sum{min-width:0;flex:1 1 0!important}
-.rd-seglist{flex-wrap:wrap}
-.rd-seg{min-width:0}
-.pk-btnrow{grid-template-columns:repeat(2,minmax(0,1fr))!important}
-html:not(.x) body #app .pk-btnrow button{white-space:normal!important;line-height:1.15;padding:4px 6px!important}
-.pk-tabs,.pk-chips,.pk-hours,.pk-quick{flex-wrap:wrap!important;overflow:visible!important}
-html:not(.x) body .pk .pk-tab,html:not(.x) body .pk .pk-chip,html:not(.x) body .pk .pk-qk{flex:1 1 auto!important;min-width:0!important;white-space:normal!important;line-height:1.15;padding:8px 10px!important;font-size:calc(var(--fs)*.85)!important}
-.pk-hours .pk-tab{flex:1 1 48px!important;min-width:48px!important}
-.pk-title{font-size:calc(var(--fs)*.95)}
-button{overflow-wrap:anywhere}
-#app .panel,#app .field,#app input,#app select,#app textarea{max-width:100%;min-width:0}</style>
-<!-- ===== v21 END ===== -->
-
-  <style>
-#storBar .sg{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
-#storBar .sd{position:relative;min-height:52px;border:1.5px solid #e4e7ec;background:#fff;color:#101828;border-radius:10px;padding:2px;font-weight:800;display:flex;flex-direction:column;align-items:center;justify-content:center}
-#storBar .sd.has{background:#eff8ff;border-color:#84caff}
-#storBar .sd.sel{background:#b42318;color:#fff;border-color:#b42318}
-#storBar .sd b{font-size:.7em;background:#175cd3;color:#fff;border-radius:99px;padding:0 7px;margin-top:2px}
-#storBar .sd.sel b{background:#fff;color:#b42318}
-#storBar .sh{text-align:center;font-weight:800;color:#667085;font-size:.8em}
-#storTotal{margin:10px 0;padding:12px;border-radius:12px;background:#101828;color:#fff;font-weight:900}
-</style>
-<script>
+/* ---------- SEZIONE 3: blocco 2 ---------- */
+try{
 (function(){
   var now=new Date(), y=now.getFullYear(), m=now.getMonth(), sel=toLocalDateStr(now), counts={}, ready=false;
   var bar=document.createElement('div'); bar.className='panel'; bar.id='storBar';
@@ -5753,28 +5948,10 @@ button{overflow-wrap:anywhere}
   var _sw=switchTab;
   switchTab=function(t){ _sw(t); if(t==='all'){ loadMonth(); loadDay(sel); } };
 })();
-</script>
-  
+}catch(e){ console.error("[bp] sezione non caricata: blocco 2", e); }
 
-<!-- ===== v22 SPEED PRO START ===== -->
-<style id="bpV22css">
-.bp22-quick-bar{display:flex;gap:6px;overflow-x:auto;padding:8px 4px;margin:4px 0 8px;border-bottom:1.5px dashed #e4e7ec;-webkit-overflow-scrolling:touch}
-.bp22-qbtn{flex:0 0 auto;background:#fff;color:#101828;border:2px solid #d0d5dd;border-radius:12px;padding:6px 11px;font-size:calc(var(--fs)*.82)!important;font-weight:850;display:inline-flex;align-items:center;gap:6px;box-shadow:0 2px 5px #1018280d;min-height:40px!important}
-.bp22-qbtn:active{transform:scale(.96);border-color:#16794b;background:#ecfdf3}
-.bp22-qbtn b{background:#16794b;color:#fff;border-radius:99px;padding:1px 7px;font-size:.85em}
-.bp22-note-chips{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0}
-.bp22-nchip{background:#f8f9fb;color:#344054;border:1.5px solid #d0d5dd;border-radius:99px;padding:4px 10px!important;font-size:calc(var(--fs)*.78)!important;min-height:34px!important;font-weight:800}
-.bp22-nchip.on{background:#fffaeb;color:#b54708;border-color:#fdb022}
-.bp22-kitchen-bar{background:linear-gradient(135deg,#101828 0%,#1d2939 100%);color:#fff;border-radius:16px;padding:12px 16px;margin-bottom:14px;display:flex;flex-direction:column;gap:8px;box-shadow:0 6px 18px #10182826}
-.bp22-k-top{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
-.bp22-k-badges{display:flex;gap:8px;flex-wrap:wrap}
-.bp22-k-pill{background:#ffffff1a;border:1px solid #ffffff33;color:#fff;border-radius:99px;padding:4px 12px;font-weight:850;font-size:calc(var(--fs)*.85)}
-.bp22-k-details{background:#ffffff12;border-radius:12px;padding:10px;display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:8px;font-size:calc(var(--fs)*.82)}
-.bp22-next-btn{width:100%;background:linear-gradient(135deg,#175cd3,#1570ef)!important;color:#fff!important;border-radius:10px!important;padding:8px 12px!important;font-weight:900!important;box-shadow:0 4px 10px #175cd330}
-.bp22-wa-btn{background:#16a34a!important;color:#fff!important}
-#savePrintOrderBtn{grid-column:1/-1;min-height:54px;background:linear-gradient(135deg,#16794b,#0f5132);border-radius:16px;font-size:calc(var(--fs)*1.05)!important;box-shadow:0 8px 18px #16794b35}
-</style>
-<script>
+/* ---------- SEZIONE 4: 1. شريط الأصناف السريعة بضغطة واحدة (Quick Tap Top 12) ---------- */
+try{
 (function(){
   if(window.__bpV22) return; window.__bpV22 = true;
   var CFG = ["quickTap","saveAndPrint","quickNotes","kitchenRadar","oneTapStatus","whatsappTools","autoCartAndKeys"];
@@ -6085,140 +6262,10 @@ button{overflow-wrap:anywhere}
     });
   }
 })();
-</script>
-  <!-- ===== v23 ULTRA PRO: SYNERGY, PERFORMANCE & MODERN UX ===== -->
-<style id="bpV23css">
-  /* 1. مظهر عصري متجانس وتأثيرات ناعمة */
-  :root {
-    --shadow-soft: 0 4px 20px -2px rgba(16, 24, 40, 0.08);
-    --shadow-hover: 0 10px 25px -4px rgba(16, 24, 40, 0.14);
-  }
-  .panel, .order {
-    transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
-  }
-  #openOrders .order:hover {
-    box-shadow: var(--shadow-hover);
-  }
+}catch(e){ console.error("[bp] sezione non caricata: 1. شريط الأصناف السريعة بضغطة واحدة (Quick Tap Top 12)", e); }
 
-  /* شارة الاتصال الحي في الهيدر */
-  .bp23-conn-pill {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 4px 10px;
-    border-radius: 99px;
-    font-size: 12px;
-    font-weight: 800;
-    background: #ecfdf3;
-    color: #16794b;
-    border: 1px solid #abefc6;
-  }
-  .bp23-conn-pill.offline {
-    background: #fee4e2;
-    color: #b42318;
-    border-color: #fecdca;
-  }
-  .bp23-dot {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background: #16794b;
-    box-shadow: 0 0 0 3px rgba(22, 121, 75, 0.2);
-  }
-  .bp23-conn-pill.offline .bp23-dot {
-    background: #d92d20;
-  }
-
-  /* 2. مؤشر ضغط الفرن داخل نافذة اختيار الوقت */
-  .bp23-slot-load {
-    margin-top: 4px;
-    padding: 2px 8px;
-    border-radius: 99px;
-    font-size: 11.5px !important;
-    font-weight: 900;
-    background: #eff8ff;
-    color: #175cd3;
-    border: 1px solid #b2ddff;
-  }
-  .bp23-slot-load.busy {
-    background: #fffaeb;
-    color: #b54708;
-    border-color: #fdb022;
-  }
-  .bp23-slot-load.full {
-    background: #fee4e2;
-    color: #b42318;
-    border-color: #fecdca;
-    animation: pulseUrg 1.2s infinite;
-  }
-
-  /* 3. ملخص عهدة السائق المالي داخل جولة التوصيل */
-  .bp23-rider-wallet {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-    gap: 8px;
-    margin: 10px 0;
-    padding: 10px 12px;
-    background: #fff;
-    border: 1.5px solid #84caff;
-    border-radius: 12px;
-  }
-  .bp23-rw-box {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-  }
-  .bp23-rw-box small {
-    font-size: 11px;
-    color: #475467;
-    font-weight: 800;
-    text-transform: uppercase;
-  }
-  .bp23-rw-box strong {
-    font-size: 16px;
-    font-weight: 900;
-    color: #101828;
-  }
-
-  /* 4. تفاعل رادار المطبخ للفلترة السريعة */
-  .bp22-k-pill, .bp22-k-details > div {
-    cursor: pointer;
-    transition: transform 0.12s, background 0.15s;
-    border-radius: 8px;
-    padding: 3px 8px;
-  }
-  .bp22-k-pill:hover, .bp22-k-details > div:hover {
-    background: rgba(255, 255, 255, 0.25);
-  }
-  .bp23-k-active {
-    background: #fdb022 !important;
-    color: #101828 !important;
-    border-color: #fdb022 !important;
-  }
-
-  /* 5. وضع طباعة المطبخ فقط (خط ضخم بدون أسعار) */
-  @media print {
-    body.bp23-kitchen-print .rc-item-price,
-    body.bp23-kitchen-print .rc-summary-box,
-    body.bp23-kitchen-print .rc-total-bar,
-    body.bp23-kitchen-print .rc-footer {
-      display: none !important;
-    }
-    body.bp23-kitchen-print .rc-item-name {
-      font-size: 21px !important;
-    }
-    body.bp23-kitchen-print .rc-qty-badge {
-      font-size: 20px !important;
-      padding: 2px 9px !important;
-    }
-    body.bp23-kitchen-print .rc-mod-line {
-      font-size: 17px !important;
-      font-weight: 950 !important;
-    }
-  }
-</style>
-
-<script>
+/* ---------- SEZIONE 5: حساب تكلفة الإضافات تلقائياً بنفس منطق الكاشير اليدوي ---------- */
+try{
 (function initBpV23UltraPro(){
   if(window.__bpV23) return;
   window.__bpV23 = true;
@@ -6460,10 +6507,10 @@ button{overflow-wrap:anywhere}
     updateConnStatus();
   }
 })();
-</script>
-<!-- ===== v23 ULTRA PRO END ===== -->
+}catch(e){ console.error("[bp] sezione non caricata: حساب تكلفة الإضافات تلقائياً بنفس منطق الكاشير اليدوي", e); }
 
-<script>
+/* ---------- SEZIONE 6: v23 ULTRA PRO ---------- */
+try{
 /* v24-b: refresh Storico day list after a status change */
 (function(){
   if(window.__bpV24b) return; window.__bpV24b = true;
@@ -6473,8 +6520,10 @@ button{overflow-wrap:anywhere}
     try{ if(window.__storReload) window.__storReload(); }catch(e){}
   };
 })();
-</script>
-<script>
+}catch(e){ console.error("[bp] sezione non caricata: v23 ULTRA PRO", e); }
+
+/* ---------- SEZIONE 7: v24-a: anti double-save + saved id ---------- */
+try{
 /* v24-a: anti double-save + saved id */
 (function(){
   if(window.__bpV24a) return; window.__bpV24a = true;
@@ -6491,8 +6540,10 @@ button{overflow-wrap:anywhere}
     return (cart.size === 0 && window.__lastSavedOrderId) ? window.__lastSavedOrderId : null;
   };
 })();
-</script>
-<script>
+}catch(e){ console.error("[bp] sezione non caricata: v24-a: anti double-save + saved id", e); }
+
+/* ---------- SEZIONE 8: v24-e: no toast/chime while logged out ---------- */
+try{
 /* v24-e: no toast/chime while logged out */
 (function(){
   if(window.__bpV24e) return; window.__bpV24e = true;
@@ -6503,8 +6554,10 @@ button{overflow-wrap:anywhere}
     orig(o);
   };
 })();
-</script>
-<script>
+}catch(e){ console.error("[bp] sezione non caricata: v24-e: no toast/chime while logged out", e); }
+
+/* ---------- SEZIONE 9: v24-c: one consistent, date-aware urgency calculation ---------- */
+try{
 /* v24-c: one consistent, date-aware urgency calculation */
 (function(){
   if(window.__bpV24c) return; window.__bpV24c = true;
@@ -6532,8 +6585,10 @@ button{overflow-wrap:anywhere}
       cardClass:'', badgeClass:'urg-badge-scheduled', badgeText:'⏰ ' + tStr + ' (tra ' + fm(diff) + ')'};
   };
 })();
-</script>
-<script>
+}catch(e){ console.error("[bp] sezione non caricata: v24-c: one consistent, date-aware urgency calculation", e); }
+
+/* ---------- SEZIONE 10: v24-d: money math in cents ---------- */
+try{
 /* v24-d: money math in cents */
 (function(){
   if(window.__bpV24d) return; window.__bpV24d = true;
@@ -6547,8 +6602,10 @@ button{overflow-wrap:anywhere}
     return (Math.round(getItemsSubtotal() * 100) + Math.round(Number(getActiveDeliveryFee() || 0) * 100)) / 100;
   };
 })();
-</script>
-<script>
+}catch(e){ console.error("[bp] sezione non caricata: v24-d: money math in cents", e); }
+
+/* ---------- SEZIONE 11: v25-pin: staff PIN login (Supabase Auth), session is remembered ---------- */
+try{
 /* v25-pin: staff PIN login (Supabase Auth), session is remembered */
 (function(){
   if(window.__bp25pin) return; window.__bp25pin = true;
@@ -6578,8 +6635,10 @@ button{overflow-wrap:anywhere}
     showApp(r.data.user);
   };
 })();
-</script>
-<script>
+}catch(e){ console.error("[bp] sezione non caricata: v25-pin: staff PIN login (Supabase Auth), session is remembered", e); }
+
+/* ---------- SEZIONE 12: v25-gemini: Gemini calls go through the secure Edge Function when enabled ---------- */
+try{
 /* v25-gemini: Gemini calls go through the secure Edge Function when enabled */
 (function(){
   if(window.__bp25gem) return; window.__bp25gem = true;
@@ -6615,8 +6674,10 @@ button{overflow-wrap:anywhere}
     };
   }
 })();
-</script>
-<script>
+}catch(e){ console.error("[bp] sezione non caricata: v25-gemini: Gemini calls go through the secure Edge Function when enabled", e); }
+
+/* ---------- SEZIONE 13: v25-resume: refresh on wake/online + live realtime badge ---------- */
+try{
 /* v25-resume: refresh on wake/online + live realtime badge */
 (function(){
   if(window.__bp25res) return; window.__bp25res = true;
@@ -6638,8 +6699,10 @@ button{overflow-wrap:anywhere}
     if(!live && st) window.__bpWasDown = true;
   }, 2000);
 })();
-</script>
-<script>
+}catch(e){ console.error("[bp] sezione non caricata: v25-resume: refresh on wake/online + live realtime badge", e); }
+
+/* ---------- SEZIONE 14: v25-customers: shared customer book from the database (optional table) ---------- */
+try{
 /* v25-customers: shared customer book from the database (optional table) */
 (function(){
   if(window.__bp25cust) return; window.__bp25cust = true;
@@ -6654,8 +6717,10 @@ button{overflow-wrap:anywhere}
   var orig = showApp;
   showApp = function(u){ orig(u); setTimeout(load, 800); };
 })();
-</script>
-<script>
+}catch(e){ console.error("[bp] sezione non caricata: v25-customers: shared customer book from the database (optional table)", e); }
+
+/* ---------- SEZIONE 15: v25-debounce: coalesce bursts of loadOrders() into one request ---------- */
+try{
 /* v25-debounce: coalesce bursts of loadOrders() into one request */
 (function(){
   if(window.__bp25deb) return; window.__bp25deb = true;
@@ -6672,8 +6737,10 @@ button{overflow-wrap:anywhere}
   }
   loadOrders = function(){ return new Promise(function(res){ waiters.push(res); schedule(); }); };
 })();
-</script>
-<script>
+}catch(e){ console.error("[bp] sezione non caricata: v25-debounce: coalesce bursts of loadOrders() into one request", e); }
+
+/* ---------- SEZIONE 16: v25-wake: keep screen on, vibrate on new order, unlock audio ---------- */
+try{
 /* v25-wake: keep screen on, vibrate on new order, unlock audio */
 (function(){
   if(window.__bp25wake) return; window.__bp25wake = true;
@@ -6701,8 +6768,10 @@ button{overflow-wrap:anywhere}
     orig(o);
   };
 })();
-</script>
-<script>
+}catch(e){ console.error("[bp] sezione non caricata: v25-wake: keep screen on, vibrate on new order, unlock audio", e); }
+
+/* ---------- SEZIONE 17: v25-print: 80mm page size + "documento non fiscale" line ---------- */
+try{
 /* v25-print: 80mm page size + "documento non fiscale" line */
 (function(){
   if(window.__bp25prt) return; window.__bp25prt = true;
@@ -6718,16 +6787,20 @@ button{overflow-wrap:anywhere}
     return bo(o, items).replace('<div class="rc-footer">', '<div class="rc-footer"><b>DOCUMENTO NON FISCALE</b><br>');
   };
 })();
-</script>
-<script>
+}catch(e){ console.error("[bp] sezione non caricata: v25-print: 80mm page size + 'documento non fiscale' line", e); }
+
+/* ---------- SEZIONE 18: v25-sw: register the optional service worker (sw.js next to the page) ---------- */
+try{
 /* v25-sw: register the optional service worker (sw.js next to the page) */
 (function(){
   if(window.__bp25sw) return; window.__bp25sw = true;
   var ok = location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1';
   if('serviceWorker' in navigator && ok){ navigator.serviceWorker.register('sw.js').catch(function(){}); }
 })();
-</script>
-<script>
+}catch(e){ console.error("[bp] sezione non caricata: v25-sw: register the optional service worker (sw.js next to the page)", e); }
+
+/* ---------- SEZIONE 19: v26-offline: work without internet (cache + local order queue + auto sync) ---------- */
+try{
 /* v26-offline: work without internet (cache + local order queue + auto sync) */
 (function(){
   if(window.__bp26off) return; window.__bp26off = true;
@@ -6994,16 +7067,10 @@ button{overflow-wrap:anywhere}
   window.__bpOff = {check: check, setOnline: setOnline, flush: flushQueue, syncPending: syncPending, qGet: qGet, hydrate: hydrate, saveCaches: saveCaches, jget: jget};
   renderQueue(); if(!online) hydrate(); check();
 })();
-</script>
-  <!-- ===== v27 ULTRA SPEED & OFFLINE FIX PATCH (FOR POS v26) START ===== -->
-<style id="bpV27css">
-  .bp27-time-pills { display:flex; gap:6px; flex-wrap:wrap; margin-top:6px; }
-  .bp27-tpill { flex:1 1 auto; min-height:38px!important; padding:4px 10px!important; border-radius:99px!important; background:#fffcf5!important; color:#93370d!important; border:1.5px solid #fdb022!important; font-size:13px!important; font-weight:850!important; }
-  .bp27-tpill:active, .bp27-tpill.on { background:#b54708!important; color:#fff!important; border-color:#b54708!important; }
-  .bp27-pay-switch { cursor:pointer; padding:2px 8px; border-radius:8px; background:#f2f4f7; border:1px dashed #98a2b3; display:inline-block; transition:0.15s; font-weight:850; }
-  .bp27-pay-switch:active { transform:scale(0.95); background:#eff8ff; border-color:#175cd3; }
-</style>
-<script>
+}catch(e){ console.error("[bp] sezione non caricata: v26-offline: work without internet (cache + local order queue + auto sync)", e); }
+
+/* ---------- SEZIONE 20: 1. تحميل فوري للمنيو والطلبات من الكاش (0 ثانية عند الفتح) ---------- */
+try{
 (function initBpV27Patch(){
   if(window.__bpV27) return;
   window.__bpV27 = true;
@@ -7133,7 +7200,211 @@ button{overflow-wrap:anywhere}
     }, 3000);
   });
 })();
+}catch(e){ console.error("[bp] sezione non caricata: 1. تحميل فوري للمنيو والطلبات من الكاش (0 ثانية عند الفتح)", e); }
+
+/* ---------- SEZIONE 21: v27 ULTRA SPEED & OFFLINE FIX PATCH ---------- */
+try{
+/* v27-operator: show who registered each order (created_by_email) + current user in header */
+(function(){
+  if(window.__bp27op) return; window.__bp27op = true;
+  var st = document.createElement('style');
+  st.textContent = '#userBar #userEmail{display:inline-block!important;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px!important;font-weight:800;background:#eff8ff;color:#175cd3;border:1px solid #b2ddff;border-radius:99px;padding:4px 10px}';
+  document.head.appendChild(st);
+  var bo = buildReceiptHtml;
+  buildReceiptHtml = function(o, items){
+    var h = bo(o, items), who = (o && o.created_by_email) || '';
+    if(!who && o && String(o.id).indexOf('OFF-') === 0){ var u = el('userEmail'); who = u ? (u.textContent || '') : ''; }
+    if(who){
+      h = h.replace('<div class="rc-items-section">', '<div class="rc-customer-box" style="border-top:0;padding-top:4px"><div class="rc-customer-row"><strong class="lbl">👤 Operatore:</strong> <span style="font-weight:800">' + esc(who) + '</span></div></div><div class="rc-items-section">');
+    }
+    return h;
+  };
+})();
+}catch(e){ console.error("[bp] sezione non caricata: v27 ULTRA SPEED & OFFLINE FIX PATCH", e); }
+
+/* ---------- SEZIONE 22: blocco 21 ---------- */
+try{
+/* v28-login: one account per employee (visible email field, remembered emails, switch user) */
+(function(){
+  if(window.__bp28login) return; window.__bp28login = true;
+  var pin = el('staffPin'); if(!pin) return;
+  var wrap = pin.closest('.field'); if(!wrap) return;
+  var KEY = 'bp_staff_emails';
+  function list(){ try{ var a = JSON.parse(localStorage.getItem(KEY)); return Array.isArray(a) ? a : []; }catch(e){ return []; } }
+  function remember(e){
+    e = (e || '').trim().toLowerCase(); if(!e) return;
+    var a = list().filter(function(x){ return x !== e; }); a.unshift(e);
+    try{ localStorage.setItem(KEY, JSON.stringify(a.slice(0, 8))); }catch(err){}
+  }
+  var f = document.createElement('div'); f.className = 'field'; f.style.margin = '0 0 10px';
+  f.innerHTML = '<label>👤 Email dipendente</label><input id="staffEmail" type="email" inputmode="email" autocomplete="off" list="staffEmailList" placeholder="nome@buonapizza.app"><datalist id="staffEmailList"></datalist>';
+  wrap.parentNode.insertBefore(f, wrap);
+  var inp = f.querySelector('input'), dl = f.querySelector('datalist');
+  function fill(){ dl.innerHTML = list().map(function(e){ return '<option value="' + e + '">'; }).join(''); }
+  fill();
+  inp.value = localStorage.getItem('bp_staff_email') || list()[0] || '';
+  function mirror(){ var m = el('email'); if(m) m.value = inp.value.trim(); }
+  inp.addEventListener('input', mirror); mirror();
+  var orig = doDirectEnter;
+  doDirectEnter = async function(){
+    mirror();
+    var r = await orig.apply(this, arguments);
+    try{ if(!el('app').classList.contains('hidden')){ remember(inp.value); fill(); } }catch(e){}
+    return r;
+  };
+  var lo = document.querySelector('#userBar button[onclick*="doLogout"]');
+  if(lo) lo.textContent = '🔄 Cambia utente';
+  var ol = doLogout;
+  doLogout = function(){ try{ el('staffPin').value = ''; }catch(e){} return ol.apply(this, arguments); };
+})();
+}catch(e){ console.error("[bp] sezione non caricata: blocco 21", e); }
+
+/* ---------- SEZIONE 23: v29-updater: show last modifier on the printed ticket ---------- */
+try{
+/* v29-updater: show last modifier on the printed ticket */
+(function(){
+  if(window.__bp29upd) return; window.__bp29upd = true;
+  var bo = buildReceiptHtml;
+  buildReceiptHtml = function(o, items){
+    var h = bo(o, items);
+    if(o && o.updated_by_email){
+      var t = '';
+      try{ if(o.updated_at) t = ' · ' + new Date(o.updated_at).toLocaleTimeString('it-IT', {hour: '2-digit', minute: '2-digit'}); }catch(e){}
+      h = h.replace('<div class="rc-items-section">', '<div class="rc-customer-box" style="border-top:0;padding-top:4px"><div class="rc-customer-row"><strong class="lbl">✏️ Modifica:</strong> <span style="font-weight:800">' + esc(o.updated_by_email) + t + '</span></div></div><div class="rc-items-section">');
+    }
+    return h;
+  };
+})();
+}catch(e){ console.error("[bp] sezione non caricata: v29-updater: show last modifier on the printed ticket", e); }
+
+
+/* ---------- SEZIONE 24: ruoli, storia ordine, schermata cucina (v31) ---------- */
+try{
+var BP_ROLE = 'cashier';
+var BP_TABS = {manager:['new','orders','kitchen','menu','all','cassa'], cashier:['new','orders','kitchen','all'], kitchen:['kitchen','orders'], driver:['orders']};
+var BP_HOME = {manager:'new', cashier:'new', kitchen:'kitchen', driver:'orders'};
+function bpApplyRole(role){
+  if(!BP_TABS[role]) role = 'cashier';
+  BP_ROLE = role; document.body.setAttribute('data-role', role);
+  document.querySelectorAll('.tabs [data-tab]').forEach(function(b){ b.classList.toggle('hidden', BP_TABS[role].indexOf(b.getAttribute('data-tab')) < 0); });
+  var u = el('userEmail'); if(u){ var base = u.getAttribute('data-base'); if(base !== null) u.textContent = base + ' · ' + role; }
+  var act = document.querySelector('.tabs [data-tab].active'), cur = act ? act.getAttribute('data-tab') : 'new';
+  if(BP_TABS[role].indexOf(cur) < 0 || (!window.__bpHomed && (role === 'kitchen' || role === 'driver'))){ window.__bpHomed = true; switchTab(BP_HOME[role]); }
+}
+function bpAfterLogin(user){
+  var email = ((user && user.email) || '').toLowerCase(), u = el('userEmail');
+  if(u) u.setAttribute('data-base', u.textContent);
+  var ck = 'bp_role_' + email, cached = null; try{ cached = localStorage.getItem(ck); }catch(e){}
+  bpApplyRole(cached || 'cashier');
+  if(!sb || !email) return;
+  Promise.resolve(sb.from('staff_profiles').select('role').eq('email', email).maybeSingle()).then(function(r){
+    if(!r || r.error) return;
+    var d = r.data; if(Array.isArray(d)) d = d[0];
+    var role = (d && d.role) || 'cashier'; try{ localStorage.setItem(ck, role); }catch(e){}
+    bpApplyRole(role);
+  }).catch(function(){});
+}
+async function bpOpenHistory(id){
+  pkOpen(); el('pkTitle').textContent = '🕘 Storia ordine #' + id;
+  el('pkTop').className = 'pk-top'; el('pkTop').innerHTML = ''; el('pkTop').onclick = null; el('pkBody').onclick = null; el('pkSum').innerHTML = '';
+  var b = el('pkBody'); b.innerHTML = '<p class="muted">Caricamento…</p>';
+  var r; try{ r = await sb.from('order_events').select('*').eq('order_id', id).order('at', {ascending: true}); }catch(e){ r = {error: e}; }
+  if(!r || r.error || !r.data){ b.innerHTML = '<p class="muted">Storia non disponibile (offline o tabella mancante).</p>'; return; }
+  if(!r.data.length){ b.innerHTML = '<p class="muted">Nessun evento registrato per questo ordine.</p>'; return; }
+  var prev = null;
+  b.innerHTML = r.data.map(function(ev){
+    var t = new Date(ev.at), hh = t.toLocaleTimeString('it-IT', {hour: '2-digit', minute: '2-digit'}), d = t.toLocaleDateString('it-IT', {day: '2-digit', month: '2-digit'});
+    var lbl = ev.event === 'created' ? '🆕 Creato' : (ev.event === 'status' ? '🔁 ' + esc(ev.from_status || '?') + ' → <b>' + esc(ev.to_status || '?') + '</b>' : '✏️ Modificato');
+    var delta = prev ? ' <span class="muted">(+' + Math.max(0, Math.round((t - prev) / 60000)) + ' min)</span>' : ''; prev = t;
+    return '<div class="order-item-line"><span>' + lbl + delta + '<br><span class="muted">👤 ' + esc(ev.by_email || '—') + '</span></span><strong>' + hh + ' <span class="muted">' + d + '</span></strong></div>';
+  }).join('');
+}
+function bpDecorate(){
+  ['openOrders', 'allOrders'].forEach(function(bid){
+    var box = el(bid); if(!box) return;
+    box.querySelectorAll('.order').forEach(function(card){
+      if(card.querySelector('.bp-hist-btn')) return;
+      var h3 = card.querySelector('h3'), rb = card.querySelector('.order-right'), m = h3 && /#(\d+)/.exec(h3.textContent);
+      if(!m || !rb) return;
+      var b = document.createElement('button'); b.type = 'button'; b.className = 'secondary btn-sm bp-hist-btn'; b.setAttribute('data-oid', m[1]); b.textContent = '🕘 Storia'; rb.appendChild(b);
+    });
+  });
+}
+['openOrders', 'allOrders'].forEach(function(bid){ var box = el(bid); if(box) new MutationObserver(bpDecorate).observe(box, {childList: true}); });
+document.addEventListener('click', function(e){ var b = e.target.closest('.bp-hist-btn'); if(b) bpOpenHistory(Number(b.getAttribute('data-oid'))); });
+bpDecorate();
+
+var BP_STATION = 'all';
+function bpStationOf(name){
+  var base = splitProductAndMods(name).baseName.toLowerCase();
+  var p = allMenu.find(function(x){ return x.name.toLowerCase() === base; });
+  var k = p ? getProductKind(p) : (/pizz|calzon|margherita|diavola|marinara/.test(base) ? 'pizza' : (/panin|kebab|piadin/.test(base) ? 'panino' : 'altro'));
+  return k === 'pizza' ? 'forno' : ((k === 'panino' || k === 'piadina') ? 'panini' : 'altro');
+}
+function renderKitchen(){
+  var tab = el('kitchenTab'); if(!tab) return;
+  var act = orders.filter(function(o){ var s = normStatus(o.status); return s === 'Nuovo' || s === 'In preparazione'; });
+  var bd = el('kitchenCountBadge'); if(bd) bd.textContent = act.length;
+  if(tab.classList.contains('hidden')) return;
+  var ST = [['all', 'Tutti'], ['forno', '🍕 Forno'], ['panini', '🥙 Panini/Piadine'], ['altro', '🍟 Altro']];
+  el('kitchenChips').innerHTML = ST.map(function(s){ return '<button type="button" class="kt-chip' + (BP_STATION === s[0] ? ' on' : '') + '" data-st="' + s[0] + '">' + s[1] + '</button>'; }).join('') + '<button type="button" class="kt-chip" data-fs="1">⛶</button>';
+  act.sort(function(a, b){ return getOrderUrgencyMeta(a).sortMinutes - getOrderUrgencyMeta(b).sortMinutes; });
+  function col(title, status, next, lbl){
+    var cards = act.filter(function(o){ return normStatus(o.status) === status; }).map(function(o){
+      var items = (itemsByOrder.get(o.id) || []).filter(function(i){ return i.product_name !== 'Supplemento Consegna' && (BP_STATION === 'all' || bpStationOf(i.product_name) === BP_STATION); });
+      if(!items.length) return '';
+      var pt = splitTimeAndNotes(o.notes), deliv = /consegna|domicilio/i.test(o.order_type || '');
+      var lines = items.map(function(i){
+        var p = splitProductAndMods(i.product_name);
+        var mods = p.mods.map(function(m){ var no = /^senza\s+/i.test(m); return '<div class="kt-mod ' + (no ? 'no' : 'ex') + '">' + (no ? '🚫 SENZA ' : '➕ EXTRA ') + esc(m.replace(/^senza\s+|^\+\s*/i, '').toUpperCase()) + '</div>'; }).join('');
+        return '<div class="kt-item"><span class="kt-q">' + i.quantity + '×</span> ' + esc(p.baseName) + (String(i.size).toLowerCase() === 'maxi' ? ' <span class="kt-maxi">MAXI</span>' : '') + mods + '</div>';
+      }).join('');
+      return '<div class="kt-card"><div class="kt-head"><b>#' + o.id + '</b><span class="kt-time">' + esc(pt.time === 'Prima possibile' ? 'SUBITO' : pt.time) + '</span><span>' + (deliv ? '🛵' : '🛍️') + '</span></div><div class="rd-timer ok" data-id="' + o.id + '"></div>' + lines + (pt.cleanNotes ? '<div class="kt-note">📝 ' + esc(pt.cleanNotes) + '</div>' : '') + '<button type="button" class="kt-go" data-oid="' + o.id + '" data-next="' + next + '">' + lbl + '</button></div>';
+    }).join('');
+    return '<div class="kt-col"><h2>' + title + '</h2>' + (cards || '<p class="muted">Nessun ordine</p>') + '</div>';
+  }
+  el('kitchenCols').innerHTML = col('🔵 Da iniziare', 'Nuovo', 'In preparazione', '▶ INIZIA') + col('👨‍🍳 In preparazione', 'In preparazione', 'Pronto', '✅ PRONTO');
+  if(typeof rdTickTimers === 'function') rdTickTimers();
+}
+el('kitchenTab').addEventListener('click', function(e){
+  var c = e.target.closest('[data-st]'); if(c){ BP_STATION = c.getAttribute('data-st'); renderKitchen(); return; }
+  if(e.target.closest('[data-fs]')){ try{ if(document.fullscreenElement) document.exitFullscreen(); else document.documentElement.requestFullscreen(); }catch(err){} return; }
+  var g = e.target.closest('.kt-go'); if(g) updateOrderStatus(Number(g.getAttribute('data-oid')), g.getAttribute('data-next'));
+});
+}catch(e){ console.error("[bp] sezione non caricata: ruoli/storia/cucina", e); }
+
 </script>
-<!-- ===== v27 ULTRA SPEED & OFFLINE FIX PATCH END ===== -->
+
+
+
+
+
+
+
+  
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+
 
 </body></html>
