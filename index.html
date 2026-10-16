@@ -7649,6 +7649,57 @@ el('kitchenTab').addEventListener('click', function(e){
   }
 })();
 
+  // --- رسائل واتساب الجاهزة لكل حالة (WhatsApp Quick Actions v31) ---
+(function(){
+  if(window.__whatsappActionsEnhanced) return;
+  window.__whatsappActionsEnhanced = true;
+
+  var _origRenderOrders = window.renderOrders;
+  if(typeof _origRenderOrders === 'function'){
+    window.renderOrders = function(){
+      _origRenderOrders.apply(this, arguments);
+      
+      document.querySelectorAll('#openOrders .order').forEach(function(card){
+        var h3 = card.querySelector('h3');
+        if(!h3) return;
+        var m = /#(\d+)/.exec(h3.textContent);
+        if(!m) return;
+        var ordId = Number(m[1]);
+        var ord = orders.find(function(x){ return x.id === ordId; });
+        if(!ord || !ord.phone) return;
+
+        var rightBox = card.querySelector('.order-right');
+        if(rightBox && !card.querySelector('.bp-wa-menu-btn')){
+          var waMenuBtn = document.createElement('button');
+          waMenuBtn.type = 'button';
+          waMenuBtn.className = 'green btn-sm bp-wa-menu-btn';
+          waMenuBtn.style.cssText = 'background:#16a34a;color:#fff;font-weight:900;width:100%;margin-top:6px';
+          waMenuBtn.innerHTML = '💬 WhatsApp Rapido';
+          
+          waMenuBtn.onclick = function(){
+            var cleanPh = String(ord.phone).replace(/\D+/g, '');
+            if(cleanPh.length === 10 && cleanPh.charAt(0) === '3') cleanPh = '39' + cleanPh;
+            
+            var pTime = splitTimeAndNotes(ord.notes).time;
+            var st = normStatus(ord.status);
+            
+            var msg = `Ciao ${ord.customer_name || 'Gentile Cliente'}! 🍕\n` +
+                      `Ti scriviamo da *Buona Pizza* (Lodi Vecchio) per il tuo ordine *#${ord.id}*:\n` +
+                      `• Orario: *${pTime}*\n` +
+                      `• Totale: *${euro(ord.total)}*\n` +
+                      `• Stato attuale: *${st}*\n\n` +
+                      `Grazie per aver scelto la nostra pizzeria! Buon appetito! 😋`;
+
+            window.open('https://wa.me/' + cleanPh + '?text=' + encodeURIComponent(msg), '_blank');
+          };
+
+          rightBox.appendChild(waMenuBtn);
+        }
+      });
+    };
+  }
+})();
+
   
 </script>
 
