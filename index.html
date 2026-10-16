@@ -7513,6 +7513,51 @@ el('kitchenTab').addEventListener('click', function(e){
   };
 })();
 
+// --- تنبيه الطلب المكرر الذكي (Duplicate Order Alert v31) ---
+(function(){
+  if(window.__dupAlertEnhanced) return;
+  window.__dupAlertEnhanced = true;
+
+  var _origSaveOrder = window.doSaveOrder;
+  window.doSaveOrder = async function(){
+    var phoneInput = el('phone');
+    var custInput = el('customer');
+    if(!phoneInput || !custInput) return _origSaveOrder.apply(this, arguments);
+
+    var curPhone = String(phoneInput.value || '').trim().replace(/\D+/g,'');
+    var curName = String(custInput.value || '').trim().toLowerCase();
+
+    if(curPhone.length >= 6 && typeof orders !== 'undefined' && orders.length){
+      // البحث في الأوردات المفتوحة خلال آخر 45 دقيقة
+      var now = Date.now();
+      var duplicateFound = orders.find(function(o){
+        var st = normStatus(o.status);
+        if(['Completato','Annullato'].includes(st)) return false;
+        var oPhone = String(o.phone || '').trim().replace(/\D+/g,'');
+        var oName = String(o.customer_name || '').trim().toLowerCase();
+        
+        var timeDiffMinutes = (now - new Date(o.created_at).getTime()) / 60000;
+        if(timeDiffMinutes > 45) return false; // تجاوز 45 دقيقة يعتبر طلباً جديداً طبيعياً
+
+        if(curPhone && oPhone && curPhone === oPhone) return true;
+        if(curName && oName && curName.length >= 3 && oName === curName) return true;
+        return false;
+      });
+
+      if(duplicateFound){
+        var parsedTime = splitTimeAndNotes(duplicateFound.notes).time;
+        var confirmMsg = `⚠️ تنبيه: العميل "${duplicateFound.customer_name || 'هذا العميل'}" لديه بالفعل طلب مفتوح رقم #${duplicateFound.id} (مُسجل قبل قليل برقم الهاتف، الساعة ${parsedTime}, بقيمة ${euro(duplicateFound.total)}).\n\nهل أنت متأكد أنك تريد حفظ هذا الطلب المكرر؟`;
+        if(!confirm(confirmMsg)){
+          setMsg('orderMsg', `❌ تم إلغاء حفظ الأوردر لتجنب التكرار (تنبيه الطلب المكرر للأمر #${duplicateFound.id})`, 'error');
+          return;
+        }
+      }
+    }
+
+    return _origSaveOrder.apply(this, arguments);
+  };
+})();
+  
   
 </script>
 
