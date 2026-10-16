@@ -8413,6 +8413,98 @@ console.log("Buona Pizza POS Pro aggiornato con successo!");
   }
 })();
 
+  // === BUONA PIZZA: KITCHEN RADAR ON KITCHEN TAB MODULE v38 ===
+(function(){
+  if(window.__bpKitchenRadarTab) return;
+  window.__bpKitchenRadarTab = true;
+
+  // دالة لحقن وتحديث رادار الفرن والكباب داخل شاشة المطبخ
+  function injectKitchenRadarToKitchenTab(){
+    var kitchenTab = el('kitchenTab');
+    if(!kitchenTab) return;
+
+    var radarBox = el('bpKitchenTabRadar');
+    if(!radarBox){
+      radarBox = document.createElement('div');
+      radarBox.id = 'bpKitchenTabRadar';
+      radarBox.className = 'panel';
+      radarBox.style.cssText = 'margin-bottom:14px;background:linear-gradient(135deg,#101828 0%,#1d2939 100%);color:#fff;border-radius:16px;padding:14px;box-shadow:0 6px 18px #10182826;';
+      
+      var topline = kitchenTab.querySelector('.topline');
+      if(topline && topline.nextSibling){
+        topline.parentNode.insertBefore(radarBox, topline.nextSibling);
+      } else {
+        kitchenTab.insertBefore(radarBox, kitchenTab.firstChild);
+      }
+    }
+
+    // حساب إجمالي الأصناف المطلوبة للأوردات النشطة (الجديدة وتحت التجهيز)
+    var activeOrds = (typeof orders !== 'undefined' ? orders : []).filter(function(o){
+      var s = normStatus(o.status);
+      return s === 'Nuovo' || s === 'In preparazione';
+    });
+
+    if(!activeOrds.length){
+      radarBox.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:center"><strong>👨‍🍳 رادار الفرن والكباب (المطبخ)</strong><span class="muted" style="color:#98a2b3">لا توجد أوردات نشطة حالياً (الفرن هادئ ☕)</span></div>';
+      return;
+    }
+
+    var counts = {pizza: 0, panino: 0, piadina: 0, fritti: 0, bibite: 0};
+    var byItem = {};
+
+    activeOrds.forEach(function(o){
+      var items = (typeof itemsByOrder !== 'undefined' ? itemsByOrder.get(o.id) : []) || [];
+      items.forEach(function(i){
+        if(i.product_name === 'Supplemento Consegna') return;
+        var q = Number(i.quantity || 1);
+        var base = splitProductAndMods(i.product_name).baseName;
+        var nm = (base + ' ' + (i.size || '')).toLowerCase();
+        
+        if(/bibit|coca|acqua|birra|fanta|cola|redbull|tè|the/.test(nm)) counts.bibite += q;
+        else if(/fritt|patatin|crocchett|nugget|anelli|olive ascolane/.test(nm)) counts.fritti += q;
+        else if(/piadin/.test(nm)) counts.piadina += q;
+        else if(/panin|kebab|kebap|burger|durum|falafel/.test(nm)) counts.panino += q;
+        else counts.pizza += q;
+
+        var k = base + (i.size === 'Maxi' ? ' (Maxi)' : '');
+        byItem[k] = (byItem[k] || 0) + q;
+      });
+    });
+
+    var topItemsHtml = Object.keys(byItem).sort(function(a,b){ return byItem[b] - byItem[a]; }).map(function(k){
+      return '<div style="background:rgba(255,255,255,0.08);padding:4px 8px;border-radius:8px">• <b>' + byItem[k] + '×</b> ' + esc(k) + '</div>';
+    }).join('');
+
+    radarBox.innerHTML = `
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:10px">
+        <strong style="font-size:16px">👨‍🍳 رادار الفرن والكباب اللحظي (${activeOrds.length} أوردات مطلوبة للمطبخ)</strong>
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
+          <span style="background:#ffffff1a;border:1px solid #ffffff33;padding:4px 10px;border-radius:99px;font-size:12px;font-weight:800">🍕 بيتزا: ${counts.pizza}</span>
+          <span style="background:#ffffff1a;border:1px solid #ffffff33;padding:4px 10px;border-radius:99px;font-size:12px;font-weight:800">🥙 كباب/سندويتشات: ${counts.panino}</span>
+          ${counts.piadina ? `<span style="background:#ffffff1a;border:1px solid #ffffff33;padding:4px 10px;border-radius:99px;font-size:12px;font-weight:800">🫓 بيادينا: ${counts.piadina}</span>` : ''}
+          ${counts.fritti ? `<span style="background:#ffffff1a;border:1px solid #ffffff33;padding:4px 10px;border-radius:99px;font-size:12px;font-weight:800">🍟 مقليات: ${counts.fritti}</span>` : ''}
+        </div>
+      </div>
+      ${topItemsHtml ? '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:6px;font-size:13px;border-top:1px solid rgba(255,255,255,0.15);padding-top:8px">' + topItemsHtml + '</div>' : ''}
+    `;
+  }
+
+  // تحديث الرادار تلقائياً عند أي تغيير في الأوردات أو عند فتح شاشة المطبخ
+  var _origRenderKitchen = window.renderKitchen;
+  if(typeof _origRenderKitchen === 'function'){
+    window.renderKitchen = function(){
+      _origRenderKitchen.apply(this, arguments);
+      injectKitchenRadarToKitchenTab();
+    };
+  }
+
+  var _origSwitchTab = window.switchTab;
+  window.switchTab = function(tabName){
+    if(typeof _origSwitchTab === 'function') _origSwitchTab(tabName);
+    if(tabName === 'kitchen') setTimeout(injectKitchenRadarToKitchenTab, 100);
+  };
+})();
+
   
 </script>
 
