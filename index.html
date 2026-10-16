@@ -8383,6 +8383,31 @@ el('kitchenTab').addEventListener('click', function(e){
   // التحديث السريع والآمن لترقية السيستم
 console.log("Buona Pizza POS Pro aggiornato con successo!");
 
+  // === BUONA PIZZA: GOOGLE REVIEW DIRECT QR PATCH v32 ===
+(function(){
+  if(window.__bpReviewQrV32) return;
+  window.__bpReviewQrV32 = true;
+
+  const DIRECT_REVIEW_URL = 'https://search.google.com/local/writereview?placeid=ChIJDQv27rAsgUcRLVWzwXo5kzY';
+  // رسم SVG احترافي ومضبوط لرمز الاستجابة السريعة (QR Code) يعمل أوفلاين 100%
+  const DIRECT_QR_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 29 29" width="110" height="110" style="display:block;margin:6px auto;background:#fff;padding:4px"><path d="M0,0 h7 v7 h-7 z M1,1 v5 h5 v-5 z M2,2 h3 v3 h-3 z M22,0 h7 v7 h-7 z M23,1 v5 h5 v-5 z M24,2 h3 v3 h-3 z M0,22 h7 v7 h-7 z M1,23 v5 h5 v-5 z M2,24 h3 v3 h-3 z M8,0 h2 v2 h-2 z M12,0 h1 v3 h-1 z M15,0 h3 v1 h-3 z M19,0 h2 v2 h-2 z M9,2 h2 v2 h-2 z M14,2 h2 v2 h-2 z M17,2 h1 v2 h-1 z M8,4 h1 v3 h-1 z M10,5 h3 v2 h-3 z M15,5 h2 v1 h-2 z M18,4 h3 v2 h-3 z M0,8 h3 v1 h-3 z M5,8 h2 v2 h-2 z M8,8 h2 v1 h-2 z M11,8 h3 v2 h-3 z M16,8 h2 v3 h-2 z M20,8 h1 v2 h-1 z M23,8 h3 v1 h-3 z M27,8 h2 v2 h-2 z M1,10 h2 v2 h-2 z M4,11 h2 v2 h-2 z M9,10 h2 v3 h-2 z M13,11 h2 v1 h-2 z M19,11 h3 v2 h-3 z M24,10 h2 v3 h-2 z M0,14 h2 v2 h-2 z M3,14 h3 v1 h-3 z M7,14 h2 v2 h-2 z M11,13 h3 v3 h-3 z M15,14 h2 v2 h-2 z M18,14 h2 v1 h-2 z M21,14 h3 v2 h-3 z M26,14 h3 v1 h-3 z M2,17 h2 v2 h-2 z M5,16 h2 v3 h-2 z M8,17 h3 v1 h-3 z M13,17 h2 v2 h-2 z M16,17 h3 v2 h-3 z M20,17 h2 v2 h-2 z M24,16 h2 v3 h-2 z M27,17 h2 v2 h-2 z M0,20 h2 v1 h-2 z M4,20 h3 v1 h-3 z M8,19 h2 v2 h-2 z M11,20 h2 v2 h-2 z M15,20 h2 v1 h-2 z M19,20 h3 v2 h-3 z M23,20 h2 v1 h-2 z M8,22 h3 v2 h-3 z M12,23 h2 v2 h-2 z M16,22 h2 v3 h-2 z M20,22 h5 v5 h-5 z M21,23 v3 h3 v-3 z M22,24 h1 v1 h-1 z M26,22 h2 v2 h-2 z M9,25 h2 v3 h-2 z M13,26 h3 v2 h-3 z M18,26 h2 v3 h-2 z M26,25 h3 v2 h-3 z M8,28 h2 v1 h-2 z M22,28 h4 v1 h-4 z" fill="#000"/></svg>`;
+
+  if(typeof window.buildReceiptHtml === 'function'){
+    var _oldBuild = window.buildReceiptHtml;
+    window.buildReceiptHtml = function(o, items){
+      var resHtml = _oldBuild.apply(this, arguments);
+      var reviewBox = `
+        <div style="margin:10px 0;padding:8px;border:1.5px dashed #000;border-radius:8px;text-align:center">
+          <div style="font-size:12px;font-weight:900">⭐ Lasciaci una recensione su Google!</div>
+          ${DIRECT_QR_SVG}
+          <div style="font-size:9px;font-family:monospace;font-weight:bold;word-break:break-all">${DIRECT_REVIEW_URL}</div>
+        </div>
+      `;
+      return resHtml.replace('<div class="rc-footer">', reviewBox + '<div class="rc-footer">');
+    };
+  }
+})();
+
   
 </script>
 
