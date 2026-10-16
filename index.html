@@ -8223,6 +8223,163 @@ el('kitchenTab').addEventListener('click', function(e){
   }catch(e){}
 })();
 
+  // --- نظام صوت التنبيه التلقائي للأوردات الجديدة (Audio Alert v31) ---
+(function(){
+  if(window.__audioAlertEnhanced) return;
+  window.__audioAlertEnhanced = true;
+
+  // دالة لتوليد صوت تنبيه لطيف عبر المتصفح (بدون الحاجة لملفات خارجية معقدة)
+  window.playNotificationBeep = function(){
+    try {
+      var audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      var osc = audioCtx.createOscillator();
+      var gain = audioCtx.createGain();
+      
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(587.33, audioCtx.currentTime); // نغمة رقيقة (D5)
+      osc.frequency.setValueAtTime(880, audioCtx.currentTime + 0.15); // نغمة ثانية (A5)
+      
+      gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.4);
+      
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      
+      osc.start();
+      osc.stop(audioCtx.currentTime + 0.4);
+    } catch(e){
+      // تجاهل الخطأ لو متصفح الموبايل منع التشغيل التلقائي قبل أول تفاعل
+    }
+  };
+
+  // زر اختباري صغير في أعلى الشاشة لتجربة الصوت والتأكد أنه يعمل
+  var topline = document.querySelector('.topline') || document.querySelector('header') || document.body;
+  if(topline && !el('testBeepBtn')){
+    var beepBtn = document.createElement('button');
+    beepBtn.type = 'button';
+    beepBtn.id = 'testBeepBtn';
+    beepBtn.className = 'secondary btn-sm';
+    beepBtn.style.cssText = 'font-weight:900;margin-left:6px;cursor:pointer';
+    beepBtn.innerHTML = '🔔 صوت';
+    beepBtn.title = 'تجربة صوت التنبيه';
+    
+    beepBtn.onclick = function(){
+      playNotificationBeep();
+    };
+
+    topline.appendChild(beepBtn);
+  }
+
+  // مراقبة الأوردات الجديدة وتنبيه المطبخ والكاشير فور إضافة أوردر جديد
+  var lastKnownOrdersCount = -1;
+  setInterval(function(){
+    try {
+      var currentOrders = (typeof orders !== 'undefined') ? orders : [];
+      if(lastKnownOrdersCount !== -1 && currentOrders.length > lastKnownOrdersCount){
+        // تم اكتشاف أوردر جديد! شغل صوت التنبيه
+        playNotificationBeep();
+      }
+      lastKnownOrdersCount = currentOrders.length;
+    } catch(e){}
+  }, 2000);
+})();
+
+ // --- نظام الطباعة التلقائية للمطبخ عند حفظ الأوردر (Auto Print KDS v31) ---
+(function(){
+  if(window.__autoPrintEnhanced) return;
+  window.__autoPrintEnhanced = true;
+
+  // 1. إضافة زر تفعيل/تعطيل الطباعة التلقائية في الشريط العلوي (ليكون تحت تحكمك)
+  var topline = document.querySelector('.topline') || document.querySelector('header') || document.body;
+  if(topline && !el('autoPrintToggleBtn')){
+    var printToggleBtn = document.createElement('button');
+    printToggleBtn.type = 'button';
+    printToggleBtn.id = 'autoPrintToggleBtn';
+    printToggleBtn.className = 'secondary btn-sm';
+    printToggleBtn.style.cssText = 'font-weight:900;margin-left:6px;cursor:pointer';
+    
+    // قراءة الحالة المخزنة مسبقاً (مفعلة افتراضياً أو لا)
+    var isAutoPrintOn = localStorage.getItem('bp_auto_print') === '1';
+    printToggleBtn.innerHTML = isAutoPrintOn ? '🖨️ طباعة أوتو: ON' : '🖨️ طباعة أوتو: OFF';
+    printToggleBtn.style.background = isAutoPrintOn ? '#d1fae5' : '';
+    printToggleBtn.style.color = isAutoPrintOn ? '#065f46' : '';
+
+    printToggleBtn.onclick = function(){
+      var current = localStorage.getItem('bp_auto_print') === '1';
+      var next = !current;
+      localStorage.setItem('bp_auto_print', next ? '1' : '0');
+      printToggleBtn.innerHTML = next ? '🖨️ طباعة أوتو: ON' : '🖨️ طباعة أوتو: OFF';
+      printToggleBtn.style.background = next ? '#d1fae5' : '';
+      printToggleBtn.style.color = next ? '#065f46' : '';
+    };
+
+    topline.appendChild(printToggleBtn);
+  }
+
+  // 2. دالة طباعة تذكرة المطبخ تلقائياً
+  window.printKitchenTicketAuto = function(ord){
+    if(!ord) return;
+    var pTime = (typeof splitTimeAndNotes === 'function') ? splitTimeAndNotes(ord.notes).time : 'Subito';
+    var cleanNotes = (typeof splitTimeAndNotes === 'function') ? splitTimeAndNotes(ord.notes).notes : ord.notes;
+    
+    var itemsHtml = (ord.items || []).map(function(it){
+      return `<div style="display:flex;justify-content:space-between;font-size:16px;font-weight:900;margin:6px 0;border-bottom:1px dashed #000;padding-bottom:4px">
+        <span>${it.qty}x ${it.name}</span>
+        <span>${it.variant || ''}</span>
+      </div>`;
+    }).join('');
+
+    var printWin = window.open('', '_blank', 'width=400,height=600');
+    if(!printWin) return;
+
+    printWin.document.write(`
+      <html>
+      <head>
+        <title>KDS - Tavolo / Asporto #${ord.id}</title>
+        <style>
+          body { font-family: monospace; padding: 10px; color: #000; width: 80mm; margin: 0 auto; }
+          h2 { text-align: center; margin: 0 0 10px 0; font-size: 20px; }
+          .box { border: 2px solid #000; padding: 8px; margin-bottom: 10px; border-radius: 6px; }
+        </style>
+      </head>
+      <body onload="window.print(); window.close();">
+        <h2>🍕 BUONA PIZZA - KITCHEN</h2>
+        <div class="box">
+          <div style="font-size:18px;font-weight:900">ORDINE #${ord.id}</div>
+          <div style="font-size:15px;margin-top:4px">Cliente: <b>${ord.customer_name || 'Asporto'}</b></div>
+          <div style="font-size:15px">Orario: <b>${pTime}</b></div>
+          <div style="font-size:15px">Tipo: <b>${ord.type || 'Asporto'}</b></div>
+        </div>
+        <div style="margin-top:10px">
+          ${itemsHtml}
+        </div>
+        ${cleanNotes ? `<div style="margin-top:10px;border:1px solid #000;padding:6px;font-weight:bold">Note: ${cleanNotes}</div>` : ''}
+        <div style="text-align:center;margin-top:15px;font-size:12px">--- Stampa Automatica KDS ---</div>
+      </body>
+      </html>
+    `);
+    printWin.document.close();
+  };
+
+  // 3. مراقبة إضافة أوردر جديد لطباعته تلقائياً لو الميزة مفعلة
+  var lastCheckedOrdersLen = -1;
+  setInterval(function(){
+    try {
+      if(localStorage.getItem('bp_auto_print') !== '1') return;
+      var currentOrders = (typeof orders !== 'undefined') ? orders : [];
+      
+      if(lastCheckedOrdersLen !== -1 && currentOrders.length > lastCheckedOrdersLen){
+        // تم رصد أوردر جديد تماماً، جلب أحدث أوردر وطباعته للمطبخ فوراً
+        var latestOrder = currentOrders[currentOrders.length - 1];
+        if(latestOrder){
+          printKitchenTicketAuto(latestOrder);
+        }
+      }
+      lastCheckedOrdersLen = currentOrders.length;
+    } catch(e){}
+  }, 2000);
+})();
+ 
   
 </script>
 
