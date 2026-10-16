@@ -8132,6 +8132,97 @@ el('kitchenTab').addEventListener('click', function(e){
   };
 })();
 
+  // --- زر الوضع الليلي المريح للعين (Dark Mode v31) ---
+(function(){
+  if(window.__darkModeEnhanced) return;
+  window.__darkModeEnhanced = true;
+
+  // 1. حقن زر تبديل الوضع الليلي في الشريط العلوي بجوار عنوان المطعم أو الـ Topline
+  var topline = document.querySelector('.topline') || document.querySelector('header') || document.body;
+  if(topline && !el('darkToggleBtn')){
+    var darkBtn = document.createElement('button');
+    darkBtn.type = 'button';
+    darkBtn.id = 'darkToggleBtn';
+    darkBtn.className = 'secondary btn-sm';
+    darkBtn.style.cssText = 'font-weight:900;margin-left:auto;display:flex;align-items:center;gap:6px;cursor:pointer';
+    darkBtn.innerHTML = '🌙 وضع الليل';
+    
+    darkBtn.onclick = function(){
+      toggleDarkMode();
+    };
+
+    // إدراج الزر في أول شريط الـ topline أو الصفحة
+    if(topline.firstElementChild){
+      topline.insertBefore(darkBtn, topline.firstElementChild);
+    } else {
+      topline.appendChild(darkBtn);
+    }
+  }
+
+  // 2. حقن ستايل الألوان الداكنة المتكاملة (CSS Dark Theme)
+  var darkStyle = document.createElement('style');
+  darkStyle.id = 'bpDarkModeStyles';
+  darkStyle.innerHTML = `
+    body.dark-mode {
+      background-color: #0f172a !important;
+      color: #f8fafc !important;
+    }
+    body.dark-mode .panel,
+    body.dark-mode .menu-admin-row,
+    body.dark-mode .order,
+    body.dark-mode .modal-content,
+    body.dark-mode .stats-bar > div,
+    body.dark-mode .stat-box {
+      background-color: #1e293b !important;
+      color: #f8fafc !important;
+      border-color: #334155 !important;
+    }
+    body.dark-mode input, 
+    body.dark-mode select, 
+    body.dark-mode textarea {
+      background-color: #0f172a !important;
+      color: #f8fafc !important;
+      border-color: #475569 !important;
+    }
+    body.dark-mode .muted {
+      color: #94a3b8 !important;
+    }
+    body.dark-mode h1, 
+    body.dark-mode h2, 
+    body.dark-mode h3 {
+      color: #f8fafc !important;
+    }
+  `;
+  document.head.appendChild(darkStyle);
+
+  // 3. وظيفة التبديل والحفظ في الذاكرة
+  window.toggleDarkMode = function(){
+    var isDark = document.body.classList.toggle('dark-mode');
+    var btn = el('darkToggleBtn');
+    if(btn){
+      btn.innerHTML = isDark ? '☀️ وضع النهار' : '🌙 وضع الليل';
+      btn.style.background = isDark ? '#334155' : '';
+      btn.style.color = isDark ? '#f8fafc' : '';
+    }
+    try{
+      localStorage.setItem('bp_dark_mode', isDark ? '1' : '0');
+    }catch(e){}
+  };
+
+  // 4. استرجاع الحالة عند فتح السيستم
+  try{
+    if(localStorage.getItem('bp_dark_mode') === '1'){
+      document.body.classList.add('dark-mode');
+      var btn = el('darkToggleBtn');
+      if(btn){
+        btn.innerHTML = '☀️ وضع النهار';
+        btn.style.background = '#334155';
+        btn.style.color = '#f8fafc';
+      }
+    }
+  }catch(e){}
+})();
+
   
 </script>
 
