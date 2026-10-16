@@ -7621,6 +7621,34 @@ el('kitchenTab').addEventListener('click', function(e){
   }
 })();
 
+// --- تخصيص الإيصال ورمز QR لتقييم Google (Receipt Customizer v31) ---
+(function(){
+  if(window.__receiptCustomizerEnhanced) return;
+  window.__receiptCustomizerEnhanced = true;
+
+  var _origBuildReceiptHtml = window.buildReceiptHtml;
+  if(typeof _origBuildReceiptHtml === 'function'){
+    window.buildReceiptHtml = function(o, items){
+      var originalHtml = _origBuildReceiptHtml.apply(this, arguments);
+      
+      // رابط تقييم جوجل الخاص بالمطعم (يمكنك تعديل الرابط برابط مطعمك الفعلي لاحقاً)
+      var googleReviewUrl = 'https://g.page/r/buonapizza-lodivecchio/review'; 
+      var qrCodeImageUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=' + encodeURIComponent(googleReviewUrl);
+
+      var customFooterSection = `
+        <div style="margin:12px 0 6px;padding:10px;background:#f8f9fb;border:1.5px dashed #101828;border-radius:10px;text-align:center">
+          <div style="font-size:13px;font-weight:900;margin-bottom:6px">⭐ Lasciaci una recensione su Google!</div>
+          <img src="${qrCodeImageUrl}" alt="QR Google Review" style="width:90px;height:90px;margin:4px auto;display:block;border-radius:6px">
+          <div style="font-size:11px;font-weight:750;color:#475467;margin-top:4px">Inquadra il codice QR con la fotocamera per votare Buona Pizza</div>
+        </div>
+      `;
+
+      // حقن قسم الـ QR وتخصيص الإيصال قبل نهاية التوتال أو الفوتر
+      return originalHtml.replace('<div class="rc-footer">', customFooterSection + '<div class="rc-footer">');
+    };
+  }
+})();
+
   
 </script>
 
