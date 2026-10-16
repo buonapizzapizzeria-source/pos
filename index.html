@@ -7557,7 +7557,70 @@ el('kitchenTab').addEventListener('click', function(e){
     return _origSaveOrder.apply(this, arguments);
   };
 })();
-  
+
+  // --- زر Esaurito السريع لتخفيض أو إخفاء الأصناف النافدة بلمسة واحدة (v31) ---
+(function(){
+  if(window.__esauritoEnhanced) return;
+  window.__esauritoEnhanced = true;
+
+  // حقن زر Esaurito السريع بجوار اسم المنتج في لوحة إدارة المنيو وتعديل اللون
+  var _origRenderAdminMenu = window.renderAdminMenu;
+  if(typeof _origRenderAdminMenu === 'function'){
+    window.renderAdminMenu = function(){
+      _origRenderAdminMenu.apply(this, arguments);
+      
+      document.querySelectorAll('#adminMenuList .menu-admin-row').forEach(function(row){
+        var actDiv = row.querySelector('.admin-actions');
+        if(!actDiv || row.querySelector('.quick-esaurito-btn')) return;
+
+        var toggleBtn = actDiv.querySelector('[data-toggle]');
+        if(!toggleBtn) return;
+
+        var esauritoQuickBtn = document.createElement('button');
+        esauritoQuickBtn.type = 'button';
+        esauritoQuickBtn.className = 'secondary btn-sm quick-esaurito-btn';
+        esauritoQuickBtn.style.cssText = 'background:#fee4e2;color:var(--red);border:1px solid #fecdca;font-weight:900';
+        esauritoQuickBtn.textContent = '⛔ Esaurito';
+        
+        esauritoQuickBtn.onclick = async function(){
+          // استخراج معرف المنتج أو الضغط مباشرة على زر التفعيل/التعطيل الأصلي بوضع active = false
+          toggleBtn.click();
+        };
+
+        actDiv.insertBefore(esauritoQuickBtn, toggleBtn);
+      });
+    };
+  }
+
+  // تمييز الأصناف غير المتوفرة (Esaurito) في قائمة اختيار المنتجات أو المنيو بوضع علامة واضحة
+  var _origPopulateDropdown = window.populateProductDropdown;
+  if(typeof _origPopulateDropdown === 'function'){
+    window.populateProductDropdown = function(){
+      _origPopulateDropdown.apply(this, arguments);
+      var prodSel = el('productDropdownSelect');
+      if(!prodSel) return;
+      
+      // إضافة علامة مميزة للأصناف غير النشطة أو النافدة في القائمة المنسدلة
+      let activeMenu = allMenu; // يشمل الكل لتمييز النافد
+      var q = (el('ddQuickFilterInput')?.value || '').toLowerCase().trim();
+      var filtered = activeMenu.filter(x => {
+        if(typeof category !== 'undefined' && category !== 'Tutti' && x.category !== category) return false;
+        if(!q) return true;
+        return (`${x.name} ${x.description||''} ${x.category||''}`).toLowerCase().includes(q);
+      });
+
+      if(filtered.length && prodSel.options.length === filtered.length){
+        filtered.forEach(function(p, idx){
+          if(p.active === false && prodSel.options[idx]){
+            prodSel.options[idx].textContent = '⛔ [ESAURITO] ' + prodSel.options[idx].textContent;
+            prodSel.options[idx].style.color = '#b42318';
+          }
+        });
+      }
+    };
+  }
+})();
+
   
 </script>
 
