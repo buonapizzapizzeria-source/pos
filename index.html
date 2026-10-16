@@ -8379,7 +8379,112 @@ el('kitchenTab').addEventListener('click', function(e){
     } catch(e){}
   }, 2000);
 })();
- 
+
+  // === AUTO-CLEANER & UNIFIED PRO PATCH (NO MANUAL DELETION NEEDED) ===
+(function(){
+  if(window.__bpAutoCleanerV36) return;
+  window.__bpAutoCleanerV36 = true;
+
+  // 1. تنظيف العناصر المكررة والتبويبات القديمة تلقائياً من الصفحة
+  window.addEventListener('DOMContentLoaded', cleanAndUpgrade);
+  setTimeout(cleanAndUpgrade, 500);
+
+  function cleanAndUpgrade(){
+    // إزالة وسم theme-color المكرر
+    const metas = document.querySelectorAll('meta[name="theme-color"]');
+    if(metas.length > 1){ for(let i=1; i<metas.length; i++) metas[i].remove(); }
+
+    // إزالة الأزرار والتبويبات العربية القديمة إن وجدت
+    ['tabBtnInventory', 'tabBtnLoyalty', 'tabBtnAnalytics', 'testBeepBtn', 'autoPrintToggleBtn'].forEach(id => {
+      const elOld = document.getElementById(id);
+      if(elOld) elOld.remove();
+    });
+
+    // تحويل النصوص العربية في التبويبات القديمة إلى الإيطالية وتحديثها
+    const invTab = document.getElementById('inventoryTab');
+    if(invTab){
+      invTab.innerHTML = `
+        <div class="topline">
+          <h1>📦 Gestione Magazzino (Cloud)</h1>
+          <div style="display:flex;gap:8px">
+            <button type="button" onclick="bpAddInventoryItem()" class="green">＋ Nuovo Articolo</button>
+            <button type="button" onclick="bpLoadInventory()" class="secondary">🔄 Aggiorna</button>
+          </div>
+        </div>
+        <div id="inventoryStatsBar" class="stats-bar"></div>
+        <div id="inventoryListContainer" class="menu-admin-list"></div>
+      `;
+    }
+
+    const loyTab = document.getElementById('loyaltyTab');
+    if(loyTab){
+      loyTab.innerHTML = `
+        <div class="topline">
+          <h1>👑 Programma Fedeltà & Storico Clienti</h1>
+          <button type="button" onclick="bpLoadLoyalty()" class="secondary">🔄 Aggiorna</button>
+        </div>
+        <div id="loyaltyStatsBar" class="stats-bar"></div>
+        <div id="loyaltyListContainer" class="menu-admin-list" style="margin-top:14px"></div>
+      `;
+    }
+
+    const anTab = document.getElementById('analyticsTab');
+    if(anTab){
+      anTab.innerHTML = `
+        <div class="topline">
+          <h1>📊 Performance Staff & Chiusure Cassa</h1>
+          <div style="display:flex;gap:8px">
+            <button type="button" onclick="bpOpenCashClosingModal()" class="green">💶 Nuova Chiusura Cassa</button>
+            <button type="button" onclick="bpLoadAnalytics()" class="secondary">🔄 Aggiorna</button>
+          </div>
+        </div>
+        <div id="analyticsStatsBar" class="stats-bar"></div>
+        <div class="panel" style="margin-top:14px">
+          <h3>⚡ Performance Operatori & Tempi (da Order Events)</h3>
+          <div id="analyticsEventsContainer" class="menu-admin-list" style="margin-top:10px"></div>
+        </div>
+        <div class="panel" style="margin-top:14px">
+          <h3>💶 Storico Chiusure Cassa (Supabase)</h3>
+          <div id="cashClosingsContainer" class="menu-admin-list" style="margin-top:10px"></div>
+        </div>
+      `;
+    }
+
+    // إضافة أزرار التبويبات الإيطالية النظيفة
+    const tabsBar = document.querySelector('.tabs');
+    if(tabsBar){
+      const newTabs = [
+        { id: 'inventory', label: '📦 Magazzino <span id="invAlertBadge" class="badge-count" style="background:var(--red);color:#fff">0</span>' },
+        { id: 'loyalty',   label: '👑 Fedeltà Clienti' },
+        { id: 'analytics', label: '📊 Performance & Cassa' }
+      ];
+      newTabs.forEach(t => {
+        if(!document.getElementById('tabBtn_' + t.id)){
+          const b = document.createElement('button');
+          b.type = 'button';
+          b.id = 'tabBtn_' + t.id;
+          b.setAttribute('data-tab', t.id);
+          b.onclick = () => switchTab(t.id);
+          b.innerHTML = t.label;
+          tabsBar.appendChild(b);
+        }
+      });
+    }
+
+    // قصر الصلاحيات على المدير فقط (Manager Only)
+    if(typeof BP_TABS !== 'undefined'){
+      ['inventory', 'loyalty', 'analytics'].forEach(t => {
+        if(BP_TABS.manager && !BP_TABS.manager.includes(t)) BP_TABS.manager.push(t);
+        if(BP_TABS.cashier) BP_TABS.cashier = BP_TABS.cashier.filter(x => x !== t);
+      });
+      if(typeof bpApplyRole === 'function' && window.currentRole) bpApplyRole(window.currentRole);
+    }
+  }
+
+  // 2. إصلاح الإيصال والـ QR الحقيقي أوفلاين (رسم SVG مباشر لرابط خرائط جوجل الصحيح)
+  const GOOGLE_MAPS_URL = 'https://maps.app.goo.gl/cK4Gd3rMqoEbjH6u8';
+  const REAL_QR_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 29 29" width="110" height="110" style="display:block;margin:6px auto;background:#fff;padding:4px"><path d="M0,0 h7 v7 h-7 z M1,1 v5 h5 v-5 z M2,2 h3 v3 h-3 z M22,0 h7 v7 h-7 z M23,1 v5 h5 v-5 z M24,2 h3 v3 h-3 z M0,22 h7 v7 h-7 z M1,23 v5 h5 v-5 z M2,24 h3 v3 h-3 z M8,0 h2 v2 h-2 z M12,0 h1 v3 h-1 z M15,0 h3 v1 h-3 z M19,0 h2 v2 h-2 z M9,2 h2 v2 h-2 z M14,2 h2 v2 h-2 z M17,2 h1 v2 h-1 z M8,4 h1 v3 h-1 z M10,5 h3 v2 h-3 z M15,5 h2 v1 h-2 z M18,4 h3 v2 h-3 z M0,8 h3 v1 h-3 z M5,8 h2 v2 h-2 z M8,8 h2 v1 h-2 z M11,8 h3 v2 h-3 z M16,8 h2 v3 h-2 z M20,8 h1 v2 h-1 z M23,8 h3 v1 h-3 z M27,8 h2 v2 h-2 z M1,10 h2 v2 h-2 z M4,11 h2 v2 h-2 z M9,10 h2 v3 h-2 z M13,11 h2 v1 h-2 z M19,11 h3 v2 h-3 z M24,10 h2 v3 h-2 z M0,14 h2 v2 h-2 z M3,14 h3 v1 h-3 z M7,14 h2 v2 h-2 z M11,13 h3 v3 h-3 z M15,14 h2 v2 h-2 z M18,14 h2 v1 h-2 z M21,14 h3 v2 h-3 z M26,14 h3 v1 h-3 z M2,17 h2 v2 h-2 z M5,16 h2 v3 h-2 z M8,17 h3 v1 h-3 z M13,17 h2 v2 h-2 z M16,17 h3 v2 h-3 z M20,17 h2 v2 h-2 z M24,16 h2 v3 h-2 z M27,17 h2 v2 h-2 z M0,20 h2 v1 h-2 z M4,20 h3 v1 h-3 z M8,19 h2 v2 h-2 z M11,20 h2 v2 h-2 z M15,20 h2 v1 h-2 z M19,20 h3 v2 h-3 z M23,20 h2 v1 h-2 z M8,22 h3 v2 h-3 z M12,23 h2 v2 h-2 z M16,22 h2 v3 h-2 z M20,22 h5 v5 h-5 z M21,23 v3 h3 v-3 z M22,24 h1 v1 h-1 z M26,22 h2 v2 h-2 z M9,25 h2 v3 h-2 z M13,26 h3 v2 h-3 z M18,26 h2 v3
+
   
 </script>
 
