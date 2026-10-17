@@ -1552,6 +1552,27 @@ html:not(.x) body .kt-go{width:100%;min-height:64px;margin-top:10px;font-size:ca
 
 function el(id){return document.getElementById(id);}
 
+/* Esegue fn a intervalli, ma salta i giri quando la pagina e' in background o l'utente non e' loggato (meno CPU/batteria) */
+function bpEvery(fn, ms){
+  return setInterval(function(){
+    if(document.hidden) return;
+    var app = document.getElementById('app');
+    if(app && app.classList.contains('hidden')) return;
+    fn();
+  }, ms);
+}
+
+/* Registra gli errori ignorati nella console (una sola volta per messaggio, cosi' non la inonda) */
+var __bpWarned = {};
+function bpWarn(e){
+  try{
+    var k = String((e && e.message) || e).slice(0, 120);
+    if(__bpWarned[k] || Object.keys(__bpWarned).length > 60) return;
+    __bpWarned[k] = 1;
+    console.warn('[bp] errore ignorato:', e);
+  }catch(_){}
+}
+
 const FALLBACK_URL = 'https://jfgizazsjjgzyhqfngnl.supabase.co';
 const FALLBACK_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpmZ2l6YXpzampnenlocWZuZ25sIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTE3ODI0ODEsImV4cCI6MjEwNzM1ODQ4MX0.Tp_bFfR-G55OaK5i3A0fi5gF6g7pc-a3LO_IDCpsuhE';
 const PIZZERIA_ORIGIN = 'Pizzeria Buona Pizza, Lodi Vecchio LO, Italia';
@@ -1930,8 +1951,8 @@ function openIngPicker(cfg){
   var tab = (cfg.tab === "extra" && secs.length) ? secs[0].key : ((hasBase || !secs.length) ? "senza" : secs[0].key);
   var base = (cfg.baseIngs || []).map(ingNorm);
   var acc = {strip: false, sel: false};
-  try{ acc.strip = localStorage.getItem("bp_pkacc_strip") === "1"; acc.sel = localStorage.getItem("bp_pkacc_sel") === "1"; }catch(e){}
-  function accSave(k){ try{ localStorage.setItem("bp_pkacc_" + k, acc[k] ? "1" : "0"); }catch(e){} }
+  try{ acc.strip = localStorage.getItem("bp_pkacc_strip") === "1"; acc.sel = localStorage.getItem("bp_pkacc_sel") === "1"; }catch(e){ bpWarn(e); }
+  function accSave(k){ try{ localStorage.setItem("bp_pkacc_" + k, acc[k] ? "1" : "0"); }catch(e){ bpWarn(e); } }
   pkOpen();
   el("pkTitle").textContent = "⚙️ Personalizza";
   el("pkTop").className = "pk-top pk-tabs";
@@ -2104,15 +2125,15 @@ function openProductPicker(){
     cat = c.getAttribute("data-c"); chipsOpen = false; q = ""; el("pkSearch").value = "";
     drawChips(); drawList(false); b_top();
   };
-  function b_top(){ try{ el("pkBody").scrollTop = 0; }catch(e){} }
+  function b_top(){ try{ el("pkBody").scrollTop = 0; }catch(e){ bpWarn(e); } }
   el("pkSearch").oninput = function(){ q = this.value.toLowerCase().trim(); if(q){ chipsOpen = true; } applyCurtain(); drawList(false); };
   var recS = null, recA = null;
   el("pkMicSearch").onclick = function(){
-    var bt = this; if(recS){ try{ recS.stop(); }catch(e){} return; }
+    var bt = this; if(recS){ try{ recS.stop(); }catch(e){ bpWarn(e); } return; }
     recS = pkListen(function(t){ el("pkSearch").value = t; q = t.toLowerCase().trim(); drawList(false); }, function(on){ bt.classList.toggle("on", on); if(!on) recS = null; });
   };
   el("pkMicAdd").onclick = function(){
-    var bt = this; if(recA){ try{ recA.stop(); }catch(e){} return; }
+    var bt = this; if(recA){ try{ recA.stop(); }catch(e){ bpWarn(e); } return; }
     recA = pkListen(function(t, fin){
       if(!fin){ pkMsg("🎙️ " + t); return; }
       var n0 = 0, n1 = 0; cart.forEach(function(it){ n0 += it.qty; });
@@ -2134,7 +2155,7 @@ function openProductPicker(){
   drawChips(); drawList(false); pkCartSummary();
 }
 function refreshProductButton(){
-  try{ refreshComposer(); }catch(e){}
+  try{ refreshComposer(); }catch(e){ bpWarn(e); }
   var b = el("pkProductBtn"); if(!b) return;
   var p = getSelectedDropdownProduct();
   b.innerHTML = p ? '<span class="pk-bico">' + prodIcon(p) + '</span><span class="pk-btxt"><b>' + esc(p.name) + '</b><small>' + esc(p.category || "") + ' · tocca per aprire il menu</small></span><span class="pk-bprice">' + euro(p.price_normal) + '</span>' : '<span class="pk-bico">🍕</span><span class="pk-btxt"><b>Apri il menu…</b></span>';
@@ -2177,7 +2198,7 @@ function attachMic(id, kind, inline){
   else { var f = inp.closest(".field") || inp.parentNode; f.appendChild(b); inp.classList.add("has-mic"); }
   var rec = null, baseTxt = "";
   b.onclick = function(){
-    if(rec){ try{ rec.stop(); }catch(e){} return; }
+    if(rec){ try{ rec.stop(); }catch(e){ bpWarn(e); } return; }
     baseTxt = kind === "notes" ? (inp.value ? inp.value + " " : "") : "";
     rec = pkListen(function(t){
       var v = t;
@@ -2248,7 +2269,7 @@ function enhancePosExtras(){
     var mv = document.querySelector('meta[name="viewport"]');
     if(mv) mv.setAttribute("content", "width=device-width,initial-scale=1,minimum-scale=0.5,maximum-scale=5,user-scalable=yes,viewport-fit=cover");
     var ui = Number(localStorage.getItem("bp_ui") || 1) || 1;
-    var setUi = function(v){ ui = Math.max(0.8, Math.min(1.5, Math.round(v * 10) / 10)); document.documentElement.style.setProperty("--ui", String(ui)); try{ localStorage.setItem("bp_ui", String(ui)); }catch(e){} };
+    var setUi = function(v){ ui = Math.max(0.8, Math.min(1.5, Math.round(v * 10) / 10)); document.documentElement.style.setProperty("--ui", String(ui)); try{ localStorage.setItem("bp_ui", String(ui)); }catch(e){ bpWarn(e); } };
     setUi(ui);
     var ub = el("userBar");
     if(ub && !el("pkUiMinus")){
@@ -2261,7 +2282,7 @@ function enhancePosExtras(){
       var tb = document.createElement("button"); tb.type = "button"; tb.id = "pkTimeBtn"; tb.className = "pk-bigbtn pk-timebtn"; tb.onclick = openTimePicker;
       tw.parentNode.insertBefore(tb, tw); tw.classList.add("hidden");
       var lb = tw.parentNode.querySelector("label"); if(lb) lb.textContent = "⏰ Orario richiesto";
-      refreshTimeBtn(); setInterval(refreshTimeBtn, 1000);
+      refreshTimeBtn(); bpEvery(refreshTimeBtn, 1000);
     }
     attachMic("customer", "name"); attachMic("phone", "phone"); attachMic("address", "text"); attachMic("notes", "notes");
     attachMic("adminSearch", "text"); attachMic("customExtraInput", "text", true); attachMic("newIngInput", "text", true);
@@ -2301,13 +2322,13 @@ function refreshFeeSeg(){
 function rdAcc(id, titleHtml, nodes, opts){
   opts = opts || {};
   var d = document.createElement("details"); d.className = "rd-acc" + (opts.cls ? " " + opts.cls : ""); d.id = id;
-  var st = null; try{ st = localStorage.getItem("bp_acc_" + id); }catch(e){}
+  var st = null; try{ st = localStorage.getItem("bp_acc_" + id); }catch(e){ bpWarn(e); }
   if(st === "1") d.open = true;
   var s = document.createElement("summary");
   s.innerHTML = titleHtml + (opts.noSum ? "" : '<span class="rd-acc-sum" id="' + id + 'Sum"></span>');
   var b = document.createElement("div"); b.className = "rd-acc-body";
   d.appendChild(s); d.appendChild(b);
-  d.addEventListener("toggle", function(){ try{ localStorage.setItem("bp_acc_" + id, d.open ? "1" : "0"); }catch(e){} });
+  d.addEventListener("toggle", function(){ try{ localStorage.setItem("bp_acc_" + id, d.open ? "1" : "0"); }catch(e){ bpWarn(e); } });
   (nodes || []).forEach(function(n){ if(n) b.appendChild(n); });
   return d;
 }
@@ -2400,7 +2421,7 @@ function enhanceRedesign(){
     if(tot) tot.classList.add("rd-total");
     calc.classList.add("rd-pay");
     var cl = calc.querySelector("#cashCalcArea label"); if(cl) cl.textContent = "💶 Contanti ricevuti";
-    refreshFeeSeg(); setInterval(refreshFeeSeg, 800);
+    refreshFeeSeg(); bpEvery(refreshFeeSeg, 800);
   });
   rdTry(function(){
     var p1 = panels[1]; if(!p1) return;
@@ -2419,7 +2440,7 @@ function enhanceRedesign(){
       if(el("type").value === "Consegna" && !el("address").value.trim() && cart.size){ aC.open = true; setTimeout(function(){ el("address").focus(); }, 50); }
     }, true);
   });
-  rdTry(function(){ rdAccRefresh(); setInterval(rdAccRefresh, 700); });
+  rdTry(function(){ rdAccRefresh(); bpEvery(rdAccRefresh, 700); });
 }
 var rdAllowExit = false, rdFresh = true;
 function rdToast(t, s){
@@ -2432,16 +2453,16 @@ function rdToast(t, s){
 function rdExitApp(){
   if(!confirm("Vuoi uscire dal programma?")) return;
   rdAllowExit = true;
-  try{ window.close(); }catch(e){}
+  try{ window.close(); }catch(e){ bpWarn(e); }
   setTimeout(function(){ location.replace("about:blank"); }, 350);
 }
 function enhanceNav(){
   rdTry(function(){
     if(window.__rdNav) return; window.__rdNav = true;
-    try{ history.replaceState({rd: 0}, ""); history.pushState({rd: 1}, ""); }catch(e){}
+    try{ history.replaceState({rd: 0}, ""); history.pushState({rd: 1}, ""); }catch(e){ bpWarn(e); }
     window.addEventListener("popstate", function(){
       if(rdAllowExit) return;
-      try{ history.pushState({rd: 1}, ""); rdFresh = true; }catch(e){}
+      try{ history.pushState({rd: 1}, ""); rdFresh = true; }catch(e){ bpWarn(e); }
       var pk = el("pkRoot");
       if(pk && !pk.classList.contains("hidden")){ pkClose(); return; }
       var ms = ["cartIngModal", "productModal", "categoryModal", "detailsModal"];
@@ -2450,7 +2471,7 @@ function enhanceNav(){
       if(tb !== "new" && !el("app").classList.contains("hidden")){ switchTab("new"); return; }
       rdToast("↩️ Indietro non esce dal programma", "Per uscire usa il pulsante 🚪 in alto");
     });
-    document.addEventListener("pointerdown", function(){ if(rdFresh){ rdFresh = false; try{ history.pushState({rd: 1}, ""); }catch(e){} } }, true);
+    document.addEventListener("pointerdown", function(){ if(rdFresh){ rdFresh = false; try{ history.pushState({rd: 1}, ""); }catch(e){ bpWarn(e); } } }, true);
     var ub = el("userBar"), lo = ub && ub.querySelector('button[onclick*="doLogout"]');
     if(lo) lo.textContent = "Disconnetti";
     if(ub && !el("pkExitBtn")){
@@ -2503,7 +2524,7 @@ function enhanceTimers(){
   rdTry(function(){
     var box = el("openOrders"); if(!box || window.__rdTim) return; window.__rdTim = true;
     new MutationObserver(rdDecorateOrders).observe(box, {childList: true});
-    setInterval(rdTickTimers, 1000);
+    bpEvery(rdTickTimers, 1000);
     rdDecorateOrders();
   });
 }
@@ -2671,7 +2692,7 @@ function renderDropdownBuilderMods(){
 }
 
 function updateDropdownBuilderPrice(){
-  try{ refreshProductButton(); }catch(e){}
+  try{ refreshProductButton(); }catch(e){ bpWarn(e); }
   let p = getSelectedDropdownProduct();
   let badge = el('ddPricePreviewBadge');
   if(!badge) return;
@@ -2917,7 +2938,7 @@ function loadSavedCustomerDirectory(){
       let sArr = JSON.parse(rawStreets);
       if(Array.isArray(sArr)) sArr.forEach(s => knownStreets.add(s));
     }
-  }catch(e){}
+  }catch(e){ bpWarn(e); }
   updateCrmCountBadge();
 }
 
@@ -2925,7 +2946,7 @@ function saveCustomerDirectoryToStorage(){
   try{
     localStorage.setItem('bp_crm_customers_v7', JSON.stringify(customerDirectory.slice(0, 600)));
     localStorage.setItem('bp_crm_streets_v7', JSON.stringify([...knownStreets].slice(0, 400)));
-  }catch(e){}
+  }catch(e){ bpWarn(e); }
   updateCrmCountBadge();
 }
 
@@ -3522,7 +3543,7 @@ async function toggleCallRecorder(){
   let btn = el('recCallBtn');
   if(isRecordingCall && mediaRecorder){
     mediaRecorder.stop();
-    if(voiceRec) try{voiceRec.stop();}catch(e){}
+    if(voiceRec) try{voiceRec.stop();}catch(e){ bpWarn(e); }
     return;
   }
   try{
@@ -3567,7 +3588,7 @@ async function toggleCallRecorder(){
           el('voiceSmartInput').value = txt.trim();
         };
         voiceRec.start();
-      }catch(e){}
+      }catch(e){ bpWarn(e); }
     }
   }catch(err){
     setVoiceMsg('❌ Impossibile accedere al microfono: ' + esc(err.message), 'error');
@@ -3616,7 +3637,7 @@ async function getAvailableGeminiModels(apiKey){
         .filter(n => n.startsWith('gemini-') && !n.includes('embedding') && !n.includes('imagen') && !n.includes('veo') && !n.includes('tts'));
       return [...new Set([...defaultList, ...apiModels])];
     }
-  }catch(e){}
+  }catch(e){ bpWarn(e); }
   return defaultList;
 }
 
@@ -4168,11 +4189,11 @@ function playOrderChime(forceTest=false){
       osc.start(now + n.start);
       osc.stop(now + n.start + n.dur + 0.02);
     });
-  }catch(e){}
+  }catch(e){ bpWarn(e); }
 }
 
 function triggerNewOrderNotification(ord){
-  try{ if(navigator.vibrate && !el('app').classList.contains('hidden')) navigator.vibrate([250, 120, 250]); }catch(e){}   // ex v25-wake
+  try{ if(navigator.vibrate && !el('app').classList.contains('hidden')) navigator.vibrate([250, 120, 250]); }catch(e){ bpWarn(e); }   // ex v25-wake
   var __app = el('app');
   if(__app && __app.classList.contains('hidden')) return;   // ex v24-e: niente avvisi se non sei loggato
   playOrderChime(false);
@@ -4302,8 +4323,9 @@ function showApp(user){
   el('app').classList.remove('hidden');
   el('userBar').classList.remove('hidden');
   el('userEmail').textContent = user?.email || 'Cassa Staff';
-  try{ bpAfterLogin(user); }catch(e){}
-  setTimeout(function(){ try{ loadInventoryData(false); }catch(e){} }, 1500);   // magazzino condiviso (badge scorte basse)
+  try{ bpAfterLogin(user); }catch(e){ bpWarn(e); }
+  setTimeout(function(){ try{ loadInventoryData(false); }catch(e){ bpWarn(e); } }, 1500);   // magazzino condiviso (badge scorte basse)
+  setTimeout(function(){ try{ bpAutoEnableGeminiProxy(); }catch(e){ bpWarn(e); } }, 2500);   // proxy Gemini sicuro, se disponibile
   updateSoundBtnUI();
   loadMenu();
   loadOrders();
@@ -4314,7 +4336,7 @@ function showApp(user){
   try{
     (function(){
     if(window.__bpRtSb === sb) return {on:function(){return this;}, subscribe:function(){return this;}};
-    try{ if(window.__bpRtCh && window.__bpRtSb) window.__bpRtSb.removeChannel(window.__bpRtCh); }catch(e){}
+    try{ if(window.__bpRtCh && window.__bpRtSb) window.__bpRtSb.removeChannel(window.__bpRtCh); }catch(e){ bpWarn(e); }
     window.__bpRtSb = sb; window.__bpRtCh = sb.channel('orders-live'); return window.__bpRtCh;
   })()
       .on('postgres_changes',{event:'*',schema:'public',table:'orders'},(payload)=>{
@@ -4325,7 +4347,7 @@ function showApp(user){
       })
       .on('postgres_changes',{event:'*',schema:'public',table:'menu'},()=>loadMenu())
       .subscribe(function(status){ window.__bpRtStatus = status; });
-  }catch(e){}
+  }catch(e){ bpWarn(e); }
 }
 
 function doLogout(){
@@ -4360,10 +4382,10 @@ function switchTab(tabName){
     lockCassaView();
   }
   updateMobileCartBar();
-  if(tabName==='kitchen'){ try{ renderKitchen(); }catch(e){} }
-  if(tabName==='inventory'){ try{ loadInventoryData(true); }catch(e){} }
-  if(tabName==='loyalty'){ try{ loadLoyaltyData(); }catch(e){} }
-  if(tabName==='analytics'){ try{ loadAnalyticsData(); }catch(e){} }
+  if(tabName==='kitchen'){ try{ renderKitchen(); }catch(e){ bpWarn(e); } }
+  if(tabName==='inventory'){ try{ loadInventoryData(true); }catch(e){ bpWarn(e); } }
+  if(tabName==='loyalty'){ try{ loadLoyaltyData(); }catch(e){ bpWarn(e); } }
+  if(tabName==='analytics'){ try{ loadAnalyticsData(); }catch(e){ bpWarn(e); } }
   if(tabName==='menu') loadMenu();
   else if(tabName!=='new') loadOrders();
 }
@@ -4389,7 +4411,7 @@ async function loadMenu(){
     renderCategories();
     populateProductDropdown();
     renderAdminMenu();
-  }catch(e){}
+  }catch(e){ bpWarn(e); }
 }
 
 function getActiveMenu(){return allMenu.filter(x=>x.active!==false);}
@@ -4684,7 +4706,7 @@ async function _doSaveOrderCore(){
           await loadOrders(); switchTab('orders'); return;
         }
         if(/Could not find the function|PGRST202|42883/.test(JSON.stringify(__r.error))) window.__bpRpc = false;
-      }catch(__e){}
+      }catch(__e){ bpWarn(__e); }
     }
     let {error: updErr} = await sb.from('orders').update({
       customer_name: custNameVal,
@@ -5424,7 +5446,7 @@ async function _loadOrdersNow(){
     rebuildCustomerDirectoryFromOrders(orders);
     renderOrders();
     renderCassaReport();
-  }catch(e){}
+  }catch(e){ bpWarn(e); }
 }
 
 /* loadOrders = _loadOrdersNow con raggruppamento delle chiamate ravvicinate (ex patch v25-debounce) */
@@ -5518,7 +5540,7 @@ function renderOrders(){
 
   renderOrderList('openOrders', filteredOpen, true);
   renderOrderList('allOrders', orders, false);
-  try{ renderKitchen(); }catch(e){}
+  try{ renderKitchen(); }catch(e){ bpWarn(e); }
   __renderOrdersHooks.forEach(function(h){
     try{ h(); }catch(e){ console.warn('[bp] renderOrders hook', e); }
   });
@@ -5647,7 +5669,7 @@ async function _updateOrderStatusCore(orderId,newStatus){
 /* updateOrderStatus = _updateOrderStatusCore + aggiornamento elenco Storico (ex patch v24-b) */
 async function updateOrderStatus(id, st){
   await _updateOrderStatusCore(id, st);
-  try{ if(window.__storReload) window.__storReload(); }catch(e){}
+  try{ if(window.__storReload) window.__storReload(); }catch(e){ bpWarn(e); }
 }
 
 /* ================= COSTRUZIONE RICEVUTA / COMANDA PROFESSIONALE v11 ================= */
@@ -5714,7 +5736,7 @@ function buildReceiptHtml(o, items){
   let editorHtml = '';
   if(o.updated_by_email){
     let t = '';
-    try{ if(o.updated_at) t = ' · ' + new Date(o.updated_at).toLocaleTimeString('it-IT', {hour: '2-digit', minute: '2-digit'}); }catch(e){}
+    try{ if(o.updated_at) t = ' · ' + new Date(o.updated_at).toLocaleTimeString('it-IT', {hour: '2-digit', minute: '2-digit'}); }catch(e){ bpWarn(e); }
     editorHtml = `<div class="rc-customer-box" style="border-top:0;padding-top:4px"><div class="rc-customer-row"><strong class="lbl">✏️ Modifica:</strong> <span style="font-weight:800">${esc(o.updated_by_email) + t}</span></div></div>`;
   }
   // QR per la recensione Google (ex patch v31)
@@ -5832,7 +5854,7 @@ function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&l
     try{
       let {data}=await sb.auth.getSession();
       if(data?.session)showApp(data.session.user);
-    }catch(e){}
+    }catch(e){ bpWarn(e); }
   }
 })();
 
@@ -5847,7 +5869,7 @@ function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&l
       var acc = rdAcc(accId, title, [n], {});
       par.insertBefore(acc, ref);
       var s = el(accId + "Sum");
-      if(s) setInterval(function(){ try{ var t = sumFn(); if(s.textContent !== t) s.textContent = t; }catch(e){} }, 700);
+      if(s) bpEvery(function(){ try{ var t = sumFn(); if(s.textContent !== t) s.textContent = t; }catch(e){ bpWarn(e); } }, 700);
     }catch(e){ console.error("v18", e); }
   }
   var pcs = function(){ var n = 0; cart.forEach(function(i){ n += i.qty; }); return n; };
@@ -5893,8 +5915,8 @@ function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&l
   var st = document.createElement("style"); st.id = "bpV19css"; st.textContent = css; document.head.appendChild(st);
   var b = el("mobileCartBar"); if(!b) return;
   var KEY = "bp_cartbar", cfg = {x: null, y: null, mini: false};
-  try{ var r = JSON.parse(localStorage.getItem(KEY) || "null"); if(r) cfg = r; }catch(e){}
-  function save(){ try{ localStorage.setItem(KEY, JSON.stringify(cfg)); }catch(e){} }
+  try{ var r = JSON.parse(localStorage.getItem(KEY) || "null"); if(r) cfg = r; }catch(e){ bpWarn(e); }
+  function save(){ try{ localStorage.setItem(KEY, JSON.stringify(cfg)); }catch(e){ bpWarn(e); } }
   var hide = document.createElement("button"); hide.type = "button"; hide.id = "bpCartHide"; hide.textContent = "✕"; hide.title = "Nascondi";
   var bub = document.createElement("span"); bub.id = "bpCartBubble"; bub.innerHTML = '🛒 <b id="bpCartCnt">0</b>';
   b.appendChild(hide); b.appendChild(bub);
@@ -5913,7 +5935,7 @@ function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&l
     if(e.target === hide) return;
     var r = b.getBoundingClientRect();
     sx = e.clientX; sy = e.clientY; ox = r.left; oy = r.top; moved = false; drag = true;
-    try{ b.setPointerCapture(e.pointerId); }catch(_){}
+    try{ b.setPointerCapture(e.pointerId); }catch(_){ bpWarn(_); }
   });
   b.addEventListener("pointermove", function(e){
     if(!drag) return;
@@ -5930,7 +5952,7 @@ function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&l
     var a = el("bpAccCart"); if(a) a.open = true;
   }, true);
   window.addEventListener("resize", place);
-  setInterval(function(){ var n = 0; try{ cart.forEach(function(i){ n += i.qty; }); }catch(e){} var c = el("bpCartCnt"); if(c && c.textContent !== String(n)) c.textContent = n; }, 700);
+  bpEvery(function(){ var n = 0; try{ cart.forEach(function(i){ n += i.qty; }); }catch(e){ bpWarn(e); } var c = el("bpCartCnt"); if(c && c.textContent !== String(n)) c.textContent = n; }, 700);
   place();
 })();
 /* ===== v19 END ===== */
@@ -5940,7 +5962,7 @@ try{
 (function bpV20(){
   if(window.__bpV20) return; window.__bpV20 = true;
   var k = "bp_cart_ultra", u = false;
-  try{ u = localStorage.getItem(k) === "1"; }catch(e){}
+  try{ u = localStorage.getItem(k) === "1"; }catch(e){ bpWarn(e); }
   var cart = document.getElementById("cart"); if(!cart) return;
   var btn = document.createElement("button");
   btn.type = "button"; btn.id = "bpCartCompactBtn"; btn.className = "secondary btn-sm";
@@ -5948,7 +5970,7 @@ try{
     document.body.classList.toggle("bp-cart-ultra", u);
     btn.textContent = u ? "↕️ Espandi carrello" : "🗜️ Comprimi carrello";
   }
-  btn.onclick = function(){ u = !u; try{ localStorage.setItem(k, u ? "1" : "0"); }catch(e){} apply(); };
+  btn.onclick = function(){ u = !u; try{ localStorage.setItem(k, u ? "1" : "0"); }catch(e){ bpWarn(e); } apply(); };
   cart.parentNode.insertBefore(btn, cart);
   apply();
 })();
@@ -6036,7 +6058,7 @@ try{
             freq[b] = (freq[b] || 0) + Number(it.quantity || 1);
           });
         });
-      }catch(e){}
+      }catch(e){ bpWarn(e); }
       var defaults = ["margherita","diavola","panino kebab","piadina kebab","patatine","coca","acqua","capricciosa","americana","prosciutto","salsiccia","marinara"];
       var sorted = menu.slice().sort(function(a,b){
         var fa = freq[a.name.toLowerCase()] || 0;
@@ -6064,7 +6086,7 @@ try{
         var accC = el("bpAccCart"); if(accC) accC.open = true;
       }
     };
-    setInterval(function(){
+    bpEvery(function(){
       if(bar && !bar.children.length && getActiveMenu().length) window.renderBp22QuickBar();
     }, 1000);
   }
@@ -6591,7 +6613,7 @@ try{
     try{
       var cur = await sb.auth.getSession();
       if(cur.data && cur.data.session){ showApp(cur.data.session.user); return; }
-    }catch(e){}
+    }catch(e){ bpWarn(e); }
     var pin = (el('staffPin').value || '').trim();
     var email = (el('email').value || localStorage.getItem('bp_staff_email') || '').trim();
     if(!pin){
@@ -6621,30 +6643,70 @@ try{
       if(/\/models\?key=/.test(u)) return new Response(JSON.stringify({models: []}), {status: 200, headers: {'Content-Type': 'application/json'}});
       var m = /models\/([^:\/?]+):generateContent/.exec(u);
       var tok = '';
-      try{ var s = await sb.auth.getSession(); tok = (s.data && s.data.session) ? s.data.session.access_token : ''; }catch(e){}
+      try{ var s = await sb.auth.getSession(); tok = (s.data && s.data.session) ? s.data.session.access_token : ''; }catch(e){ bpWarn(e); }
       var anon = (el('sbKey').value || '').trim();
       var base = (el('sbUrl').value || '').trim().replace(/\/$/, '');
-      var body = {}; try{ body = JSON.parse((opts && opts.body) || '{}'); }catch(e){}
+      var body = {}; try{ body = JSON.parse((opts && opts.body) || '{}'); }catch(e){ bpWarn(e); }
       return of(base + '/functions/v1/gemini-proxy', {method: 'POST',
         headers: {'Content-Type': 'application/json', 'apikey': anon, 'Authorization': 'Bearer ' + (tok || anon)},
         body: JSON.stringify({model: m ? m[1] : 'gemini-2.5-flash', body: body})});
     }
     return of(url, opts);
   };
+  // verifica che la Edge Function «gemini-proxy» esista e risponda (risponde {ok:true} al ping, senza chiamare Gemini)
+  async function probeProxy(){
+    try{
+      var tok = '';
+      try{ var ss = await sb.auth.getSession(); tok = (ss.data && ss.data.session) ? ss.data.session.access_token : ''; }catch(e){ bpWarn(e); }
+      var anon = (el('sbKey').value || '').trim();
+      var base = (el('sbUrl').value || '').trim().replace(/\/$/, '');
+      var r = await of(base + '/functions/v1/gemini-proxy', {method: 'POST',
+        headers: {'Content-Type': 'application/json', 'apikey': anon, 'Authorization': 'Bearer ' + (tok || anon)},
+        body: JSON.stringify({ping: true})});
+      if(!r.ok) return false;
+      var j = await r.json();
+      return !!(j && j.ok);
+    }catch(e){ return false; }
+  }
+  function applyProxyState(on){
+    localStorage.setItem('bp_gemini_proxy', on ? '1' : '0');
+    if(on){ localStorage.setItem('bp_gemini_key', 'proxy'); if(el('geminiApiKey')) el('geminiApiKey').value = 'proxy'; }
+    else { localStorage.removeItem('bp_gemini_key'); if(el('geminiApiKey')) el('geminiApiKey').value = ''; }
+    var chk = el('bpGemProxyChk'); if(chk) chk.checked = on;
+    var warn = el('bpGemWarn'); if(warn) warn.classList.toggle('hidden', on);
+  }
   var kb = el('aiKeyBox');
   if(kb && !el('bpGemProxyChk')){
     var lab = document.createElement('label');
     lab.style.cssText = 'display:flex;align-items:center;gap:8px;width:100%;margin-top:6px';
-    lab.innerHTML = '<input type="checkbox" id="bpGemProxyChk" style="width:22px;height:22px"> <span>🔒 Usa proxy sicuro (Edge Function «gemini-proxy») — la chiave non resta nel browser</span>';
+    lab.innerHTML = '<input type="checkbox" id="bpGemProxyChk" style="width:22px;height:22px"> <span>🔒 Usa proxy sicuro (Edge Function «gemini-proxy»): la chiave non resta nel browser</span>';
     kb.appendChild(lab);
+    var warn = document.createElement('div');
+    warn.id = 'bpGemWarn'; warn.className = 'muted' + (localStorage.getItem('bp_gemini_proxy') === '1' ? ' hidden' : '');
+    warn.style.cssText = 'width:100%;margin-top:4px;color:#b42318;font-weight:700';
+    warn.textContent = '⚠️ Senza il proxy la chiave Gemini resta salvata in questo browser. Attiva il proxy sicuro (vedi gemini_proxy_setup.md).';
+    kb.appendChild(warn);
     var chk = lab.querySelector('input');
     chk.checked = localStorage.getItem('bp_gemini_proxy') === '1';
-    chk.onchange = function(){
-      localStorage.setItem('bp_gemini_proxy', chk.checked ? '1' : '0');
-      if(chk.checked){ localStorage.setItem('bp_gemini_key', 'proxy'); if(el('geminiApiKey')) el('geminiApiKey').value = 'proxy'; }
-      else { localStorage.removeItem('bp_gemini_key'); if(el('geminiApiKey')) el('geminiApiKey').value = ''; }
+    chk.onchange = async function(){
+      if(chk.checked){
+        chk.disabled = true;
+        var ok = await probeProxy();
+        chk.disabled = false;
+        if(!ok){ chk.checked = false; alert('Il proxy «gemini-proxy» non risponde: la funzione non è stata ancora pubblicata su Supabase.\nL\'AI continua a usare la chiave salvata.'); return; }
+        applyProxyState(true);
+      } else {
+        applyProxyState(false);
+      }
     };
   }
+  // dopo il login: se non hai mai scelto e il proxy funziona, lo attiva da solo e cancella la chiave dal browser
+  var __gemProbed = false;
+  window.bpAutoEnableGeminiProxy = async function(){
+    if(__gemProbed) return; __gemProbed = true;
+    if(localStorage.getItem('bp_gemini_proxy') !== null) return;     // scelta gia' fatta (anche "no"): rispettala
+    if(await probeProxy()){ applyProxyState(true); console.info('[bp] proxy Gemini attivato automaticamente'); }
+  };
 })();
 }catch(e){ console.error("[bp] sezione non caricata: v25-gemini: Gemini calls go through the secure Edge Function when enabled", e); }
 
@@ -6656,7 +6718,7 @@ try{
   var last = 0;
   function refresh(){
     var n = Date.now(); if(n - last < 4000) return; last = n;
-    try{ if(sb && !el('app').classList.contains('hidden')){ loadOrders(); loadMenu(); } }catch(e){}
+    try{ if(sb && !el('app').classList.contains('hidden')){ loadOrders(); loadMenu(); } }catch(e){ bpWarn(e); }
   }
   document.addEventListener('visibilitychange', function(){ if(!document.hidden) refresh(); });
   window.addEventListener('online', function(){ last = 0; refresh(); });
@@ -6684,7 +6746,7 @@ try{
       if(r.error || !r.data) return;
       r.data.forEach(function(c){ upsertCustomerProfile(c.name, c.phone, c.address, false, c.last_order_id); });
       saveCustomerDirectoryToStorage();
-    }catch(e){}
+    }catch(e){ bpWarn(e); }
   }
   var orig = showApp;
   showApp = function(u){ orig(u); setTimeout(load, 800); };
@@ -6705,7 +6767,7 @@ try{
         lock = await navigator.wakeLock.request('screen');
         lock.addEventListener('release', function(){ lock = null; });
       }
-    }catch(e){}
+    }catch(e){ bpWarn(e); }
   }
   document.addEventListener('visibilitychange', function(){ if(!document.hidden) acquire(); });
   document.addEventListener('pointerdown', function(){
@@ -6713,7 +6775,7 @@ try{
     try{
       if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
       if(audioCtx.state === 'suspended') audioCtx.resume();
-    }catch(e){}
+    }catch(e){ bpWarn(e); }
   }, true);
   setInterval(function(){ if(!lock) acquire(); }, 60000);
 })();
@@ -6741,7 +6803,7 @@ try{
   window.__bpOnline = online;
   function jget(k, d){ try{ var v = JSON.parse(localStorage.getItem(k)); return v == null ? d : v; }catch(e){ return d; } }
   function jset(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); return true; }catch(e){ return false; } }
-  function toast(t, s){ try{ if(typeof rdToast === 'function') rdToast(t, s); }catch(e){} }
+  function toast(t, s){ try{ if(typeof rdToast === 'function') rdToast(t, s); }catch(e){ bpWarn(e); } }
   function isIdNum(k){ return /^\d+$/.test(String(k)); }
 
   var ban = document.createElement('div'); ban.id = 'bpOffBanner'; ban.className = 'hidden no-print';
@@ -6759,7 +6821,7 @@ try{
         o.forEach(function(x){ var a = itemsByOrder.get(x.id); if(a) its[x.id] = a; });
         jset(CO, {orders: o, items: its, ts: Date.now()});
       }
-    }catch(e){}
+    }catch(e){ bpWarn(e); }
   }
   function hydrate(){
     try{
@@ -6775,7 +6837,7 @@ try{
           renderOrders();
         }
       }
-    }catch(e){}
+    }catch(e){ bpWarn(e); }
   }
   var lm = loadMenu;
   loadMenu = async function(){ await lm(); if(!allMenu.length){ if(!online) hydrate(); } else saveCaches(); };
@@ -6817,14 +6879,14 @@ try{
   }
   function enqueueCurrent(){
     var q = buildFromForm(), arr = qGet(); arr.push(q); qSet(arr);
-    try{ upsertCustomerProfile(q.customer_name, q.phone, q.address, true); saveCustomerDirectoryToStorage(); }catch(e){}
-    try{ playOrderChime(false); }catch(e){}
+    try{ upsertCustomerProfile(q.customer_name, q.phone, q.address, true); saveCustomerDirectoryToStorage(); }catch(e){ bpWarn(e); }
+    try{ playOrderChime(false); }catch(e){ bpWarn(e); }
     cart.clear(); el('cashGivenInput').value = '';
-    try{ el('customerLastOrderBanner').classList.add('hidden'); el('imagePreviewBar').classList.add('hidden'); }catch(e){}
+    try{ el('customerLastOrderBanner').classList.add('hidden'); el('imagePreviewBar').classList.add('hidden'); }catch(e){ bpWarn(e); }
     renderCart();
     ['customer', 'phone', 'address', 'notes', 'voiceSmartInput'].forEach(function(id){ if(el(id)) el(id).value = ''; });
     el('deliveryHour').value = 'Prima possibile'; onTimeHourChange();
-    try{ el('voiceTranscriptBar').classList.add('hidden'); }catch(e){}
+    try{ el('voiceTranscriptBar').classList.add('hidden'); }catch(e){ bpWarn(e); }
     setMsg('orderMsg', '📴 Ordine ' + q.local_id + ' salvato OFFLINE (' + euro(q.total) + '). Sarà inviato appena torna la connessione.', 'success');
     return q.local_id;
   }
@@ -6856,7 +6918,7 @@ try{
       var q = qGet().filter(function(x){ return x.local_id === id; })[0]; if(q) ord = localOrder(q);
     } else {
       ord = orders.find(function(x){ return x.id === id; });
-      if(!ord && sb){ try{ var rr = await sb.from('orders').select('*').eq('id', id).maybeSingle(); ord = rr.data; }catch(e){} }
+      if(!ord && sb){ try{ var rr = await sb.from('orders').select('*').eq('id', id).maybeSingle(); ord = rr.data; }catch(e){ bpWarn(e); } }
     }
     if(ord){ await showDetails(ord); setTimeout(function(){ printReceiptWindow('80mm'); }, 250); }
   };
@@ -6914,7 +6976,7 @@ try{
     var arr = qGet(); if(!arr.length) return 0;
     flushing = true; var sent = 0;
     try{
-      var uid = null; try{ var ud = await sb.auth.getUser(); uid = ud && ud.data && ud.data.user ? ud.data.user.id : null; }catch(e){}
+      var uid = null; try{ var ud = await sb.auth.getUser(); uid = ud && ud.data && ud.data.user ? ud.data.user.id : null; }catch(e){ bpWarn(e); }
       for(var i = 0; i < arr.length; i++){
         var q = arr[i];
         try{
@@ -6939,12 +7001,12 @@ try{
     return sent;
   }
   async function syncPending(manual){
-    if(!sb){ try{ connect(); }catch(e){} }
+    if(!sb){ try{ connect(); }catch(e){ bpWarn(e); } }
     if(!sb) return;
-    try{ await sb.auth.getSession(); }catch(e){}
+    try{ await sb.auth.getSession(); }catch(e){ bpWarn(e); }
     await flushStatus();
     var n = await flushQueue();
-    if(n){ toast('✅ ' + n + ' ordini inviati', 'Sincronizzazione completata'); try{ await loadOrders(); }catch(e){} }
+    if(n){ toast('✅ ' + n + ' ordini inviati', 'Sincronizzazione completata'); try{ await loadOrders(); }catch(e){ bpWarn(e); } }
     else if(manual){ toast('Nessun ordine inviato', qGet().length ? 'Connessione non ancora disponibile' : 'Coda vuota'); }
   }
 
@@ -6964,7 +7026,7 @@ try{
     if(!ok){ hydrate(); toast('📴 Offline', 'Gli ordini nuovi verranno salvati sul dispositivo'); return; }
     toast('✅ Connessione ripristinata', 'Sincronizzazione in corso…');
     await syncPending(false);
-    try{ await loadOrders(); await loadMenu(); }catch(e){}
+    try{ await loadOrders(); await loadMenu(); }catch(e){ bpWarn(e); }
   }
   async function check(){ await setOnline(await probe()); }
   window.addEventListener('online', check); window.addEventListener('offline', check);
@@ -6982,7 +7044,7 @@ try{
           if(v && v.currentSession && v.currentSession.user) return v.currentSession;
         }
       }
-    }catch(e){}
+    }catch(e){ bpWarn(e); }
     return null;
   }
   var dde = doDirectEnter;
@@ -7010,7 +7072,7 @@ try{
 
   /* 1. تحميل فوري للمنيو والطلبات من الكاش (0 ثانية عند الفتح) */
   if(window.__bpOff && typeof window.__bpOff.hydrate === 'function'){
-    try{ window.__bpOff.hydrate(); }catch(e){}
+    try{ window.__bpOff.hydrate(); }catch(e){ bpWarn(e); }
   }
 
   /* 2. أزرار وقت سريعة بلمسة واحدة تحت زر الوقت مباشرة */
@@ -7138,7 +7200,7 @@ try{
   function remember(e){
     e = (e || '').trim().toLowerCase(); if(!e) return;
     var a = list().filter(function(x){ return x !== e; }); a.unshift(e);
-    try{ localStorage.setItem(KEY, JSON.stringify(a.slice(0, 8))); }catch(err){}
+    try{ localStorage.setItem(KEY, JSON.stringify(a.slice(0, 8))); }catch(err){ bpWarn(err); }
   }
   var f = document.createElement('div'); f.className = 'field'; f.style.margin = '0 0 10px';
   f.innerHTML = '<label>👤 Email dipendente</label><input id="staffEmail" type="email" inputmode="email" autocomplete="off" list="staffEmailList" placeholder="nome@buonapizza.app"><datalist id="staffEmailList"></datalist>';
@@ -7153,13 +7215,13 @@ try{
   doDirectEnter = async function(){
     mirror();
     var r = await orig.apply(this, arguments);
-    try{ if(!el('app').classList.contains('hidden')){ remember(inp.value); fill(); } }catch(e){}
+    try{ if(!el('app').classList.contains('hidden')){ remember(inp.value); fill(); } }catch(e){ bpWarn(e); }
     return r;
   };
   var lo = document.querySelector('#userBar button[onclick*="doLogout"]');
   if(lo) lo.textContent = '🔄 Cambia utente';
   var ol = doLogout;
-  doLogout = function(){ try{ el('staffPin').value = ''; }catch(e){} return ol.apply(this, arguments); };
+  doLogout = function(){ try{ el('staffPin').value = ''; }catch(e){ bpWarn(e); } return ol.apply(this, arguments); };
 })();
 }catch(e){ console.error("[bp] sezione non caricata: blocco 21", e); }
 
@@ -7182,13 +7244,13 @@ function bpApplyRole(role){
 function bpAfterLogin(user){
   var email = ((user && user.email) || '').toLowerCase(), u = el('userEmail');
   if(u) u.setAttribute('data-base', u.textContent);
-  var ck = 'bp_role_' + email, cached = null; try{ cached = localStorage.getItem(ck); }catch(e){}
+  var ck = 'bp_role_' + email, cached = null; try{ cached = localStorage.getItem(ck); }catch(e){ bpWarn(e); }
   bpApplyRole(cached || 'cashier');
   if(!sb || !email) return;
   Promise.resolve(sb.from('staff_profiles').select('role').eq('email', email).maybeSingle()).then(function(r){
     if(!r || r.error) return;
     var d = r.data; if(Array.isArray(d)) d = d[0];
-    var role = (d && d.role) || 'cashier'; try{ localStorage.setItem(ck, role); }catch(e){}
+    var role = (d && d.role) || 'cashier'; try{ localStorage.setItem(ck, role); }catch(e){ bpWarn(e); }
     bpApplyRole(role);
   }).catch(function(){});
 }
@@ -7256,7 +7318,7 @@ function renderKitchen(){
 }
 el('kitchenTab').addEventListener('click', function(e){
   var c = e.target.closest('[data-st]'); if(c){ BP_STATION = c.getAttribute('data-st'); renderKitchen(); return; }
-  if(e.target.closest('[data-fs]')){ try{ if(document.fullscreenElement) document.exitFullscreen(); else document.documentElement.requestFullscreen(); }catch(err){} return; }
+  if(e.target.closest('[data-fs]')){ try{ if(document.fullscreenElement) document.exitFullscreen(); else document.documentElement.requestFullscreen(); }catch(err){ bpWarn(err); } return; }
   var g = e.target.closest('.kt-go'); if(g) updateOrderStatus(Number(g.getAttribute('data-oid')), g.getAttribute('data-next'));
 });
 }catch(e){ console.error("[bp] sezione non caricata: ruoli/storia/cucina", e); }
@@ -7382,7 +7444,7 @@ el('kitchenTab').addEventListener('click', function(e){
       return;
     }
     var diff = Math.round((val - expected) * 100) / 100;
-    try{ localStorage.setItem('bp_counted_cash_' + el('cassaDate').value, inp.value); }catch(e){}
+    try{ localStorage.setItem('bp_counted_cash_' + el('cassaDate').value, inp.value); }catch(e){ bpWarn(e); }
 
     if(diff === 0){
       res.value = '✅ Cassa perfetta (0 €)';
@@ -8079,7 +8141,7 @@ el('kitchenTab').addEventListener('click', function(e){
     }
     try{
       localStorage.setItem('bp_dark_mode', isDark ? '1' : '0');
-    }catch(e){}
+    }catch(e){ bpWarn(e); }
   };
 
   // 4. استرجاع الحالة عند فتح السيستم
@@ -8093,7 +8155,7 @@ el('kitchenTab').addEventListener('click', function(e){
         btn.style.color = '#f8fafc';
       }
     }
-  }catch(e){}
+  }catch(e){ bpWarn(e); }
 })();
 
   // --- نظام صوت التنبيه التلقائي للأوردات الجديدة (Audio Alert v31) ---
