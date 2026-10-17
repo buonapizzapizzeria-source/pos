@@ -3,8 +3,7 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#b42318"> 
-  <meta name="theme-color" content="#b42318"><title>Buona Pizza · POS Pro v31</title>
+<meta name="theme-color" content="#b42318"><title>Buona Pizza · POS Pro v33</title>
 <style id="bp-styles">
 /* ---- stile 1 ---- */
 :root{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;color:#202124;background:#f5f6f8;--red:#b42318;--green:#16794b;--blue:#175cd3;--orange:#b54708;--purple:#5925dc;--line:#e1e4e8}
@@ -862,7 +861,7 @@ html:not(.x) body .kt-go{width:100%;min-height:64px;margin-top:10px;font-size:ca
 </head>
 <body>
 <header class="no-print">
-  <div class="brand"><span class="logo">🍕</span><span>Buona Pizza <span class="muted">· POS Pro v31</span></span></div>
+  <div class="brand"><span class="logo">🍕</span><span>Buona Pizza <span class="muted">· POS Pro v33</span></span></div>
   <div id="userBar" class="hidden" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
     <button type="button" id="soundToggleBtn" onclick="toggleSoundAlert()" class="sound-btn" title="Attiva/Disattiva suono nuovo ordine">🔔 Audio ON</button>
     <button type="button" onclick="playOrderChime(true)" class="secondary btn-sm" title="Prova suono campanello">🔊 Test</button>
@@ -1150,10 +1149,10 @@ html:not(.x) body .kt-go{width:100%;min-height:64px;margin-top:10px;font-size:ca
               <div id="deliveryMinuteWrap">
                 <span class="time-col-label">👉 2. Minuti (Esatta / Quarto / Mezza)</span>
                 <select id="deliveryMinute">
-                  <option value="00">:00 · Esatta (بالضبط)</option>
-                  <option value="15">:15 · E un quarto (وربع)</option>
-                  <option value="30">:30 · E mezza (ونصف)</option>
-                  <option value="45">:45 · Meno un quarto (إلا ربع)</option>
+                  <option value="00">:00 · Esatta</option>
+                  <option value="15">:15 · E un quarto</option>
+                  <option value="30">:30 · E mezza</option>
+                  <option value="45">:45 · Meno un quarto</option>
                 </select>
               </div>
             </div>
@@ -1532,23 +1531,23 @@ html:not(.x) body .kt-go{width:100%;min-height:64px;margin-top:10px;font-size:ca
  * Sezione 1  : applicazione base (funzioni originali)
  * Sezioni 2-23: estensioni, ognuna isolata in try/catch (un errore non ferma le altre)
  * Funzioni ancora "avvolte" da piu sezioni (debito tecnico, da fondere):
- *   buildReceiptHtml             <- v25-print: 80mm page size + "documento non fiscale" line, v27 ULTRA SPEED & OFFLINE FIX PATCH, v29-updater: show last modifier on the printed ticket
+ *   buildReceiptHtml             <- (v33: unificata in un'unica definizione)
  *   doDirectEnter                <- v25-pin: staff PIN login (Supabase Auth), session is remembered, v26-offline: work without internet (cache + local order queue + auto sync), blocco 21
  *   doLogout                     <- blocco 21
- *   doSaveOrder                  <- v24-a: anti double-save + saved id, v26-offline: work without internet (cache + local order queue + auto sync)
- *   getGrandTotal                <- v24-d: money math in cents
- *   getItemsSubtotal             <- v24-d: money math in cents
- *   getOrderUrgencyMeta          <- v24-c: one consistent, date-aware urgency calculation
+ *   doSaveOrder                  <- (v33: base + anti doppio salvataggio unificati) + v26-offline (con avviso duplicato)
+ *   getGrandTotal                <- (v33: unificata)
+ *   getItemsSubtotal             <- (v33: unificata)
+ *   getOrderUrgencyMeta          <- (v33: unificata)
  *   loadMenu                     <- v26-offline: work without internet (cache + local order queue + auto sync)
- *   loadOrders                   <- v25-debounce: coalesce bursts of loadOrders() into one request, v26-offline: work without internet (cache + local order queue + auto sync)
- *   printReceiptWindow           <- v25-print: 80mm page size + "documento non fiscale" line
+ *   loadOrders                   <- (v33: base + debounce unificati) + v26-offline
+ *   printReceiptWindow           <- (v33: unificata)
  *   renderCart                   <- 1. شريط الأصناف السريعة بضغطة واحدة (Quick Tap Top 12)
  *   renderOrderList              <- blocco 2
- *   renderOrders                 <- 1. شريط الأصناف السريعة بضغطة واحدة (Quick Tap Top 12)
+ *   renderOrders                 <- (v33: base + __renderOrdersHooks: radar cucina, pulsanti stato, WhatsApp, pagamento, rider)
  *   showApp                      <- v25-customers: shared customer book from the database (optional table)
- *   switchTab                    <- blocco 2
- *   triggerNewOrderNotification  <- v24-e: no toast/chime while logged out, v25-wake: keep screen on, vibrate on new order, unlock audio
- *   updateOrderStatus            <- v23 ULTRA PRO, v26-offline: work without internet (cache + local order queue + auto sync)
+ *   switchTab                    <- (v33: unificata) + blocco 2 (Storico)
+ *   triggerNewOrderNotification  <- (v33: unificata)
+ *   updateOrderStatus            <- (v33: unificata) + v26-offline
  * ===================================================================== */
 
 function el(id){return document.getElementById(id);}
@@ -1556,6 +1555,7 @@ function el(id){return document.getElementById(id);}
 const FALLBACK_URL = 'https://jfgizazsjjgzyhqfngnl.supabase.co';
 const FALLBACK_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpmZ2l6YXpzampnenlocWZuZ25sIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTE3ODI0ODEsImV4cCI6MjEwNzM1ODQ4MX0.Tp_bFfR-G55OaK5i3A0fi5gF6g7pc-a3LO_IDCpsuhE';
 const PIZZERIA_ORIGIN = 'Pizzeria Buona Pizza, Lodi Vecchio LO, Italia';
+const GOOGLE_REVIEW_URL = 'https://search.google.com/local/writereview?placeid=ChIJDQv27rAsgUcRLVWzwXo5kzY';
 
 const COMMON_INGREDIENTS = [
   'Pomodoro','Mozzarella','Mozzarella di Bufala','Salame piccante','Prosciutto cotto','Prosciutto crudo',
@@ -2229,7 +2229,7 @@ function openTimePicker(){
     el("pkTop").innerHTML = h;
     var on = el("pkTop").querySelector(".pk-hours .on"); if(on && on.scrollIntoView) on.scrollIntoView({inline: "center", block: "nearest"});
     var now = new Date(), nowM = now.getHours() * 60 + now.getMinutes(), nh = Number(hour);
-    var labs = [["00", "in punto", "بالضبط"], ["15", "e un quarto", "وربع"], ["30", "e mezza", "ونصف"], ["45", "meno un quarto", "إلا ربع"]];
+    var labs = [["00", "in punto", ""], ["15", "e un quarto", ""], ["30", "e mezza", ""], ["45", "meno un quarto", ""]];
     el("pkBody").innerHTML = '<div class="pk-hint">Ore <b>' + hour + '</b> — scegli i minuti</div><div class="pk-grid pk-times">' + labs.map(function(l){
       var t = hour + ":" + l[0], past = (nh * 60 + Number(l[0])) < nowM;
       return '<button type="button" class="pk-tile tm' + (t === cur ? " sel" : "") + (past ? " past" : "") + '" data-t="' + t + '"><span class="pk-time">' + t + '</span><span class="pk-sub2">' + l[1] + '</span><span class="pk-sub2 ar">' + l[2] + '</span></button>';
@@ -2810,91 +2810,28 @@ async function processUploadedOrderImage(file){
 }
 
 /* ================= CALCOLO URGENZA & ORDINAMENTO AUTOMATICO PER ORARIO DI CONSEGNA ================= */
+function __fmMin(n){ n = Math.abs(n); return n >= 60 ? Math.floor(n / 60) + 'h ' + (n % 60) + 'min' : n + ' min'; }
 function getOrderUrgencyMeta(o){
-  let parsed = splitTimeAndNotes(o.notes);
-  let tStr = parsed.time || 'Prima possibile';
-  let st = normStatus(o.status);
-  let isDone = ['Completato','Annullato'].includes(st);
-
-  let now = new Date();
-  let nowMins = now.getHours() * 60 + now.getMinutes();
-
-  let m = tStr.match(/^(\d{1,2}):(\d{2})$/);
+  var parsed = splitTimeAndNotes(o.notes), tStr = parsed.time || 'Prima possibile';
+  var st = normStatus(o.status), isDone = ['Completato','Annullato'].indexOf(st) >= 0;
+  var now = Date.now(), created = o.created_at ? new Date(o.created_at).getTime() : now;
+  var m = /^(\d{1,2}):(\d{2})$/.exec(tStr);
   if(!m){
-    let createdDate = o.created_at ? new Date(o.created_at) : now;
-    let waitMins = Math.max(0, Math.round((now - createdDate) / 60000));
-    let isLateAsap = !isDone && st !== 'In consegna' && waitMins >= 25;
-    return {
-      type: 'asap',
-      timeLabel: 'Prima possibile',
-      sortMinutes: nowMins - 5 - Math.min(waitMins, 60),
-      diffMinutes: 0,
-      waitMins,
-      isUrgent: true,
-      isOverdue: isLateAsap,
-      cardClass: isLateAsap ? 'urg-overdue' : 'urg-soon',
-      badgeClass: isLateAsap ? 'urg-badge-overdue' : 'urg-badge-asap',
-      badgeText: isLateAsap ? `🚨 SUBITO (attesa ${waitMins} min)` : `⚡ SUBITO (${waitMins} min fa)`
-    };
+    var wait = Math.max(0, Math.round((now - created) / 60000));
+    var late = !isDone && st !== 'In consegna' && wait >= 25;
+    return {type:'asap', timeLabel:'Prima possibile', sortMinutes: now / 60000 - 5 - Math.min(wait, 60), diffMinutes:0, waitMins:wait,
+      isUrgent:true, isOverdue:late, cardClass: late ? 'urg-overdue' : 'urg-soon', badgeClass: late ? 'urg-badge-overdue' : 'urg-badge-asap',
+      badgeText: late ? '🚨 SUBITO (attesa ' + wait + ' min)' : '⚡ SUBITO (' + wait + ' min fa)'};
   }
-
-  let targetMins = Number(m[1]) * 60 + Number(m[2]);
-  let diff = targetMins - nowMins;
-
-  if(isDone){
-    return {
-      type: 'done',
-      timeLabel: tStr,
-      sortMinutes: targetMins,
-      diffMinutes: diff,
-      isUrgent: false,
-      isOverdue: false,
-      cardClass: '',
-      badgeClass: 'time-badge',
-      badgeText: `⏰ ${tStr}`
-    };
-  }
-
-  if(diff < 0){
-    let lateMins = Math.abs(diff);
-    return {
-      type: 'overdue',
-      timeLabel: tStr,
-      sortMinutes: targetMins - 1000,
-      diffMinutes: diff,
-      isUrgent: true,
-      isOverdue: true,
-      cardClass: 'urg-overdue',
-      badgeClass: 'urg-badge-overdue',
-      badgeText: `🚨 ${tStr} · IN RITARDO DI ${lateMins} MIN`
-    };
-  }
-
-  if(diff <= 25){
-    return {
-      type: 'soon',
-      timeLabel: tStr,
-      sortMinutes: targetMins,
-      diffMinutes: diff,
-      isUrgent: true,
-      isOverdue: false,
-      cardClass: 'urg-soon',
-      badgeClass: 'urg-badge-soon',
-      badgeText: diff === 0 ? `🔥 ${tStr} · ADESSO!` : `🔥 ${tStr} · tra ${diff} min`
-    };
-  }
-
-  return {
-    type: 'scheduled',
-    timeLabel: tStr,
-    sortMinutes: targetMins,
-    diffMinutes: diff,
-    isUrgent: false,
-    isOverdue: false,
-    cardClass: '',
-    badgeClass: 'urg-badge-scheduled',
-    badgeText: `⏰ ${tStr} (tra ${diff} min)`
-  };
+  var d = new Date(created); d.setHours(Number(m[1]), Number(m[2]), 0, 0);
+  var tgt = d.getTime(), diff = Math.round((tgt - now) / 60000), tm = tgt / 60000;
+  if(isDone) return {type:'done', timeLabel:tStr, sortMinutes:tm, diffMinutes:diff, isUrgent:false, isOverdue:false, cardClass:'', badgeClass:'time-badge', badgeText:'⏰ ' + tStr};
+  if(diff < 0) return {type:'overdue', timeLabel:tStr, sortMinutes: tm - 1000000, diffMinutes:diff, isUrgent:true, isOverdue:true,
+    cardClass:'urg-overdue', badgeClass:'urg-badge-overdue', badgeText:'🚨 ' + tStr + ' · IN RITARDO DI ' + __fmMin(diff)};
+  if(diff <= 25) return {type:'soon', timeLabel:tStr, sortMinutes:tm, diffMinutes:diff, isUrgent:true, isOverdue:false,
+    cardClass:'urg-soon', badgeClass:'urg-badge-soon', badgeText: diff === 0 ? '🔥 ' + tStr + ' · ADESSO!' : '🔥 ' + tStr + ' · tra ' + diff + ' min'};
+  return {type:'scheduled', timeLabel:tStr, sortMinutes:tm, diffMinutes:diff, isUrgent:false, isOverdue:false,
+    cardClass:'', badgeClass:'urg-badge-scheduled', badgeText:'⏰ ' + tStr + ' (tra ' + __fmMin(diff) + ')'};
 }
 
 function sortOpenOrdersList(list){
@@ -3516,13 +3453,14 @@ function getActiveDeliveryFee(){
 }
 
 function getItemsSubtotal(){
-  return [...cart.values()].reduce((s,x)=>s+x.price*x.qty, 0);
+  var c = 0;
+  cart.forEach(function(x){ c += Math.round(Number(x.price || 0) * 100) * Number(x.qty || 0); });
+  return c / 100;
 }
 
 function getGrandTotal(){
-  let itemsSub = getItemsSubtotal();
-  if(itemsSub === 0 && !cart.size) return 0;
-  return itemsSub + getActiveDeliveryFee();
+  if(!cart.size) return 0;
+  return (Math.round(getItemsSubtotal() * 100) + Math.round(Number(getActiveDeliveryFee() || 0) * 100)) / 100;
 }
 
 function onDeliveryFeeChange(){
@@ -4234,6 +4172,9 @@ function playOrderChime(forceTest=false){
 }
 
 function triggerNewOrderNotification(ord){
+  try{ if(navigator.vibrate && !el('app').classList.contains('hidden')) navigator.vibrate([250, 120, 250]); }catch(e){}   // ex v25-wake
+  var __app = el('app');
+  if(__app && __app.classList.contains('hidden')) return;   // ex v24-e: niente avvisi se non sei loggato
   playOrderChime(false);
   el('toastTitle').textContent = `🔔 Nuovo Ordine #${ord.id}!`;
   el('toastSub').textContent = `${ord.customer_name||'Cliente'} · ${ord.order_type||'Ordine'} · ${euro(ord.total)}`;
@@ -4362,6 +4303,7 @@ function showApp(user){
   el('userBar').classList.remove('hidden');
   el('userEmail').textContent = user?.email || 'Cassa Staff';
   try{ bpAfterLogin(user); }catch(e){}
+  setTimeout(function(){ try{ loadInventoryData(false); }catch(e){} }, 1500);   // magazzino condiviso (badge scorte basse)
   updateSoundBtnUI();
   loadMenu();
   loadOrders();
@@ -4409,15 +4351,19 @@ function switchTab(tabName){
   document.querySelectorAll('[data-tab]').forEach(b=>{
     b.classList.toggle('active', b.getAttribute('data-tab')===tabName);
   });
-  const map={'new':'newTab','orders':'ordersTab','cassa':'cassaTab','menu':'menuTab','all':'allTab','kitchen':'kitchenTab'};
-  ['newTab','ordersTab','cassaTab','menuTab','allTab','kitchenTab'].forEach(id=>{
-    el(id).classList.toggle('hidden', id!==map[tabName]);
+  const map={'new':'newTab','orders':'ordersTab','cassa':'cassaTab','menu':'menuTab','all':'allTab','kitchen':'kitchenTab','inventory':'inventoryTab','loyalty':'loyaltyTab','analytics':'analyticsTab'};
+  Object.keys(map).forEach(k=>{
+    let box = el(map[k]);                                   // i tab Magazzino/Fedelta'/Report esistono solo dopo il caricamento delle estensioni
+    if(box) box.classList.toggle('hidden', k!==tabName);
   });
   if(tabName !== 'cassa'){
     lockCassaView();
   }
   updateMobileCartBar();
   if(tabName==='kitchen'){ try{ renderKitchen(); }catch(e){} }
+  if(tabName==='inventory'){ try{ loadInventoryData(true); }catch(e){} }
+  if(tabName==='loyalty'){ try{ loadLoyaltyData(); }catch(e){} }
+  if(tabName==='analytics'){ try{ loadAnalyticsData(); }catch(e){} }
   if(tabName==='menu') loadMenu();
   else if(tabName!=='new') loadOrders();
 }
@@ -4693,7 +4639,7 @@ async function insertOrderItemsForOrder(orderId, items, delivFee){
   return result;
 }
 
-async function doSaveOrder(){
+async function _doSaveOrderCore(){
   if(!cart.size){setMsg('orderMsg','Aggiungi almeno un prodotto.','error');return;}
   if(el('type').value==='Consegna'&&!el('address').value.trim()){setMsg('orderMsg','Inserisci l’indirizzo di consegna.','error');return;}
   let items=[...cart.values()];
@@ -4817,6 +4763,59 @@ async function doSaveOrder(){
     await loadOrders();
   }
   el('saveOrder').disabled=false;
+}
+
+/* doSaveOrder = _doSaveOrderCore + anti doppio salvataggio + id salvato (ex patch v24-a) */
+var __saveInFlight = false;
+window.__lastSavedOrderId = null;
+async function doSaveOrder(){
+  if(__saveInFlight) return null;
+  __saveInFlight = true;
+  var wasEdit = editingOrderId;
+  window.__lastSavedOrderId = null;
+  try{ await _doSaveOrderCore(); }
+  finally{ __saveInFlight = false; }
+  if(wasEdit) return (editingOrderId == null) ? wasEdit : null;
+  return (cart.size === 0 && window.__lastSavedOrderId) ? window.__lastSavedOrderId : null;
+}
+
+/* Avviso ordine duplicato (ex patch v31): true = si puo' salvare, false = utente ha annullato */
+function bpConfirmDuplicateOrder(){
+  var phoneInput = el('phone');
+  var custInput = el('customer');
+  if(!phoneInput || !custInput) return true;
+
+  var curPhone = String(phoneInput.value || '').trim().replace(/\D+/g,'');
+  var curName = String(custInput.value || '').trim().toLowerCase();
+
+  if(curPhone.length >= 6 && typeof orders !== 'undefined' && orders.length){
+    // البحث في الأوردات المفتوحة خلال آخر 45 دقيقة
+    var now = Date.now();
+    var duplicateFound = orders.find(function(o){
+      var st = normStatus(o.status);
+      if(['Completato','Annullato'].includes(st)) return false;
+      var oPhone = String(o.phone || '').trim().replace(/\D+/g,'');
+      var oName = String(o.customer_name || '').trim().toLowerCase();
+      
+      var timeDiffMinutes = (now - new Date(o.created_at).getTime()) / 60000;
+      if(timeDiffMinutes > 45) return false; // تجاوز 45 دقيقة يعتبر طلباً جديداً طبيعياً
+
+      if(curPhone && oPhone && curPhone === oPhone) return true;
+      if(curName && oName && curName.length >= 3 && oName === curName) return true;
+      return false;
+    });
+
+    if(duplicateFound){
+      var parsedTime = splitTimeAndNotes(duplicateFound.notes).time;
+      var confirmMsg = `⚠️ Attenzione: il cliente "${duplicateFound.customer_name || 'questo cliente'}" ha già un ordine aperto #${duplicateFound.id} (registrato poco fa, orario ${parsedTime}, totale ${euro(duplicateFound.total)}).\n\nVuoi davvero salvare questo ordine duplicato?`;
+      if(!confirm(confirmMsg)){
+        setMsg('orderMsg', `❌ Salvataggio annullato per evitare il duplicato (ordine #${duplicateFound.id})`, 'error');
+        return false;
+      }
+    }
+  }
+
+  return true;
 }
 
 /* ================= CHIUSURA CASSA & INCASSI GIORNALIERI ================= */
@@ -5399,7 +5398,7 @@ async function markRouteInConsegna(){
 }
 
 /* ================= GESTIONE ORDINI ================= */
-async function loadOrders(){
+async function _loadOrdersNow(){
   if(!sb)return;
   try{
     let {data,error}=await sb.from('orders').select('*').order('created_at',{ascending:false}).limit(250);
@@ -5427,6 +5426,20 @@ async function loadOrders(){
     renderCassaReport();
   }catch(e){}
 }
+
+/* loadOrders = _loadOrdersNow con raggruppamento delle chiamate ravvicinate (ex patch v25-debounce) */
+var __loWaiters = [], __loTimer = null, __loRunning = false, __loRerun = false;
+function __loSchedule(){ if(__loTimer) clearTimeout(__loTimer); __loTimer = setTimeout(__loFlush, 250); }
+function __loFlush(){
+  __loTimer = null;
+  if(__loRunning){ __loRerun = true; return; }
+  __loRunning = true; var w = __loWaiters; __loWaiters = [];
+  Promise.resolve().then(function(){ return _loadOrdersNow(); }).catch(function(){}).then(function(){
+    __loRunning = false; w.forEach(function(r){ r(); });
+    if(__loRerun || __loWaiters.length){ __loRerun = false; __loSchedule(); }
+  });
+}
+function loadOrders(){ return new Promise(function(res){ __loWaiters.push(res); __loSchedule(); }); }
 
 function normStatus(s){
   let v=String(s||'Nuovo').trim().toLowerCase();
@@ -5482,6 +5495,8 @@ function renderStatusFilters(openList){
   });
 }
 
+/* Estensioni che disegnano elementi extra dopo renderOrders (radar cucina, pulsanti stato, WhatsApp, pagamento, rider) */
+var __renderOrdersHooks = [];
 function renderOrders(){
   let rawOpenList = orders.filter(o=>!['Completato','Annullato'].includes(normStatus(o.status)));
   let sortedOpenList = sortOpenOrdersList(rawOpenList);
@@ -5504,6 +5519,9 @@ function renderOrders(){
   renderOrderList('openOrders', filteredOpen, true);
   renderOrderList('allOrders', orders, false);
   try{ renderKitchen(); }catch(e){}
+  __renderOrdersHooks.forEach(function(h){
+    try{ h(); }catch(e){ console.warn('[bp] renderOrders hook', e); }
+  });
 }
 
 function renderOrderItemLineWithIcons(i){
@@ -5612,7 +5630,7 @@ function renderOrderList(id, list, isOpenTab=false){
   });
 }
 
-async function updateOrderStatus(orderId,newStatus){
+async function _updateOrderStatusCore(orderId,newStatus){
   let target=orders.find(x=>x.id===orderId);
   let oldStatus=target?target.status:'Nuovo';
   if(target){target.status=newStatus;renderOrders();}
@@ -5624,6 +5642,12 @@ async function updateOrderStatus(orderId,newStatus){
   }else{
     await loadOrders();
   }
+}
+
+/* updateOrderStatus = _updateOrderStatusCore + aggiornamento elenco Storico (ex patch v24-b) */
+async function updateOrderStatus(id, st){
+  await _updateOrderStatusCore(id, st);
+  try{ if(window.__storReload) window.__storReload(); }catch(e){}
 }
 
 /* ================= COSTRUZIONE RICEVUTA / COMANDA PROFESSIONALE v11 ================= */
@@ -5681,6 +5705,27 @@ function buildReceiptHtml(o, items){
     `;
   }).join('') : '<p class="muted">Nessun prodotto registrato.</p>';
 
+  // chi ha registrato / modificato l'ordine (ex patch v27 + v29)
+  let who = o.created_by_email || '';
+  if(!who && String(o.id).indexOf('OFF-') === 0){ let u = el('userEmail'); who = u ? (u.textContent || '') : ''; }
+  let operatorHtml = who
+    ? `<div class="rc-customer-box" style="border-top:0;padding-top:4px"><div class="rc-customer-row"><strong class="lbl">👤 Operatore:</strong> <span style="font-weight:800">${esc(who)}</span></div></div>`
+    : '';
+  let editorHtml = '';
+  if(o.updated_by_email){
+    let t = '';
+    try{ if(o.updated_at) t = ' · ' + new Date(o.updated_at).toLocaleTimeString('it-IT', {hour: '2-digit', minute: '2-digit'}); }catch(e){}
+    editorHtml = `<div class="rc-customer-box" style="border-top:0;padding-top:4px"><div class="rc-customer-row"><strong class="lbl">✏️ Modifica:</strong> <span style="font-weight:800">${esc(o.updated_by_email) + t}</span></div></div>`;
+  }
+  // QR per la recensione Google (ex patch v31)
+  let reviewHtml = `
+        <div style="margin:12px 0 6px;padding:10px;background:#f8f9fb;border:1.5px dashed #101828;border-radius:10px;text-align:center">
+          <div style="font-size:13px;font-weight:900;margin-bottom:6px">⭐ Lasciaci una recensione su Google!</div>
+          <img src="https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${encodeURIComponent(GOOGLE_REVIEW_URL)}" alt="QR Google Review" onerror="this.style.display='none'" style="width:90px;height:90px;margin:4px auto;display:block;border-radius:6px">
+          <div style="font-size:11px;font-weight:750;color:#475467;margin-top:4px">Inquadra il codice QR con la fotocamera per votare Buona Pizza</div>
+        </div>
+      `;
+
   return `
     <div class="receipt-card" id="printableReceiptCard">
       <div class="rc-header">
@@ -5709,6 +5754,7 @@ function buildReceiptHtml(o, items){
         ${o.address ? `<div class="rc-customer-row"><strong class="lbl">📍 Indirizzo:</strong> <span style="font-weight:900;text-decoration:underline">${esc(o.address)}</span></div>` : ''}
       </div>
 
+      ${operatorHtml}${editorHtml}
       <div class="rc-items-section">
         <div class="rc-table-head">
           <span>Q.tà & Articolo</span>
@@ -5736,7 +5782,8 @@ function buildReceiptHtml(o, items){
         <span class="rc-tot-val">${euro(o.total)}</span>
       </div>
 
-      <div class="rc-footer">
+      ${reviewHtml}
+      <div class="rc-footer"><b>DOCUMENTO NON FISCALE</b><br>
         Grazie per aver scelto <strong>Buona Pizza</strong> · Buon Appetito!
       </div>
     </div>
@@ -5744,6 +5791,7 @@ function buildReceiptHtml(o, items){
 }
 
 async function showDetails(o){
+  currentPrintedOrder = o;
   let items=itemsByOrder.get(o.id);
   if(!items||!items.length){
     let {data,error}=await sb.from('order_items').select('*').eq('order_id',o.id);
@@ -5756,7 +5804,12 @@ async function showDetails(o){
 }
 
 /* ================= STAMPA DIRETTA SENZA PAGINA BIANCA (80mm & A4) ================= */
+var currentPrintedOrder = null;
 function printReceiptWindow(format){
+  // formato pagina (ex v25-print)
+  var st = document.getElementById('bpPageStyle');
+  if(!st){ st = document.createElement('style'); st.id = 'bpPageStyle'; document.head.appendChild(st); }
+  st.textContent = format === '80mm' ? '@page{size:80mm auto;margin:2mm}' : '@page{size:A4;margin:10mm}';
   let container = el('receiptContainer');
   if(format === '80mm'){
     container.style.maxWidth = '76mm';
@@ -5764,6 +5817,10 @@ function printReceiptWindow(format){
     container.style.maxWidth = '100%';
   }
   window.print();
+  // dopo la stampa un ordine "Nuovo" passa a "In preparazione"
+  if(currentPrintedOrder && /^\d+$/.test(String(currentPrintedOrder.id)) && normStatus(currentPrintedOrder.status) === 'Nuovo'){
+    updateOrderStatus(currentPrintedOrder.id, 'In preparazione');
+  }
 }
 
 function closeDetailsModal(){el('detailsModal').classList.add('hidden');}
@@ -5993,7 +6050,7 @@ try{
       }).slice(0, 12);
 
       bar.innerHTML = sorted.map(function(p){
-        return '<button type="button" class="bp22-qbtn" data-qid="' + esc(p.id) + '" title="إضافة سريعة للسلة">' +
+        return '<button type="button" class="bp22-qbtn" data-qid="' + esc(p.id) + '" title="Aggiungi al carrello">' +
           prodIcon(p) + ' <span>' + esc(p.name) + '</span> <b>+' + euro(p.price_normal) + '</b></button>';
       }).join("");
     };
@@ -6138,9 +6195,7 @@ try{
     }
   }
 
-  var _origRenderOrders = renderOrders;
-  renderOrders = function(){
-    _origRenderOrders();
+  __renderOrdersHooks.push(function(){
     try{
       /* تحديث رادار المطبخ */
       if(has("kitchenRadar")){
@@ -6238,7 +6293,7 @@ try{
         }
       });
     }catch(e){ console.error("bp22 renderOrders", e); }
-  };
+  });
 
   /* 7. فتح السلة تلقائياً + اختصارات لوحة المفاتيح */
   if(has("autoCartAndKeys")){
@@ -6511,100 +6566,15 @@ try{
 })();
 }catch(e){ console.error("[bp] sezione non caricata: حساب تكلفة الإضافات تلقائياً بنفس منطق الكاشير اليدوي", e); }
 
-/* ---------- SEZIONE 6: v23 ULTRA PRO ---------- */
-try{
-/* v24-b: refresh Storico day list after a status change */
-(function(){
-  if(window.__bpV24b) return; window.__bpV24b = true;
-  var orig = updateOrderStatus;
-  updateOrderStatus = async function(id, st){
-    await orig(id, st);
-    try{ if(window.__storReload) window.__storReload(); }catch(e){}
-  };
-})();
-}catch(e){ console.error("[bp] sezione non caricata: v23 ULTRA PRO", e); }
+/* ---------- SEZIONE 6: v23 ULTRA PRO / v24-b -> integrata in updateOrderStatus ---------- */
 
-/* ---------- SEZIONE 7: v24-a: anti double-save + saved id ---------- */
-try{
-/* v24-a: anti double-save + saved id */
-(function(){
-  if(window.__bpV24a) return; window.__bpV24a = true;
-  window.__lastSavedOrderId = null;
-  var orig = doSaveOrder, saving = false;
-  doSaveOrder = async function(){
-    if(saving) return null;
-    saving = true;
-    var wasEdit = editingOrderId;
-    window.__lastSavedOrderId = null;
-    try{ await orig(); }
-    finally{ saving = false; }
-    if(wasEdit) return (editingOrderId == null) ? wasEdit : null;
-    return (cart.size === 0 && window.__lastSavedOrderId) ? window.__lastSavedOrderId : null;
-  };
-})();
-}catch(e){ console.error("[bp] sezione non caricata: v24-a: anti double-save + saved id", e); }
+/* ---------- SEZIONE 7: v24-a -> integrata in doSaveOrder ---------- */
 
-/* ---------- SEZIONE 8: v24-e: no toast/chime while logged out ---------- */
-try{
-/* v24-e: no toast/chime while logged out */
-(function(){
-  if(window.__bpV24e) return; window.__bpV24e = true;
-  var orig = triggerNewOrderNotification;
-  triggerNewOrderNotification = function(o){
-    var app = el('app');
-    if(app && app.classList.contains('hidden')) return;
-    orig(o);
-  };
-})();
-}catch(e){ console.error("[bp] sezione non caricata: v24-e: no toast/chime while logged out", e); }
+/* ---------- SEZIONE 8: v24-e -> integrata in triggerNewOrderNotification ---------- */
 
-/* ---------- SEZIONE 9: v24-c: one consistent, date-aware urgency calculation ---------- */
-try{
-/* v24-c: one consistent, date-aware urgency calculation */
-(function(){
-  if(window.__bpV24c) return; window.__bpV24c = true;
-  function fm(n){ n = Math.abs(n); return n >= 60 ? Math.floor(n / 60) + 'h ' + (n % 60) + 'min' : n + ' min'; }
-  getOrderUrgencyMeta = function(o){
-    var parsed = splitTimeAndNotes(o.notes), tStr = parsed.time || 'Prima possibile';
-    var st = normStatus(o.status), isDone = ['Completato','Annullato'].indexOf(st) >= 0;
-    var now = Date.now(), created = o.created_at ? new Date(o.created_at).getTime() : now;
-    var m = /^(\d{1,2}):(\d{2})$/.exec(tStr);
-    if(!m){
-      var wait = Math.max(0, Math.round((now - created) / 60000));
-      var late = !isDone && st !== 'In consegna' && wait >= 25;
-      return {type:'asap', timeLabel:'Prima possibile', sortMinutes: now / 60000 - 5 - Math.min(wait, 60), diffMinutes:0, waitMins:wait,
-        isUrgent:true, isOverdue:late, cardClass: late ? 'urg-overdue' : 'urg-soon', badgeClass: late ? 'urg-badge-overdue' : 'urg-badge-asap',
-        badgeText: late ? '🚨 SUBITO (attesa ' + wait + ' min)' : '⚡ SUBITO (' + wait + ' min fa)'};
-    }
-    var d = new Date(created); d.setHours(Number(m[1]), Number(m[2]), 0, 0);
-    var tgt = d.getTime(), diff = Math.round((tgt - now) / 60000), tm = tgt / 60000;
-    if(isDone) return {type:'done', timeLabel:tStr, sortMinutes:tm, diffMinutes:diff, isUrgent:false, isOverdue:false, cardClass:'', badgeClass:'time-badge', badgeText:'⏰ ' + tStr};
-    if(diff < 0) return {type:'overdue', timeLabel:tStr, sortMinutes: tm - 1000000, diffMinutes:diff, isUrgent:true, isOverdue:true,
-      cardClass:'urg-overdue', badgeClass:'urg-badge-overdue', badgeText:'🚨 ' + tStr + ' · IN RITARDO DI ' + fm(diff)};
-    if(diff <= 25) return {type:'soon', timeLabel:tStr, sortMinutes:tm, diffMinutes:diff, isUrgent:true, isOverdue:false,
-      cardClass:'urg-soon', badgeClass:'urg-badge-soon', badgeText: diff === 0 ? '🔥 ' + tStr + ' · ADESSO!' : '🔥 ' + tStr + ' · tra ' + diff + ' min'};
-    return {type:'scheduled', timeLabel:tStr, sortMinutes:tm, diffMinutes:diff, isUrgent:false, isOverdue:false,
-      cardClass:'', badgeClass:'urg-badge-scheduled', badgeText:'⏰ ' + tStr + ' (tra ' + fm(diff) + ')'};
-  };
-})();
-}catch(e){ console.error("[bp] sezione non caricata: v24-c: one consistent, date-aware urgency calculation", e); }
+/* ---------- SEZIONE 9: v24-c -> integrata in getOrderUrgencyMeta ---------- */
 
-/* ---------- SEZIONE 10: v24-d: money math in cents ---------- */
-try{
-/* v24-d: money math in cents */
-(function(){
-  if(window.__bpV24d) return; window.__bpV24d = true;
-  getItemsSubtotal = function(){
-    var c = 0;
-    cart.forEach(function(x){ c += Math.round(Number(x.price || 0) * 100) * Number(x.qty || 0); });
-    return c / 100;
-  };
-  getGrandTotal = function(){
-    if(!cart.size) return 0;
-    return (Math.round(getItemsSubtotal() * 100) + Math.round(Number(getActiveDeliveryFee() || 0) * 100)) / 100;
-  };
-})();
-}catch(e){ console.error("[bp] sezione non caricata: v24-d: money math in cents", e); }
+/* ---------- SEZIONE 10: v24-d -> integrata in getItemsSubtotal/getGrandTotal ---------- */
 
 /* ---------- SEZIONE 11: v25-pin: staff PIN login (Supabase Auth), session is remembered ---------- */
 try{
@@ -6721,25 +6691,7 @@ try{
 })();
 }catch(e){ console.error("[bp] sezione non caricata: v25-customers: shared customer book from the database (optional table)", e); }
 
-/* ---------- SEZIONE 15: v25-debounce: coalesce bursts of loadOrders() into one request ---------- */
-try{
-/* v25-debounce: coalesce bursts of loadOrders() into one request */
-(function(){
-  if(window.__bp25deb) return; window.__bp25deb = true;
-  var orig = loadOrders, waiters = [], timer = null, running = false, rerun = false;
-  function schedule(){ if(timer) clearTimeout(timer); timer = setTimeout(flush, 250); }
-  function flush(){
-    timer = null;
-    if(running){ rerun = true; return; }
-    running = true; var w = waiters; waiters = [];
-    Promise.resolve().then(function(){ return orig(); }).catch(function(){}).then(function(){
-      running = false; w.forEach(function(r){ r(); });
-      if(rerun || waiters.length){ rerun = false; schedule(); }
-    });
-  }
-  loadOrders = function(){ return new Promise(function(res){ waiters.push(res); schedule(); }); };
-})();
-}catch(e){ console.error("[bp] sezione non caricata: v25-debounce: coalesce bursts of loadOrders() into one request", e); }
+/* ---------- SEZIONE 15: v25-debounce -> integrata in loadOrders ---------- */
 
 /* ---------- SEZIONE 16: v25-wake: keep screen on, vibrate on new order, unlock audio ---------- */
 try{
@@ -6764,32 +6716,10 @@ try{
     }catch(e){}
   }, true);
   setInterval(function(){ if(!lock) acquire(); }, 60000);
-  var orig = triggerNewOrderNotification;
-  triggerNewOrderNotification = function(o){
-    try{ if(navigator.vibrate && !el('app').classList.contains('hidden')) navigator.vibrate([250, 120, 250]); }catch(e){}
-    orig(o);
-  };
 })();
 }catch(e){ console.error("[bp] sezione non caricata: v25-wake: keep screen on, vibrate on new order, unlock audio", e); }
 
-/* ---------- SEZIONE 17: v25-print: 80mm page size + "documento non fiscale" line ---------- */
-try{
-/* v25-print: 80mm page size + "documento non fiscale" line */
-(function(){
-  if(window.__bp25prt) return; window.__bp25prt = true;
-  var po = printReceiptWindow;
-  printReceiptWindow = function(f){
-    var st = document.getElementById('bpPageStyle');
-    if(!st){ st = document.createElement('style'); st.id = 'bpPageStyle'; document.head.appendChild(st); }
-    st.textContent = f === '80mm' ? '@page{size:80mm auto;margin:2mm}' : '@page{size:A4;margin:10mm}';
-    po(f);
-  };
-  var bo = buildReceiptHtml;
-  buildReceiptHtml = function(o, items){
-    return bo(o, items).replace('<div class="rc-footer">', '<div class="rc-footer"><b>DOCUMENTO NON FISCALE</b><br>');
-  };
-})();
-}catch(e){ console.error("[bp] sezione non caricata: v25-print: 80mm page size + 'documento non fiscale' line", e); }
+/* ---------- SEZIONE 17: v25-print -> integrata in printReceiptWindow ---------- */
 
 /* ---------- SEZIONE 18: v25-sw: register the optional service worker (sw.js next to the page) ---------- */
 try{
@@ -6900,6 +6830,7 @@ try{
   }
   var ds = doSaveOrder;
   doSaveOrder = async function(){
+    if(!bpConfirmDuplicateOrder()) return;   // avviso duplicato (ex patch v31)
     if(!cart.size) return ds();
     if(editingOrderId && !online){ setMsg('orderMsg', '📴 Modifica non disponibile offline: riprova quando torna la connessione.', 'error'); return null; }
     if(!editingOrderId && !online){
@@ -7139,24 +7070,7 @@ try{
     });
   }
 
-  /* 4. تحويل حالة الطلب الجديد إلى In preparazione تلقائياً عند الطباعة */
-  var _origShowDetails = window.showDetails;
-  var currentPrintedOrder = null;
-  if(typeof _origShowDetails === 'function'){
-    window.showDetails = async function(o){
-      currentPrintedOrder = o;
-      return await _origShowDetails.apply(this, arguments);
-    };
-  }
-  var _origPrintWin = window.printReceiptWindow;
-  if(typeof _origPrintWin === 'function'){
-    window.printReceiptWindow = function(format){
-      _origPrintWin.apply(this, arguments);
-      if(currentPrintedOrder && /^\d+$/.test(String(currentPrintedOrder.id)) && normStatus(currentPrintedOrder.status) === 'Nuovo'){
-        updateOrderStatus(currentPrintedOrder.id, 'In preparazione');
-      }
-    };
-  }
+  /* 4. (stampa -> In preparazione: ora dentro printReceiptWindow/showDetails) */
 
   /* 5. تبديل طريقة الدفع (Contanti ⇄ Carta) بلمسة واحدة من كارت الطلب المفتوح */
   document.addEventListener('click', async function(e){
@@ -7181,17 +7095,13 @@ try{
       if(!m) return;
       var pLine = card.querySelector('p');
       if(!pLine || pLine.querySelector('[data-quick-pay-id]')) return;
-      pLine.innerHTML = pLine.innerHTML.replace(/💳\s*([^<·]+)/, '<span class="bp27-pay-switch" data-quick-pay-id="' + m[1] + '" title="اضغط لتبديل كاش / فيزا">💳 $1 🔁</span>');
+      pLine.innerHTML = pLine.innerHTML.replace(/💳\s*([^<·]+)/, '<span class="bp27-pay-switch" data-quick-pay-id="' + m[1] + '" title="Tocca per cambiare Contanti / Carta">💳 $1 🔁</span>');
     });
   }
 
-  var _origRenderOrders27 = window.renderOrders;
-  if(typeof _origRenderOrders27 === 'function'){
-    window.renderOrders = function(){
-      _origRenderOrders27.apply(this, arguments);
+  __renderOrdersHooks.push(function(){
       decoratePaymentSwitches();
-    };
-  }
+  });
 
   /* 6. تحسين إرسال طابور الأوفلاين التلقائي وإظهار الخطأ الحقيقي إن وجد */
   window.addEventListener('online', function(){
@@ -7212,15 +7122,7 @@ try{
   var st = document.createElement('style');
   st.textContent = '#userBar #userEmail{display:inline-block!important;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px!important;font-weight:800;background:#eff8ff;color:#175cd3;border:1px solid #b2ddff;border-radius:99px;padding:4px 10px}';
   document.head.appendChild(st);
-  var bo = buildReceiptHtml;
-  buildReceiptHtml = function(o, items){
-    var h = bo(o, items), who = (o && o.created_by_email) || '';
-    if(!who && o && String(o.id).indexOf('OFF-') === 0){ var u = el('userEmail'); who = u ? (u.textContent || '') : ''; }
-    if(who){
-      h = h.replace('<div class="rc-items-section">', '<div class="rc-customer-box" style="border-top:0;padding-top:4px"><div class="rc-customer-row"><strong class="lbl">👤 Operatore:</strong> <span style="font-weight:800">' + esc(who) + '</span></div></div><div class="rc-items-section">');
-    }
-    return h;
-  };
+  // (operatore sullo scontrino: ora nella funzione principale buildReceiptHtml)
 })();
 }catch(e){ console.error("[bp] sezione non caricata: v27 ULTRA SPEED & OFFLINE FIX PATCH", e); }
 
@@ -7261,23 +7163,7 @@ try{
 })();
 }catch(e){ console.error("[bp] sezione non caricata: blocco 21", e); }
 
-/* ---------- SEZIONE 23: v29-updater: show last modifier on the printed ticket ---------- */
-try{
-/* v29-updater: show last modifier on the printed ticket */
-(function(){
-  if(window.__bp29upd) return; window.__bp29upd = true;
-  var bo = buildReceiptHtml;
-  buildReceiptHtml = function(o, items){
-    var h = bo(o, items);
-    if(o && o.updated_by_email){
-      var t = '';
-      try{ if(o.updated_at) t = ' · ' + new Date(o.updated_at).toLocaleTimeString('it-IT', {hour: '2-digit', minute: '2-digit'}); }catch(e){}
-      h = h.replace('<div class="rc-items-section">', '<div class="rc-customer-box" style="border-top:0;padding-top:4px"><div class="rc-customer-row"><strong class="lbl">✏️ Modifica:</strong> <span style="font-weight:800">' + esc(o.updated_by_email) + t + '</span></div></div><div class="rc-items-section">');
-    }
-    return h;
-  };
-})();
-}catch(e){ console.error("[bp] sezione non caricata: v29-updater: show last modifier on the printed ticket", e); }
+/* ---------- SEZIONE 23: v29-updater -> integrata in buildReceiptHtml ---------- */
 
 
 /* ---------- SEZIONE 24: ruoli, storia ordine, schermata cucina (v31) ---------- */
@@ -7398,10 +7284,7 @@ el('kitchenTab').addEventListener('click', function(e){
   };
 
   // حقن زر "تم التوصيل بلمسة واحدة" مباشرة في كروت الأوردات عند فتح الحساب كسايق
-  var _origRenderOrders = window.renderOrders;
-  if(typeof _origRenderOrders === 'function'){
-    window.renderOrders = function(){
-      _origRenderOrders.apply(this, arguments);
+  __renderOrdersHooks.push(function(){
       if(typeof BP_ROLE !== 'undefined' && BP_ROLE === 'driver'){
         document.querySelectorAll('#openOrders .order').forEach(function(card){
           var h3 = card.querySelector('h3');
@@ -7428,8 +7311,7 @@ el('kitchenTab').addEventListener('click', function(e){
           }
         });
       }
-    };
-  }
+  });
 })();
 
 // --- إغلاق الصندوق الاحترافي وتعديل النقدية الفعلية (Chiusura Cassa Pro) ---
@@ -7465,19 +7347,19 @@ el('kitchenTab').addEventListener('click', function(e){
       var savedCounted = localStorage.getItem('bp_counted_cash_' + el('cassaDate').value) || '';
 
       proBox.innerHTML = `
-        <h2 style="color:var(--green);display:flex;align-items:center;gap:8px">🧮 مطابقة الصندوق الفعلية (Chiusura Cassa)</h2>
-        <p class="muted">أدخل إجمالي الأموال النقدية الموجودة فعلياً في الدرج لمقارنتها مع مبيعات الكاش المتوقعة.</p>
+        <h2 style="color:var(--green);display:flex;align-items:center;gap:8px">🧮 Verifica cassa (Chiusura Cassa)</h2>
+        <p class="muted">Inserisci il contante realmente presente nel cassetto per confrontarlo con gli incassi in contanti previsti.</p>
         <div class="fields" style="grid-template-columns:repeat(auto-fit,minmax(200px,1fr));align-items:end;margin-top:10px">
           <div class="field">
-            <label>💵 الكاش المتوقع في النظام</label>
+            <label>💵 Contanti previsti dal sistema</label>
             <input type="text" readonly value="${euro(cashExpected)}" style="font-weight:900;background:#eef2f6">
           </div>
           <div class="field">
-            <label>🪙 النقدية الفعلية في الدرج (€)</label>
-            <input type="number" step="0.50" id="actualCashCounted" placeholder="أدخل المبلغ الفعلي..." value="${savedCounted}" oninput="calcCassaDifference(${cashExpected})" style="font-weight:900;border:2px solid var(--green)">
+            <label>🪙 Contanti reali nel cassetto (€)</label>
+            <input type="number" step="0.50" id="actualCashCounted" placeholder="Inserisci l'importo reale..." value="${esc(savedCounted)}" oninput="calcCassaDifference(${cashExpected})" style="font-weight:900;border:2px solid var(--green)">
           </div>
           <div class="field">
-            <label>⚖️ الفارق (عجز / زيادة)</label>
+            <label>⚖️ Differenza (ammanco / eccedenza)</label>
             <input type="text" id="cassaDiffResult" readonly value="—" style="font-weight:900">
           </div>
         </div>
@@ -7503,62 +7385,19 @@ el('kitchenTab').addEventListener('click', function(e){
     try{ localStorage.setItem('bp_counted_cash_' + el('cassaDate').value, inp.value); }catch(e){}
 
     if(diff === 0){
-      res.value = '✅ الصندوق مضبوط تماماً (0 €)';
+      res.value = '✅ Cassa perfetta (0 €)';
       res.style.color = 'var(--green)';
     } else if(diff > 0){
-      res.value = `📈 زيادة في الصندوق (+ ${euro(diff)})`;
+      res.value = `📈 Eccedenza di cassa (+ ${euro(diff)})`;
       res.style.color = 'var(--blue)';
     } else {
-      res.value = `📉 عجز في الصندوق (${euro(diff)})`;
+      res.value = `📉 Ammanco di cassa (${euro(diff)})`;
       res.style.color = 'var(--red)';
     }
   };
 })();
 
-// --- تنبيه الطلب المكرر الذكي (Duplicate Order Alert v31) ---
-(function(){
-  if(window.__dupAlertEnhanced) return;
-  window.__dupAlertEnhanced = true;
-
-  var _origSaveOrder = window.doSaveOrder;
-  window.doSaveOrder = async function(){
-    var phoneInput = el('phone');
-    var custInput = el('customer');
-    if(!phoneInput || !custInput) return _origSaveOrder.apply(this, arguments);
-
-    var curPhone = String(phoneInput.value || '').trim().replace(/\D+/g,'');
-    var curName = String(custInput.value || '').trim().toLowerCase();
-
-    if(curPhone.length >= 6 && typeof orders !== 'undefined' && orders.length){
-      // البحث في الأوردات المفتوحة خلال آخر 45 دقيقة
-      var now = Date.now();
-      var duplicateFound = orders.find(function(o){
-        var st = normStatus(o.status);
-        if(['Completato','Annullato'].includes(st)) return false;
-        var oPhone = String(o.phone || '').trim().replace(/\D+/g,'');
-        var oName = String(o.customer_name || '').trim().toLowerCase();
-        
-        var timeDiffMinutes = (now - new Date(o.created_at).getTime()) / 60000;
-        if(timeDiffMinutes > 45) return false; // تجاوز 45 دقيقة يعتبر طلباً جديداً طبيعياً
-
-        if(curPhone && oPhone && curPhone === oPhone) return true;
-        if(curName && oName && curName.length >= 3 && oName === curName) return true;
-        return false;
-      });
-
-      if(duplicateFound){
-        var parsedTime = splitTimeAndNotes(duplicateFound.notes).time;
-        var confirmMsg = `⚠️ تنبيه: العميل "${duplicateFound.customer_name || 'هذا العميل'}" لديه بالفعل طلب مفتوح رقم #${duplicateFound.id} (مُسجل قبل قليل برقم الهاتف، الساعة ${parsedTime}, بقيمة ${euro(duplicateFound.total)}).\n\nهل أنت متأكد أنك تريد حفظ هذا الطلب المكرر؟`;
-        if(!confirm(confirmMsg)){
-          setMsg('orderMsg', `❌ تم إلغاء حفظ الأوردر لتجنب التكرار (تنبيه الطلب المكرر للأمر #${duplicateFound.id})`, 'error');
-          return;
-        }
-      }
-    }
-
-    return _origSaveOrder.apply(this, arguments);
-  };
-})();
+// (avviso ordine duplicato: ora bpConfirmDuplicateOrder(), chiamata da doSaveOrder)
 
   // --- زر Esaurito السريع لتخفيض أو إخفاء الأصناف النافدة بلمسة واحدة (v31) ---
 (function(){
@@ -7623,43 +7462,14 @@ el('kitchenTab').addEventListener('click', function(e){
   }
 })();
 
-// --- تخصيص الإيصال ورمز QR لتقييم Google (Receipt Customizer v31) ---
-(function(){
-  if(window.__receiptCustomizerEnhanced) return;
-  window.__receiptCustomizerEnhanced = true;
-
-  var _origBuildReceiptHtml = window.buildReceiptHtml;
-  if(typeof _origBuildReceiptHtml === 'function'){
-    window.buildReceiptHtml = function(o, items){
-      var originalHtml = _origBuildReceiptHtml.apply(this, arguments);
-      
-      // رابط تقييم جوجل الخاص بالمطعم (يمكنك تعديل الرابط برابط مطعمك الفعلي لاحقاً)
-      var googleReviewUrl = 'https://g.page/r/buonapizza-lodivecchio/review'; 
-      var qrCodeImageUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=' + encodeURIComponent(googleReviewUrl);
-
-      var customFooterSection = `
-        <div style="margin:12px 0 6px;padding:10px;background:#f8f9fb;border:1.5px dashed #101828;border-radius:10px;text-align:center">
-          <div style="font-size:13px;font-weight:900;margin-bottom:6px">⭐ Lasciaci una recensione su Google!</div>
-          <img src="${qrCodeImageUrl}" alt="QR Google Review" style="width:90px;height:90px;margin:4px auto;display:block;border-radius:6px">
-          <div style="font-size:11px;font-weight:750;color:#475467;margin-top:4px">Inquadra il codice QR con la fotocamera per votare Buona Pizza</div>
-        </div>
-      `;
-
-      // حقن قسم الـ QR وتخصيص الإيصال قبل نهاية التوتال أو الفوتر
-      return originalHtml.replace('<div class="rc-footer">', customFooterSection + '<div class="rc-footer">');
-    };
-  }
-})();
+// (QR recensione Google: ora nella funzione principale buildReceiptHtml)
 
   // --- رسائل واتساب الجاهزة لكل حالة (WhatsApp Quick Actions v31) ---
 (function(){
   if(window.__whatsappActionsEnhanced) return;
   window.__whatsappActionsEnhanced = true;
 
-  var _origRenderOrders = window.renderOrders;
-  if(typeof _origRenderOrders === 'function'){
-    window.renderOrders = function(){
-      _origRenderOrders.apply(this, arguments);
+  __renderOrdersHooks.push(function(){
       
       document.querySelectorAll('#openOrders .order').forEach(function(card){
         var h3 = card.querySelector('h3');
@@ -7698,17 +7508,18 @@ el('kitchenTab').addEventListener('click', function(e){
           rightBox.appendChild(waMenuBtn);
         }
       });
-    };
-  }
+  });
 })();
 
 
-  // --- نظام إدارة المخزون الذكي والتنبيهات (Inventory & Stock v31) ---
+  // --- Magazzino condiviso (Inventory v34: tabella Supabase «inventory_items» + realtime, fallback locale) ---
 (function(){
   if(window.__inventoryEnhanced) return;
   window.__inventoryEnhanced = true;
 
-  // 1. إضافة تبويب "المخزون" لشريط التبويبات الرئيسي (للمدير فقط أو المتاح للكل حسب الصلاحية)
+  var TABLE = 'inventory_items', LS_KEY = 'bp_inventory_db_v1';
+  var cache = [], sharedOk = null;
+
   var tabsBar = document.querySelector('.tabs');
   if(tabsBar && !el('tabBtnInventory')){
     var invBtn = document.createElement('button');
@@ -7716,11 +7527,10 @@ el('kitchenTab').addEventListener('click', function(e){
     invBtn.id = 'tabBtnInventory';
     invBtn.setAttribute('data-tab', 'inventory');
     invBtn.onclick = function(){ switchTab('inventory'); };
-    invBtn.innerHTML = '📦 المخزون <span id="invAlertBadge" class="badge-count" style="background:var(--red);color:#fff">0</span>';
+    invBtn.innerHTML = '📦 Magazzino <span id="invAlertBadge" class="badge-count" style="background:var(--red);color:#fff">0</span>';
     tabsBar.appendChild(invBtn);
   }
 
-  // 2. إنشاء محتوى تبويب المخزون وحقنه في الصفحة الرئيسية
   var appMain = el('app');
   if(appMain && !el('inventoryTab')){
     var invTab = document.createElement('div');
@@ -7728,41 +7538,85 @@ el('kitchenTab').addEventListener('click', function(e){
     invTab.className = 'hidden';
     invTab.innerHTML = `
       <div class="topline">
-        <h1>📦 إدارة المخزون & المواد الخام</h1>
+        <h1>📦 Gestione magazzino &amp; materie prime</h1>
         <div style="display:flex;gap:8px;flex-wrap:wrap">
-          <button type="button" onclick="openInventoryModal()" class="green">＋ إضافة مادة خام جديدة</button>
-          <button type="button" onclick="loadInventoryData()" class="secondary">🔄 تحديث</button>
+          <button type="button" onclick="openInventoryModal()" class="green">＋ Aggiungi materia prima</button>
+          <button type="button" onclick="loadInventoryData(true)" class="secondary">🔄 Aggiorna</button>
         </div>
       </div>
+      <div id="invNote" class="muted" style="margin:4px 0 10px"></div>
       <div id="inventoryStatsBar" class="stats-bar"></div>
       <div id="inventoryListContainer" class="menu-admin-list"></div>
     `;
     appMain.appendChild(invTab);
-
-    // توسيع صلاحيات المدير لفتح تبويب المخزون
     if(typeof BP_TABS !== 'undefined'){
       if(BP_TABS.manager && BP_TABS.manager.indexOf('inventory') < 0) BP_TABS.manager.push('inventory');
       if(BP_TABS.cashier && BP_TABS.cashier.indexOf('inventory') < 0) BP_TABS.cashier.push('inventory');
     }
   }
 
-  // قاعدة بيانات محلية افتراضية للمخزون في حال لم يوجد جدول في Supabase
   var DEFAULT_INVENTORY = [
-    {id: 1, name: 'Farina (الدقيق)', unit: 'Kg', stock: 45, min_alert: 10},
-    {id: 2, name: 'Mozzarella (جبنة موزاريلا)', unit: 'Kg', stock: 12, min_alert: 5},
-    {id: 3, name: 'Pomodoro (صوص طماطم)', unit: 'Litri', stock: 25, min_alert: 8},
-    {id: 4, name: 'Carne Kebab (لحم كباب)', unit: 'Kg', stock: 8, min_alert: 3},
-    {id: 5, name: 'Scatole Pizza (علب بيتزا)', unit: 'Pz', stock: 120, min_alert: 30},
-    {id: 6, name: 'Bibite Lattine (كنز بيبسي/كوكا)', unit: 'Pz', stock: 48, min_alert: 12}
+    {id: 1, name: 'Farina', unit: 'Kg', stock: 45, min_alert: 10},
+    {id: 2, name: 'Mozzarella', unit: 'Kg', stock: 12, min_alert: 5},
+    {id: 3, name: 'Pomodoro (passata)', unit: 'Litri', stock: 25, min_alert: 8},
+    {id: 4, name: 'Carne Kebab', unit: 'Kg', stock: 8, min_alert: 3},
+    {id: 5, name: 'Scatole Pizza', unit: 'Pz', stock: 120, min_alert: 30},
+    {id: 6, name: 'Bibite in lattina', unit: 'Pz', stock: 48, min_alert: 12}
   ];
 
-  window.loadInventoryData = function(){
-    var items = [];
+  // ---- modalità locale (solo se la tabella condivisa non esiste) ----
+  function localRead(){ try{ var a = JSON.parse(localStorage.getItem(LS_KEY) || 'null'); return Array.isArray(a) ? a : null; }catch(e){ return null; } }
+  function localWrite(items){ try{ localStorage.setItem(LS_KEY, JSON.stringify(items)); }catch(e){ alert('Impossibile salvare il magazzino su questo dispositivo.'); } }
+
+  function setNote(){
+    var n = el('invNote'); if(!n) return;
+    n.textContent = sharedOk
+      ? '🔗 Magazzino condiviso: le modifiche sono visibili subito su tutti i dispositivi.'
+      : '⚠️ Modalità locale: la tabella «inventory_items» non è stata trovata, i dati restano solo su questo dispositivo.';
+  }
+
+  async function fetchShared(){
+    if(typeof sb === 'undefined' || !sb) return null;
+    var r = await sb.from(TABLE).select('*').order('name');
+    if(r.error){ console.warn('[bp] magazzino condiviso non disponibile:', r.error.message); return null; }
+    return r.data || [];
+  }
+
+  function subscribeRealtime(){
+    if(window.__invRt || typeof sb === 'undefined' || !sb || !sb.channel) return;
     try{
-      var raw = localStorage.getItem('bp_inventory_db_v1');
-      items = raw ? JSON.parse(raw) : DEFAULT_INVENTORY;
-    }catch(e){ items = DEFAULT_INVENTORY; }
-    renderInventoryUI(items);
+      window.__invRt = sb.channel('bp-inventory')
+        .on('postgres_changes', {event: '*', schema: 'public', table: TABLE}, function(){
+          clearTimeout(window.__invT);
+          window.__invT = setTimeout(function(){ loadInventoryData(false); }, 400);
+        }).subscribe();
+    }catch(e){ console.warn('[bp] realtime magazzino', e); }
+  }
+
+  window.loadInventoryData = async function(askImport){
+    var rows = null;
+    try{ rows = await fetchShared(); }catch(e){ console.warn('[bp] magazzino', e); }
+    if(rows){
+      sharedOk = true;
+      if(!rows.length && askImport === true && !window.__invImportAsked){
+        window.__invImportAsked = true;
+        var loc = localRead();
+        if(loc && loc.length && confirm('Il magazzino condiviso è vuoto.\nImportare le ' + loc.length + ' scorte salvate su questo dispositivo?')){
+          var ins = await sb.from(TABLE).insert(loc.map(function(x){
+            return {name: x.name, unit: x.unit || 'Pz', stock: Number(x.stock) || 0, min_alert: Number(x.min_alert) || 0};
+          }));
+          if(ins.error) alert('Importazione non riuscita: ' + ins.error.message);
+          else rows = (await fetchShared()) || [];
+        }
+      }
+      cache = rows;
+      subscribeRealtime();
+    } else {
+      sharedOk = false;
+      cache = localRead() || DEFAULT_INVENTORY.map(function(x){ return Object.assign({}, x); });
+    }
+    setNote();
+    renderInventoryUI(cache);
   };
 
   window.renderInventoryUI = function(items){
@@ -7776,100 +7630,146 @@ el('kitchenTab').addEventListener('click', function(e){
 
     if(statsBar){
       statsBar.innerHTML = `
-        <div class="stat-box"><span>إجمالي المواد</span><strong>${items.length}</strong></div>
-        <div class="stat-box"><span>مواد منخفضة / ناقصة</span><strong style="color:${lowStockCount > 0 ? 'var(--red)' : 'var(--green)'}">${lowStockCount}</strong></div>
+        <div class="stat-box"><span>Totale articoli</span><strong>${items.length}</strong></div>
+        <div class="stat-box"><span>Scorte basse / esaurite</span><strong style="color:${lowStockCount > 0 ? 'var(--red)' : 'var(--green)'}">${lowStockCount}</strong></div>
       `;
     }
 
-    listContainer.innerHTML = items.map(function(item, idx){
+    if(!items.length){
+      listContainer.innerHTML = '<div class="panel" style="text-align:center;padding:24px"><p class="muted">Nessun articolo in magazzino. Premi «Aggiungi materia prima».</p></div>';
+      return;
+    }
+
+    listContainer.innerHTML = items.map(function(item){
+      var id = Number(item.id);
       var isLow = Number(item.stock) <= Number(item.min_alert);
       return `
         <div class="menu-admin-row ${isLow ? 'inactive' : ''}" style="${isLow ? 'border-left:6px solid var(--red)' : ''}">
           <div>
-            <div style="display:flex;align-items:center;gap:8px">
+            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
               <strong style="font-size:16px">${esc(item.name)}</strong>
-              ${isLow ? '<span class="pill st-annullato">⚠️ كمية منخفضة!</span>' : ''}
+              ${isLow ? '<span class="pill st-annullato">⚠️ Scorta bassa!</span>' : ''}
             </div>
-            <div class="muted" style="margin-top:2px">الحد الأدنى للتنبيه: ${item.min_alert} ${item.unit}</div>
+            <div class="muted" style="margin-top:2px">Soglia di allarme: ${esc(item.min_alert)} ${esc(item.unit)}</div>
           </div>
           <div class="price-inputs">
             <div class="mini-field" style="width:120px">
-              <span>المخزون الحالي</span>
-              <input type="number" step="1" value="${item.stock}" onchange="updateStockValue(${idx}, this.value)">
+              <span>Giacenza attuale</span>
+              <input type="number" step="1" value="${esc(item.stock)}" onchange="updateStockValue(${id}, this.value)">
             </div>
-            <span style="font-weight:800;color:#475467">${item.unit}</span>
+            <span style="font-weight:800;color:#475467">${esc(item.unit)}</span>
           </div>
           <div class="admin-actions">
-            <button type="button" class="secondary btn-sm" onclick="adjustStock(${idx}, 10)">＋10</button>
-            <button type="button" class="secondary btn-sm" onclick="adjustStock(${idx}, -5)">−5</button>
-            <button type="button" class="secondary btn-sm" style="color:var(--red)" onclick="deleteInventoryItem(${idx})">🗑️</button>
+            <button type="button" class="secondary btn-sm" onclick="adjustStock(${id}, 10)">＋10</button>
+            <button type="button" class="secondary btn-sm" onclick="adjustStock(${id}, -5)">−5</button>
+            <button type="button" class="secondary btn-sm" onclick="editInventoryItem(${id})" title="Modifica">✏️</button>
+            <button type="button" class="secondary btn-sm" style="color:var(--red)" onclick="deleteInventoryItem(${id})">🗑️</button>
           </div>
         </div>
       `;
     }).join('');
   };
 
-  window.updateStockValue = function(idx, val){
-    try{
-      var raw = localStorage.getItem('bp_inventory_db_v1');
-      var items = raw ? JSON.parse(raw) : DEFAULT_INVENTORY;
-      items[idx].stock = Number(val);
-      localStorage.setItem('bp_inventory_db_v1', JSON.stringify(items));
-      loadInventoryData();
-    }catch(e){}
+  function fail(err){ alert('Operazione non riuscita: ' + (err && err.message ? err.message : err)); }
+
+  window.updateStockValue = async function(id, val){
+    var n = Number(val); n = isNaN(n) ? 0 : Math.max(0, n);
+    if(sharedOk){
+      var r = await sb.from(TABLE).update({stock: n, updated_at: new Date().toISOString()}).eq('id', id);
+      if(r.error) fail(r.error);
+    } else {
+      var items = localRead() || cache;
+      items.forEach(function(x){ if(Number(x.id) === id) x.stock = n; });
+      localWrite(items);
+    }
+    loadInventoryData(false);
   };
 
-  window.adjustStock = function(idx, delta){
-    try{
-      var raw = localStorage.getItem('bp_inventory_db_v1');
-      var items = raw ? JSON.parse(raw) : DEFAULT_INVENTORY;
-      items[idx].stock = Math.max(0, Number(items[idx].stock || 0) + delta);
-      localStorage.setItem('bp_inventory_db_v1', JSON.stringify(items));
-      loadInventoryData();
-    }catch(e){}
+  window.adjustStock = async function(id, delta){
+    if(sharedOk){
+      // variazione atomica sul server: due dispositivi insieme non si sovrascrivono
+      var r = await sb.rpc('inventory_adjust', {p_id: id, p_delta: delta});
+      if(r.error){
+        var cur = cache.filter(function(x){ return Number(x.id) === id; })[0];
+        if(cur){
+          var r2 = await sb.from(TABLE).update({stock: Math.max(0, Number(cur.stock || 0) + delta), updated_at: new Date().toISOString()}).eq('id', id);
+          if(r2.error) fail(r2.error);
+        }
+      }
+    } else {
+      var items = localRead() || cache;
+      items.forEach(function(x){ if(Number(x.id) === id) x.stock = Math.max(0, Number(x.stock || 0) + delta); });
+      localWrite(items);
+    }
+    loadInventoryData(false);
   };
 
-  window.deleteInventoryItem = function(idx){
-    if(!confirm('هل تريد حذف هذه المادة من المخزون؟')) return;
-    try{
-      var raw = localStorage.getItem('bp_inventory_db_v1');
-      var items = raw ? JSON.parse(raw) : DEFAULT_INVENTORY;
-      items.splice(idx, 1);
-      localStorage.setItem('bp_inventory_db_v1', JSON.stringify(items));
-      loadInventoryData();
-    }catch(e){}
+  window.deleteInventoryItem = async function(id){
+    if(!confirm('Eliminare questo articolo dal magazzino?')) return;
+    if(sharedOk){
+      var r = await sb.from(TABLE).delete().eq('id', id);
+      if(r.error) fail(r.error);
+    } else {
+      localWrite((localRead() || cache).filter(function(x){ return Number(x.id) !== id; }));
+    }
+    loadInventoryData(false);
   };
 
-  window.openInventoryModal = function(){
-    var name = prompt('اسم المادة الخام الجديدة (مثال: طماطم، جبنة، علب):');
-    if(!name) return;
-    var unit = prompt('وحدة القياس (Kg, Litri, Pz):', 'Kg') || 'Kg';
-    var stock = Number(prompt('الكمية الحالية في المخزون:', '20') || 0);
-    var minAlert = Number(prompt('الحد الأدنى للتنبيه عند النقص:', '5') || 5);
-
-    try{
-      var raw = localStorage.getItem('bp_inventory_db_v1');
-      var items = raw ? JSON.parse(raw) : DEFAULT_INVENTORY;
-      items.push({id: Date.now(), name: name, unit: unit, stock: stock, min_alert: minAlert});
-      localStorage.setItem('bp_inventory_db_v1', JSON.stringify(items));
-      loadInventoryData();
-    }catch(e){}
+  window.openInventoryModal = async function(){
+    var name = prompt('Nome della nuova materia prima (es. Pomodori, Formaggio, Scatole):');
+    if(!name || !name.trim()) return;
+    var unit = (prompt('Unità di misura (Kg, Litri, Pz):', 'Kg') || 'Kg').trim();
+    var stock = Number(prompt('Giacenza attuale:', '20')); if(isNaN(stock)) stock = 0;
+    var minAlert = Number(prompt('Soglia minima di allarme:', '5')); if(isNaN(minAlert)) minAlert = 5;
+    if(sharedOk){
+      var r = await sb.from(TABLE).insert({name: name.trim(), unit: unit, stock: Math.max(0, stock), min_alert: minAlert});
+      if(r.error) fail(r.error);
+    } else {
+      var items = localRead() || cache;
+      items.push({id: Date.now(), name: name.trim(), unit: unit, stock: stock, min_alert: minAlert});
+      localWrite(items);
+    }
+    loadInventoryData(false);
   };
 
-  // ربط فتح تبويب المخزون بتحميل البيانات
-  var _origSwitchTab = window.switchTab;
-  window.switchTab = function(tabName){
-    if(typeof _origSwitchTab === 'function') _origSwitchTab(tabName);
-    if(tabName === 'inventory') loadInventoryData();
+  window.editInventoryItem = async function(id){
+    var cur = cache.filter(function(x){ return Number(x.id) === id; })[0];
+    if(!cur) return;
+    var name = prompt('Nome materia prima:', cur.name);
+    if(name === null) return;               // Annulla = nessuna modifica
+    name = name.trim();
+    if(!name){ alert('Il nome non può essere vuoto.'); return; }
+    var unit = prompt('Unità di misura (Kg, Litri, Pz):', cur.unit || 'Pz');
+    if(unit === null) return;
+    unit = unit.trim() || cur.unit || 'Pz';
+    var minRaw = prompt('Soglia minima di allarme:', cur.min_alert);
+    if(minRaw === null) return;
+    var minAlert = Number(String(minRaw).replace(',', '.'));
+    if(isNaN(minAlert) || minAlert < 0){ alert('Soglia non valida.'); return; }
+
+    if(sharedOk){
+      var r = await sb.from(TABLE).update({name: name, unit: unit, min_alert: minAlert, updated_at: new Date().toISOString()}).eq('id', id);
+      if(r.error) fail(r.error);
+    } else {
+      var items = localRead() || cache;
+      items.forEach(function(x){ if(Number(x.id) === id){ x.name = name; x.unit = unit; x.min_alert = minAlert; } });
+      localWrite(items);
+    }
+    loadInventoryData(false);
   };
+
+
+  setInterval(function(){
+    var app = el('app');
+    if(app && !app.classList.contains('hidden') && typeof sb !== 'undefined' && sb) loadInventoryData(false);
+  }, 120000);
 })();
 
-  // --- برنامج الولاء ونقاط العملاء الذكي (Loyalty Program v31) ---
+  // --- Programma fedeltà clienti (Loyalty v33, tradotto + dati dal database) ---
 (function(){
   if(window.__loyaltyEnhanced) return;
   window.__loyaltyEnhanced = true;
 
-  // 1. إضافة تبويب "الولاء والعملاء" لشريط التبويبات الرئيسي
   var tabsBar = document.querySelector('.tabs');
   if(tabsBar && !el('tabBtnLoyalty')){
     var loyBtn = document.createElement('button');
@@ -7877,11 +7777,10 @@ el('kitchenTab').addEventListener('click', function(e){
     loyBtn.id = 'tabBtnLoyalty';
     loyBtn.setAttribute('data-tab', 'loyalty');
     loyBtn.onclick = function(){ switchTab('loyalty'); };
-    loyBtn.innerHTML = '👑 برنامج الولاء';
+    loyBtn.innerHTML = '👑 Fedeltà';
     tabsBar.appendChild(loyBtn);
   }
 
-  // 2. إنشاء محتوى تبويب الولاء وحقنه في الصفحة
   var appMain = el('app');
   if(appMain && !el('loyaltyTab')){
     var loyTab = document.createElement('div');
@@ -7889,126 +7788,123 @@ el('kitchenTab').addEventListener('click', function(e){
     loyTab.className = 'hidden';
     loyTab.innerHTML = `
       <div class="topline">
-        <h1>👑 نظام ولاء العملاء & النقاط</h1>
+        <h1>👑 Fedeltà clienti &amp; punti</h1>
         <div style="display:flex;gap:8px;flex-wrap:wrap">
-          <button type="button" onclick="loadLoyaltyData()" class="green">🔄 تحديث بيانات الزبائن</button>
+          <button type="button" onclick="loadLoyaltyData()" class="green">🔄 Aggiorna clienti</button>
         </div>
       </div>
       <div id="loyaltyStatsBar" class="stats-bar"></div>
       <div id="loyaltyListContainer" class="menu-admin-list" style="margin-top:16px"></div>
     `;
     appMain.appendChild(loyTab);
-
-    // توسيع صلاحيات المدير والكاشير لفتح تبويب الولاء
     if(typeof BP_TABS !== 'undefined'){
       if(BP_TABS.manager && BP_TABS.manager.indexOf('loyalty') < 0) BP_TABS.manager.push('loyalty');
       if(BP_TABS.cashier && BP_TABS.cashier.indexOf('loyalty') < 0) BP_TABS.cashier.push('loyalty');
     }
   }
 
-  // 3. دالة تحليل الأوردات واستخراج قاعدة بيانات العملاء الأوفياء تلقائياً
-  window.loadLoyaltyData = function(){
+  window.loadLoyaltyData = async function(){
     var listContainer = el('loyaltyListContainer');
     var statsBar = el('loyaltyStatsBar');
     if(!listContainer) return;
+    listContainer.innerHTML = '<div class="panel" style="text-align:center;padding:20px"><p class="muted">⏳ Caricamento clienti…</p></div>';
 
+    // 1) storico completo dal database; 2) in alternativa, gli ordini caricati in memoria
     var allOrders = [];
-    try {
-      if(typeof orders !== 'undefined' && orders.length){
-        allOrders = orders;
-      } else {
-        var raw = localStorage.getItem('bp_orders_v1');
-        allOrders = raw ? JSON.parse(raw) : [];
+    try{
+      if(typeof sb !== 'undefined' && sb){
+        var r = await sb.from('orders').select('customer_name,phone,total,created_at,status')
+          .not('phone','is',null).order('created_at',{ascending:false}).limit(5000);
+        if(r && !r.error && Array.isArray(r.data)) allOrders = r.data;
       }
-    } catch(e){ allOrders = []; }
+    }catch(e){ console.warn('[bp] fedeltà: query storico fallita', e); }
+    if(!allOrders.length){
+      try{ allOrders = (typeof orders !== 'undefined' && orders.length) ? orders : JSON.parse(localStorage.getItem('bp_orders_v1') || '[]'); }
+      catch(e){ allOrders = []; }
+    }
 
-    // تجميع العملاء حسب رقم الهاتف
     var clientsMap = {};
     allOrders.forEach(function(o){
+      if(typeof normStatus === 'function' && normStatus(o.status) === 'Annullato') return; // gli ordini annullati non contano
       var phone = String(o.phone || '').trim().replace(/\D+/g,'');
       if(!phone || phone.length < 6) return;
-      
       if(!clientsMap[phone]){
-        clientsMap[phone] = {
-          name: o.customer_name || 'عميل بدون اسم',
-          phone: o.phone,
-          totalOrders: 0,
-          totalSpent: 0,
-          lastOrderDate: o.created_at || ''
-        };
+        clientsMap[phone] = { name: o.customer_name || 'Cliente senza nome', phone: o.phone, totalOrders: 0, totalSpent: 0, lastOrderDate: o.created_at || '' };
       }
-      clientsMap[phone].totalOrders += 1;
-      clientsMap[phone].totalSpent += Number(o.total || 0);
-      if(o.created_at && o.created_at > clientsMap[phone].lastOrderDate){
-        clientsMap[phone].lastOrderDate = o.created_at;
-        clientsMap[phone].name = o.customer_name || clientsMap[phone].name;
+      var c = clientsMap[phone];
+      c.totalOrders += 1;
+      c.totalSpent += Number(o.total || 0);
+      if(o.created_at && o.created_at > c.lastOrderDate){
+        c.lastOrderDate = o.created_at;
+        c.name = o.customer_name || c.name;
       }
     });
 
     var clientsArr = Object.keys(clientsMap).map(function(k){ return clientsMap[k]; });
-    // ترتيب العملاء حسب أكثر ناس طلبوا من المطعم
     clientsArr.sort(function(a, b){ return b.totalOrders - a.totalOrders; });
 
     if(statsBar){
       statsBar.innerHTML = `
-        <div class="stat-box"><span>إجمالي العملاء المسجلين</span><strong>${clientsArr.length}</strong></div>
-        <div class="stat-box"><span>عملاء VIP (أكثر من 3 طلبات)</span><strong style="color:var(--green)">${clientsArr.filter(c => c.totalOrders >= 3).length}</strong></div>
+        <div class="stat-box"><span>Clienti registrati</span><strong>${clientsArr.length}</strong></div>
+        <div class="stat-box"><span>Clienti fedeli (3+ ordini)</span><strong style="color:var(--green)">${clientsArr.filter(function(c){ return c.totalOrders >= 3; }).length}</strong></div>
+        <div class="stat-box"><span>Clienti VIP (5+ ordini)</span><strong style="color:#b45309">${clientsArr.filter(function(c){ return c.totalOrders >= 5; }).length}</strong></div>
       `;
     }
 
-    if(clientsArr.length === 0){
-      listContainer.innerHTML = `<div class="panel" style="text-align:center;padding:30px"><p class="muted">لا توجد سجلات أوردات كافية حتى الآن لتكوين قاعدة بيانات الولاء. ابدأ بتسجيل الأوردات وسيقوم السيستم بجمعهم تلقائياً!</p></div>`;
+    if(!clientsArr.length){
+      listContainer.innerHTML = '<div class="panel" style="text-align:center;padding:30px"><p class="muted">Non ci sono ancora abbastanza ordini con numero di telefono per creare l\'archivio fedeltà. Continua a registrare ordini: i clienti verranno raccolti automaticamente.</p></div>';
       return;
     }
 
     listContainer.innerHTML = clientsArr.map(function(c){
       var isVip = c.totalOrders >= 5;
       var isRegular = c.totalOrders >= 3 && !isVip;
+      var last = c.lastOrderDate ? new Date(c.lastOrderDate).toLocaleString('it-IT',{dateStyle:'short',timeStyle:'short'}) : '—';
       return `
         <div class="menu-admin-row" style="${isVip ? 'border-left:6px solid #f59e0b;background:linear-gradient(135deg,#fffbeb 0%,#fff 100%)' : ''}">
           <div>
-            <div style="display:flex;align-items:center;gap:8px">
+            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
               <strong style="font-size:16px">👤 ${esc(c.name)}</strong>
-              ${isVip ? '<span class="pill" style="background:#fef3c7;color:#b45309;font-weight:900">⭐ زبون ذهبي VIP (5+ طلبات)</span>' : ''}
-              ${isRegular ? '<span class="pill" style="background:#e0f2fe;color:#0369a1;font-weight:900">🥈 زبون متكرر</span>' : ''}
+              ${isVip ? '<span class="pill" style="background:#fef3c7;color:#b45309;font-weight:900">⭐ Cliente VIP (5+ ordini)</span>' : ''}
+              ${isRegular ? '<span class="pill" style="background:#e0f2fe;color:#0369a1;font-weight:900">🥈 Cliente fedele</span>' : ''}
             </div>
-            <div class="muted" style="margin-top:4px">📞 ${esc(c.phone)} | آخر طلب: ${String(c.lastOrderDate).slice(0,16).replace('T',' ')}</div>
+            <div class="muted" style="margin-top:4px">📞 ${esc(c.phone)} | Ultimo ordine: ${esc(last)}</div>
           </div>
           <div style="text-align:right">
-            <div style="font-weight:900;font-size:15px;color:var(--green)">${c.totalOrders} طلبات</div>
-            <div class="muted" style="font-size:13px">إجمالي المشتريات: ${euro(c.totalSpent)}</div>
+            <div style="font-weight:900;font-size:15px;color:var(--green)">${c.totalOrders} ${c.totalOrders === 1 ? 'ordine' : 'ordini'}</div>
+            <div class="muted" style="font-size:13px">Totale speso: ${euro(c.totalSpent)}</div>
           </div>
           <div class="admin-actions">
-            <button type="button" class="secondary btn-sm" onclick="sendLoyaltyWhatsapp('${c.phone}', '${esc(c.name)}', ${c.totalOrders})">💬 إرسال هدية/تحية واتساب</button>
+            <button type="button" class="secondary btn-sm" data-wa-phone="${esc(c.phone)}" data-wa-name="${esc(c.name)}" data-wa-count="${c.totalOrders}">💬 Invia omaggio / saluto su WhatsApp</button>
           </div>
         </div>
       `;
     }).join('');
+
+    // niente piu' onclick con stringhe nell'HTML: i dati passano da data-attributes
+    listContainer.onclick = function(ev){
+      var btn = ev.target.closest && ev.target.closest('[data-wa-phone]');
+      if(!btn) return;
+      window.sendLoyaltyWhatsapp(btn.dataset.waPhone, btn.dataset.waName, Number(btn.dataset.waCount));
+    };
   };
 
   window.sendLoyaltyWhatsapp = function(phone, name, count){
     var cleanPh = String(phone).replace(/\D+/g, '');
     if(cleanPh.length === 10 && cleanPh.charAt(0) === '3') cleanPh = '39' + cleanPh;
-    var msg = `Ciao ${name}! 🍕 من *Buona Pizza* (Lodi Vecchio).\n` +
-              `لاحظنا أنك زبون مميز جداً معنا ولديك ${count} طلبات ناجحة!\n` +
-              `شكراً لثقتك الدائمة، ولك منا خصم خاص أو بيتزا هدية في طلبك القادم عند ذكر هذه الرسالة! ❤️`;
+    var msg = 'Ciao ' + name + '! 🍕 Siamo *Buona Pizza* (Lodi Vecchio).\n' +
+              'Abbiamo notato che sei un cliente speciale: hai già fatto ' + count + ' ordini con noi!\n' +
+              'Grazie per la fiducia: nel tuo prossimo ordine ti aspetta uno sconto speciale o una pizza in omaggio, basta citare questo messaggio! ❤️';
     window.open('https://wa.me/' + cleanPh + '?text=' + encodeURIComponent(msg), '_blank');
   };
 
-  // ربط فتح تبويب الولاء بتحميل البيانات
-  var _origSwitchTab = window.switchTab;
-  window.switchTab = function(tabName){
-    if(typeof _origSwitchTab === 'function') _origSwitchTab(tabName);
-    if(tabName === 'loyalty') loadLoyaltyData();
-  };
 })();
 
-  // --- تقارير الأداء وسرعة السائقين والمطبخ (Analytics v31) ---
+  // --- Report & statistiche (Analytics v33: dati reali, niente piu' statistiche inventate) ---
 (function(){
   if(window.__analyticsEnhanced) return;
   window.__analyticsEnhanced = true;
 
-  // 1. إضافة تبويب "التقارير والأداء" لشريط التبويبات الرئيسي
   var tabsBar = document.querySelector('.tabs');
   if(tabsBar && !el('tabBtnAnalytics')){
     var anBtn = document.createElement('button');
@@ -8016,11 +7912,10 @@ el('kitchenTab').addEventListener('click', function(e){
     anBtn.id = 'tabBtnAnalytics';
     anBtn.setAttribute('data-tab', 'analytics');
     anBtn.onclick = function(){ switchTab('analytics'); };
-    anBtn.innerHTML = '📊 تقارير الأداء';
+    anBtn.innerHTML = '📊 Report';
     tabsBar.appendChild(anBtn);
   }
 
-  // 2. إنشاء محتوى تبويب التقارير وحقنه في الصفحة
   var appMain = el('app');
   if(appMain && !el('analyticsTab')){
     var anTab = document.createElement('div');
@@ -8028,108 +7923,86 @@ el('kitchenTab').addEventListener('click', function(e){
     anTab.className = 'hidden';
     anTab.innerHTML = `
       <div class="topline">
-        <h1>📊 لوحة تحكم الأداء وسرعة السائقين</h1>
+        <h1>📊 Report vendite &amp; prestazioni</h1>
         <div style="display:flex;gap:8px;flex-wrap:wrap">
-          <button type="button" onclick="loadAnalyticsData()" class="green">🔄 تحديث الإحصائيات</button>
+          <button type="button" onclick="loadAnalyticsData()" class="green">🔄 Aggiorna statistiche</button>
         </div>
       </div>
+      <div class="muted" style="margin:4px 0 10px">ℹ️ I dati si riferiscono agli ordini attualmente caricati nell'elenco.</div>
       <div id="analyticsStatsBar" class="stats-bar"></div>
       <div id="analyticsDriversContainer" class="menu-admin-list" style="margin-top:16px"></div>
     `;
     appMain.appendChild(anTab);
-
-    // توسيع صلاحيات المدير لفتح تبويب التقارير
     if(typeof BP_TABS !== 'undefined'){
       if(BP_TABS.manager && BP_TABS.manager.indexOf('analytics') < 0) BP_TABS.manager.push('analytics');
     }
   }
 
-  // 3. تحليل بيانات الأوردات وحساب إحصائيات السائقين وسرعة الإنجاز
+  function groupRows(title, icon, map, total){
+    var keys = Object.keys(map).sort(function(a, b){ return map[b].amount - map[a].amount; });
+    if(!keys.length) return '';
+    return '<div class="panel" style="margin-bottom:12px"><h3 style="margin:0 0 8px">' + icon + ' ' + title + '</h3>' +
+      keys.map(function(k){
+        var g = map[k], pct = total > 0 ? Math.round(g.amount / total * 100) : 0;
+        return '<div class="menu-admin-row" style="padding:8px 10px"><div><strong>' + esc(k) + '</strong></div>' +
+          '<div style="text-align:right"><b style="color:var(--green)">' + euro(g.amount) + '</b> <span class="muted">· ' + g.count + ' ord. · ' + pct + '%</span></div></div>';
+      }).join('') + '</div>';
+  }
+
   window.loadAnalyticsData = function(){
     var container = el('analyticsDriversContainer');
     var statsBar = el('analyticsStatsBar');
     if(!container) return;
 
     var allOrders = [];
-    try {
-      if(typeof orders !== 'undefined' && orders.length){
-        allOrders = orders;
-      } else {
-        var raw = localStorage.getItem('bp_orders_v1');
-        allOrders = raw ? JSON.parse(raw) : [];
-      }
-    } catch(e){ allOrders = []; }
+    try{ allOrders = (typeof orders !== 'undefined' && orders.length) ? orders : JSON.parse(localStorage.getItem('bp_orders_v1') || '[]'); }
+    catch(e){ allOrders = []; }
 
-    // تجميع أداء السائقين (لو الطلبات مسجل فيها اسم السائق أو تم توصيلها)
-    var driversMap = {};
-    var totalCompleted = 0;
-    var totalRevenue = 0;
-
+    var done = 0, revenue = 0, cancelled = 0;
+    var byType = {}, byPay = {}, prod = {};
     allOrders.forEach(function(o){
       var st = normStatus(o.status);
-      if(st === 'Completato' || st === 'Consegnato'){
-        totalCompleted++;
-        totalRevenue += Number(o.total || 0);
-      }
-
-      // افتراض تتبع اسم السائق إذا وجد في الأوردر أو تم تسجيله
-      var driverName = o.driver || o.assigned_driver || 'سائق عام (Team)';
-      if(!driversMap[driverName]){
-        driversMap[driverName] = { name: driverName, deliveredCount: 0, totalAmount: 0 };
-      }
-      if(st === 'Completato' || st === 'Consegnato' || st === 'In Consegna'){
-        driversMap[driverName].deliveredCount += 1;
-        driversMap[driverName].totalAmount += Number(o.total || 0);
-      }
+      if(st === 'Annullato'){ cancelled++; return; }
+      var tot = Number(o.total || 0);
+      if(st === 'Completato' || st === 'Consegnato'){ done++; revenue += tot; }
+      var t = o.order_type || 'Altro', p = o.payment_method || 'Contanti';
+      (byType[t] = byType[t] || {count: 0, amount: 0}).count++; byType[t].amount += tot;
+      (byPay[p] = byPay[p] || {count: 0, amount: 0}).count++; byPay[p].amount += tot;
+      ((typeof itemsByOrder !== 'undefined' && itemsByOrder.get(o.id)) || []).forEach(function(it){
+        if(it.product_name === 'Supplemento Consegna') return;
+        var base = (typeof splitProductAndMods === 'function') ? splitProductAndMods(it.product_name).baseName : it.product_name;
+        prod[base] = (prod[base] || 0) + Number(it.quantity || 1);
+      });
     });
 
-    var driversArr = Object.keys(driversMap).map(function(k){ return driversMap[k]; });
-    driversArr.sort(function(a, b){ return b.deliveredCount - a.deliveredCount; });
+    var validCount = allOrders.length - cancelled;
+    var allTotal = Object.keys(byType).reduce(function(s, k){ return s + byType[k].amount; }, 0);
+    var avg = validCount > 0 ? allTotal / validCount : 0;
 
     if(statsBar){
       statsBar.innerHTML = `
-        <div class="stat-box"><span>إجمالي الطلبات المكتملة</span><strong>${totalCompleted}</strong></div>
-        <div class="stat-box"><span>إجمالي الإيرادات المسجلة</span><strong style="color:var(--green)">${euro(totalRevenue)}</strong></div>
-        <div class="stat-box"><span>كفاءة المطبخ & التوصيل</span><strong style="color:var(--blue)">ممتازة ⚡</strong></div>
+        <div class="stat-box"><span>Ordini completati</span><strong>${done}</strong></div>
+        <div class="stat-box"><span>Incasso (completati)</span><strong style="color:var(--green)">${euro(revenue)}</strong></div>
+        <div class="stat-box"><span>Scontrino medio</span><strong style="color:var(--blue)">${euro(avg)}</strong></div>
+        <div class="stat-box"><span>Ordini annullati</span><strong style="color:${cancelled ? 'var(--red)' : 'var(--green)'}">${cancelled}</strong></div>
       `;
     }
 
-    if(driversArr.length === 0 || totalCompleted === 0){
-      container.innerHTML = `<div class="panel" style="text-align:center;padding:30px"><p class="muted">لا توجد بيانات توصيل مكتملة كافية حتى الآن لعرض تقارير السائقين. أكمل بعض الشفتات وسيظهر التقرير هنا فوراً!</p></div>`;
+    if(!validCount){
+      container.innerHTML = '<div class="panel" style="text-align:center;padding:30px"><p class="muted">Non ci sono ancora ordini sufficienti per mostrare i report. Registra alcuni ordini e le statistiche appariranno qui.</p></div>';
       return;
     }
 
-    container.innerHTML = `
-      <div class="panel" style="margin-bottom:16px;background:#f8f9fb">
-        <h3 style="margin-bottom:8px">🛵 تقييم وسرعة السائقين في التوصيل</h3>
-        <p class="muted" style="margin-bottom:12px">مقارنة أعداد التوصيلات الناجحة لكل سائق خلال الشفتات الحالية.</p>
-      </div>
-    ` + driversArr.map(function(d, idx){
-      var isTop = idx === 0;
-      return `
-        <div class="menu-admin-row" style="${isTop ? 'border-left:6px solid var(--green);background:linear-gradient(135deg,#f6fef9 0%,#fff 100%)' : ''}">
-          <div>
-            <div style="display:flex;align-items:center;gap:8px">
-              <strong style="font-size:16px">🛵 ${esc(d.name)}</strong>
-              ${isTop ? '<span class="pill" style="background:#d1fae5;color:#065f46;font-weight:900">🏆 السائق الأسرع / الأكثر إنجازاً</span>' : ''}
-            </div>
-            <div class="muted" style="margin-top:4px">حالة التوصيل: نشط ومستعد للمهمات القادمة</div>
-          </div>
-          <div style="text-align:right">
-            <div style="font-weight:900;font-size:15px;color:var(--green)">${d.deliveredCount} أوردر موصل</div>
-            <div class="muted" style="font-size:13px">قيمة التوصيلات: ${euro(d.totalAmount)}</div>
-          </div>
-        </div>
-      `;
-    }).join('');
+    var top = Object.keys(prod).sort(function(a, b){ return prod[b] - prod[a]; }).slice(0, 8);
+    var topHtml = top.length ? '<div class="panel" style="margin-bottom:12px"><h3 style="margin:0 0 8px">🏆 Prodotti più venduti</h3>' +
+      top.map(function(k, i){
+        return '<div class="menu-admin-row" style="padding:8px 10px"><div><strong>' + (i + 1) + '. ' + esc(k) + '</strong></div><div style="text-align:right"><b>' + prod[k] + ' pz</b></div></div>';
+      }).join('') + '</div>' : '';
+
+    container.innerHTML = groupRows('Per tipo di ordine', '🛵', byType, allTotal) +
+                          groupRows('Per metodo di pagamento', '💳', byPay, allTotal) + topHtml;
   };
 
-  // ربط فتح تبويب التقارير بتحميل البيانات
-  var _origSwitchTab = window.switchTab;
-  window.switchTab = function(tabName){
-    if(typeof _origSwitchTab === 'function') _origSwitchTab(tabName);
-    if(tabName === 'analytics') loadAnalyticsData();
-  };
 })();
 
   // --- زر الوضع الليلي المريح للعين (Dark Mode v31) ---
@@ -8145,7 +8018,7 @@ el('kitchenTab').addEventListener('click', function(e){
     darkBtn.id = 'darkToggleBtn';
     darkBtn.className = 'secondary btn-sm';
     darkBtn.style.cssText = 'font-weight:900;margin-left:auto;display:flex;align-items:center;gap:6px;cursor:pointer';
-    darkBtn.innerHTML = '🌙 وضع الليل';
+    darkBtn.innerHTML = '🌙 Modalità notte';
     
     darkBtn.onclick = function(){
       toggleDarkMode();
@@ -8200,7 +8073,7 @@ el('kitchenTab').addEventListener('click', function(e){
     var isDark = document.body.classList.toggle('dark-mode');
     var btn = el('darkToggleBtn');
     if(btn){
-      btn.innerHTML = isDark ? '☀️ وضع النهار' : '🌙 وضع الليل';
+      btn.innerHTML = isDark ? '☀️ Modalità giorno' : '🌙 Modalità notte';
       btn.style.background = isDark ? '#334155' : '';
       btn.style.color = isDark ? '#f8fafc' : '';
     }
@@ -8215,7 +8088,7 @@ el('kitchenTab').addEventListener('click', function(e){
       document.body.classList.add('dark-mode');
       var btn = el('darkToggleBtn');
       if(btn){
-        btn.innerHTML = '☀️ وضع النهار';
+        btn.innerHTML = '☀️ Modalità giorno';
         btn.style.background = '#334155';
         btn.style.color = '#f8fafc';
       }
@@ -8260,8 +8133,8 @@ el('kitchenTab').addEventListener('click', function(e){
     beepBtn.id = 'testBeepBtn';
     beepBtn.className = 'secondary btn-sm';
     beepBtn.style.cssText = 'font-weight:900;margin-left:6px;cursor:pointer';
-    beepBtn.innerHTML = '🔔 صوت';
-    beepBtn.title = 'تجربة صوت التنبيه';
+    beepBtn.innerHTML = '🔔 Suono';
+    beepBtn.title = 'Prova il suono di avviso';
     
     beepBtn.onclick = function(){
       playNotificationBeep();
@@ -8271,17 +8144,7 @@ el('kitchenTab').addEventListener('click', function(e){
   }
 
   // مراقبة الأوردات الجديدة وتنبيه المطبخ والكاشير فور إضافة أوردر جديد
-  var lastKnownOrdersCount = -1;
-  setInterval(function(){
-    try {
-      var currentOrders = (typeof orders !== 'undefined') ? orders : [];
-      if(lastKnownOrdersCount !== -1 && currentOrders.length > lastKnownOrdersCount){
-        // تم اكتشاف أوردر جديد! شغل صوت التنبيه
-        playNotificationBeep();
-      }
-      lastKnownOrdersCount = currentOrders.length;
-    } catch(e){}
-  }, 2000);
+  // (rimosso v33) il suono dei nuovi ordini e' gia' gestito da triggerNewOrderNotification -> playOrderChime
 })();
 
  // --- نظام الطباعة التلقائية للمطبخ عند حفظ الأوردر (Auto Print KDS v31) ---
@@ -8300,7 +8163,7 @@ el('kitchenTab').addEventListener('click', function(e){
     
     // قراءة الحالة المخزنة مسبقاً (مفعلة افتراضياً أو لا)
     var isAutoPrintOn = localStorage.getItem('bp_auto_print') === '1';
-    printToggleBtn.innerHTML = isAutoPrintOn ? '🖨️ طباعة أوتو: ON' : '🖨️ طباعة أوتو: OFF';
+    printToggleBtn.innerHTML = isAutoPrintOn ? '🖨️ Stampa auto: ON' : '🖨️ Stampa auto: OFF';
     printToggleBtn.style.background = isAutoPrintOn ? '#d1fae5' : '';
     printToggleBtn.style.color = isAutoPrintOn ? '#065f46' : '';
 
@@ -8308,7 +8171,7 @@ el('kitchenTab').addEventListener('click', function(e){
       var current = localStorage.getItem('bp_auto_print') === '1';
       var next = !current;
       localStorage.setItem('bp_auto_print', next ? '1' : '0');
-      printToggleBtn.innerHTML = next ? '🖨️ طباعة أوتو: ON' : '🖨️ طباعة أوتو: OFF';
+      printToggleBtn.innerHTML = next ? '🖨️ Stampa auto: ON' : '🖨️ Stampa auto: OFF';
       printToggleBtn.style.background = next ? '#d1fae5' : '';
       printToggleBtn.style.color = next ? '#065f46' : '';
     };
@@ -8316,194 +8179,71 @@ el('kitchenTab').addEventListener('click', function(e){
     topline.appendChild(printToggleBtn);
   }
 
-  // 2. دالة طباعة تذكرة المطبخ تلقائياً
-  window.printKitchenTicketAuto = function(ord){
+  // 2. Stampa ticket cucina (v33: usa itemsByOrder, campi reali del DB, tutto escapato)
+  window.printKitchenTicketAuto = function(ord, attempt){
     if(!ord) return;
-    var pTime = (typeof splitTimeAndNotes === 'function') ? splitTimeAndNotes(ord.notes).time : 'Subito';
-    var cleanNotes = (typeof splitTimeAndNotes === 'function') ? splitTimeAndNotes(ord.notes).notes : ord.notes;
-    
-    var itemsHtml = (ord.items || []).map(function(it){
-      return `<div style="display:flex;justify-content:space-between;font-size:16px;font-weight:900;margin:6px 0;border-bottom:1px dashed #000;padding-bottom:4px">
-        <span>${it.qty}x ${it.name}</span>
-        <span>${it.variant || ''}</span>
-      </div>`;
+    attempt = attempt || 0;
+    var items = (typeof itemsByOrder !== 'undefined' && itemsByOrder.get(ord.id)) || [];
+    items = items.filter(function(i){ return i.product_name !== 'Supplemento Consegna'; });
+    // le righe ordine arrivano con una seconda query: riprova per qualche secondo
+    if(!items.length && attempt < 6){
+      setTimeout(function(){ window.printKitchenTicketAuto(ord, attempt + 1); }, 1500);
+      return;
+    }
+    var E = (typeof esc === 'function') ? esc : function(x){ return String(x == null ? '' : x); };
+    var parsedNotes = (typeof splitTimeAndNotes === 'function') ? splitTimeAndNotes(ord.notes) : {time:'Subito', cleanNotes: ord.notes || ''};
+    var pTime = parsedNotes.time, cleanNotes = parsedNotes.cleanNotes;
+
+    var itemsHtml = items.map(function(it){
+      var p = (typeof splitProductAndMods === 'function') ? splitProductAndMods(it.product_name) : {baseName: it.product_name, mods: []};
+      var mods = (p.mods && p.mods.length) ? '<div style="font-size:13px;font-weight:700;margin-left:18px">' + p.mods.map(E).join(', ') + '</div>' : '';
+      return '<div style="font-size:16px;font-weight:900;margin:6px 0;border-bottom:1px dashed #000;padding-bottom:4px">' +
+        '<div style="display:flex;justify-content:space-between"><span>' + E(it.quantity || 1) + 'x ' + E(p.baseName) + '</span><span>' + E(it.size || '') + '</span></div>' + mods + '</div>';
     }).join('');
 
     var printWin = window.open('', '_blank', 'width=400,height=600');
     if(!printWin) return;
-
-    printWin.document.write(`
-      <html>
-      <head>
-        <title>KDS - Tavolo / Asporto #${ord.id}</title>
-        <style>
-          body { font-family: monospace; padding: 10px; color: #000; width: 80mm; margin: 0 auto; }
-          h2 { text-align: center; margin: 0 0 10px 0; font-size: 20px; }
-          .box { border: 2px solid #000; padding: 8px; margin-bottom: 10px; border-radius: 6px; }
-        </style>
-      </head>
-      <body onload="window.print(); window.close();">
-        <h2>🍕 BUONA PIZZA - KITCHEN</h2>
-        <div class="box">
-          <div style="font-size:18px;font-weight:900">ORDINE #${ord.id}</div>
-          <div style="font-size:15px;margin-top:4px">Cliente: <b>${ord.customer_name || 'Asporto'}</b></div>
-          <div style="font-size:15px">Orario: <b>${pTime}</b></div>
-          <div style="font-size:15px">Tipo: <b>${ord.type || 'Asporto'}</b></div>
-        </div>
-        <div style="margin-top:10px">
-          ${itemsHtml}
-        </div>
-        ${cleanNotes ? `<div style="margin-top:10px;border:1px solid #000;padding:6px;font-weight:bold">Note: ${cleanNotes}</div>` : ''}
-        <div style="text-align:center;margin-top:15px;font-size:12px">--- Stampa Automatica KDS ---</div>
-      </body>
-      </html>
-    `);
+    printWin.document.write(
+      '<html><head><title>Cucina #' + E(ord.id) + '</title><style>' +
+      'body{font-family:monospace;padding:10px;color:#000;width:80mm;margin:0 auto}' +
+      'h2{text-align:center;margin:0 0 10px;font-size:20px}' +
+      '.box{border:2px solid #000;padding:8px;margin-bottom:10px;border-radius:6px}' +
+      '@page{size:80mm auto;margin:0}</style></head>' +
+      '<body onload="window.print();window.close();">' +
+      '<h2>\uD83C\uDF55 BUONA PIZZA - CUCINA</h2>' +
+      '<div class="box"><div style="font-size:18px;font-weight:900">ORDINE #' + E(ord.id) + '</div>' +
+      '<div style="font-size:15px;margin-top:4px">Cliente: <b>' + E(ord.customer_name || 'Asporto') + '</b></div>' +
+      '<div style="font-size:15px">Orario: <b>' + E(pTime) + '</b></div>' +
+      '<div style="font-size:15px">Tipo: <b>' + E(ord.order_type || 'Asporto') + '</b></div></div>' +
+      '<div style="margin-top:10px">' + itemsHtml + '</div>' +
+      (cleanNotes ? '<div style="margin-top:10px;border:1px solid #000;padding:6px;font-weight:bold">Note: ' + E(cleanNotes) + '</div>' : '') +
+      '</body></html>');
     printWin.document.close();
   };
 
-  // 3. مراقبة إضافة أوردر جديد لطباعته تلقائياً لو الميزة مفعلة
-  var lastCheckedOrdersLen = -1;
+  // 3. Rileva SOLO ordini davvero nuovi (per id, non per lunghezza lista) e stampa
+  var knownIds = null;
   setInterval(function(){
     try {
+      var list = (typeof orders !== 'undefined' && Array.isArray(orders)) ? orders : [];
+      if(!list.length) return;
+      if(knownIds === null){ knownIds = new Set(list.map(function(o){ return o.id; })); return; }
+      var fresh = list.filter(function(o){ return !knownIds.has(o.id); });
+      fresh.forEach(function(o){ knownIds.add(o.id); });
       if(localStorage.getItem('bp_auto_print') !== '1') return;
-      var currentOrders = (typeof orders !== 'undefined') ? orders : [];
-      
-      if(lastCheckedOrdersLen !== -1 && currentOrders.length > lastCheckedOrdersLen){
-        // تم رصد أوردر جديد تماماً، جلب أحدث أوردر وطباعته للمطبخ فوراً
-        var latestOrder = currentOrders[currentOrders.length - 1];
-        if(latestOrder){
-          printKitchenTicketAuto(latestOrder);
-        }
-      }
-      lastCheckedOrdersLen = currentOrders.length;
-    } catch(e){}
+      fresh.forEach(function(o){
+        var age = o.created_at ? (Date.now() - new Date(o.created_at).getTime()) : 0;
+        if(age > 10 * 60 * 1000) return; // ignora ordini vecchi comparsi cambiando filtro/data
+        window.printKitchenTicketAuto(o);
+      });
+    } catch(e){ console.warn('[bp] auto-print', e); }
   }, 2000);
 })();
 
   // التحديث السريع والآمن لترقية السيستم
 console.log("Buona Pizza POS Pro aggiornato con successo!");
 
-// === BUONA PIZZA: GOOGLE REVIEW PNG QR MODULE (100% WORKING SCAN) ===
-(function(){
-  if(window.__bpReviewQrV34) return;
-  window.__bpReviewQrV34 = true;
-
-  const DIRECT_REVIEW_URL = 'https://search.google.com/local/writereview?placeid=ChIJDQv27rAsgUcRLVWzwXo5kzY';
-  // استخدام صورة QR واضحة جداً وعالية الجودة تقرأها أي كاميرا فوراً
-  const QR_IMAGE_URL = 'https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=' + encodeURIComponent(DIRECT_REVIEW_URL);
-
-  if(typeof window.buildReceiptHtml === 'function'){
-    const _origBuild = window.buildReceiptHtml;
-    window.buildReceiptHtml = function(o, items){
-      let html = _origBuild.apply(this, arguments);
-      
-      // إزالة أي أقسام QR قديمة لتجنب التكرار
-      html = html.replace(/<div style="margin:12px 0 6px;[\s\S]*?<\/div>\s*<\/div>/g, '');
-      html = html.replace(/<div style="margin:10px 0;[\s\S]*?<\/div>\s*<\/div>/g, '');
-
-      let reviewSection = `
-        <div style="margin:10px 0;padding:8px;border:1.5px dashed #000;border-radius:8px;text-align:center">
-          <div style="font-size:12px;font-weight:900">⭐ Lasciaci una recensione su Google!</div>
-          <img src="${QR_IMAGE_URL}" alt="QR Review" style="width:110px;height:110px;margin:6px auto;display:block;background:#fff;padding:2px">
-          <div style="font-size:9px;font-family:monospace;font-weight:bold;word-break:break-all">${DIRECT_REVIEW_URL}</div>
-        </div>
-      `;
-      return html.replace('<div class="rc-footer">', reviewSection + '<div class="rc-footer">');
-    };
-  }
-})();
-
-  // === BUONA PIZZA: KITCHEN RADAR ON KITCHEN TAB MODULE v38 ===
-(function(){
-  if(window.__bpKitchenRadarTab) return;
-  window.__bpKitchenRadarTab = true;
-
-  // دالة لحقن وتحديث رادار الفرن والكباب داخل شاشة المطبخ
-  function injectKitchenRadarToKitchenTab(){
-    var kitchenTab = el('kitchenTab');
-    if(!kitchenTab) return;
-
-    var radarBox = el('bpKitchenTabRadar');
-    if(!radarBox){
-      radarBox = document.createElement('div');
-      radarBox.id = 'bpKitchenTabRadar';
-      radarBox.className = 'panel';
-      radarBox.style.cssText = 'margin-bottom:14px;background:linear-gradient(135deg,#101828 0%,#1d2939 100%);color:#fff;border-radius:16px;padding:14px;box-shadow:0 6px 18px #10182826;';
-      
-      var topline = kitchenTab.querySelector('.topline');
-      if(topline && topline.nextSibling){
-        topline.parentNode.insertBefore(radarBox, topline.nextSibling);
-      } else {
-        kitchenTab.insertBefore(radarBox, kitchenTab.firstChild);
-      }
-    }
-
-    // حساب إجمالي الأصناف المطلوبة للأوردات النشطة (الجديدة وتحت التجهيز)
-    var activeOrds = (typeof orders !== 'undefined' ? orders : []).filter(function(o){
-      var s = normStatus(o.status);
-      return s === 'Nuovo' || s === 'In preparazione';
-    });
-
-    if(!activeOrds.length){
-      radarBox.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:center"><strong>👨‍🍳 رادار الفرن والكباب (المطبخ)</strong><span class="muted" style="color:#98a2b3">لا توجد أوردات نشطة حالياً (الفرن هادئ ☕)</span></div>';
-      return;
-    }
-
-    var counts = {pizza: 0, panino: 0, piadina: 0, fritti: 0, bibite: 0};
-    var byItem = {};
-
-    activeOrds.forEach(function(o){
-      var items = (typeof itemsByOrder !== 'undefined' ? itemsByOrder.get(o.id) : []) || [];
-      items.forEach(function(i){
-        if(i.product_name === 'Supplemento Consegna') return;
-        var q = Number(i.quantity || 1);
-        var base = splitProductAndMods(i.product_name).baseName;
-        var nm = (base + ' ' + (i.size || '')).toLowerCase();
-        
-        if(/bibit|coca|acqua|birra|fanta|cola|redbull|tè|the/.test(nm)) counts.bibite += q;
-        else if(/fritt|patatin|crocchett|nugget|anelli|olive ascolane/.test(nm)) counts.fritti += q;
-        else if(/piadin/.test(nm)) counts.piadina += q;
-        else if(/panin|kebab|kebap|burger|durum|falafel/.test(nm)) counts.panino += q;
-        else counts.pizza += q;
-
-        var k = base + (i.size === 'Maxi' ? ' (Maxi)' : '');
-        byItem[k] = (byItem[k] || 0) + q;
-      });
-    });
-
-    var topItemsHtml = Object.keys(byItem).sort(function(a,b){ return byItem[b] - byItem[a]; }).map(function(k){
-      return '<div style="background:rgba(255,255,255,0.08);padding:4px 8px;border-radius:8px">• <b>' + byItem[k] + '×</b> ' + esc(k) + '</div>';
-    }).join('');
-
-    radarBox.innerHTML = `
-      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:10px">
-        <strong style="font-size:16px">👨‍🍳 رادار الفرن والكباب اللحظي (${activeOrds.length} أوردات مطلوبة للمطبخ)</strong>
-        <div style="display:flex;gap:6px;flex-wrap:wrap">
-          <span style="background:#ffffff1a;border:1px solid #ffffff33;padding:4px 10px;border-radius:99px;font-size:12px;font-weight:800">🍕 بيتزا: ${counts.pizza}</span>
-          <span style="background:#ffffff1a;border:1px solid #ffffff33;padding:4px 10px;border-radius:99px;font-size:12px;font-weight:800">🥙 كباب/سندويتشات: ${counts.panino}</span>
-          ${counts.piadina ? `<span style="background:#ffffff1a;border:1px solid #ffffff33;padding:4px 10px;border-radius:99px;font-size:12px;font-weight:800">🫓 بيادينا: ${counts.piadina}</span>` : ''}
-          ${counts.fritti ? `<span style="background:#ffffff1a;border:1px solid #ffffff33;padding:4px 10px;border-radius:99px;font-size:12px;font-weight:800">🍟 مقليات: ${counts.fritti}</span>` : ''}
-        </div>
-      </div>
-      ${topItemsHtml ? '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:6px;font-size:13px;border-top:1px solid rgba(255,255,255,0.15);padding-top:8px">' + topItemsHtml + '</div>' : ''}
-    `;
-  }
-
-  // تحديث الرادار تلقائياً عند أي تغيير في الأوردات أو عند فتح شاشة المطبخ
-  var _origRenderKitchen = window.renderKitchen;
-  if(typeof _origRenderKitchen === 'function'){
-    window.renderKitchen = function(){
-      _origRenderKitchen.apply(this, arguments);
-      injectKitchenRadarToKitchenTab();
-    };
-  }
-
-  var _origSwitchTab = window.switchTab;
-  window.switchTab = function(tabName){
-    if(typeof _origSwitchTab === 'function') _origSwitchTab(tabName);
-    if(tabName === 'kitchen') setTimeout(injectKitchenRadarToKitchenTab, 100);
-  };
-})();
+  // (rimosso v33) patch QR v32 duplicata, con QR disegnato a mano non leggibile
 
   
 </script>
