@@ -102,7 +102,7 @@ async function load(){
     render(r.data);
     if(r.data.status==='Completato' || r.data.status==='Annullato'){ clearInterval(timer); }
   }catch(e){
-    if(!document.querySelector('.steps')) root.innerHTML='<div class="card err">Impossibile caricare l’ordine. Riprova tra poco.</div>';
+    if(!document.querySelector('.steps')) root.innerHTML='<div class="card err">Impossibile caricare l’ordine. Riprova tra poco.<br><small>'+esc((e&&e.message)||e)+'</small></div>';
   }
 }
 load();

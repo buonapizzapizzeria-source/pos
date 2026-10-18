@@ -6400,7 +6400,7 @@ function isPrivateUrl(u){
   return /^(file:|https?:\/\/(localhost\b|127\.|0\.0\.0\.0|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|[^\/:]*\.local\b))/i.test(String(u||''));
 }
 function trackingBase(){
-  var b = String(window.__bpPublicBase||'').trim();
+  var b = String(window.__bpPublicBase||'').replace(/\s+/g,'');
   if(b) return b.replace(/\/?$/, '/');
   return location.href.split('#')[0].split('?')[0].replace(/[^\/]*$/, '');
 }
@@ -14855,12 +14855,12 @@ setInterval(function(){if(document.hidden)return;var a=el('app');if(a&&a.classLi
    Modalità "1 tocco": WhatsApp si apre con il messaggio pronto, la cassa preme Invia. */
 try{(function(){
 var KEY='auto_settings', LS='bp_auto_cfg', SENT='bp_review_sent';
-var DEF={base:'',wa:{on:false,states:{'In preparazione':false,'Pronto':true,'In consegna':true}},review:{on:false,delay:30}};
+var DEF={base:'https://buonapizzapizzeria-source.github.io/pos/',wa:{on:false,states:{'In preparazione':false,'Pronto':true,'In consegna':true}},review:{on:false,delay:30}};
 var CFG=JSON.parse(JSON.stringify(DEF)), shared=false, inited=false;
 function $q(s,r){return (r||document).querySelector(s)}
 function merge(c){
   var o=JSON.parse(JSON.stringify(DEF)); if(!c||typeof c!=='object') return o;
-  if(typeof c.base==='string') o.base=c.base.trim();
+  if(typeof c.base==='string') o.base=c.base.replace(/\s+/g,'');
   if(c.wa){o.wa.on=!!c.wa.on; if(c.wa.states) Object.keys(o.wa.states).forEach(function(k){ if(k in c.wa.states) o.wa.states[k]=!!c.wa.states[k]; });}
   if(c.review){o.review.on=!!c.review.on; var d=Number(c.review.delay); if(d>=5&&d<=600) o.review.delay=d;}
   return o;
@@ -14906,7 +14906,7 @@ function paintPanel(){
    '<button type="button" class="secondary" id="auClose" style="width:100%;margin-top:10px;padding:12px">Chiudi</button>';
   var b=ov.querySelector('.au-box');
   function bind(id,fn){var e=$q('#'+id,b); if(e) e.onchange=function(){fn(e);push()}}
-  bind('auBase',function(e){CFG.base=e.value.trim()});
+  bind('auBase',function(e){CFG.base=e.value.replace(/\s+/g,'')});
   bind('auWa',function(e){CFG.wa.on=e.checked});
   ['In preparazione','Pronto','In consegna'].forEach(function(k,i){bind('auS'+i,function(e){CFG.wa.states[k]=e.checked})});
   bind('auRv',function(e){CFG.review.on=e.checked});
