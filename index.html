@@ -6396,10 +6396,17 @@ function renderOrderList(id, list, isOpenTab=false){
 }
 
 /* ===== v53: link tracking ordine per il cliente (richiede 01_tracking.sql + track.html) ===== */
+function isPrivateUrl(u){
+  return /^(file:|https?:\/\/(localhost\b|127\.|0\.0\.0\.0|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|[^\/:]*\.local\b))/i.test(String(u||''));
+}
+function trackingBase(){
+  var b = String(window.__bpPublicBase||'').trim();
+  if(b) return b.replace(/\/?$/, '/');
+  return location.href.split('#')[0].split('?')[0].replace(/[^\/]*$/, '');
+}
 function trackingUrl(o){
   if(!o || !o.track_token) return '';
-  var base = location.href.split('#')[0].split('?')[0].replace(/[^\/]*$/, '');
-  return base + 'track.html?t=' + encodeURIComponent(o.track_token);
+  return trackingBase() + 'track.html?t=' + encodeURIComponent(o.track_token);
 }
 function waPhone(raw){
   var d = String(raw||'').replace(/[^\d+]/g,'');
@@ -6415,6 +6422,7 @@ async function sendTrackingLink(o){
   }
   var url = trackingUrl(o);
   if(!url){ alert('Manca la colonna track_token.\nEsegui 01_tracking.sql in Supabase → SQL Editor, poi riprova.'); return; }
+  if(isPrivateUrl(url)){ alert('Il link punta a un indirizzo locale (' + url.split('/track.html')[0] + ') e il cliente non potrebbe aprirlo.\n\nIl Responsabile deve impostare l\'indirizzo pubblico di track.html in ⚙️ Automazioni → Indirizzo pubblico.'); return; }
   var name = String(o.customer_name||'').split(' ')[0];
   var msg = 'Ciao' + (name?' '+name:'') + '! 🍕 Segui il tuo ordine #' + o.id + ' da Buona Pizza qui: ' + url;
   window.open('https://wa.me/' + waPhone(o.phone) + '?text=' + encodeURIComponent(msg), '_blank');
@@ -14840,5 +14848,147 @@ document.addEventListener('input',function(e){if(e.target&&e.target.id==='phone'
 var _st=switchTab;switchTab=function(n){var r=_st.apply(this,arguments);if(n==='new'&&window.matchMedia&&matchMedia('(pointer:fine)').matches)setTimeout(function(){var i=$('#b52Line');if(i)i.focus()},160);return r};
 setInterval(function(){if(document.hidden)return;var a=el('app');if(a&&a.classList.contains('hidden'))return;S(mount);S(recog);S(paintCust);S(paintTime);S(paint)},700);
 })()}catch(e){console.error('[bp] v52',e)}
+</script>
+<script>
+/* ================= v53: Automazioni (solo Responsabile) =================
+   Ogni invio automatico ha un interruttore. Default: TUTTO SPENTO.
+   Modalità "1 tocco": WhatsApp si apre con il messaggio pronto, la cassa preme Invia. */
+try{(function(){
+var KEY='auto_settings', LS='bp_auto_cfg', SENT='bp_review_sent';
+var DEF={base:'',wa:{on:false,states:{'In preparazione':false,'Pronto':true,'In consegna':true}},review:{on:false,delay:30}};
+var CFG=JSON.parse(JSON.stringify(DEF)), shared=false, inited=false;
+function $q(s,r){return (r||document).querySelector(s)}
+function merge(c){
+  var o=JSON.parse(JSON.stringify(DEF)); if(!c||typeof c!=='object') return o;
+  if(typeof c.base==='string') o.base=c.base.trim();
+  if(c.wa){o.wa.on=!!c.wa.on; if(c.wa.states) Object.keys(o.wa.states).forEach(function(k){ if(k in c.wa.states) o.wa.states[k]=!!c.wa.states[k]; });}
+  if(c.review){o.review.on=!!c.review.on; var d=Number(c.review.delay); if(d>=5&&d<=600) o.review.delay=d;}
+  return o;
+}
+try{CFG=merge(JSON.parse(localStorage.getItem(LS)||'null'))}catch(e){}
+applyBase();
+function applyBase(){window.__bpPublicBase=CFG.base||''}
+function saveLocal(){applyBase();try{localStorage.setItem(LS,JSON.stringify(CFG))}catch(e){}}
+async function pull(){
+  try{ var r=await sb.from('bp36_data').select('data').eq('key',KEY).maybeSingle();
+    if(r&&!r.error){ shared=true; if(r.data&&r.data.data&&r.data.data.cfg){CFG=merge(r.data.data.cfg);saveLocal();} }
+    else shared=false; }catch(e){shared=false}
+  paintPanel();
+}
+async function push(){
+  saveLocal();
+  try{ var r=await sb.from('bp36_data').upsert({key:KEY,data:{cfg:CFG},updated_at:new Date().toISOString()});
+    shared=!(r&&r.error); }catch(e){shared=false}
+  paintPanel();
+}
+function canSeeToasts(){return typeof BP_ROLE==='undefined'||BP_ROLE==='manager'||BP_ROLE==='cashier'}
+
+/* ---------- stile ---------- */
+var st=document.createElement('style');
+st.textContent='#autoBtn{background:#6941c6;color:#fff}.au-ov{position:fixed;inset:0;background:#0007;z-index:99999;display:flex;align-items:flex-end;justify-content:center}.au-box{background:#fff;color:#101828;width:100%;max-width:520px;max-height:90vh;overflow:auto;border-radius:18px 18px 0 0;padding:16px 16px calc(16px + env(safe-area-inset-bottom))}.au-box h2{margin:0 0 4px;font-size:19px}.au-sec{border:1px solid #e4e7ec;border-radius:12px;padding:12px;margin:12px 0}.au-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:6px 0}.au-row label{flex:1;font-weight:700}.au-sub{margin:4px 0 0 0;padding-left:6px;border-left:3px solid #e4e7ec}.au-sw{width:46px;height:26px;flex:none;appearance:none;-webkit-appearance:none;background:#d0d5dd;border-radius:99px;position:relative;cursor:pointer;border:0;padding:0}.au-sw:checked{background:#16794b}.au-sw::after{content:"";position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;transition:.15s}.au-sw:checked::after{left:23px}.au-note{font-size:12.5px;color:#667085;margin:6px 0 0}.au-warn{background:#fffaeb;border:1px solid #fdb022;color:#93370d;border-radius:10px;padding:8px 10px;font-size:12.5px;margin-top:8px}#auStack{position:fixed;left:10px;right:10px;bottom:calc(10px + env(safe-area-inset-bottom));z-index:99998;display:flex;flex-direction:column;gap:8px;max-width:520px;margin:0 auto}.au-t{background:#101828;color:#fff;border-radius:14px;padding:10px 12px;display:flex;gap:10px;align-items:center;box-shadow:0 6px 20px #0006}.au-t span{flex:1;font-size:14px}.au-t button{padding:9px 12px;font-weight:800}';
+document.head.appendChild(st);
+
+/* ---------- pannello ---------- */
+var ov=null;
+function sw(id,on){return '<input type="checkbox" class="au-sw" id="'+id+'"'+(on?' checked':'')+'>'}
+function paintPanel(){
+  if(!ov) return;
+  var s=CFG.wa.states;
+  ov.querySelector('.au-box').innerHTML=
+   '<h2>⚙️ Automazioni</h2><p class="au-note">Tutto è <b>spento</b> finché non lo accendi tu. Modalità <b>1 tocco</b>: WhatsApp si apre con il messaggio già scritto, la cassa preme solo Invia.</p>'+
+   '<div class="au-sec"><div class="au-row"><label for="auWa">📲 Messaggio al cliente quando cambia lo stato</label>'+sw('auWa',CFG.wa.on)+'</div>'+
+   '<div class="au-sub" style="'+(CFG.wa.on?'':'opacity:.45;pointer-events:none')+'">'+
+   ['In preparazione','Pronto','In consegna'].map(function(k,i){return '<div class="au-row"><label for="auS'+i+'">'+({'In preparazione':'👨‍🍳 In preparazione','Pronto':'✅ Pronto','In consegna':'🛵 In consegna'})[k]+'</label>'+sw('auS'+i,s[k])+'</div>'}).join('')+'</div></div>'+
+   '<div class="au-sec"><div class="au-row"><label for="auRv">⭐ Richiesta recensione dopo la consegna</label>'+sw('auRv',CFG.review.on)+'</div>'+
+   '<div class="au-row" style="'+(CFG.review.on?'':'opacity:.45;pointer-events:none')+'"><label for="auDl">Dopo quanti minuti</label><select id="auDl">'+[15,30,45,60,90,120].map(function(m){return '<option value="'+m+'"'+(CFG.review.delay===m?' selected':'')+'>'+m+' min</option>'}).join('')+'</select></div></div>'+
+   '<div class="au-sec"><div class="au-row"><label for="auBase">🌐 Indirizzo pubblico di track.html</label></div><input id="auBase" type="url" placeholder="https://il-tuo-sito.netlify.app/" value="'+esc(CFG.base)+'" style="width:100%"><p class="au-note">I link inviati ai clienti useranno questo indirizzo. Non usare localhost.</p></div>'+
+   (shared?'<p class="au-note">✅ Salvato su Supabase: vale per tutti i dispositivi.</p>':'<div class="au-warn">⚠️ Salvato solo su questo dispositivo. Per condividerlo esegui <b>02_automation.sql</b> in Supabase.</div>')+
+   '<button type="button" class="secondary" id="auClose" style="width:100%;margin-top:10px;padding:12px">Chiudi</button>';
+  var b=ov.querySelector('.au-box');
+  function bind(id,fn){var e=$q('#'+id,b); if(e) e.onchange=function(){fn(e);push()}}
+  bind('auBase',function(e){CFG.base=e.value.trim()});
+  bind('auWa',function(e){CFG.wa.on=e.checked});
+  ['In preparazione','Pronto','In consegna'].forEach(function(k,i){bind('auS'+i,function(e){CFG.wa.states[k]=e.checked})});
+  bind('auRv',function(e){CFG.review.on=e.checked});
+  bind('auDl',function(e){CFG.review.delay=Number(e.value)});
+  $q('#auClose',b).onclick=function(){ov.remove();ov=null};
+}
+function openPanel(){
+  if(BP_ROLE!=='manager'){alert('Solo il Responsabile può modificare le automazioni.');return}
+  if(ov) ov.remove(); ov=document.createElement('div'); ov.className='au-ov';
+  ov.innerHTML='<div class="au-box"></div>'; ov.onclick=function(e){if(e.target===ov){ov.remove();ov=null}};
+  document.body.appendChild(ov); paintPanel(); pull();
+}
+function mountBtn(){
+  var bar=$q('#userBar'); if(!bar) return;
+  var b=$q('#autoBtn'), isM=(typeof BP_ROLE!=='undefined'&&BP_ROLE==='manager');
+  if(!b){ b=document.createElement('button'); b.type='button'; b.id='autoBtn'; b.className='btn-sm'; b.textContent='⚙️ Automazioni'; b.onclick=openPanel; bar.insertBefore(b,bar.firstChild); }
+  b.style.display=isM?'':'none';
+}
+
+/* ---------- toast "1 tocco" ---------- */
+function stack(){var s=$q('#auStack'); if(!s){s=document.createElement('div');s.id='auStack';document.body.appendChild(s)} return s}
+function toast(key,text,label,fn){
+  var s=stack(); if(s.querySelector('[data-k="'+key+'"]')) return; if(s.children.length>=4) s.firstChild.remove();
+  var t=document.createElement('div'); t.className='au-t'; t.setAttribute('data-k',key);
+  t.innerHTML='<span></span><button type="button" class="green btn-sm"></button><button type="button" class="secondary btn-sm">✕</button>';
+  t.children[0].textContent=text; t.children[1].textContent=label;
+  var done=function(){t.remove()};
+  t.children[1].onclick=function(){try{fn()}catch(e){console.warn(e)} done()};
+  t.children[2].onclick=function(){done(); if(/^rv:/.test(key)) markSent(key.slice(3))};
+  s.appendChild(t); setTimeout(function(){if(t.parentNode) t.remove()},45000);
+}
+function wa(o,msg){window.open('https://wa.me/'+waPhone(o.phone)+'?text='+encodeURIComponent(msg),'_blank')}
+function fname(o){return String(o.customer_name||'').split(' ')[0]}
+
+/* ---------- 1) cambio stato -> WhatsApp ---------- */
+async function onStatus(id,newSt,oldSt){
+  if(!CFG.wa.on||!CFG.wa.states[newSt]||newSt===oldSt||!canSeeToasts()) return;
+  var o=(orders||[]).filter(function(x){return String(x.id)===String(id)})[0]; if(!o||!o.phone) return;
+  if(!o.track_token){ try{var r=await sb.from('orders').select('track_token').eq('id',o.id).maybeSingle(); if(r.data&&r.data.track_token) o.track_token=r.data.track_token}catch(e){} }
+  var link=trackingUrl(o); if(isPrivateUrl(link)) link=''; var deliv=/consegna|domicilio/i.test(o.order_type||''), n=fname(o), hi='Ciao'+(n?' '+n:'')+'! ';
+  var body={'In preparazione':'👨‍🍳 il tuo ordine #'+o.id+' è in preparazione.',
+            'Pronto':deliv?'✅ il tuo ordine #'+o.id+' è pronto, parte a breve!':'✅ il tuo ordine #'+o.id+' è pronto, puoi passare a ritirarlo.',
+            'In consegna':'🛵 il fattorino è in arrivo con il tuo ordine #'+o.id+'!'}[newSt];
+  if(!body) return;
+  var msg=hi+body+(link&&newSt!=='Pronto'?' Seguilo qui: '+link:'');
+  toast('st:'+o.id+':'+newSt,'#'+o.id+' → '+newSt+' · '+(n||o.phone),'📲 Invia',function(){wa(o,msg)});
+}
+var _u=updateOrderStatus;
+updateOrderStatus=async function(id,st){
+  var o=(orders||[]).filter(function(x){return String(x.id)===String(id)})[0], old=o?o.status:null;
+  var r=await _u.apply(this,arguments);
+  try{onStatus(id,st,old)}catch(e){console.warn(e)}
+  return r;
+};
+
+/* ---------- 2) recensione dopo consegna ---------- */
+function sentSet(){try{return JSON.parse(localStorage.getItem(SENT)||'[]')}catch(e){return[]}}
+function markSent(id){var a=sentSet(); if(a.indexOf(String(id))<0){a.push(String(id)); try{localStorage.setItem(SENT,JSON.stringify(a.slice(-300)))}catch(e){}}}
+function reviewTick(){
+  if(document.hidden||!CFG.review.on||!canSeeToasts()) return;
+  var sent=sentSet(), now=Date.now(), min=CFG.review.delay*60000, max=3*3600000;
+  (orders||[]).forEach(function(o){
+    if(normStatus(o.status)!=='Completato'||!o.phone||sent.indexOf(String(o.id))>=0) return;
+    var t=new Date(o.updated_at||o.created_at).getTime(), age=now-t; if(!(age>=min&&age<=max)) return;
+    var n=fname(o);
+    toast('rv:'+o.id,'⭐ #'+o.id+' completato · chiedi recensione a '+(n||o.phone),'⭐ Invia',function(){
+      markSent(o.id);
+      wa(o,'Ciao'+(n?' '+n:'')+'! 🍕 Grazie per aver ordinato da Buona Pizza. Ti è piaciuto? Una recensione ci aiuta tantissimo: '+GOOGLE_REVIEW_URL);
+    });
+  });
+}
+setInterval(reviewTick,60000);
+
+/* ---------- avvio ---------- */
+var _ar=bpApplyRole; bpApplyRole=function(){var r=_ar.apply(this,arguments); try{mountBtn()}catch(e){} return r};
+setInterval(function(){
+  var a=$q('#app'); if(!a||a.classList.contains('hidden')) return;
+  mountBtn();
+  if(!inited&&typeof sb!=='undefined'&&sb){ inited=true; pull();
+    try{ sb.channel('bp-auto').on('postgres_changes',{event:'*',schema:'public',table:'bp36_data',filter:'key=eq.'+KEY},function(){pull()}).subscribe(); }catch(e){}
+  }
+},1500);
+})()}catch(e){console.error('[bp] v53 automazioni',e)}
 </script>
 </body></html>
