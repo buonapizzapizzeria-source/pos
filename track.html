@@ -67,7 +67,7 @@ var HEAD = {
 
 function render(o){
   var st = o.status || 'Nuovo';
-  var h = HEAD[st] || HEAD['Nuovo'];
+  var h = (o.pending && st==='Nuovo') ? ['⏳','In attesa di conferma','Il locale sta per confermare il tuo ordine.'] : (HEAD[st] || HEAD['Nuovo']);
   var steps = flow(o.order_type), idx = steps.findIndex(function(s){return s[0]===st});
   var list = '';
   if(st !== 'Annullato'){
