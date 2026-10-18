@@ -7443,10 +7443,16 @@ try{
       var r = await of(base + '/functions/v1/gemini-proxy', {method: 'POST',
         headers: {'Content-Type': 'application/json', 'apikey': anon, 'Authorization': 'Bearer ' + (tok || anon)},
         body: JSON.stringify({ping: true})});
-      if(!r.ok) return false;
+      if(!r.ok){
+        var t = ''; try{ t = (await r.text()).slice(0, 200); }catch(e2){}
+        window.__bpProbeErr = 'HTTP ' + r.status + ' ' + t + (tok ? '' : ' [nessuna sessione: token anon usato]');
+        return false;
+      }
       var j = await r.json();
-      return !!(j && j.ok);
-    }catch(e){ return false; }
+      if(!(j && j.ok)){ window.__bpProbeErr = 'Risposta inattesa: ' + JSON.stringify(j).slice(0, 200); return false; }
+      window.__bpProbeErr = '';
+      return true;
+    }catch(e){ window.__bpProbeErr = 'Errore di rete/CORS: ' + (e && e.message ? e.message : e) + ' | url=' + ((el('sbUrl').value || '').trim() || '(vuoto)'); return false; }
   }
   function applyProxyState(on){
     localStorage.setItem('bp_gemini_proxy', on ? '1' : '0');
@@ -7473,7 +7479,7 @@ try{
         chk.disabled = true;
         var ok = await probeProxy();
         chk.disabled = false;
-        if(!ok){ chk.checked = false; alert('Il proxy «gemini-proxy» non risponde: la funzione non è stata ancora pubblicata su Supabase.\nL\'AI continua a usare la chiave salvata.'); return; }
+        if(!ok){ chk.checked = false; alert('Il proxy «gemini-proxy» non risponde.\nDettaglio: ' + (window.__bpProbeErr || 'sconosciuto') + '\nL\'AI continua a usare la chiave salvata.'); return; }
         applyProxyState(true);
       } else {
         applyProxyState(false);
