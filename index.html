@@ -6404,7 +6404,7 @@ function isPrivateUrl(u){
   return /^(file:|https?:\/\/(localhost\b|127\.|0\.0\.0\.0|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|[^\/:]*\.local\b))/i.test(String(u||''));
 }
 function trackingBase(){
-  var b = String(window.__bpPublicBase||'').replace(/\s+/g,'');
+  var b = String(window.__bpPublicBase||'').replace(/\s+/g,'').split(/[?#]/)[0].replace(/[^\/]*\.html?$/i,'');
   if(b) return b.replace(/\/?$/, '/');
   return location.href.split('#')[0].split('?')[0].replace(/[^\/]*$/, '');
 }
@@ -14866,7 +14866,7 @@ var CFG=JSON.parse(JSON.stringify(DEF)), shared=false, inited=false;
 function $q(s,r){return (r||document).querySelector(s)}
 function merge(c){
   var o=JSON.parse(JSON.stringify(DEF)); if(!c||typeof c!=='object') return o;
-  if(typeof c.base==='string') o.base=c.base.replace(/\s+/g,'');
+  if(typeof c.base==='string') o.base=cleanBase(c.base);
   if(c.online){var q=c.online; o.online.on=!!q.on; o.online.fee=Math.max(0,Number(q.fee)||0); o.online.min=Math.max(0,Number(q.min)||0); o.online.promo=!!q.promo;
     if(/^\d\d:\d\d$/.test(q.open||'')) o.online.open=q.open; if(/^\d\d:\d\d$/.test(q.close||'')) o.online.close=q.close;}
   if(c.wa){o.wa.on=!!c.wa.on; if(c.wa.states) Object.keys(o.wa.states).forEach(function(k){ if(k in c.wa.states) o.wa.states[k]=!!c.wa.states[k]; });}
@@ -14875,6 +14875,7 @@ function merge(c){
 }
 try{CFG=merge(JSON.parse(localStorage.getItem(LS)||'null'))}catch(e){}
 applyBase();
+function cleanBase(v){return String(v||'').replace(/\s+/g,'').split(/[?#]/)[0].replace(/[^\/]*\.html?$/i,'')}
 function applyBase(){window.__bpPublicBase=CFG.base||''}
 function saveLocal(){applyBase();try{localStorage.setItem(LS,JSON.stringify(CFG))}catch(e){}}
 async function pull(){
@@ -14908,7 +14909,7 @@ window.sendMenuLink=sendMenuLink;
 
 /* ---------- stile ---------- */
 var st=document.createElement('style');
-st.textContent='#autoBtn{background:#6941c6;color:#fff}.au-ov{position:fixed;inset:0;background:#0007;z-index:99999;display:flex;align-items:flex-end;justify-content:center}.au-box{background:#fff;color:#101828;width:100%;max-width:520px;max-height:90vh;overflow:auto;border-radius:18px 18px 0 0;padding:16px 16px calc(16px + env(safe-area-inset-bottom))}.au-box h2{margin:0 0 4px;font-size:19px}.au-sec{border:1px solid #e4e7ec;border-radius:12px;padding:12px;margin:12px 0}.au-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:6px 0}.au-row label{flex:1;font-weight:700}.au-sub{margin:4px 0 0 0;padding-left:6px;border-left:3px solid #e4e7ec}.au-sw{width:46px;height:26px;flex:none;appearance:none;-webkit-appearance:none;background:#d0d5dd;border-radius:99px;position:relative;cursor:pointer;border:0;padding:0}.au-sw:checked{background:#16794b}.au-sw::after{content:"";position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;transition:.15s}.au-sw:checked::after{left:23px}.au-note{font-size:12.5px;color:#667085;margin:6px 0 0}.au-warn{background:#fffaeb;border:1px solid #fdb022;color:#93370d;border-radius:10px;padding:8px 10px;font-size:12.5px;margin-top:8px}#auStack{position:fixed;left:10px;right:10px;bottom:calc(10px + env(safe-area-inset-bottom));z-index:99998;display:flex;flex-direction:column;gap:8px;max-width:520px;margin:0 auto}.au-t{background:#101828;color:#fff;border-radius:14px;padding:10px 12px;display:flex;gap:10px;align-items:center;box-shadow:0 6px 20px #0006}.au-t span{flex:1;font-size:14px}.au-t button{padding:9px 12px;font-weight:800}';
+st.textContent='#autoBtn{background:#6941c6;color:#fff}.au-ov{position:fixed;inset:0;background:#0007;z-index:99999;display:flex;align-items:flex-end;justify-content:center}.au-box{background:#fff;color:#101828;width:100%;max-width:520px;max-height:90vh;overflow:auto;border-radius:18px 18px 0 0;padding:16px 16px calc(16px + env(safe-area-inset-bottom))}.au-box h2{margin:0 0 4px;font-size:19px}.au-sec{border:1px solid #e4e7ec;border-radius:12px;padding:12px;margin:12px 0}.au-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:6px 0}.au-row label{flex:1 1 0;min-width:40%;font-weight:700}.au-row select,.au-row input[type=number],.au-row input[type=time]{width:auto!important;flex:0 0 auto;max-width:52%}.au-sub{margin:4px 0 0 0;padding-left:6px;border-left:3px solid #e4e7ec}.au-sw{width:46px;height:26px;flex:none;appearance:none;-webkit-appearance:none;background:#d0d5dd;border-radius:99px;position:relative;cursor:pointer;border:0;padding:0}.au-sw:checked{background:#16794b}.au-sw::after{content:"";position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;transition:.15s}.au-sw:checked::after{left:23px}.au-note{font-size:12.5px;color:#667085;margin:6px 0 0}.au-warn{background:#fffaeb;border:1px solid #fdb022;color:#93370d;border-radius:10px;padding:8px 10px;font-size:12.5px;margin-top:8px}#auStack{position:fixed;left:10px;right:10px;bottom:calc(10px + env(safe-area-inset-bottom));z-index:99998;display:flex;flex-direction:column;gap:8px;max-width:520px;margin:0 auto}.au-t{background:#101828;color:#fff;border-radius:14px;padding:10px 12px;display:flex;gap:10px;align-items:center;box-shadow:0 6px 20px #0006}.au-t span{flex:1;font-size:14px}.au-t button{padding:9px 12px;font-weight:800}';
 document.head.appendChild(st);
 
 /* ---------- pannello ---------- */
@@ -14939,12 +14940,12 @@ function paintPanel(){
    '<div class="au-sec"><div class="au-row"><label for="auRv">⭐ Richiesta recensione dopo la consegna</label>'+sw('auRv',CFG.review.on)+'</div>'+
    '<div class="au-row" style="'+(CFG.review.on?'':'opacity:.45;pointer-events:none')+'"><label for="auDl">Dopo quanti minuti</label><select id="auDl">'+[15,30,45,60,90,120].map(function(m){return '<option value="'+m+'"'+(CFG.review.delay===m?' selected':'')+'>'+m+' min</option>'}).join('')+'</select></div></div>'+
    onlineSec()+
-   '<div class="au-sec"><div class="au-row"><label for="auBase">🌐 Indirizzo pubblico di track.html</label></div><input id="auBase" type="url" placeholder="https://il-tuo-sito.netlify.app/" value="'+esc(CFG.base)+'" style="width:100%"><p class="au-note">I link inviati ai clienti useranno questo indirizzo. Non usare localhost.</p></div>'+
+   '<div class="au-sec"><div class="au-row"><label for="auBase">🌐 Cartella pubblica del sito (finisce con /pos/)</label></div><input id="auBase" type="url" placeholder="https://il-tuo-sito.netlify.app/" value="'+esc(CFG.base)+'" style="width:100%"><p class="au-note">Solo la cartella, senza order.html o track.html. Non usare localhost.</p></div>'+
    (shared?'<p class="au-note">✅ Salvato su Supabase: vale per tutti i dispositivi.</p>':'<div class="au-warn">⚠️ Salvato solo su questo dispositivo. Per condividerlo esegui <b>02_automation.sql</b> in Supabase.</div>')+
    '<button type="button" class="secondary" id="auClose" style="width:100%;margin-top:10px;padding:12px">Chiudi</button>';
   var b=ov.querySelector('.au-box');
   function bind(id,fn){var e=$q('#'+id,b); if(e) e.onchange=function(){fn(e);push()}}
-  bind('auBase',function(e){CFG.base=e.value.replace(/\s+/g,'')});
+  bind('auBase',function(e){CFG.base=cleanBase(e.value)});
   bind('auOn',function(e){CFG.online.on=e.checked});
   bind('auPromo',function(e){CFG.online.promo=e.checked});
   bind('auFee',function(e){CFG.online.fee=Number(e.value)||0});
