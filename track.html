@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>Il tuo ordine · Buona Pizza</title>
+<style>
+:root{--bg:#f6f4ef;--card:#fff;--ink:#1f2328;--mut:#6b7280;--line:#e5e7eb;--ok:#16794b;--run:#e8590c;--off:#d0d5dd}
+@media(prefers-color-scheme:dark){:root{--bg:#16181b;--card:#202327;--ink:#f1f3f5;--mut:#9aa3ad;--line:#333840;--off:#3a3f46}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.45 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;padding:max(16px,env(safe-area-inset-top)) 16px max(24px,env(safe-area-inset-bottom))}
+.wrap{max-width:480px;margin:0 auto}
+.brand{text-align:center;font-weight:800;font-size:20px;margin:6px 0 16px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px;margin-bottom:14px}
+h1{font-size:22px;margin:0 0 4px}
+.sub{color:var(--mut);font-size:14px;margin:0}
+.big{font-size:44px;text-align:center;margin:6px 0}
+.steps{list-style:none;margin:16px 0 0;padding:0}
+.steps li{display:flex;gap:12px;align-items:center;padding:10px 0;position:relative;color:var(--mut)}
+.steps li:not(:last-child)::after{content:"";position:absolute;left:15px;top:38px;width:2px;height:22px;background:var(--off)}
+.dot{width:32px;height:32px;border-radius:50%;background:var(--off);display:grid;place-items:center;font-size:15px;flex:none;color:#fff}
+.steps li.done{color:var(--ink)}.steps li.done .dot{background:var(--ok)}
+.steps li.done:not(:last-child)::after{background:var(--ok)}
+.steps li.now{color:var(--ink);font-weight:800}.steps li.now .dot{background:var(--run);animation:p 1.4s infinite}
+@keyframes p{50%{transform:scale(1.12);box-shadow:0 0 0 6px #e8590c33}}
+.items div{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px dashed var(--line);font-size:15px}
+.items div:last-child{border:0}
+.tot{display:flex;justify-content:space-between;font-weight:800;margin-top:8px}
+.err{text-align:center;color:var(--mut)}
+.upd{text-align:center;color:var(--mut);font-size:12px}
+.cancel .big{filter:grayscale(1)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="brand">🍕 Buona Pizza</div>
+  <div id="root"><div class="card err">Caricamento…</div></div>
+  <p class="upd" id="upd"></p>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+var SB_URL = 'https://jfgizazsjjgzyhqfngnl.supabase.co';
+var SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpmZ2l6YXpzampnenlocWZuZ25sIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTE3ODI0ODEsImV4cCI6MjEwNzM1ODQ4MX0.Tp_bFfR-G55OaK5i3A0fi5gF6g7pc-a3LO_IDCpsuhE';
+var sb = window.supabase.createClient(SB_URL, SB_KEY);
+var token = new URLSearchParams(location.search).get('t') || '';
+var root = document.getElementById('root');
+
+function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+function euro(n){return '€ '+Number(n||0).toFixed(2).replace('.',',')}
+
+function flow(type){
+  var delivery = /consegna/i.test(type||'');
+  return delivery
+   ? [['Nuovo','📝','Ordine ricevuto'],['In preparazione','👨‍🍳','Lo stiamo preparando'],['Pronto','✅','Pronto'],['In consegna','🛵','In consegna da te'],['Completato','🏁','Consegnato']]
+   : [['Nuovo','📝','Ordine ricevuto'],['In preparazione','👨‍🍳','Lo stiamo preparando'],['Pronto','✅','Pronto per il ritiro'],['Completato','🏁','Ritirato']];
+}
+var HEAD = {
+  'Nuovo':['📝','Ordine ricevuto','Lo stiamo per prendere in carico.'],
+  'In preparazione':['👨‍🍳','In preparazione','Il nostro pizzaiolo ci sta lavorando!'],
+  'Pronto':['✅','Pronto!','Il tuo ordine è pronto.'],
+  'In consegna':['🛵','In consegna','Il fattorino è in arrivo da te.'],
+  'Completato':['🏁','Completato','Buon appetito! Grazie 🍕'],
+  'Annullato':['❌','Ordine annullato','Chiamaci se hai domande.']
+};
+
+function render(o){
+  var st = o.status || 'Nuovo';
+  var h = HEAD[st] || HEAD['Nuovo'];
+  var steps = flow(o.order_type), idx = steps.findIndex(function(s){return s[0]===st});
+  var list = '';
+  if(st !== 'Annullato'){
+    list = '<ul class="steps">'+steps.map(function(s,i){
+      var cls = idx<0 ? '' : (i<idx?'done':(i===idx?'now':''));
+      return '<li class="'+cls+'"><span class="dot">'+(i<idx?'✓':s[1])+'</span>'+esc(s[2])+'</li>';
+    }).join('')+'</ul>';
+  }
+  var items = (o.items||[]).map(function(i){
+    return '<div><span>'+esc(i.qty)+'× '+esc(i.name)+(i.size&&i.size!=='Normale'?' ('+esc(i.size)+')':'')+'</span></div>';
+  }).join('');
+  root.innerHTML =
+   '<div class="card '+(st==='Annullato'?'cancel':'')+'">'+
+     '<div class="big">'+h[0]+'</div>'+
+     '<h1 style="text-align:center">'+esc(h[1])+'</h1>'+
+     '<p class="sub" style="text-align:center">'+(o.first_name?'Ciao '+esc(o.first_name)+'. ':'')+esc(h[2])+'</p>'+
+     list+
+   '</div>'+
+   '<div class="card"><strong>Ordine #'+esc(o.id)+'</strong>'+
+     '<div class="items" style="margin-top:8px">'+items+'</div>'+
+     '<div class="tot"><span>Totale</span><span>'+euro(o.total)+'</span></div></div>';
+  document.getElementById('upd').textContent = 'Aggiornato alle '+new Date().toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'})+' · si aggiorna da solo';
+}
+
+var timer = null;
+async function load(){
+  if(!token){ root.innerHTML='<div class="card err">Link non valido.</div>'; return; }
+  try{
+    var r = await sb.rpc('get_order_tracking', {p_token: token});
+    if(r.error) throw r.error;
+    if(!r.data){ root.innerHTML='<div class="card err">Ordine non trovato. Controlla il link.</div>'; return; }
+    render(r.data);
+    if(r.data.status==='Completato' || r.data.status==='Annullato'){ clearInterval(timer); }
+  }catch(e){
+    if(!document.querySelector('.steps')) root.innerHTML='<div class="card err">Impossibile caricare l’ordine. Riprova tra poco.</div>';
+  }
+}
+load();
+timer = setInterval(function(){ if(!document.hidden) load(); }, 15000);
+document.addEventListener('visibilitychange', function(){ if(!document.hidden) load(); });
+</script>
+</body>
+</html>
