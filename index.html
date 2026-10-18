@@ -3718,6 +3718,28 @@ async function toggleCallRecorder(){
     };
 
     mediaRecorder.start();
+    try{                                                         // v51: stop automatico dopo ~2 secondi di silenzio
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if(AC){
+        const ac = new AC(), src = ac.createMediaStreamSource(stream), an = ac.createAnalyser();
+        an.fftSize = 1024; src.connect(an);
+        const buf = new Uint8Array(an.fftSize), t0 = Date.now();
+        let floor = 0, nCal = 0, thr = 0.02, spoke = false, quietSince = 0;
+        const iv = setInterval(() => {
+          an.getByteTimeDomainData(buf);
+          let sum = 0; for(let i = 0; i < buf.length; i++){ const v = (buf[i] - 128) / 128; sum += v * v; }
+          const rms = Math.sqrt(sum / buf.length), el0 = Date.now() - t0;
+          if(el0 < 700){ floor += rms; nCal++; if(el0 >= 600 && nCal){ thr = Math.max(0.02, (floor / nCal) * 2.5); } return; }
+          if(rms > thr){ spoke = true; quietSince = 0; }
+          else if(spoke){
+            if(!quietSince) quietSince = Date.now();
+            if(Date.now() - quietSince > 2200){ clearInterval(iv); try{ if(mediaRecorder && mediaRecorder.state === 'recording') toggleCallRecorder(); }catch(e){ bpWarn(e); } }
+          }
+          if(el0 > 120000){ clearInterval(iv); try{ if(mediaRecorder && mediaRecorder.state === 'recording') toggleCallRecorder(); }catch(e){ bpWarn(e); } }
+        }, 150);
+        mediaRecorder.addEventListener('stop', () => { clearInterval(iv); try{ ac.close(); }catch(e){} });
+      }
+    }catch(e){ bpWarn(e); }
     isRecordingCall = true;
     btn.classList.add('recording');
     btn.textContent = '⏹️ Stop & Estrai';
@@ -3857,11 +3879,13 @@ const GEM_SCHEMA = {
     cashGiven:    { type: 'NUMBER' },
     address:      { type: 'STRING' },
     notes:        { type: 'STRING' },
+    uncertainFields: { type: 'ARRAY', items: { type: 'STRING' } },
     items: {
       type: 'ARRAY',
       items: {
         type: 'OBJECT',
         properties: {
+          confidence: { type: 'STRING' },
           name:     { type: 'STRING' },
           size:     { type: 'STRING' },
           quantity: { type: 'INTEGER' },
@@ -3982,14 +4006,46 @@ REGOLE:
 9. phone: solo cifre (e +) se presente. address: via/viale/piazza, numero civico e città se presenti. notes: altre indicazioni (citofono, scala, piano, ben cotta, tagliata, allergie, cotture speciali).
 10. ${type === 'text' ? 'transcript: lascia sempre "" (il testo è già disponibile).' : 'transcript: trascrizione fedele e COMPATTA di ciò che hai letto/ascoltato (nella lingua originale).'}
 11. Controlla quantità, taglie, telefono e civico. Rispondi subito, senza commenti.
+12. uncertainFields: elenco dei campi di cui NON sei sicuro (illeggibili, ambigui, dedotti o con audio poco chiaro). Usa SOLO questi nomi: customerName, phone, address, deliveryTime, cashGiven, notes. Se sei sicuro di tutto: [].
+13. Per ogni riga di items: confidence = "low" se il prodotto, la quantità o la taglia sono incerti, altrimenti "high".
 
 Rispondi ESCLUSIVAMENTE con JSON valido secondo questa struttura:
-{"transcript":"","customerName":"","phone":"","orderType":"","deliveryTime":"","paymentMethod":"","cashGiven":0,"address":"","notes":"","items":[{"name":"","size":"Normale","quantity":1,"removed":[],"added":[],"rawText":""}]}`;
+{"transcript":"","customerName":"","phone":"","orderType":"","deliveryTime":"","paymentMethod":"","cashGiven":0,"address":"","notes":"","uncertainFields":[],"items":[{"name":"","size":"Normale","quantity":1,"removed":[],"added":[],"rawText":"","confidence":"high"}]}`;
+}
+
+/* v51: se il primo modello e' lento parte un secondo in parallelo; vince la prima risposta valida */
+function gemHasContent(p){ return !!(p && ((Array.isArray(p.items) && p.items.length) || p.customerName || p.address || p.phone)); }
+function gemRunHedged(models, apiKey, parts, timeoutMs, hedgeMs, onStart){
+  return new Promise(resolve => {
+    let next = 0, inflight = 0, done = false, lastErr = '', lastKind = '', emptyRes = null, hedgeT = null;
+    const finish = v => { if(done) return; done = true; clearTimeout(hedgeT); resolve(v); };
+    const launch = () => {
+      if(done || next >= models.length) return false;
+      const m = models[next++]; inflight++;
+      if(onStart) onStart(m);
+      clearTimeout(hedgeT);
+      if(next < models.length) hedgeT = setTimeout(launch, hedgeMs);
+      gemCallModel(m, apiKey, parts, timeoutMs).then(r => {
+        inflight--; if(done) return;
+        if(r.ok){
+          if(gemHasContent(r.parsed)){ finish({ parsed: r.parsed, model: m }); return; }
+          emptyRes = r.parsed;
+        }else{
+          lastErr = r.msg; lastKind = r.kind;
+          if(r.kind === 'fatal'){ finish({ error: { kind: 'fatal', msg: r.msg } }); return; }
+        }
+        if(!launch() && inflight === 0) finish(emptyRes ? { parsed: emptyRes } : { error: { kind: lastKind, msg: lastErr } });
+      });
+      return true;
+    };
+    launch();
+  });
 }
 
 async function analyzeMediaOrTextWithGemini(payloadObj, apiKey){
   if(__gemBusy){ setVoiceMsg('⏳ Analisi AI già in corso, attendi qualche secondo...', ''); return; }
   __gemBusy = true;
+  try{ gemAliasSync(); }catch(e){ bpWarn(e); }
   let __tick = null, __t0 = Date.now(), __lbl = '';
   try{
     apiKey = String(apiKey || '').trim();
@@ -4017,27 +4073,18 @@ async function analyzeMediaOrTextWithGemini(payloadObj, apiKey){
 
     const timeoutMs = type === 'audio' ? 60000 : 30000;
     const models = await getAvailableGeminiModels(apiKey);
-    let parsed = null, lastError = '', lastKind = '', emptyResult = null;
-
-    for(let i = 0; i < models.length; i++){
-      const modelName = models[i];
-      __lbl = `⏳ ${modeLabel} con <strong>${esc(modelName)}</strong>`;
+    let parsed = null, lastError = '', lastKind = '';
+    const started = [];
+    if(!__tick) __tick = setInterval(() => setVoiceMsg(`${__lbl} · ${Math.round((Date.now() - __t0) / 1000)}s`, ''), 1000);
+    const hr = await gemRunHedged(models, apiKey, parts, timeoutMs, type === 'audio' ? 15000 : 9000, m => {
+      started.push(m);
+      __lbl = `⏳ ${modeLabel} con ` + started.map(x => `<strong>${esc(x)}</strong>`).join(' + ');
       setVoiceMsg(__lbl + '...', '');
-      if(!__tick) __tick = setInterval(() => setVoiceMsg(`${__lbl} · ${Math.round((Date.now() - __t0) / 1000)}s`, ''), 1000);
-      const r = await gemCallModel(modelName, apiKey, parts, timeoutMs);
-      if(r.ok){
-        const p = r.parsed;
-        const hasContent = (Array.isArray(p.items) && p.items.length) || p.customerName || p.address || p.phone;
-        if(!hasContent && i < models.length - 1){ emptyResult = p; continue; }   // risposta vuota: prova un modello migliore
-        parsed = p;
-        try{ localStorage.setItem('bp_gemini_model_ok', modelName); }catch(e){ bpWarn(e); }
-        break;
-      }
-      lastError = r.msg; lastKind = r.kind;
-      if(r.kind === 'fatal') break;
-      if(r.kind === 'quota' && i < models.length - 1) await waitMs(600);
-    }
-    if(!parsed && emptyResult) parsed = emptyResult;
+    });
+    if(hr.parsed){
+      parsed = hr.parsed;
+      if(hr.model){ try{ localStorage.setItem('bp_gemini_model_ok', hr.model); }catch(e){ bpWarn(e); } }
+    }else if(hr.error){ lastError = hr.error.msg; lastKind = hr.error.kind; }
 
     if(!parsed){
       if(type === 'text' && el('voiceSmartInput').value.trim()){
@@ -4083,14 +4130,16 @@ function gemLev(a, b){
   }
   return prev[n];
 }
-function gemMatchProduct(name, menu){
+function gemMatchInfo(name, menu){
   const n = gemNorm(name);
-  if(!n) return null;
+  if(!n) return { prod: null, sure: false };
+  const alId = gemAliasLoad()[n];                                   // nome appreso in precedenza
+  if(alId != null){ const ap = menu.find(p => String(p.id) === String(alId)); if(ap) return { prod: ap, sure: true }; }
   const exact = menu.find(p => gemNorm(p.name) === n);
-  if(exact) return exact;
+  if(exact) return { prod: exact, sure: true };
   const tk = gemTokens(name);
-  if(!tk.length) return null;
-  let best = null, bestScore = 0, bestDiff = 1e9;
+  if(!tk.length) return { prod: null, sure: false };
+  let best = null, bestScore = 0, bestDiff = 1e9, bestSure = false;
   for(const p of menu){
     const pn = gemNorm(p.name), pt = gemTokens(p.name);
     if(!pt.length) continue;
@@ -4101,16 +4150,370 @@ function gemMatchProduct(name, menu){
     let score = 2 * common / (tk.length + pt.length);
     if(n.length >= 3 && (pn.includes(n) || n.includes(pn))) score = Math.max(score, 0.85);
     const diff = Math.abs(pn.length - n.length);
-    if(score > bestScore || (score === bestScore && diff < bestDiff)){ best = p; bestScore = score; bestDiff = diff; }
+    if(score > bestScore || (score === bestScore && diff < bestDiff)){
+      best = p; bestScore = score; bestDiff = diff;
+      bestSure = tk.length === pt.length && tk.every(t => pt.includes(t));   // stesse parole, ignorando "pizza", maiuscole e accenti
+    }
   }
-  return bestScore >= 0.6 ? best : null;
+  return bestScore >= 0.6 ? { prod: best, sure: bestSure } : { prod: null, sure: false };
+}
+function gemMatchProduct(name, menu){ return gemMatchInfo(name, menu).prod; }
+
+/* ================= v49: nomi appresi (alias) + schermata di revisione prima di aggiungere l'ordine ================= */
+/* ================= v50: nomi appresi CONDIVISI tra dispositivi (Supabase, tabella bp36_data, chiave 'menu_aliases') ================= */
+const GEM_AL_KEY = 'bp_menu_aliases2';
+const GEM_ALIAS_SQL =
+  "create table if not exists bp36_data (key text primary key, data jsonb not null default '{}', updated_at timestamptz default now());\n" +
+  "alter table bp36_data enable row level security;\n" +
+  "drop policy if exists \"bp_alias_all\" on bp36_data;\n" +
+  "create policy \"bp_alias_all\" on bp36_data for all to authenticated using (key = 'menu_aliases') with check (key = 'menu_aliases');\n" +
+  "do $$ begin alter publication supabase_realtime add table bp36_data; exception when others then null; end $$;";
+let __gemAlSt = 'unknown', __gemAlBusy = false, __gemAlAgain = false;
+
+function gemAliasRaw(){
+  try{ const r = JSON.parse(localStorage.getItem(GEM_AL_KEY) || 'null'); if(r && typeof r === 'object') return r; }catch(e){}
+  const out = {};                                           // migrazione dalla v49 (solo locale)
+  try{ const old = JSON.parse(localStorage.getItem('bp_menu_aliases') || '{}') || {}; Object.keys(old).forEach(k => { out[k] = { p: old[k], u: 1 }; }); }catch(e){}
+  return out;
+}
+function gemAliasSaveRaw(r){ try{ localStorage.setItem(GEM_AL_KEY, JSON.stringify(r)); }catch(e){ bpWarn(e); } }
+function gemAliasLoad(){                                      // mappa semplice nome->id (solo voci attive)
+  const r = gemAliasRaw(), o = {};
+  Object.keys(r).forEach(k => { if(r[k] && r[k].p != null && r[k].p !== '') o[k] = r[k].p; });
+  return o;
+}
+function gemAliasCanon(r){ return JSON.stringify(Object.keys(r).sort().map(k => [k, r[k] && r[k].p, r[k] && r[k].u])); }
+function gemAliasMerge(a, b){
+  const m = {}, cut = Date.now() - 60 * 864e5;
+  new Set([...Object.keys(a || {}), ...Object.keys(b || {})]).forEach(k => {
+    const x = a && a[k], y = b && b[k];
+    const w = (!x) ? y : (!y) ? x : ((y.u || 0) > (x.u || 0) ? y : x);
+    if(!w) return;
+    if(w.p == null && (w.u || 0) < cut) return;               // pulizia vecchie cancellazioni
+    m[k] = w;
+  });
+  return m;
+}
+function gemAliasPaint(){
+  const c = el('gemAliasCount'); if(c) c.textContent = Object.keys(gemAliasLoad()).length;
+  const s = el('gemAliasSt'); if(!s) return;
+  s.innerHTML = __gemAlSt === 'on' ? '☁️ condivisi con tutti i dispositivi'
+    : __gemAlSt === 'off' ? '⚠️ solo su questo dispositivo <a href="#" id="gemAliasSql">copia SQL</a>'
+    : '⏳ connessione...';
+}
+async function gemAliasSync(){
+  if(typeof sb === 'undefined' || !sb) return;
+  if(__gemAlBusy){ __gemAlAgain = true; return; }
+  __gemAlBusy = true;
+  try{
+    const r = await sb.from('bp36_data').select('data').eq('key', 'menu_aliases');
+    if(r.error){ __gemAlSt = 'off'; return; }
+    const remote = (r.data && r.data[0] && r.data[0].data && r.data[0].data.map) || {};
+    const local = gemAliasRaw();
+    const merged = gemAliasMerge(local, remote);
+    if(gemAliasCanon(merged) !== gemAliasCanon(local)) gemAliasSaveRaw(merged);
+    if(gemAliasCanon(merged) !== gemAliasCanon(remote)){
+      const w = await sb.from('bp36_data').upsert({ key: 'menu_aliases', data: { map: merged }, updated_at: new Date().toISOString() });
+      if(w.error){ __gemAlSt = 'off'; return; }
+    }
+    __gemAlSt = 'on';
+  }catch(e){ __gemAlSt = 'off'; bpWarn(e); }
+  finally{
+    __gemAlBusy = false;
+    gemAliasPaint();
+    if(__gemAlAgain){ __gemAlAgain = false; gemAliasSync(); }
+  }
+}
+function gemAliasSet(aiName, prodId){
+  const k = gemNorm(aiName);
+  if(!k || k.length < 2 || prodId == null || prodId === '') return false;
+  const a = gemAliasRaw();
+  if(a[k] && String(a[k].p) === String(prodId)) return false;
+  a[k] = { p: prodId, u: Date.now() };
+  gemAliasSaveRaw(a);
+  gemAliasSync();
+  return true;
+}
+function gemAliasClear(){
+  const a = gemAliasRaw(), now = Date.now();
+  Object.keys(a).forEach(k => { a[k] = { p: null, u: now }; });   // cancellazione propagata a tutti i dispositivi
+  gemAliasSaveRaw(a);
+  gemAliasPaint();
+  gemAliasSync();
+}
+(function(){
+  if(window.__gemAlInit) return; window.__gemAlInit = true;
+  const iv = setInterval(function(){
+    if(typeof sb !== 'undefined' && sb){
+      clearInterval(iv);
+      gemAliasSync();
+      try{ sb.channel('bp-alias').on('postgres_changes', { event: '*', schema: 'public', table: 'bp36_data', filter: 'key=eq.menu_aliases' }, function(){ gemAliasSync(); }).subscribe(); }catch(e){ bpWarn(e); }
+    }
+  }, 1500);
+  document.addEventListener('visibilitychange', function(){ if(!document.hidden) gemAliasSync(); });
+  setInterval(function(){ if(!document.hidden) gemAliasSync(); }, 90000);
+  document.addEventListener('click', function(e){
+    const b = e.target.closest && e.target.closest('#gemAliasSql'); if(!b) return;
+    e.preventDefault();
+    try{ navigator.clipboard.writeText(GEM_ALIAS_SQL); b.textContent = '✅ copiato: incollalo in Supabase › SQL Editor'; }
+    catch(x){ prompt('Copia ed esegui in Supabase > SQL Editor:', GEM_ALIAS_SQL); }
+  });
+})();
+
+(function(){
+  if(document.getElementById('gemReviewCss')) return;
+  const st = document.createElement('style');
+  st.id = 'gemReviewCss';
+  st.textContent = `
+  #gemReviewBack{z-index:80}
+  #gemReview{max-width:640px}
+  #gemReview h3{margin:0 0 8px;font-size:1.1em}
+  #gemReview .gem-chips{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 10px}
+  #gemReview .gem-chip{background:#f1f3f5;border-radius:999px;padding:4px 10px;font-size:.85em;font-weight:700}
+  #gemReview .gem-fields{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}
+  #gemReview .gem-fields label{display:flex;flex-direction:column;font-size:.78em;font-weight:700;gap:2px}
+  #gemReview .gem-fields .full{grid-column:1/-1}
+  #gemReview input,#gemReview select{width:100%;box-sizing:border-box;min-height:40px}
+  #gemReview .gem-row{border:1px solid var(--line,#e1e4e8);border-radius:12px;padding:8px;margin-bottom:8px}
+  #gemReview .gem-row.bad{border-color:#f79009;background:#fffaeb}
+  #gemReview .gem-row.warn{border-color:#f5c542;background:#fffdf0}
+  #gemReview .unsure{background:#fffaeb;border-color:#f79009}
+  #gemReview .gem-warn{background:#fffaeb;border:1px solid #f79009;border-radius:10px;padding:8px 10px;margin:0 0 8px;font-size:.88em;font-weight:700}
+  #gemReview .gem-warn.red{background:#fef3f2;border-color:#f04438}
+  #gemReview .gem-r1{display:flex;gap:6px;align-items:center}
+  #gemReview .gem-r1 .gq{width:64px;flex:none;text-align:center}
+  #gemReview .gem-r2{display:flex;gap:6px;margin-top:6px}
+  #gemReview .gem-r2 .gs{width:110px;flex:none}
+  #gemReview .gem-r2 .gx{flex:none;width:44px}
+  #gemReview .gem-src{font-size:.78em;opacity:.75;margin-top:4px}
+  #gemReview .gem-foot{display:flex;gap:8px;margin-top:12px}
+  #gemReview .gem-foot button{flex:1;min-height:46px;font-weight:800}
+  #gemReview .gem-meta{font-size:.78em;opacity:.8;margin-top:10px;display:flex;justify-content:space-between;gap:8px;align-items:center;flex-wrap:wrap}
+  body.dark-mode #gemReview .gem-chip{background:#1e293b}
+  body.dark-mode #gemReview .gem-row.bad,body.dark-mode #gemReview .gem-row.warn,body.dark-mode #gemReview .unsure,body.dark-mode #gemReview .gem-warn{background:#3b2a0b;color:#fde68a}
+  `;
+  document.head.appendChild(st);
+})();
+
+function gemFmtMods(rem, add){
+  return [...(rem || []).map(r => '-' + r), ...(add || []).map(a => '+' + a)].join(', ');
+}
+function gemParseMods(str){
+  const rem = [], add = [];
+  String(str || '').split(/[,;]+/).map(x => x.trim()).filter(Boolean).forEach(x => {
+    if(/^(\+|extra\s|con\s|aggiungi\s)/i.test(x)) add.push(x.replace(/^(\+|extra\s|con\s|aggiungi\s)\s*/i, '').trim());
+    else rem.push(x.replace(/^(-|senza\s|no\s|togli\s)\s*/i, '').trim());
+  });
+  return { rem: rem.filter(Boolean), add: add.filter(Boolean) };
+}
+function gemProductOptions(menu, selectedId){
+  const byCat = {};
+  menu.forEach(p => { (byCat[p.category || 'Menu'] = byCat[p.category || 'Menu'] || []).push(p); });
+  let h = `<option value="">⚠️ Scegli prodotto…</option>`;
+  Object.keys(byCat).forEach(cat => {
+    h += `<optgroup label="${esc(cat)}">` + byCat[cat].map(p =>
+      `<option value="${esc(p.id)}"${String(p.id) === String(selectedId) ? ' selected' : ''}>${esc(p.name)}</option>`).join('') + `</optgroup>`;
+  });
+  return h;
+}
+
+function gemCloseReview(){
+  const b = el('gemReviewBack'); if(b) b.remove();
+}
+
+/* Punto d'ingresso: sostituisce la vecchia applyExtractedOrderObject */
+/* v51: pulizia leggera dell'indirizzo letto dall'AI (abbreviazioni, maiuscole, civico) - NON aggiunge la citta' */
+function gemCleanAddress(a){
+  let t = String(a || '').replace(/\s+/g, ' ').replace(/\s*,\s*/g, ', ').trim();
+  if(!t) return '';
+  t = t.replace(/^v(?:\.\s*|\s+)(?=[a-zà-ù])/i, 'Via ').replace(/^vle(?:\.\s*|\s+)/i, 'Viale ')
+       .replace(/^p\.?\s?zza\.?\s*/i, 'Piazza ').replace(/^c\.?\s?so\.?\s*/i, 'Corso ');
+  t = t.replace(/\b(?:n|civico|numero|num)\.?\s*(?=\d)/ig, '');
+  const low = new Set(['di','del','della','dei','delle','da','e','a','al','alla','dello','degli','d']);
+  t = t.split(' ').map((w, i) => {
+    if(/\d/.test(w) || /[\u0600-\u06ff]/.test(w)) return w;
+    const lw = w.toLowerCase();
+    return (i > 0 && low.has(lw)) ? lw : lw.charAt(0).toUpperCase() + lw.slice(1);
+  }).join(' ');
+  t = t.replace(/'([a-zà-ù])/g, (m, c) => "'" + c.toUpperCase()).replace(/([A-Za-zà-ù])(\d)/g, '$1 $2');
+  return t.replace(/\s+/g, ' ').trim();
+}
+
+/* v51: avviso doppione - stesso cliente, stessi articoli, negli ultimi 20 minuti */
+function gemDupCheck(phone, name, rows){
+  try{
+    const agg = arr => {
+      const m = {};
+      arr.forEach(x => { const k = x.b + '|' + x.s; m[k] = (m[k] || 0) + x.q; });
+      return Object.keys(m).sort().map(k => k + 'x' + m[k]).join(';');
+    };
+    const mine = (rows || []).filter(r => r && r.prod).map(r => ({
+      b: gemNorm(r.prod.name),
+      s: String(r.size || '').toLowerCase().includes('maxi') ? 'maxi' : 'normale',
+      q: Math.min(Math.max(parseInt(r.qty, 10) || 1, 1), 50)
+    }));
+    if(!mine.length) return null;
+    const want = agg(mine);
+    const pk = normalizePhoneKey(phone), nk = gemNorm(name), now = Date.now();
+    for(const o of orders){
+      if(!o.created_at || now - new Date(o.created_at).getTime() > 20 * 60000) continue;
+      if(normStatus(o.status) === 'Annullato') continue;
+      const samePhone = pk.length >= 6 && normalizePhoneKey(o.phone) === pk;
+      const sameName = pk.length < 6 && nk && gemNorm(o.customer_name) === nk;
+      if(!samePhone && !sameName) continue;
+      const its = itemsByOrder.get(o.id) || [];
+      if(!its.length) continue;
+      const theirs = its.map(it => ({
+        b: gemNorm(splitProductAndMods(it.product_name).baseName),
+        s: String(it.size || '').toLowerCase().includes('maxi') ? 'maxi' : 'normale',
+        q: Math.max(parseInt(it.quantity, 10) || 1, 1)
+      }));
+      if(agg(theirs) === want) return o;
+    }
+  }catch(e){ bpWarn(e); }
+  return null;
+}
+function gemDupText(o){
+  let hh = '';
+  try{ hh = new Date(o.created_at).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' }); }catch(e){}
+  return `Possibile doppione: ordine #${o.id}${o.customer_name ? ' di ' + o.customer_name : ''} alle ${hh} con gli stessi articoli.`;
 }
 
 function applyExtractedOrderObject(parsed){
   if(!parsed) return;
   if(parsed.transcript) el('voiceSmartInput').value = parsed.transcript;
-  let infoLog = [];
+  const menu = getActiveMenu();
+  if(parsed.address) parsed.address = gemCleanAddress(parsed.address);
+  const items = (Array.isArray(parsed.items) ? parsed.items : []).filter(it => String(it.name || it.rawText || '').trim());
+  const rows = items.map(it => {
+    const mi = gemMatchInfo(it.name, menu);
+    return { it, prod: mi.prod, fuzzy: !!mi.prod && !mi.sure, low: String(it.confidence || '').toLowerCase() === 'low' };
+  });
+  const unc = new Set(Array.isArray(parsed.uncertainFields) ? parsed.uncertainFields.map(String) : []);
+  if(parsed.phone){ const dg = String(parsed.phone).replace(/\D/g, '').length; if(dg < 6 || dg > 13) unc.add('phone'); }
+  parsed.__unc = Array.from(unc);
+  const dup = gemDupCheck(parsed.phone, parsed.customerName, rows.map(r => ({ prod: r.prod, size: r.it.size, qty: r.it.quantity })));
+  parsed.__dup = dup ? gemDupText(dup) : '';
+  const allOk = rows.length > 0 && rows.every(r => r.prod && !r.fuzzy && !r.low) && !unc.size && !dup;
+  if(localStorage.getItem('bp_gem_autoconfirm') === '1' && allOk){
+    gemCommitOrder(parsed, rows.map(r => ({
+      prod: r.prod, size: r.it.size, qty: r.it.quantity,
+      rem: r.it.removed, add: r.it.added
+    })), []);
+    return;
+  }
+  gemShowReview(parsed, rows, menu);
+}
 
+function gemShowReview(parsed, rows, menu){
+  gemCloseReview();
+  const chips = [];
+  if(parsed.orderType && ['Consegna','Asporto'].includes(parsed.orderType)) chips.push('🛵 ' + parsed.orderType);
+  if(parsed.deliveryTime) chips.push('⏰ ' + parsed.deliveryTime + ((parsed.__unc || []).includes('deliveryTime') ? ' ❓' : ''));
+  if(parsed.paymentMethod) chips.push('💳 ' + parsed.paymentMethod);
+  if(parsed.cashGiven && Number(parsed.cashGiven) > 0) chips.push('💶 Paga con €' + Number(parsed.cashGiven));
+
+  const back = document.createElement('div');
+  back.id = 'gemReviewBack';
+  back.className = 'modal-backdrop';
+  const aliasN = Object.keys(gemAliasLoad()).length;
+  back.innerHTML = `
+  <div class="modal" id="gemReview">
+    <h3>🔎 Controlla l'ordine prima di aggiungerlo</h3>
+    ${parsed.__dup ? `<div class="gem-warn red">⚠️ ${esc(parsed.__dup)}</div>` : ''}
+    ${(parsed.__unc || []).length ? `<div class="gem-warn">❓ L'AI non è sicura di: ${(parsed.__unc || []).map(f => esc(({customerName:'Cliente',phone:'Telefono',address:'Indirizzo',deliveryTime:'Orario',cashGiven:'Resto',notes:'Note'})[f] || f)).join(', ')}</div>` : ''}
+    <div class="gem-chips">${chips.map(c => `<span class="gem-chip">${esc(c)}</span>`).join('') || '<span class="gem-chip">Nessun orario/pagamento rilevato</span>'}</div>
+    <div class="gem-fields">
+      <label>👤 Cliente<input id="gemF_name" class="${(parsed.__unc || []).includes('customerName') ? 'unsure' : ''}" value="${esc(parsed.customerName || '')}"></label>
+      <label>📞 Telefono<input id="gemF_phone" inputmode="tel" class="${(parsed.__unc || []).includes('phone') ? 'unsure' : ''}" value="${esc(parsed.phone || '')}"></label>
+      <label class="full">📍 Indirizzo<input id="gemF_addr" class="${(parsed.__unc || []).includes('address') ? 'unsure' : ''}" value="${esc(parsed.address || '')}"></label>
+      <label class="full">📝 Note<input id="gemF_notes" class="${(parsed.__unc || []).includes('notes') ? 'unsure' : ''}" value="${esc(parsed.notes || '')}"></label>
+    </div>
+    <div id="gemRows"></div>
+    <button type="button" class="secondary btn-sm" id="gemAddRow">➕ Aggiungi riga</button>
+    <label style="display:flex;gap:8px;align-items:center;margin-top:10px;font-size:.85em">
+      <input type="checkbox" id="gemAuto" style="width:22px;height:22px;min-height:0" ${localStorage.getItem('bp_gem_autoconfirm') === '1' ? 'checked' : ''}>
+      <span>Salta questa schermata quando tutto è riconosciuto</span>
+    </label>
+    <div class="gem-foot">
+      <button type="button" class="secondary" id="gemCancel">✖ Annulla</button>
+      <button type="button" class="green" id="gemOk">✅ Conferma e aggiungi</button>
+    </div>
+    <div class="gem-meta"><span>🧠 Nomi appresi: <strong id="gemAliasCount">${aliasN}</strong> · <span id="gemAliasSt"></span></span>
+      <a href="#" id="gemAliasReset">azzera</a></div>
+  </div>`;
+  document.body.appendChild(back);
+  gemAliasPaint();
+  gemAliasSync();
+
+  const rowsBox = back.querySelector('#gemRows');
+  function addRow(r){
+    const it = r.it || { name: '', size: 'Normale', quantity: 1, removed: [], added: [] };
+    const d = document.createElement('div');
+    d.className = 'gem-row' + (r.prod ? ((r.fuzzy || r.low) ? ' warn' : '') : ' bad');
+    d.dataset.auto = r.prod ? String(r.prod.id) : '';
+    d.dataset.ai = String(it.name || it.rawText || '');
+    d.innerHTML = `
+      <div class="gem-r1">
+        <input class="gq" type="number" min="1" max="50" inputmode="numeric" value="${Math.min(Math.max(parseInt(it.quantity, 10) || 1, 1), 50)}">
+        <select class="gp">${gemProductOptions(menu, r.prod ? r.prod.id : '')}</select>
+      </div>
+      <div class="gem-r2">
+        <select class="gs"><option>Normale</option><option>Maxi</option></select>
+        <input class="gm" placeholder="Modifiche: -cipolla, +mozzarella" value="${esc(gemFmtMods(it.removed, it.added))}">
+        <button type="button" class="secondary gx" title="Rimuovi riga">🗑️</button>
+      </div>
+      ${d.dataset.ai ? `<div class="gem-src">Letto dall'AI: «${esc(d.dataset.ai)}»${r.prod && r.low ? ' · ❓ <strong>AI incerta: verifica</strong>' : ''}${r.prod && r.fuzzy ? ' · ≈ <strong>abbinato per somiglianza</strong>' : ''}</div>` : ''}`;
+    const gs = d.querySelector('.gs'), gp = d.querySelector('.gp');
+    gs.value = String(it.size || '').toLowerCase().includes('maxi') ? 'Maxi' : 'Normale';
+    const syncSize = () => {
+      const p = menu.find(x => String(x.id) === gp.value);
+      const hasMaxi = !!(p && p.price_maxi != null && Number(p.price_maxi) > 0);
+      gs.querySelector('option:nth-child(2)').disabled = !hasMaxi;
+      if(!hasMaxi) gs.value = 'Normale';
+      d.classList.toggle('bad', !p);
+      if(p) d.classList.remove('warn');
+    };
+    gp.onchange = syncSize;
+    d.querySelector('.gx').onclick = () => d.remove();
+    syncSize();
+    rowsBox.appendChild(d);
+  }
+  rows.forEach(addRow);
+  if(!rows.length) addRow({ it: null, prod: null });
+  back.querySelector('#gemAddRow').onclick = () => addRow({ it: null, prod: null });
+  back.querySelector('#gemCancel').onclick = () => { gemCloseReview(); setVoiceMsg('❎ Ordine annullato. Il testo resta nella casella: puoi rielaborarlo.', ''); };
+  back.querySelector('#gemAliasReset').onclick = (e) => {
+    e.preventDefault();
+    if(confirm('Cancellare tutti i nomi appresi su TUTTI i dispositivi?')) gemAliasClear();
+  };
+  back.querySelector('#gemOk').onclick = () => {
+    try{ localStorage.setItem('bp_gem_autoconfirm', back.querySelector('#gemAuto').checked ? '1' : '0'); }catch(e){ bpWarn(e); }
+    const edited = Object.assign({}, parsed, {
+      customerName: back.querySelector('#gemF_name').value.trim(),
+      phone: back.querySelector('#gemF_phone').value.trim(),
+      address: back.querySelector('#gemF_addr').value.trim(),
+      notes: back.querySelector('#gemF_notes').value.trim()
+    });
+    const final = [], learned = [], skipped = [];
+    rowsBox.querySelectorAll('.gem-row').forEach(d => {
+      const pid = d.querySelector('.gp').value;
+      const prod = menu.find(x => String(x.id) === pid);
+      if(!prod){ if(d.dataset.ai) skipped.push(d.dataset.ai); return; }
+      const mods = gemParseMods(d.querySelector('.gm').value);
+      final.push({ prod, size: d.querySelector('.gs').value, qty: d.querySelector('.gq').value, rem: mods.rem, add: mods.add });
+      if(d.dataset.ai && d.dataset.auto !== String(prod.id) && gemAliasSet(d.dataset.ai, prod.id)) learned.push(`«${d.dataset.ai}» → ${prod.name}`);
+    });
+    const dup2 = gemDupCheck(edited.phone, edited.customerName, final);
+    if(dup2 && !confirm('⚠️ ' + gemDupText(dup2) + '\n\nAggiungere comunque?')) return;
+    gemCloseReview();
+    gemCommitOrder(edited, final, skipped, learned);
+  };
+}
+
+/* Scrive davvero i campi e il carrello (logica della vecchia applyExtractedOrderObject) */
+function gemCommitOrder(parsed, finalRows, skipped, learned){
+  let infoLog = [];
   if(parsed.customerName){ el('customer').value = String(parsed.customerName).trim(); }
   if(parsed.phone){
     let ph = String(parsed.phone).replace(/[^\d+]/g, '');
@@ -4154,39 +4557,31 @@ function applyExtractedOrderObject(parsed){
     infoLog.push(`📝 ${esc(parsed.notes)}`);
   }
 
-  let activeMenu = getActiveMenu();
-  let addedItemsLog = [], missingLog = [];
   const cleanIng = x => String(x || '').replace(/^\s*(senza|no|togli|aggiungi|aggiunta|extra|con)\s+/i, '').trim();
-  if(Array.isArray(parsed.items)){
-    parsed.items.forEach(it => {
-      let label = String(it.name || it.rawText || '').trim();
-      if(!label) return;
-      let prod = gemMatchProduct(it.name, activeMenu);
-      if(prod){
-        let isMaxi = String(it.size || '').toLowerCase().includes('maxi') && prod.price_maxi != null && Number(prod.price_maxi) > 0;
-        let size = isMaxi ? 'Maxi' : 'Normale';
-        let price = isMaxi ? Number(prod.price_maxi) : Number(prod.price_normal || 0);
-        let qty = Math.min(Math.max(parseInt(it.quantity, 10) || 1, 1), 50);
-        let rem = (Array.isArray(it.removed) ? it.removed : []).map(cleanIng).filter(Boolean);
-        let add = (Array.isArray(it.added) ? it.added : []).map(cleanIng).filter(Boolean);
-        addVoiceItemToCart(prod, size, price, qty, rem, add);
-        let modStr = [...rem.map(r => `🚫 Senza ${esc(r)}`), ...add.map(a => `➕ ${esc(a)}`)].join(' ');
-        addedItemsLog.push(`<strong>${qty}× ${esc(prod.name)} (${size})</strong> ${modStr}`);
-      }else{
-        missingLog.push(esc(label));
-      }
-    });
-  }
+  let addedItemsLog = [];
+  (finalRows || []).forEach(r => {
+    const prod = r.prod;
+    let isMaxi = String(r.size || '').toLowerCase().includes('maxi') && prod.price_maxi != null && Number(prod.price_maxi) > 0;
+    let size = isMaxi ? 'Maxi' : 'Normale';
+    let price = isMaxi ? Number(prod.price_maxi) : Number(prod.price_normal || 0);
+    let qty = Math.min(Math.max(parseInt(r.qty, 10) || 1, 1), 50);
+    let rem = (Array.isArray(r.rem) ? r.rem : []).map(cleanIng).filter(Boolean);
+    let add = (Array.isArray(r.add) ? r.add : []).map(cleanIng).filter(Boolean);
+    addVoiceItemToCart(prod, size, price, qty, rem, add);
+    let modStr = [...rem.map(x => `🚫 Senza ${esc(x)}`), ...add.map(a => `➕ ${esc(a)}`)].join(' ');
+    addedItemsLog.push(`<strong>${qty}× ${esc(prod.name)} (${size})</strong> ${modStr}`);
+  });
 
   renderCart();
   playOrderChime(true);
+  const sk = skipped || [], ln = learned || [];
   setVoiceMsg(
-    `${missingLog.length ? '⚠️' : '✅'} <strong>Ordine Estratto e Posizionato nei Campi!</strong><br>` +
+    `${sk.length ? '⚠️' : '✅'} <strong>Ordine inserito!</strong><br>` +
     (infoLog.length ? `📋 Dati Cliente: ${infoLog.join(' · ')}<br>` : '') +
     (addedItemsLog.length ? `🍕 Nel Carrello: ${addedItemsLog.join(', ')}<br>` : '') +
-    (missingLog.length ? `⚠️ <strong>Non trovati nel menu (aggiungili a mano):</strong> ${missingLog.join(', ')}` : '') +
-    (!addedItemsLog.length && !missingLog.length ? '⚠️ Nessun prodotto riconosciuto: controlla il testo o la foto.' : ''),
-    missingLog.length || !addedItemsLog.length ? 'error' : 'success'
+    (sk.length ? `⚠️ <strong>Righe saltate (nessun prodotto scelto):</strong> ${sk.map(esc).join(', ')}<br>` : '') +
+    (ln.length ? `🧠 <strong>Imparato:</strong> ${ln.map(esc).join(' · ')}` : ''),
+    sk.length || !addedItemsLog.length ? 'error' : 'success'
   );
 }
 
@@ -5976,6 +6371,7 @@ function renderOrderList(id, list, isOpenTab=false){
           <button type="button" class="purple btn-sm" style="flex:1" data-riordina title="Crea un nuovo ordine identico">🔄 Copia</button>
         </div>
         <button type="button" class="blue btn-sm" data-dettagli>🧾 Comanda / Stampa</button>
+        ${o.order_type && o.phone ? `<button type="button" class="green btn-sm" data-track title="Invia al cliente il link per seguire l'ordine">🔗 Link tracking</button>` : ''}
       </div>`;
 
     let rBtn = d.querySelector('[data-route-toggle]');
@@ -5994,8 +6390,34 @@ function renderOrderList(id, list, isOpenTab=false){
     });
 
     d.querySelector('[data-dettagli]').onclick=()=>showDetails(o);
+    let __tb=d.querySelector('[data-track]'); if(__tb) __tb.onclick=()=>sendTrackingLink(o);
     box.appendChild(d);
   });
+}
+
+/* ===== v53: link tracking ordine per il cliente (richiede 01_tracking.sql + track.html) ===== */
+function trackingUrl(o){
+  if(!o || !o.track_token) return '';
+  var base = location.href.split('#')[0].split('?')[0].replace(/[^\/]*$/, '');
+  return base + 'track.html?t=' + encodeURIComponent(o.track_token);
+}
+function waPhone(raw){
+  var d = String(raw||'').replace(/[^\d+]/g,'');
+  if(d.startsWith('+')) return d.slice(1);
+  if(d.startsWith('00')) return d.slice(2);
+  if(d.startsWith('39') && d.length>=11) return d;
+  return '39' + d.replace(/^0+(?=3)/,'');
+}
+async function sendTrackingLink(o){
+  if(!o.track_token){
+    let r = await sb.from('orders').select('track_token').eq('id', o.id).maybeSingle();
+    if(r.data && r.data.track_token) o.track_token = r.data.track_token;
+  }
+  var url = trackingUrl(o);
+  if(!url){ alert('Manca la colonna track_token.\nEsegui 01_tracking.sql in Supabase → SQL Editor, poi riprova.'); return; }
+  var name = String(o.customer_name||'').split(' ')[0];
+  var msg = 'Ciao' + (name?' '+name:'') + '! 🍕 Segui il tuo ordine #' + o.id + ' da Buona Pizza qui: ' + url;
+  window.open('https://wa.me/' + waPhone(o.phone) + '?text=' + encodeURIComponent(msg), '_blank');
 }
 
 async function _updateOrderStatusCore(orderId,newStatus){
@@ -14233,5 +14655,190 @@ try{
 })();
 
 }catch(e){ console.error("[bp] v45", e); }
+</script>
+<script id="bp-v52">
+try{(function(){
+if(window.__bpV52)return;window.__bpV52=1;
+var $=function(s,r){return(r||document).querySelector(s)};
+function W(e){try{bpWarn(e)}catch(_){}}
+function S(f){try{return f()}catch(e){W(e)}}
+function vib(p){try{navigator.vibrate&&navigator.vibrate(p||12)}catch(e){}}
+function N(s){return String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9\u0600-\u06ff\s]/g,' ').replace(/\s+/g,' ').trim()}
+function D(s){return String(s||'').replace(/[٠-٩]/g,function(d){return '٠١٢٣٤٥٦٧٨٩'.indexOf(d)})}
+function base(n){return splitProductAndMods(n).baseName}
+function off(){return allMenu.filter(function(p){return p.active===false})}
+function toast(m,bad){try{ssToast(m,bad)}catch(e){S(function(){setMsg('orderMsg',m,bad?'error':'success')})}}
+function pad(n){return(n<10?'0':'')+n}
+function food(items){return(items||[]).filter(function(i){return!bpIsSvc(i.product_name)})}
+function chip(c,h){return'<span class="b52-c '+c+'">'+h+'</span>'}
+
+var css=document.createElement('style');css.textContent=
+'#bp52Bar{display:flex;flex-direction:column;gap:8px;margin:0 0 12px}.b52-line{display:flex;gap:6px}.b52-line input{flex:1;min-height:52px;font-size:calc(var(--fs,16px)*1.05);font-weight:800;border:2px solid #84caff;border-radius:14px;padding:0 14px}.b52-line button{min-width:56px;border-radius:14px;font-size:22px;font-weight:900}'+
+'.b52-msg{display:flex;flex-wrap:wrap;gap:5px}.b52-msg:empty{display:none}.b52-c{border-radius:99px;padding:3px 10px;font-size:13px;font-weight:800;background:#ecfdf3;color:#067647;border:1px solid #abefc6}.b52-c.warn{background:#fffaeb;color:#b54708;border-color:#fedf89}.b52-c.bad{background:#fef3f2;color:#b42318;border-color:#fecdca}'+
+'.b52-hd{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:13px}.b52-hd button{background:#fee4e2;color:#b42318;border:1px solid #fecdca;font-weight:900;border-radius:10px;padding:6px 10px}'+
+'.b52-sells{display:flex;gap:8px;overflow-x:auto;padding:2px 0 4px;-webkit-overflow-scrolling:touch}.b52-s{flex:0 0 auto;display:flex;position:relative;border:2px solid #d0d5dd;border-radius:14px;background:#fff;overflow:hidden}.b52-s.has{border-color:#16794b;background:#ecfdf3}'+
+'.b52-s .m{border:0;background:none;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;min-width:92px;min-height:62px;padding:4px 8px;color:#101828;font-weight:850}.b52-s .m b{font-size:13px;max-width:110px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.b52-s .m i{font-style:normal;font-size:12px;color:#16794b}'+
+'.b52-s .k{display:flex;flex-direction:column;border-inline-start:1px solid #e4e7ec}.b52-s .k button{flex:1;border:0;background:#f2f4f7;min-width:38px;font-weight:900;font-size:12px;padding:0 6px;color:#344054}.b52-s em{position:absolute;top:0;inset-inline-start:0;background:#16794b;color:#fff;border-radius:0 0 10px 0;padding:0 7px;font-style:normal;font-weight:900;font-size:12px}'+
+'#b52Cust{border:2px solid #abefc6;background:#f6fef9;border-radius:14px;padding:10px;margin:0 0 10px;display:none;flex-direction:column;gap:7px}#b52Cust .r{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:13px}#b52Cust button{border-radius:10px;font-weight:850;padding:7px 11px;font-size:13px;background:#5925dc;color:#fff;border:0}#b52Cust button.f{background:#fff;color:#5925dc;border:1.5px solid #d6bbfb}#b52Cust button.off{background:#fef3f2;color:#b42318;border-color:#fecdca}'+
+'body.b52-cu #customerLastOrderBanner{display:none!important}#b52Time{margin:6px 0;font-size:13.5px;font-weight:800;display:flex;flex-wrap:wrap;gap:8px;align-items:center}#b52Time:empty{display:none}#b52Time button{background:#175cd3;color:#fff;border:0;border-radius:10px;padding:6px 12px;font-weight:900}'+
+'.b52-ov{position:fixed;inset:0;background:#0009;z-index:2147483300;display:none;align-items:flex-end;justify-content:center}.b52-sh{background:#fff;width:100%;max-width:560px;max-height:88vh;border-radius:18px 18px 0 0;display:flex;flex-direction:column;padding:12px;gap:8px}.b52-sh-h{display:flex;justify-content:space-between;align-items:center}.b52-sh input{min-height:46px;border-radius:12px;border:2px solid #d0d5dd;padding:0 12px;font-size:16px}'+
+'.b52-l{overflow:auto;display:grid;gap:6px;grid-template-columns:repeat(auto-fill,minmax(150px,1fr))}.b52-l button{min-height:48px;border-radius:12px;border:2px solid #abefc6;background:#ecfdf3;font-weight:850;text-align:start;padding:6px 10px;color:#067647}.b52-l button.off{border-color:#fda29b;background:#fef3f2;color:#b42318}'+
+'body.dark-mode .b52-s,body.dark-mode .b52-sh,body.dark-mode #b52Cust{background:#131c2e;color:#e5e7eb}body.dark-mode .b52-s .m{color:#e5e7eb}';
+document.head.appendChild(css);
+
+/* ---- storico vendite (30 gg) ---- */
+function freq(){var f={},cut=Date.now()-30*864e5;orders.forEach(function(o){if(normStatus(o.status)==='Annullato')return;var t=o.created_at?new Date(o.created_at).getTime():0;if(t&&t<cut)return;food(itemsByOrder.get(o.id)).forEach(function(i){var b=N(base(i.product_name));f[b]=(f[b]||0)+Number(i.quantity||1)})});return f}
+function alts(p){var f=freq();return getActiveMenu().filter(function(x){return x.category===p.category}).sort(function(a,b){return(f[N(b.name)]||0)-(f[N(a.name)]||0)}).slice(0,3).map(function(x){return x.name})}
+function isOff(name){var n=N(base(name));return off().some(function(p){return N(p.name)===n})}
+
+/* ---- 6) esauriti: avvisi ---- */
+function warnOff(list){var u=[],seen={};list.forEach(function(p){if(!seen[p.id]){seen[p.id]=1;u.push(p)}});if(!u.length)return;
+  var m='⛔ ESAURITO · خلص: '+u.map(function(p){var a=alts(p);return p.name+(a.length?' (alt: '+a.join(', ')+')':'')}).join(' · ');toast(m,true);S(function(){setVoiceMsg(m,'error')});vib([180,80,180])}
+function offIn(text){var t=' '+N(D(text))+' ';return off().filter(function(p){var n=N(p.name).replace(/^(pizza|panino|piadina) /,'');return n.length>=3&&t.indexOf(' '+n)>=0})}
+function cartOff(){var r=[];cart.forEach(function(it){var p=allMenu.filter(function(x){return String(x.id)===String(it.menu_id)})[0];if((p&&p.active===false)||(!p&&isOff(it.name)))r.push(it.name)});return r}
+var _ds=doSaveOrder;doSaveOrder=async function(){var o=cartOff();if(o.length){setMsg('orderMsg','⛔ Esaurito: '+o.join(', ')+' — toglilo dal carrello · شيله من الأوردر','error');vib([180,80,180]);return null}return _ds.apply(this,arguments)};
+var _aq=addQuick;addQuick=function(p){if(p&&p.active===false){toast('⛔ '+p.name+' esaurito · خلص',true);return}return _aq.apply(this,arguments)};
+var _ro=repeatOrderIntoCart;repeatOrderIntoCart=function(o,items,f){var bad=[];var ok=(items||[]).filter(function(i){if(!bpIsSvc(i.product_name)&&isOff(i.product_name)){bad.push(base(i.product_name));return false}return true});if(bad.length)toast('⛔ Esaurito, saltato: '+bad.join(', '),true);return _ro.call(this,o,ok,f)};
+var _ps=processSpokenOrder;processSpokenOrder=function(t){S(function(){warnOff(offIn(t))});return _ps.apply(this,arguments)};
+var _gp=gemBuildPrompt;gemBuildPrompt=function(){var s=_gp.apply(this,arguments),o=off();return o.length?s+'\n\nPRODOTTI ESAURITI OGGI (non disponibili): '+o.map(function(p){return p.name}).join(', ')+'. Se il cliente ne chiede uno, riportalo in items con il suo nome ESATTO come scritto qui.':s};
+var _ae=applyExtractedOrderObject;applyExtractedOrderObject=function(parsed){S(function(){var hit=[];((parsed&&parsed.items)||[]).forEach(function(it){var nm=it.name||it.rawText||'',mi=gemMatchInfo(nm,getActiveMenu()),mo=gemMatchInfo(nm,off());if(mo.prod&&(!mi.prod||(!mi.sure&&mo.sure)))hit.push(mo.prod)});if(hit.length){parsed.__off=hit;warnOff(hit)}});return _ae.apply(this,arguments)};
+var _gs=gemShowReview;gemShowReview=function(parsed){var r=_gs.apply(this,arguments);S(function(){var m=$('#gemReview');if(m&&parsed&&parsed.__off&&parsed.__off.length){var d=document.createElement('div');d.className='gem-warn red';d.innerHTML='⛔ Esaurito: '+parsed.__off.map(function(p){return esc(p.name)}).join(', ');m.insertBefore(d,m.children[1]||null)}});return r};
+
+/* esauriti: schermata di gestione */
+function sync(){S(renderCategories);S(populateProductDropdown);S(renderCart);S(drawSheet);S(paint)}
+async function setActive(p,val){var prev=p.active;p.active=val;sync();
+  try{if(!sb)throw new Error('offline');var r=await sb.from('menu').update({active:val}).eq('id',p.id);if(r.error)throw r.error}catch(e){p.active=prev;sync();alert('Errore: '+(e.message||e));return}
+  if(!val&&cart.size&&cartOff().length)toast('⚠️ '+p.name+' è nel carrello: toglilo · شيله',true)}
+function drawSheet(){var o=$('#b52Sheet');if(!o||o.style.display!=='flex')return;var q=N($('#b52Q').value),f=freq();
+  var l=allMenu.filter(function(p){return!q||N(p.name+' '+(p.category||'')).indexOf(q)>=0}).sort(function(a,b){return((a.active===false?0:1)-(b.active===false?0:1))||((f[N(b.name)]||0)-(f[N(a.name)]||0))||a.name.localeCompare(b.name)});
+  $('#b52L').innerHTML=l.map(function(p){var of=p.active===false;return'<button type="button" class="'+(of?'off':'')+'" data-id="'+esc(p.id)+'">'+(of?'⛔ ':'✅ ')+esc(p.name)+(of?'<br><small>ESAURITO · خلص</small>':'')+'</button>'}).join('')}
+function openSheet(){var o=$('#b52Sheet');if(!o){o=document.createElement('div');o.id='b52Sheet';o.className='b52-ov';
+  o.innerHTML='<div class="b52-sh"><div class="b52-sh-h"><b>⛔ Esauriti · الأصناف الخلصانة</b><button type="button" data-x>✕</button></div><input id="b52Q" type="search" placeholder="🔍 Cerca · ابحث" autocomplete="off"><div id="b52L" class="b52-l"></div><button type="button" data-all class="secondary">🔄 Riattiva tutti · رجّع الكل</button></div>';
+  document.body.appendChild(o);$('#b52Q').oninput=drawSheet;
+  o.onclick=function(e){var b=e.target.closest('button');if(e.target===o||(b&&b.hasAttribute('data-x'))){o.style.display='none';return}
+    if(b&&b.hasAttribute('data-all')){var l=off();if(l.length&&confirm('Riattivare '+l.length+' prodotti?'))l.forEach(function(p){setActive(p,true)});return}
+    if(b&&b.getAttribute('data-id')){var p=allMenu.filter(function(x){return String(x.id)===b.getAttribute('data-id')})[0];if(p){vib();setActive(p,p.active===false)}}}}
+  o.style.display='flex';drawSheet()}
+
+/* ---- 4) riga veloce ---- */
+var NW={una:1,un:1,uno:1,due:2,tre:3,quattro:4,cinque:5,sei:6,sette:7,otto:8,nove:9,dieci:10};
+function parseSeg(raw){var s=D(raw).toLowerCase().trim(),qty=1,m;
+  if((m=s.match(/^(\d{1,2})(?!\d)\s*(?:x|×|pz)?\s*(\S.*)$/))){qty=+m[1];s=m[2]}
+  else if((m=s.match(/^(una|un|uno|due|tre|quattro|cinque|sei|sette|otto|nove|dieci)\s+(\S.*)$/))){qty=NW[m[1]];s=m[2]}
+  else if((m=s.match(/^(.+?)\s*(?:x|×)\s*(\d{1,2})$/))){qty=+m[2];s=m[1]}
+  if(!qty||qty>30)return null;
+  var size='Normale',rem=[],add=[],mode=null,nm=[];
+  s=s.replace(/\b(maxi|xl|grande|famiglia)\b|ماكسي/g,function(){size='Maxi';return' '}).replace(/\bnormale\b/g,' ');
+  s.split(/\s+/).forEach(function(t){if(!t)return;
+    if(/^(senza|no|بدون)$/.test(t)){mode='r';return}
+    if(/^(con|extra|piu|più|مع)$/.test(t)){mode='a';return}
+    if(t.charAt(0)==='-'&&t.length>1){rem.push(t.slice(1));mode=null;return}
+    if(t.charAt(0)==='+'&&t.length>1){add.push(t.slice(1));mode=null;return}
+    if(mode==='r'){rem.push(t);mode=null}else if(mode==='a'){add.push(t);mode=null}else nm.push(t)});
+  return{qty:qty,size:size,rem:rem,add:add,name:nm.join(' ')}}
+function findProd(q){var G=/^(pizza|pizze|panino|piadina)$/;
+  function run(strip){var qt=q.split(' ').filter(function(t){return t&&!(strip&&G.test(t))}),best=null,bs=-1e9,list=[];if(!qt.length)return null;
+    allMenu.forEach(function(p){var full=N(p.name),pt=full.split(' ').filter(function(t){return t&&!(strip&&G.test(t))});if(!pt.length)return;
+      if(!qt.every(function(t){return pt.some(function(u){return u.indexOf(t)===0})}))return;
+      var sc=100-pt.length*5-full.length*.1+(qt.join(' ')===pt.join(' ')?200:0);list.push({p:p,full:full});if(sc>bs){bs=sc;best=p}});
+    if(!best)return null;var bf=N(best.name);return{p:best,fz:list.some(function(c){return c.p.active!==false&&c.full.indexOf(bf)!==0&&c.p!==best})}}
+  var r=run(false)||run(true);if(r)return r;
+  var g=S(function(){return gemMatchInfo(q,allMenu)});return g&&g.prod?{p:g.prod,fz:true}:null}
+function resIng(t,pool){var q=N(t),f=pool.filter(function(g){return N(g).indexOf(q)===0});if(!f.length)f=pool.filter(function(g){return N(g).indexOf(q)>=0});return f[0]||(q.length>2?t:'')}
+function runLine(raw){var msg=$('#b52Msg');
+  if(raw.length>80||/\b(via|viale|piazza|corso|tel|telefono|alle|ore|consegna|asporto|sono|nome)\b|\d{6,}/i.test(D(raw))){
+    S(function(){extractCustomerAndDeliveryFromText(raw)});var f=processSpokenOrder(raw,false);
+    msg.innerHTML=f?chip('','✓ Ordine letto · اتقرا'):chip('bad','❓ Non capito · مفهمتش');return f}
+  var added=[],outs=[],bad=[];
+  raw.split(/[,;\n]+|\s+\+\s+|\s+e\s+(?=(?:\d|una\b|un\b|uno\b|due\b|tre\b|quattro\b|cinque\b))/i).map(function(x){return x.trim()}).filter(Boolean).forEach(function(seg){
+    var r=parseSeg(seg);if(!r||!r.name){bad.push(seg);return}
+    var m=findProd(N(r.name));if(!m){bad.push(seg);return}
+    var p=m.p;if(p.active===false){outs.push(p);return}
+    var rp=S(function(){return ingUnique(parseIngredients(p.description))})||[],ap=S(function(){return ingUnique(getAllKnownIngredients())})||[];
+    var rem=r.rem.map(function(t){return resIng(t,rp)}).filter(Boolean),add=r.add.map(function(t){return resIng(t,ap)}).filter(Boolean);
+    var mx=r.size==='Maxi'&&Number(p.price_maxi)>0;
+    ssCartAdd(p,mx?'Maxi':'Normale',r.qty,rem,add);
+    added.push({p:p,qty:r.qty,mx:mx,nomx:r.size==='Maxi'&&!mx,rem:rem,add:add,fz:m.fz})});
+  if(added.length)renderCart();
+  if(!added.length&&!outs.length&&bad.length){var f2=processSpokenOrder(raw,false);if(f2){msg.innerHTML=chip('','✓ Ordine letto · اتقرا');return true}}
+  var h=added.map(function(a){return chip(a.fz||a.nomx?'warn':'',(a.fz?'≈ ':'✓ ')+a.qty+'× '+esc(a.p.name)+(a.mx?' Maxi':'')+(a.nomx?' (no Maxi)':'')+(a.rem.length?' 🚫'+esc(a.rem.join(',')):'')+(a.add.length?' ➕'+esc(a.add.join(',')):''))});
+  outs.forEach(function(p){h.push(chip('bad','⛔ '+esc(p.name)+' esaurito'+(alts(p).length?' · alt: '+esc(alts(p).join(', ')):'')))});
+  bad.forEach(function(b){h.push(chip('bad','❓ «'+esc(b)+'»'))});
+  msg.innerHTML=h.join('');if(outs.length){warnOff(outs)}else if(added.length)vib();
+  return added.length>0||outs.length>0}
+function go(){var i=$('#b52Line'),t=i.value.trim();if(!t)return;var ok=runLine(t);if(ok)i.value='';i.focus()}
+
+/* ---- 3) piu venduti ---- */
+function paintSells(){var box=$('#b52Sells');if(!box)return;var f=freq(),m=getActiveMenu().slice().sort(function(a,b){return(f[N(b.name)]||0)-(f[N(a.name)]||0)}).slice(0,10);
+  var sig=m.map(function(p){return p.id+':'+qtyInCart(p)}).join(',');if(box.getAttribute('data-s')===sig)return;box.setAttribute('data-s',sig);
+  box.innerHTML=m.map(function(p){var n=qtyInCart(p),mx=Number(p.price_maxi)>0;return'<div class="b52-s'+(n?' has':'')+'" data-id="'+esc(p.id)+'"><button type="button" class="m" data-a="Normale"><span>'+prodIcon(p)+'</span><b>'+esc(p.name)+'</b><i>'+euro(p.price_normal)+'</i></button>'+(n?'<em>'+n+'</em>':'')+((n||mx)?'<div class="k">'+(n?'<button type="button" data-m>−</button>':'')+(mx?'<button type="button" data-a="Maxi">XL</button>':'')+'</div>':'')+'</div>'}).join('')}
+
+/* ---- 1+2) riconoscimento cliente + ordini abituali ---- */
+var CU={key:'',name:'',addr:'',list:[]};
+function pk(v){return normalizePhoneKey(v)}
+function custOrders(k){return orders.filter(function(o){return normStatus(o.status)!=='Annullato'&&pk(o.phone)===k&&food(itemsByOrder.get(o.id)).length})}
+function sig(o){return food(itemsByOrder.get(o.id)).map(function(i){return i.quantity+'×'+i.product_name+'|'+(i.size||'Normale')}).sort().join(';')}
+function lbl(o){var s=food(itemsByOrder.get(o.id)).map(function(i){return i.quantity+'× '+base(i.product_name)+(i.size==='Maxi'?' XL':'')}).join(' + ');return s.length>58?s.slice(0,56)+'…':s}
+function setSel(id,v){var e=el(id);if(e&&e.value!==v){e.value=v;e.dispatchEvent(new Event('change',{bubbles:true}))}}
+function recog(){if(editingOrderId)return;var k=pk(el('phone').value);
+  if(k.length<9){CU.key=CU.name=CU.addr='';return}
+  if(k===CU.key)return;
+  var list=custOrders(k),prof=customerDirectory.filter(function(c){return pk(c.phone)===k})[0];CU.key=k;
+  if(!prof&&!list.length)return;
+  var lo=list[0],nm=(prof&&prof.name)||(lo&&lo.customer_name)||'',ad=(prof&&prof.address)||(lo&&lo.address)||'';
+  var cu=el('customer'),adr=el('address');
+  if(nm&&(!cu.value.trim()||cu.value===CU.name))cu.value=nm;
+  if(ad&&(!adr.value.trim()||adr.value===CU.addr))adr.value=ad;
+  CU.name=nm;CU.addr=ad;
+  if(lo&&/^(Contanti|Carta|Altro)$/.test(lo.payment_method||''))setSel('payment',lo.payment_method);
+  if(lo&&lo.order_type==='Asporto')setSel('type','Asporto');else if(ad)setSel('type','Consegna');
+  S(hideAllAutoSuggest);S(checkAndShowLastOrderBanner);S(rdAccRefresh);toast('✅ Cliente riconosciuto · '+(nm||el('phone').value))}
+function paintCust(){var box=$('#b52Cust');if(!box)return;var list=(!editingOrderId&&CU.key)?custOrders(CU.key):[];
+  if(!list.length){box.style.display='none';document.body.classList.remove('b52-cu');box.removeAttribute('data-s');return}
+  var s=CU.key+'|'+list.length+'|'+list[0].id+'|'+off().length;if(box.getAttribute('data-s')===s)return;box.setAttribute('data-s',s);
+  var lo=list[0],g={},ls=sig(lo);list.forEach(function(o){var k=sig(o);(g[k]=g[k]||{n:0,o:o}).n++});
+  var fr=Object.keys(g).filter(function(k){return g[k].n>=2&&k!==ls}).sort(function(a,b){return g[b].n-g[a].n}).slice(0,3);
+  CU.list=[lo].concat(fr.map(function(k){return g[k].o}));
+  function hasOff(o){return food(itemsByOrder.get(o.id)).some(function(i){return isOff(i.product_name)})}
+  var nm=CU.name||lo.customer_name||el('phone').value;
+  box.innerHTML='<div class="r">✅ <b>'+esc(nm)+'</b> · '+list.length+' ordini · '+(lo.address?'📍 '+esc(lo.address):'🛍️ Asporto')+'</div>'+
+   '<div class="r"><span>🕒 Ultimo:</span><button type="button" data-i="0"'+(hasOff(lo)?' class="off"':'')+'>🔄 '+(hasOff(lo)?'⛔ ':'')+esc(lbl(lo))+'</button></div>'+
+   (fr.length?'<div class="r"><span>⭐ Spesso:</span>'+fr.map(function(k,i){var o=g[k].o;return'<button type="button" class="f'+(hasOff(o)?' off':'')+'" data-i="'+(i+1)+'">×'+g[k].n+' · '+esc(lbl(o))+'</button>'}).join('')+'</div>':'');
+  box.style.display='flex';document.body.classList.add('b52-cu')}
+
+/* ---- 5) orario consigliato secondo il carico forno ---- */
+function cap(){return+(localStorage.getItem('bp52_cap')||8)}
+function isPizza(n){var b=N(base(n)),p=allMenu.filter(function(x){return N(x.name)===b})[0];return p?getProductKind(p)==='pizza':!/bibit|coca|acqua|birra|fanta|patatin|fritt|piadin|panin|kebab|burger/.test(b)}
+function slotOf(ms){var d=new Date(ms);return Math.ceil((d.getHours()*60+d.getMinutes())/15)}
+function hh(s){return pad(Math.floor(s/4))+':'+pad((s%4)*15)}
+function loads(){var L={},td=new Date().toDateString(),ns=slotOf(Date.now());
+  orders.forEach(function(o){var st=normStatus(o.status);if(st!=='Nuovo'&&st!=='In preparazione')return;var c=new Date(o.created_at);if(c.toDateString()!==td)return;
+    var m=/^(\d{1,2}):(\d{2})$/.exec(splitTimeAndNotes(o.notes).time),s=m?Math.ceil((+m[1]*60+ +m[2])/15):slotOf(c.getTime()+20*6e4);s=Math.max(s,ns);
+    food(itemsByOrder.get(o.id)).forEach(function(i){if(isPizza(i.product_name))L[s]=(L[s]||0)+(i.size==='Maxi'?1.5:1)*Number(i.quantity||1)})});return L}
+function cartPz(){var q=0;cart.forEach(function(it){if(isPizza(it.name))q+=(it.size==='Maxi'?1.5:1)*it.qty});return q}
+function paintTime(){var box=$('#b52Time');if(!box)return;var L=loads(),c=cartPz(),cp=cap(),now=Date.now(),lead=(el('type').value==='Asporto'?15:25)*6e4;
+  var any=c>0||Object.keys(L).length;if(!any){if(box.innerHTML)box.innerHTML='';return}
+  var s0=Math.max(slotOf(now+lead),44),best=null;for(var s=s0;s<=95;s++){if((L[s]||0)+c<=cp){best=s;break}}
+  var sel=getSelectedDeliveryTime(),m=/^(\d{1,2}):(\d{2})$/.exec(sel),cur=m?Math.ceil((+m[1]*60+ +m[2])/15):slotOf(now+lead),ld=(L[cur]||0)+c,over=ld>cp;
+  var h=over?'<span class="b52-c bad">⚠️ '+(m?sel:'Subito')+' pieno · '+ld+'/'+cp+' pizze</span>'+(best!=null?'<button type="button" data-t="'+hh(best)+'">💡 Usa '+hh(best)+' ('+((L[best]||0)+c)+'/'+cp+')</button>':'<span class="b52-c bad">🔥 Cucina piena fino a chiusura</span>'):'<span class="b52-c">✅ '+(m?sel:'Subito')+' libero · '+ld+'/'+cp+' pizze</span>';
+  if(box.getAttribute('data-s')!==h){box.setAttribute('data-s',h);box.innerHTML=h}}
+
+/* ---- montaggio ---- */
+function paint(){S(paintSells);var n=off().length,b=$('#b52OutN');if(b)b.textContent=n?'('+n+')':''}
+function mount(){
+  var p=$('#newTab .grid>section.panel');
+  if(p&&!$('#bp52Bar')){var b=document.createElement('div');b.id='bp52Bar';
+    b.innerHTML='<div class="b52-line"><input id="b52Line" enterkeyhint="send" autocomplete="off" autocapitalize="off" placeholder="⚡ 2 marg, 1 diav maxi senza cipolla  ↵"><button type="button" id="b52Go">↵</button></div><div id="b52Msg" class="b52-msg"></div><div class="b52-hd"><b>⭐ Più venduti · الأكتر مبيعًا</b><button type="button" id="b52Out">⛔ Esauriti · خلصت <i id="b52OutN" style="font-style:normal"></i></button></div><div id="b52Sells" class="b52-sells"></div>';
+    p.insertBefore(b,p.firstChild);
+    $('#b52Go').onclick=go;$('#b52Out').onclick=openSheet;
+    $('#b52Sells').onclick=function(e){var t=e.target.closest('.b52-s');if(!t)return;var pr=getActiveMenu().filter(function(x){return String(x.id)===t.getAttribute('data-id')})[0];if(!pr)return;var a=e.target.closest('[data-a]');vib();
+      if(a)addQuick(pr,a.getAttribute('data-a'));else if(e.target.closest('[data-m]'))minusQuick(pr)}}
+  var ac=$('#rdAccCust');if(ac&&!$('#b52Cust')){var c=document.createElement('div');c.id='b52Cust';c.onclick=function(e){var bt=e.target.closest('[data-i]');if(!bt)return;var o=CU.list[+bt.getAttribute('data-i')];if(o){vib();repeatOrderIntoCart(o,food(itemsByOrder.get(o.id)),false)}};ac.parentNode.insertBefore(c,ac)}
+  var oc=$('#bpOrder')||$('#rdAccTime .rd-acc-body');if(oc&&!$('#b52Time')){var t=document.createElement('div');t.id='b52Time';t.onclick=function(e){var bt=e.target.closest('[data-t]');if(!bt)return;setDeliveryTimeDropdown(bt.getAttribute('data-t'));S(refreshTimeBtn);S(rdAccRefresh);$('#b52Time').removeAttribute('data-s')};oc.appendChild(t)}}
+document.addEventListener('keydown',function(e){var t=e.target;if(t&&t.id==='b52Line'&&e.key==='Enter'&&!e.isComposing){e.preventDefault();go()}});
+document.addEventListener('input',function(e){if(e.target&&e.target.id==='phone')S(recog)});
+var _st=switchTab;switchTab=function(n){var r=_st.apply(this,arguments);if(n==='new'&&window.matchMedia&&matchMedia('(pointer:fine)').matches)setTimeout(function(){var i=$('#b52Line');if(i)i.focus()},160);return r};
+setInterval(function(){if(document.hidden)return;var a=el('app');if(a&&a.classList.contains('hidden'))return;S(mount);S(recog);S(paintCust);S(paintTime);S(paint)},700);
+})()}catch(e){console.error('[bp] v52',e)}
 </script>
 </body></html>
