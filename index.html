@@ -10095,7 +10095,7 @@ el('kitchenTab').addEventListener('click', function(e){
     }
     if(seq !== RP.seq) return;
 
-    RP.view = { mode: RP.mode, date: RP.date, range: range, label: rangeLabel(RP.mode, range), orders: list, local: local,
+    RP.view = { mode: RP.mode, date: RP.date, range: range, label: rangeLabel(RP.mode, range), orders: list, items: items, local: local,
       S: compute(list, items, range), P: compute(prevList, new Map(), prev) };
     render(RP.view);
   };
@@ -13787,6 +13787,99 @@ html.bp-dark .bp36-badge.due{background:#3a1512;color:#fda29b;border-color:#7a27
       var html = await costPanel(v);
       if(box.isConnected) box.innerHTML = html;
     }catch(e){ warn(e); if(box.isConnected) box.innerHTML = ''; }
+    try{ profitReport(v, box); }catch(e){ warn(e); }
+  }
+
+  /* ---------- v54 · Redditività dei prodotti (ricavi − costo ricetta) ---------- */
+  var PF = {sort: 'profit', dir: -1, data: null, ver: 0};
+  function profitData(v){
+    var b = B(); if(!b || !b.unitCosts) return null;
+    var endIncl = toLocalDateStr(new Date(v.range.end.getTime() - 1)), costs = b.unitCosts(endIncl), R = recipes();
+    var items = v.items || new Map(), map = {}, noRecipeRev = 0, totRev = 0, missCost = {};
+    function unitCost(m, sz){
+      var rc = R[rkey(m.id, sz)]; if(!rc || !rc.lines || !rc.lines.length) return null;
+      var tot = 0, ok = false;
+      rc.lines.forEach(function(l){
+        var inv = invById(l.inv); if(!inv || !(num(l.a) > 0)) return;
+        var uc = costs[String(l.inv)]; if(!uc){ missCost[inv.name] = 1; return; }
+        tot += toInv(l.a, l.u, inv.unit) * uc.cost; ok = true;
+      });
+      return ok ? tot : null;
+    }
+    v.orders.forEach(function(o){
+      if(normStatus(o.status) === 'Annullato') return;
+      foodRows(items.get(o.id) || []).forEach(function(it){
+        var base = splitProductAndMods(it.product_name).baseName, q = Number(it.quantity || 1), lt = Number(it.line_total || 0), sz = it.size || 'Normale';
+        var parts = gustiParts(base), list = parts || [menuByName(base)], f = parts ? 1 / parts.length : 1;
+        list.forEach(function(m, idx){
+          var name = m ? m.name : (parts ? 'Gusto sconosciuto' : base), key = name + (m && hasMaxi(m) ? ' · ' + sz : '');
+          var g = map[key] || (map[key] = {name: name, size: (m && hasMaxi(m)) ? sz : '', qty: 0, rev: 0, cost: 0, covQty: 0, covRev: 0, m: m});
+          var rv = lt * f, qq = q * f; g.qty += qq; g.rev += rv; totRev += rv;
+          var uc = m ? unitCost(m, sz) : null;
+          if(uc == null){ noRecipeRev += rv; } else { g.cost += uc * q * f; g.covQty += qq; g.covRev += rv; }
+        });
+      });
+    });
+    var rows = Object.keys(map).map(function(k){
+      var g = map[k], full = g.covQty > 0;
+      return {name: g.name, size: g.size, qty: g.qty, rev: g.rev, cost: g.cost, covRev: g.covRev, covQty: g.covQty, has: full,
+        profit: full ? g.covRev - g.cost : null, fc: full && g.covRev > 0 ? g.cost / g.covRev * 100 : null, margin: full && g.covRev > 0 ? 100 - g.cost / g.covRev * 100 : null,
+        unitProfit: full ? (g.covRev - g.cost) / g.covQty : null, partial: full && g.covQty < g.qty - 0.001};
+    });
+    return {rows: rows, totRev: totRev, noRecipeRev: noRecipeRev, missCost: Object.keys(missCost)};
+  }
+  function fcColor(fc){ return fc == null ? '#667085' : fc <= 30 ? '#16794b' : fc <= 40 ? '#b54708' : '#b42318'; }
+  function profitHtml(d){
+    var rows = d.rows.slice(), withR = rows.filter(function(r){ return r.has; });
+    if(!rows.length) return '';
+    var sk = PF.sort, dir = PF.dir;
+    rows.sort(function(a, b2){
+      if(sk === 'name') return dir * String(a.name).localeCompare(String(b2.name), 'it');
+      var x = a[sk], y = b2[sk];
+      if(x == null && y == null) return b2.rev - a.rev;
+      if(x == null) return 1; if(y == null) return -1;
+      return x === y ? b2.rev - a.rev : dir * (x - y);
+    });
+    var tCov = withR.reduce(function(s, r){ return s + r.covRev; }, 0), tCost = withR.reduce(function(s, r){ return s + r.cost; }, 0), tProfit = tCov - tCost;
+    var best = withR.slice().sort(function(a, b2){ return b2.profit - a.profit; })[0];
+    var worst = withR.filter(function(r){ return r.fc != null; }).sort(function(a, b2){ return b2.fc - a.fc; })[0];
+    var cov = d.totRev > 0 ? tCov / d.totRev * 100 : 0;
+    var k1 = kp('💶 Utile lordo prodotti', euro(tProfit), '#16794b', '<span>' + (tCov > 0 ? pc(tProfit / tCov * 100) + ' di margine · food cost ' + pc(tCost / tCov * 100) : '—') + '</span>');
+    var k2 = kp('🏆 Più redditizio', best ? E(best.name + (best.size ? ' ' + best.size : '')) : '—', '#175cd3', '<span>' + (best ? 'Utile ' + euro(best.profit) + ' · ' + fmtN(best.qty) + ' pz' : '') + '</span>');
+    var k3 = kp('⚠️ Food cost più alto', worst ? E(worst.name + (worst.size ? ' ' + worst.size : '')) : '—', '#b42318', '<span>' + (worst ? pc(worst.fc) + ' del prezzo' : '') + '</span>');
+    var k4 = kp('📋 Ricavi con ricetta', pc(cov), '#5925dc', '<span>' + euro(tCov) + ' su ' + euro(d.totRev) + '</span>');
+    var notes = '';
+    var nor = rows.filter(function(r){ return !r.has; });
+    if(nor.length) notes += '<div class="rp-note">ℹ️ ' + nor.length + ' prodotti senza ricetta o senza prezzo d\'acquisto (utile non calcolabile): ' + E(nor.slice(0, 8).map(function(r){ return r.name + (r.size ? ' ' + r.size : ''); }).join(', ')) + (nor.length > 8 ? '…' : '') + '. ' + (isMgr() ? '<button type="button" class="blue btn-sm" onclick="bpV38.open()">🍕 Ricette</button>' : '') + '</div>';
+    if(d.missCost.length) notes += '<div class="rp-note">⚠️ Ingredienti senza prezzo d\'acquisto (costo sottostimato): ' + E(d.missCost.join(', ')) + '.</div>';
+    function th(k, label, cls){ return '<th class="' + (cls || 'num') + '" data-b54s="' + k + '" style="cursor:pointer">' + label + (PF.sort === k ? (PF.dir === -1 ? ' ▼' : ' ▲') : '') + '</th>'; }
+    var tr = rows.map(function(r, i){
+      var c = fcColor(r.fc);
+      return '<tr><td><b>' + (i + 1) + '.</b> ' + E(r.name) + (r.size ? ' <span class="rp-muted">' + E(r.size) + '</span>' : '') + (r.partial ? ' <span class="rp-muted" title="Alcuni pezzi senza ricetta">*</span>' : '') + '</td>' +
+        '<td class="num">' + fmtN(r.qty) + '</td><td class="num">' + euro(r.rev) + '</td>' +
+        '<td class="num">' + (r.has ? euro(r.cost) : '—') + '</td>' +
+        '<td class="num"><b>' + (r.has ? euro(r.profit) : '—') + '</b></td>' +
+        '<td class="num">' + (r.has ? euro(r.unitProfit) : '—') + '</td>' +
+        '<td class="num"><b style="color:' + c + '">' + (r.fc != null ? pc(100 - r.fc) : '—') + '</b></td>' +
+        '<td class="num" style="color:' + c + '">' + (r.fc != null ? pc(r.fc) : '—') + '</td></tr>';
+    }).join('');
+    var tot = '<tfoot><tr><td>TOTALE (con ricetta)</td><td class="num">' + fmtN(withR.reduce(function(s, r){ return s + r.covQty; }, 0)) + '</td><td class="num">' + euro(tCov) + '</td><td class="num">' + euro(tCost) + '</td><td class="num"><b>' + euro(tProfit) + '</b></td><td></td><td class="num"><b>' + (tCov > 0 ? pc(tProfit / tCov * 100) : '—') + '</b></td><td class="num">' + (tCov > 0 ? pc(tCost / tCov * 100) : '—') + '</td></tr></tfoot>';
+    return '<h3>📊 Redditività dei prodotti</h3>' + notes + '<div class="rp-kpis" style="margin-bottom:12px">' + k1 + k2 + k3 + k4 + '</div>' +
+      '<div class="rp-tablewrap"><table class="rp-table"><thead><tr>' + th('name', 'Prodotto', '') + th('qty', 'Pz') + th('rev', 'Ricavi') + th('cost', 'Costo') + th('profit', 'Utile') + th('unitProfit', 'Utile/pz') + th('margin', 'Margine') + th('fc', 'Food cost') + '</tr></thead><tbody>' + tr + '</tbody>' + tot + '</table></div>' +
+      '<div class="rp-muted" style="margin-top:8px">Utile = ricavi − costo degli ingredienti della ricetta (prezzi d\'acquisto medi). Food cost: <b style="color:#16794b">≤30%</b> ottimo · <b style="color:#b54708">30–40%</b> da controllare · <b style="color:#b42318">&gt;40%</b> troppo alto. Le pizze a gusti sono divise in parti uguali. Extra/aggiunte non hanno costo, quindi l\'utile è leggermente sovrastimato. Tocca le intestazioni per ordinare.</div>';
+  }
+  function profitReport(v, afterBox){
+    var d = profitData(v); if(!d || !d.rows.length) return;
+    var box = document.createElement('div'); box.id = 'bp54Profit'; box.className = 'rp-panel';
+    PF.data = d;
+    box.innerHTML = profitHtml(d);
+    afterBox.insertAdjacentElement('afterend', box);
+    box.addEventListener('click', function(ev){
+      var t = ev.target.closest ? ev.target.closest('[data-b54s]') : null; if(!t) return;
+      var k = t.getAttribute('data-b54s');
+      if(PF.sort === k){ PF.dir = -PF.dir; } else { PF.sort = k; PF.dir = (k === 'name' || k === 'fc') ? 1 : -1; }
+      box.innerHTML = profitHtml(PF.data);
+    });
   }
   async function costPanel(v){
     var b = B(); if(!b || !b.unitCosts) return '';
