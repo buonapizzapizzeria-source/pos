@@ -6355,6 +6355,7 @@ function renderOrderList(id, list, isOpenTab=false){
           Ordine #${o.id} · ${esc(o.customer_name||'Cliente')}
           <span class="pill ${stCls}">${esc(st)}</span>
           ${o.source==='online' ? '<span class="pill" style="background:#6941c6;color:#fff">🌐 Online</span>' : ''}
+          ${bpTableNo(o) ? '<span class="pill" style="background:#ce2b37;color:#fff;font-weight:900">🍽️ TAVOLO '+esc(bpTableNo(o))+'</span>' : ''}
           <span class="pill ${u.badgeClass}">${esc(u.badgeText)}</span>
           ${parsedNotes.cashInfo ? `<span class="pill resto-pill">💶 ${esc(parsedNotes.cashInfo)}</span>` : ''}
         </h3>
@@ -6400,6 +6401,12 @@ function renderOrderList(id, list, isOpenTab=false){
 }
 
 /* ===== v53: link tracking ordine per il cliente (richiede 01_tracking.sql + track.html) ===== */
+function bpTableNo(o){
+  if(!o) return '';
+  var v=o.table_no||o.table_number||o.tavolo||'';
+  if(!v){ var m=String((o.notes||'')+' '+(o.address||'')+' '+(o.order_type||'')).match(/tavolo\s*(?:n[°o.]?\s*)?(\d{1,3})/i); if(m) v=m[1]; }
+  return v?String(v):'';
+}
 function isPrivateUrl(u){
   return /^(file:|https?:\/\/(localhost\b|127\.|0\.0\.0\.0|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|[^\/:]*\.local\b))/i.test(String(u||''));
 }
@@ -6552,6 +6559,7 @@ function buildReceiptHtml(o, items){
 
       <div class="rc-customer-box">
         <div class="rc-customer-row"><strong class="lbl">👤 Cliente:</strong> <span style="font-weight:900;font-size:15px">${esc(o.customer_name||'Cliente al banco')}</span></div>
+        ${bpTableNo(o) ? `<div class="rc-customer-row"><strong class="lbl">🍽️ Tavolo:</strong> <span style="font-weight:900;font-size:20px">${esc(bpTableNo(o))}</span></div>` : ''}
         ${o.phone ? `<div class="rc-customer-row"><strong class="lbl">📞 Telefono:</strong> <span style="font-weight:800">${esc(o.phone)}</span></div>` : ''}
         ${o.address ? `<div class="rc-customer-row"><strong class="lbl">📍 Indirizzo:</strong> <span style="font-weight:900;text-decoration:underline">${esc(o.address)}</span></div>` : ''}
       </div>
@@ -7443,21 +7451,10 @@ try{
       var r = await of(base + '/functions/v1/gemini-proxy', {method: 'POST',
         headers: {'Content-Type': 'application/json', 'apikey': anon, 'Authorization': 'Bearer ' + (tok || anon)},
         body: JSON.stringify({ping: true})});
-      if(r.status === 400){
-        // versione della funzione senza «ping»: arrivare a questo errore significa che login e ruolo staff sono già stati accettati
-        var t400 = ''; try{ t400 = await r.clone().text(); }catch(e3){}
-        if(/modello non valido/.test(t400)){ window.__bpProbeErr = ''; return true; }
-      }
-      if(!r.ok){
-        var t = ''; try{ t = (await r.text()).slice(0, 200); }catch(e2){}
-        window.__bpProbeErr = 'HTTP ' + r.status + ' ' + t + (tok ? '' : ' [nessuna sessione: token anon usato]');
-        return false;
-      }
+      if(!r.ok) return false;
       var j = await r.json();
-      if(!(j && j.ok)){ window.__bpProbeErr = 'Risposta inattesa: ' + JSON.stringify(j).slice(0, 200); return false; }
-      window.__bpProbeErr = '';
-      return true;
-    }catch(e){ window.__bpProbeErr = 'Errore di rete/CORS: ' + (e && e.message ? e.message : e) + ' | url=' + ((el('sbUrl').value || '').trim() || '(vuoto)'); return false; }
+      return !!(j && j.ok);
+    }catch(e){ return false; }
   }
   function applyProxyState(on){
     localStorage.setItem('bp_gemini_proxy', on ? '1' : '0');
@@ -7484,7 +7481,7 @@ try{
         chk.disabled = true;
         var ok = await probeProxy();
         chk.disabled = false;
-        if(!ok){ chk.checked = false; alert('Il proxy «gemini-proxy» non risponde.\nDettaglio: ' + (window.__bpProbeErr || 'sconosciuto') + '\nL\'AI continua a usare la chiave salvata.'); return; }
+        if(!ok){ chk.checked = false; alert('Il proxy «gemini-proxy» non risponde: la funzione non è stata ancora pubblicata su Supabase.\nL\'AI continua a usare la chiave salvata.'); return; }
         applyProxyState(true);
       } else {
         applyProxyState(false);
