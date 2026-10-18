@@ -7443,6 +7443,11 @@ try{
       var r = await of(base + '/functions/v1/gemini-proxy', {method: 'POST',
         headers: {'Content-Type': 'application/json', 'apikey': anon, 'Authorization': 'Bearer ' + (tok || anon)},
         body: JSON.stringify({ping: true})});
+      if(r.status === 400){
+        // versione della funzione senza «ping»: arrivare a questo errore significa che login e ruolo staff sono già stati accettati
+        var t400 = ''; try{ t400 = await r.clone().text(); }catch(e3){}
+        if(/modello non valido/.test(t400)){ window.__bpProbeErr = ''; return true; }
+      }
       if(!r.ok){
         var t = ''; try{ t = (await r.text()).slice(0, 200); }catch(e2){}
         window.__bpProbeErr = 'HTTP ' + r.status + ' ' + t + (tok ? '' : ' [nessuna sessione: token anon usato]');
