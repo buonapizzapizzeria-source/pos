@@ -29,12 +29,19 @@ label{display:block;font-weight:700;margin:10px 0 4px;font-size:14px}
 input,select,textarea{width:100%;padding:11px;border:1px solid var(--line);border-radius:10px;background:var(--card);color:var(--ink);font:inherit}
 .tot{display:flex;justify-content:space-between;padding:4px 0}.tot.g{font-weight:800;font-size:18px}
 .err{background:#fef3f2;color:#b42318;border-radius:10px;padding:10px;margin-top:10px;font-size:14px}
+#tv{margin:0 0 12px;border-radius:16px;overflow:hidden;background:#14213d;color:#fff;text-align:center;padding:16px 14px 14px;position:relative}
+#tv:before{content:"";position:absolute;left:0;right:0;top:0;height:5px;background:linear-gradient(90deg,#009246 33.3%,#fff 33.3% 66.6%,#ce2b37 66.6%)}
+#tv small{display:block;letter-spacing:.22em;font-size:11px;opacity:.75;font-weight:700}
+#tv h2{margin:4px 0 2px;font-size:24px;line-height:1.15}#tv h2 b{color:#ff6b6b}
+#tv p{margin:0;font-size:13.5px;opacity:.85}
+.tvb{display:inline-block;background:#ce2b37;color:#fff;border-radius:99px;padding:5px 14px;font-weight:800;letter-spacing:.06em;font-size:13px;margin-bottom:6px}
 a.btn{display:block;text-align:center;text-decoration:none;margin-top:12px}
 </style>
 </head>
 <body>
 <div class="wrap">
   <div class="brand">🍕 Buona Pizza</div>
+  <div id="tv" class="hide"></div>
   <div id="note" class="card hide"></div>
   <div id="chips" class="chips"></div>
   <div id="list"><div class="card mut">Caricamento menu…</div></div>
@@ -46,6 +53,8 @@ a.btn{display:block;text-align:center;text-decoration:none;margin-top:12px}
 <script>
 var sb=window.supabase.createClient('https://jfgizazsjjgzyhqfngnl.supabase.co','eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpmZ2l6YXpzampnenlocWZuZ25sIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTE3ODI0ODEsImV4cCI6MjEwNzM1ODQ4MX0.Tp_bFfR-G55OaK5i3A0fi5gF6g7pc-a3LO_IDCpsuhE');
 var M=null,cart={},cat='',canOrder=false,busy=false;
+/* QR tavolo: order.html?tavolo=12 */
+var TV=(function(){var n=parseInt(new URLSearchParams(location.search).get('tavolo'),10);if(n>=1&&n<=99){try{sessionStorage.setItem('bp_tavolo',n)}catch(_){}return n}try{var k=parseInt(sessionStorage.getItem('bp_tavolo'),10);return k>=1&&k<=99?k:0}catch(_){return 0}})();
 function $(i){return document.getElementById(i)}
 function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
 function euro(n){return '€ '+Number(n||0).toFixed(2).replace('.',',')}
@@ -60,7 +69,8 @@ async function init(){
     var open=mins(M.open),close=mins(M.close),now=mins(M.now);
     if(!M.enabled) note('🔒 Gli ordini online sono momentaneamente chiusi.<br><span class="mut">Chiamaci in pizzeria!</span>');
     else if(now<open||now>=close) note('🕒 Ordini online dalle <b>'+esc(M.open)+'</b> alle <b>'+esc(M.close)+'</b>.');
-    else{canOrder=true; var x=[]; if(M.min>0)x.push('ordine minimo '+euro(M.min)); if(M.fee>0)x.push('consegna '+euro(M.fee)); x.push('pagamento alla consegna / al ritiro'); note('<span class="mut">'+esc(x.join(' · '))+'</span>');}
+    else{canOrder=true; var x=[]; if(M.min>0)x.push('ordine minimo '+euro(M.min)); if(M.fee>0)x.push('consegna '+euro(M.fee)); x.push(TV?'pagamento al tavolo':'pagamento alla consegna / al ritiro'); note('<span class="mut">'+esc(x.join(' · '))+'</span>');}
+    if(TV){var t=$('tv');t.classList.remove('hide');t.innerHTML='<small>BUONA PIZZA</small><h2>Benvenuti al <b>Tavolo '+TV+'</b>!</h2><p>Scegli le tue pizze e invia: ti serviamo noi al tavolo. Buon appetito! 🍕</p>'}
     var cats=[]; M.menu.forEach(function(p){var c=p.category||'Altro'; if(cats.indexOf(c)<0)cats.push(c)});
     cat=cats[0]||''; $('chips').innerHTML=cats.map(function(c){return '<button data-c="'+esc(c)+'">'+esc(c)+'</button>'}).join('');
     paintList();
@@ -111,6 +121,11 @@ function openSheet(){
    '<label>Note (facoltative)</label><textarea id="fo" rows="2"></textarea>'+
    '<div id="er"></div><button class="btn" id="go" style="width:100%;padding:14px;font-size:16px;margin-top:12px">✅ Invia ordine</button>'+
    '<button class="btn" id="cl" style="width:100%;margin-top:8px;background:var(--mut)">Continua con il menu</button>';
+  if(TV){
+    $('box').insertAdjacentHTML('afterbegin','<div class="tvb">🍽️ TAVOLO '+TV+'</div>');
+    $('ft').value='Asporto'; [$('ft'),$('ft').previousElementSibling,$('fh'),$('fh').previousElementSibling].forEach(function(e){e.classList.add('hide')});
+    $('fn').previousElementSibling.textContent='Nome (facoltativo)'; $('fp').previousElementSibling.textContent='Telefono (per avvisarti se serve)';
+  }
   $('ov').classList.remove('hide');
   $('ft').onchange=function(){$('fa').classList.toggle('hide',$('ft').value!=='Consegna');upd()};
   $('cl').onclick=function(){$('ov').classList.add('hide')};
@@ -131,19 +146,20 @@ $('box').onclick=function(e){
 var ERR={ONLINE_OFF:'Gli ordini online sono chiusi.',CLOSED:'Siamo fuori orario per gli ordini online.',BAD_NAME:'Inserisci il tuo nome.',BAD_PHONE:'Numero di telefono non valido.',BAD_ADDRESS:'Inserisci l’indirizzo di consegna.',BAD_ITEM:'Un prodotto non è più disponibile. Ricarica la pagina.',BAD_ITEMS:'Controlla le quantità.',MIN:'Non hai raggiunto l’ordine minimo.',RATE:'Troppi ordini ravvicinati. Chiamaci in pizzeria.'};
 async function send(){
   if(busy)return; var er=$('er'); er.innerHTML='';
-  var n=$('fn').value.trim(),ph=$('fp').value.trim(),ty=$('ft').value,ad=$('fd').value.trim();
-  if(n.length<2) return er.innerHTML='<div class="err">'+ERR.BAD_NAME+'</div>';
+  var n=$('fn').value.trim(),ph=$('fp').value.trim(),ty=$('ft').value,ad=$('fd').value.trim(),n0=n,tm=$('fh').value,nt=$('fo').value;
+  if(TV){ty='Asporto';ad='';tm='';n='Tavolo '+TV+(n?' · '+n:'');nt='TAVOLO '+TV+(nt.trim()?' · '+nt.trim():'')}
+  if(!TV&&n.length<2) return er.innerHTML='<div class="err">'+ERR.BAD_NAME+'</div>';
   if(ph.replace(/\D/g,'').length<8) return er.innerHTML='<div class="err">'+ERR.BAD_PHONE+'</div>';
   if(ty==='Consegna'&&ad.length<5) return er.innerHTML='<div class="err">'+ERR.BAD_ADDRESS+'</div>';
   if(M.min>0&&sub()<M.min) return er.innerHTML='<div class="err">Ordine minimo '+euro(M.min)+'.</div>';
   busy=true; $('go').disabled=true; $('go').textContent='Invio in corso…';
   try{
-    var r=await sb.rpc('create_online_order',{p_name:n,p_phone:ph,p_type:ty,p_address:ad,p_time:$('fh').value,p_notes:$('fo').value,
+    var r=await sb.rpc('create_online_order',{p_name:n,p_phone:ph,p_type:ty,p_address:ad,p_time:tm,p_notes:nt,
       p_items:lines().map(function(l){return{id:String(l.id),size:l.size,qty:l.qty}})});
     if(r.error) throw r.error;
-    try{localStorage.setItem('bp_cust',JSON.stringify({n:n,p:ph,a:ad}))}catch(_){}
+    try{localStorage.setItem('bp_cust',JSON.stringify({n:n0,p:ph,a:ad}))}catch(_){}
     cart={}; paintBar();
-    $('box').innerHTML='<h2>✅ Ordine inviato!</h2><p>Il tuo ordine <b>#'+esc(r.data.id)+'</b> è stato ricevuto. Il locale lo confermerà a breve.</p><p class="mut">Pagamento in contanti alla consegna o al ritiro.</p><a class="btn" href="track.html?t='+encodeURIComponent(r.data.token)+'">📍 Segui il tuo ordine</a>';
+    $('box').innerHTML='<h2>✅ Ordine inviato!</h2><p>Il tuo ordine <b>#'+esc(r.data.id)+'</b>'+(TV?' per il <b>Tavolo '+TV+'</b>':'')+' è stato ricevuto. Il locale lo confermerà a breve.</p><p class="mut">'+(TV?'Pagamento al tavolo. Buon appetito! 🍕':'Pagamento in contanti alla consegna o al ritiro.')+'</p><a class="btn" href="track.html?t='+encodeURIComponent(r.data.token)+'">📍 Segui il tuo ordine</a>';
   }catch(e){
     var msg=String((e&&e.message)||e),code=Object.keys(ERR).filter(function(c){return msg.indexOf(c)>=0})[0];
     er.innerHTML='<div class="err">'+esc(code?ERR[code]:'Errore: '+msg)+'</div>';
