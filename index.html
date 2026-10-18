@@ -14934,6 +14934,7 @@ function paintPanel(){
   var s=CFG.wa.states;
   ov.querySelector('.au-box').innerHTML=
    '<h2>⚙️ Automazioni</h2><p class="au-note">Tutto è <b>spento</b> finché non lo accendi tu. Modalità <b>1 tocco</b>: WhatsApp si apre con il messaggio già scritto, la cassa preme solo Invia.</p>'+
+   '<div class="au-sec"><div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="blue btn-sm" id="auFb">⭐ Feedback clienti<span id="auFbN"></span></button><button type="button" class="blue btn-sm" id="auWb">💤 Clienti inattivi</button></div></div>'+
    '<div class="au-sec"><div class="au-row"><label for="auWa">📲 Messaggio al cliente quando cambia lo stato</label>'+sw('auWa',CFG.wa.on)+'</div>'+
    '<div class="au-sub" style="'+(CFG.wa.on?'':'opacity:.45;pointer-events:none')+'">'+
    ['In preparazione','Pronto','In consegna'].map(function(k,i){return '<div class="au-row"><label for="auS'+i+'">'+({'In preparazione':'👨‍🍳 In preparazione','Pronto':'✅ Pronto','In consegna':'🛵 In consegna'})[k]+'</label>'+sw('auS'+i,s[k])+'</div>'}).join('')+'</div></div>'+
@@ -14948,6 +14949,8 @@ function paintPanel(){
   bind('auBase',function(e){CFG.base=cleanBase(e.value)});
   bind('auOn',function(e){CFG.online.on=e.checked});
   bind('auPromo',function(e){CFG.online.promo=e.checked});
+  $q('#auFb',b).onclick=openFeedback; $q('#auWb',b).onclick=function(){openWinback(30)};
+  fbCount().then(function(n){ var e=$q('#auFbN',b); if(e&&n) e.textContent=' ('+n+')'; });
   bind('auFee',function(e){CFG.online.fee=Number(e.value)||0});
   bind('auMin',function(e){CFG.online.min=Math.max(0,Number(e.value)||0)});
   bind('auHo',function(e){if(e.value)CFG.online.open=e.value});
@@ -15019,13 +15022,90 @@ function reviewTick(){
     if(normStatus(o.status)!=='Completato'||!o.phone||sent.indexOf(String(o.id))>=0) return;
     var t=new Date(o.updated_at||o.created_at).getTime(), age=now-t; if(!(age>=min&&age<=max)) return;
     var n=fname(o);
-    toast('rv:'+o.id,'⭐ #'+o.id+' completato · chiedi recensione a '+(n||o.phone),'⭐ Invia',function(){
-      markSent(o.id);
-      wa(o,'Ciao'+(n?' '+n:'')+'! 🍕 Grazie per aver ordinato da Buona Pizza. Ti è piaciuto? Una recensione ci aiuta tantissimo: '+GOOGLE_REVIEW_URL+promoLine());
+    ensureToken(o).then(function(){
+      toast('rv:'+o.id,'⭐ #'+o.id+' completato · chiedi recensione a '+(n||o.phone),'⭐ Invia',function(){
+        markSent(o.id); var rl=rateLink(o);
+        wa(o,'Ciao'+(n?' '+n:'')+'! 🍕 Grazie per aver ordinato da Buona Pizza. '+(rl?'Com’è andata? Ci dai un voto in 10 secondi: '+rl:'Ti è piaciuto? Una recensione ci aiuta tantissimo: '+GOOGLE_REVIEW_URL)+promoLine());
+      });
     });
   });
 }
 setInterval(reviewTick,60000);
+
+/* ---------- 3) recensione intelligente + feedback privato ---------- */
+function rateLink(o){ if(!o||!o.track_token) return ''; var u=trackingBase()+'rate.html?t='+encodeURIComponent(o.track_token); return isPrivateUrl(u)?'':u; }
+async function ensureToken(o){ if(o.track_token) return; try{ var r=await sb.from('orders').select('track_token').eq('id',o.id).maybeSingle(); if(r.data&&r.data.track_token) o.track_token=r.data.track_token; }catch(e){} }
+var mv=null;
+function modal(title,html){
+  if(mv) mv.remove(); mv=document.createElement('div'); mv.className='au-ov';
+  mv.innerHTML='<div class="au-box"><h2>'+title+'</h2><div id="mvb">'+html+'</div><button type="button" class="secondary" id="mvx" style="width:100%;margin-top:10px;padding:12px">Chiudi</button></div>';
+  mv.onclick=function(e){ if(e.target===mv||e.target.id==='mvx'){ mv.remove(); mv=null; } };
+  document.body.appendChild(mv); return mv.querySelector('#mvb');
+}
+async function fbCount(){
+  try{ var r=await sb.from('feedback').select('id',{count:'exact',head:true}).eq('handled',false).lt('rating',4); return r.error?null:(r.count||0); }catch(e){ return null; }
+}
+async function openFeedback(){
+  var b=modal('⭐ Feedback clienti','<p class="au-note">Caricamento…</p>'), d=null;
+  try{ var r=await sb.from('feedback').select('*').order('created_at',{ascending:false}).limit(60); if(!r.error) d=r.data; }catch(e){}
+  if(!d){ b.innerHTML='<div class="au-warn">Tabella feedback non trovata. Esegui <b>04_feedback.sql</b> in Supabase.</div>'; return; }
+  if(!d.length){ b.innerHTML='<p class="au-note">Ancora nessun voto. Appena un cliente vota dal link, lo vedi qui.</p>'; return; }
+  var avg=d.reduce(function(s,x){return s+x.rating},0)/d.length;
+  d.sort(function(a,b2){ var ka=(!a.handled&&a.rating<4)?0:1, kb=(!b2.handled&&b2.rating<4)?0:1; return ka-kb || new Date(b2.created_at)-new Date(a.created_at); });
+  function paint(){
+    b.innerHTML='<p class="au-note">Media <b>'+avg.toFixed(1)+' ★</b> su '+d.length+' voti. I voti sotto 4 non vanno su Google: arrivano solo a te.</p>'+d.map(function(x){
+      var low=x.rating<4&&!x.handled;
+      return '<div class="au-sec" style="margin:8px 0;'+(low?'border-color:#d92d20;background:#fef3f2':'')+'"><div class="au-row"><b>'+'★'.repeat(x.rating)+'☆'.repeat(5-x.rating)+' · #'+esc(x.order_id)+'</b><span class="au-note">'+new Date(x.created_at).toLocaleDateString('it-IT')+'</span></div>'+
+        '<div>'+esc(x.customer_name||'')+' · '+esc(x.phone||'')+'</div>'+(x.comment?'<div style="margin-top:4px">“'+esc(x.comment)+'”</div>':'')+
+        '<div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap">'+(x.phone?'<button type="button" class="blue btn-sm" data-fw="'+x.id+'">💬 Scrivi al cliente</button>':'')+(x.handled?'<span class="au-note">✓ gestito</span>':'<button type="button" class="green btn-sm" data-fh="'+x.id+'">✓ Gestito</button>')+'</div></div>';
+    }).join('');
+  }
+  paint();
+  b.onclick=async function(e){
+    var w=e.target.closest('[data-fw]'), h=e.target.closest('[data-fh]');
+    if(w){ var x=d.filter(function(y){return String(y.id)===w.getAttribute('data-fw')})[0]; var n=String(x.customer_name||'').split(' ')[0];
+      window.open('https://wa.me/'+waPhone(x.phone)+'?text='+encodeURIComponent('Ciao'+(n?' '+n:'')+', sono di Buona Pizza. Abbiamo letto il tuo messaggio e ci dispiace per l’inconveniente. Possiamo fare qualcosa per rimediare?'),'_blank'); }
+    if(h){ var id=h.getAttribute('data-fh'); var r2=await sb.from('feedback').update({handled:true}).eq('id',id); if(!r2.error){ d.forEach(function(y){ if(String(y.id)===id) y.handled=true; }); paint(); } }
+  };
+}
+
+/* ---------- 4) clienti inattivi: un tocco per cliente, mai invio di massa ---------- */
+var WB='bp_winback';
+function wbState(){ try{ return JSON.parse(localStorage.getItem(WB)||'{}'); }catch(e){ return {}; } }
+function wbSave(x){ try{ localStorage.setItem(WB,JSON.stringify(x)); }catch(e){} }
+function pkey(ph){ var d=String(ph||'').replace(/\D/g,'').replace(/^0039/,''); if(/^39\d{9,10}$/.test(d)) d=d.slice(2); return d.length>=8?d:''; }
+async function openWinback(days){
+  days=days||30; var b=modal('💤 Clienti inattivi','<p class="au-note">Caricamento…</p>'), rows=[];
+  try{ for(var i=0;i<6;i++){ var r=await sb.from('orders').select('phone,customer_name,created_at,status').not('phone','is',null).order('created_at',{ascending:false}).range(i*1000,i*1000+999); if(r.error) throw r.error; rows=rows.concat(r.data||[]); if((r.data||[]).length<1000) break; } }
+  catch(e){ b.innerHTML='<div class="au-warn">Errore: '+esc(e.message||e)+'</div>'; return; }
+  var g={}, now=Date.now(), st=wbState();
+  rows.forEach(function(o){ if(normStatus(o.status)==='Annullato') return; var k=pkey(o.phone); if(!k) return;
+    var x=g[k]; if(!x) g[k]=x={k:k,phone:o.phone,name:o.customer_name,last:new Date(o.created_at).getTime(),n:0}; x.n++; });
+  var list=Object.keys(g).map(function(k){return g[k]}).filter(function(x){
+    var age=(now-x.last)/864e5, s=st[x.k]; if(age<days||age>365) return false;
+    return !(s&&(s.s==='skip'||now-s.t<30*864e5));
+  }).sort(function(a,b2){return b2.n-a.n}).slice(0,60);
+  var l=orderLink(), canLink=CFG.online.on&&!isPrivateUrl(l);
+  function paint(){
+    b.innerHTML='<div class="au-row"><label for="wbD">Senza ordini da almeno</label><select id="wbD">'+[21,30,45,60,90].map(function(v){return '<option value="'+v+'"'+(v===days?' selected':'')+'>'+v+' giorni</option>'}).join('')+'</select></div>'+
+      '<p class="au-note">'+list.length+' clienti (prima i più fedeli). Ogni messaggio parte solo quando tocchi “Invia”.'+(canLink?'':' Gli ordini online sono spenti: il messaggio non avrà il link.')+'</p>'+
+      list.map(function(x){ return '<div class="au-sec" style="margin:8px 0"><div class="au-row"><b>'+esc(x.name||x.phone)+'</b><span class="au-note">'+x.n+' ordini · '+Math.floor((now-x.last)/864e5)+' gg fa</span></div><div class="au-note">'+esc(x.phone)+'</div><div style="display:flex;gap:6px;margin-top:8px"><button type="button" class="green btn-sm" data-ws="'+x.k+'">📲 Invia</button><button type="button" class="secondary btn-sm" data-wk="'+x.k+'">🚫 Non contattare</button></div></div>'; }).join('');
+    $q('#wbD',b).onchange=function(){ openWinback(Number(this.value)); };
+  }
+  paint();
+  b.onclick=function(e){
+    var s=e.target.closest('[data-ws]'), k=e.target.closest('[data-wk]'), key=(s||k)&&(s||k).getAttribute(s?'data-ws':'data-wk'); if(!key) return;
+    var x=list.filter(function(y){return y.k===key})[0]; if(!x) return; var st2=wbState();
+    if(s){ var n=String(x.name||'').split(' ')[0];
+      window.open('https://wa.me/'+waPhone(x.phone)+'?text='+encodeURIComponent('Ciao'+(n?' '+n:'')+'! 🍕 È un po’ che non ti vediamo da Buona Pizza, ci manchi! '+(canLink?'Ordina online in un attimo: '+l:'Ti aspettiamo, chiamaci o passa a trovarci.')),'_blank'); st2[key]={t:Date.now(),s:'sent'}; }
+    else st2[key]={t:Date.now(),s:'skip'};
+    wbSave(st2); list=list.filter(function(y){return y.k!==key}); paint();
+  };
+}
+var fbNotified=0;
+function fbPoll(){ if(typeof BP_ROLE==='undefined'||BP_ROLE!=='manager'||document.hidden) return;
+  fbCount().then(function(n){ if(n&&n>fbNotified) toast('fb:'+n,'⭐ '+n+' feedback negativi da gestire','Apri',openFeedback); if(n!==null) fbNotified=n; }); }
+setInterval(fbPoll,300000); setTimeout(fbPoll,25000);
 
 /* ---------- avvio ---------- */
 var _ar=bpApplyRole; bpApplyRole=function(){var r=_ar.apply(this,arguments); try{mountBtn()}catch(e){} return r};
