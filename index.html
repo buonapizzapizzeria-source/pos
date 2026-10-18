@@ -6428,7 +6428,7 @@ async function sendTrackingLink(o){
   if(!url){ alert('Manca la colonna track_token.\nEsegui 01_tracking.sql in Supabase → SQL Editor, poi riprova.'); return; }
   if(isPrivateUrl(url)){ alert('Il link punta a un indirizzo locale (' + url.split('/track.html')[0] + ') e il cliente non potrebbe aprirlo.\n\nIl Responsabile deve impostare l\'indirizzo pubblico di track.html in ⚙️ Automazioni → Indirizzo pubblico.'); return; }
   var name = String(o.customer_name||'').split(' ')[0];
-  var msg = 'Ciao' + (name?' '+name:'') + '! 🍕 Segui il tuo ordine #' + o.id + ' da Buona Pizza qui: ' + url;
+  var msg = 'Ciao' + (name?' '+name:'') + '! 🍕 Segui il tuo ordine #' + o.id + ' da Buona Pizza qui: ' + url + (window.__bpAuto ? window.__bpAuto.promo() : '');
   window.open('https://wa.me/' + waPhone(o.phone) + '?text=' + encodeURIComponent(msg), '_blank');
 }
 
@@ -9377,6 +9377,7 @@ el('kitchenTab').addEventListener('click', function(e){
       html += '<div style="display:flex;gap:8px;flex-wrap:wrap;margin:12px 0">' +
         '<button type="button" class="blue btn-sm" data-bpc="edit">✏️ Modifica dati</button>' +
         '<button type="button" class="secondary btn-sm" data-bpc="wa">💬 WhatsApp</button>' +
+        '<button type="button" class="blue btn-sm" data-bpc="menu">📲 Invia menu online</button>' +
         '<button type="button" class="btn-sm" data-bpc="delete">🗑️ Elimina cliente</button></div>' +
         '<h3 style="margin:8px 0">📋 Ordini del cliente</h3><div id="bpcOrders" class="muted">Caricamento…</div>';
     }
@@ -9480,6 +9481,7 @@ el('kitchenTab').addEventListener('click', function(e){
     if(act === 'back') return renderSheet(c, 'view');
     if(act === 'edit') return renderSheet(c, 'edit');
     if(act === 'wa') return sendLoyaltyWhatsapp(c.phone, c.name, c.totalOrders);
+    if(act === 'menu') return window.sendMenuLink && window.sendMenuLink(c.phone, c.name);
     if(act === 'order'){
       var oid = b.dataset.oid, ord = c.orders.filter(function(x){ return String(x.id) === oid; })[0];
       if(!ord) return;
@@ -14859,13 +14861,13 @@ setInterval(function(){if(document.hidden)return;var a=el('app');if(a&&a.classLi
    Modalità "1 tocco": WhatsApp si apre con il messaggio pronto, la cassa preme Invia. */
 try{(function(){
 var KEY='auto_settings', LS='bp_auto_cfg', SENT='bp_review_sent';
-var DEF={online:{on:false,fee:0,min:0,open:'11:00',close:'23:00'},base:'https://buonapizzapizzeria-source.github.io/pos/',wa:{on:false,states:{'In preparazione':false,'Pronto':true,'In consegna':true}},review:{on:false,delay:30}};
+var DEF={online:{on:false,promo:false,fee:0,min:0,open:'11:00',close:'23:00'},base:'https://buonapizzapizzeria-source.github.io/pos/',wa:{on:false,states:{'In preparazione':false,'Pronto':true,'In consegna':true}},review:{on:false,delay:30}};
 var CFG=JSON.parse(JSON.stringify(DEF)), shared=false, inited=false;
 function $q(s,r){return (r||document).querySelector(s)}
 function merge(c){
   var o=JSON.parse(JSON.stringify(DEF)); if(!c||typeof c!=='object') return o;
   if(typeof c.base==='string') o.base=c.base.replace(/\s+/g,'');
-  if(c.online){var q=c.online; o.online.on=!!q.on; o.online.fee=Math.max(0,Number(q.fee)||0); o.online.min=Math.max(0,Number(q.min)||0);
+  if(c.online){var q=c.online; o.online.on=!!q.on; o.online.fee=Math.max(0,Number(q.fee)||0); o.online.min=Math.max(0,Number(q.min)||0); o.online.promo=!!q.promo;
     if(/^\d\d:\d\d$/.test(q.open||'')) o.online.open=q.open; if(/^\d\d:\d\d$/.test(q.close||'')) o.online.close=q.close;}
   if(c.wa){o.wa.on=!!c.wa.on; if(c.wa.states) Object.keys(o.wa.states).forEach(function(k){ if(k in c.wa.states) o.wa.states[k]=!!c.wa.states[k]; });}
   if(c.review){o.review.on=!!c.review.on; var d=Number(c.review.delay); if(d>=5&&d<=600) o.review.delay=d;}
@@ -14889,6 +14891,21 @@ async function push(){
 }
 function canSeeToasts(){return typeof BP_ROLE==='undefined'||BP_ROLE==='manager'||BP_ROLE==='cashier'}
 
+function promoLine(){
+  if(!CFG.online.on||!CFG.online.promo) return '';
+  var l=orderLink(); if(isPrivateUrl(l)) return '';
+  return '\n\n🍕 Ordina anche online: '+l;
+}
+function sendMenuLink(phone,name){
+  if(!CFG.online.on){alert('Gli ordini online sono spenti. Accendili da ⚙️ Automazioni (Responsabile).');return}
+  var l=orderLink(); if(isPrivateUrl(l)){alert('Imposta prima l\'indirizzo pubblico in ⚙️ Automazioni.');return}
+  if(!phone){alert('Questo cliente non ha un numero di telefono.');return}
+  var n=String(name||'').split(' ')[0];
+  window.open('https://wa.me/'+waPhone(phone)+'?text='+encodeURIComponent('Ciao'+(n?' '+n:'')+'! 🍕 Da Buona Pizza ora puoi ordinare online, comodo dal telefono: '+l),'_blank');
+}
+window.__bpAuto={cfg:function(){return CFG},promo:promoLine};
+window.sendMenuLink=sendMenuLink;
+
 /* ---------- stile ---------- */
 var st=document.createElement('style');
 st.textContent='#autoBtn{background:#6941c6;color:#fff}.au-ov{position:fixed;inset:0;background:#0007;z-index:99999;display:flex;align-items:flex-end;justify-content:center}.au-box{background:#fff;color:#101828;width:100%;max-width:520px;max-height:90vh;overflow:auto;border-radius:18px 18px 0 0;padding:16px 16px calc(16px + env(safe-area-inset-bottom))}.au-box h2{margin:0 0 4px;font-size:19px}.au-sec{border:1px solid #e4e7ec;border-radius:12px;padding:12px;margin:12px 0}.au-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:6px 0}.au-row label{flex:1;font-weight:700}.au-sub{margin:4px 0 0 0;padding-left:6px;border-left:3px solid #e4e7ec}.au-sw{width:46px;height:26px;flex:none;appearance:none;-webkit-appearance:none;background:#d0d5dd;border-radius:99px;position:relative;cursor:pointer;border:0;padding:0}.au-sw:checked{background:#16794b}.au-sw::after{content:"";position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;transition:.15s}.au-sw:checked::after{left:23px}.au-note{font-size:12.5px;color:#667085;margin:6px 0 0}.au-warn{background:#fffaeb;border:1px solid #fdb022;color:#93370d;border-radius:10px;padding:8px 10px;font-size:12.5px;margin-top:8px}#auStack{position:fixed;left:10px;right:10px;bottom:calc(10px + env(safe-area-inset-bottom));z-index:99998;display:flex;flex-direction:column;gap:8px;max-width:520px;margin:0 auto}.au-t{background:#101828;color:#fff;border-radius:14px;padding:10px 12px;display:flex;gap:10px;align-items:center;box-shadow:0 6px 20px #0006}.au-t span{flex:1;font-size:14px}.au-t button{padding:9px 12px;font-weight:800}';
@@ -14905,6 +14922,7 @@ function onlineSec(){
    '<div style="'+(O.on?'':'opacity:.45;pointer-events:none')+'">'+
    '<div class="au-row"><label for="auFee">Supplemento consegna</label><select id="auFee">'+fees+'</select></div>'+
    '<div class="au-row"><label for="auMin">Ordine minimo (€)</label><input id="auMin" type="number" min="0" step="0.5" value="'+O.min+'" style="width:90px"></div>'+
+   '<div class="au-row"><label for="auPromo">📣 Aggiungi il link “Ordina online” ai messaggi WhatsApp</label>'+sw('auPromo',O.promo)+'</div>'+
    '<div class="au-row"><label for="auHo">Aperto dalle / alle</label><span style="display:flex;gap:6px"><input id="auHo" type="time" value="'+O.open+'"><input id="auHc" type="time" value="'+O.close+'"></span></div></div>'+
    (bad?'<div class="au-warn">⚠️ Imposta qui sotto l’indirizzo pubblico: ora il link punta a un indirizzo locale.</div>':
     '<div style="display:flex;gap:12px;align-items:center;margin-top:10px;flex-wrap:wrap"><img src="'+qr+'" width="110" height="110" alt="QR menu" style="border-radius:8px;background:#fff"><div style="flex:1;min-width:150px"><div style="font-size:12.5px;word-break:break-all;font-weight:700">'+esc(link)+'</div><div style="display:flex;gap:6px;margin-top:8px"><button type="button" class="blue btn-sm" id="auCopy">🔗 Copia link</button><button type="button" class="secondary btn-sm" id="auPrint">🖨️ Stampa QR</button></div></div></div>')+
@@ -14928,6 +14946,7 @@ function paintPanel(){
   function bind(id,fn){var e=$q('#'+id,b); if(e) e.onchange=function(){fn(e);push()}}
   bind('auBase',function(e){CFG.base=e.value.replace(/\s+/g,'')});
   bind('auOn',function(e){CFG.online.on=e.checked});
+  bind('auPromo',function(e){CFG.online.promo=e.checked});
   bind('auFee',function(e){CFG.online.fee=Number(e.value)||0});
   bind('auMin',function(e){CFG.online.min=Math.max(0,Number(e.value)||0)});
   bind('auHo',function(e){if(e.value)CFG.online.open=e.value});
@@ -14978,7 +14997,7 @@ async function onStatus(id,newSt,oldSt){
             'Pronto':deliv?'✅ il tuo ordine #'+o.id+' è pronto, parte a breve!':'✅ il tuo ordine #'+o.id+' è pronto, puoi passare a ritirarlo.',
             'In consegna':'🛵 il fattorino è in arrivo con il tuo ordine #'+o.id+'!'}[newSt];
   if(!body) return;
-  var msg=hi+body+(link&&newSt!=='Pronto'?' Seguilo qui: '+link:'');
+  var msg=hi+body+(link&&newSt!=='Pronto'?' Seguilo qui: '+link:'')+promoLine();
   toast('st:'+o.id+':'+newSt,'#'+o.id+' → '+newSt+' · '+(n||o.phone),'📲 Invia',function(){wa(o,msg)});
 }
 var _u=updateOrderStatus;
@@ -15001,7 +15020,7 @@ function reviewTick(){
     var n=fname(o);
     toast('rv:'+o.id,'⭐ #'+o.id+' completato · chiedi recensione a '+(n||o.phone),'⭐ Invia',function(){
       markSent(o.id);
-      wa(o,'Ciao'+(n?' '+n:'')+'! 🍕 Grazie per aver ordinato da Buona Pizza. Ti è piaciuto? Una recensione ci aiuta tantissimo: '+GOOGLE_REVIEW_URL);
+      wa(o,'Ciao'+(n?' '+n:'')+'! 🍕 Grazie per aver ordinato da Buona Pizza. Ti è piaciuto? Una recensione ci aiuta tantissimo: '+GOOGLE_REVIEW_URL+promoLine());
     });
   });
 }
