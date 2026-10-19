@@ -1617,10 +1617,10 @@ html:not(.x) body .kt-go{width:100%;min-height:64px;margin-top:10px;font-size:ca
   </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script id="bp-app">
 /* =====================================================================
- * BUONA PIZZA POS v30  (codice unificato: 1 <style> + 1 <script>)
+ * BUONA PIZZA POS v58  (codice unificato: 1 <style> + 1 <script>)
  * Sezione 1  : applicazione base (funzioni originali)
  * Sezioni 2-23: estensioni, ognuna isolata in try/catch (un errore non ferma le altre)
  * Funzioni ancora "avvolte" da piu sezioni (debito tecnico, da fondere):
@@ -5099,10 +5099,16 @@ async function doSignIn(){
   }
 }
 
-function doDirectEnter(){
+async function doDirectEnter(){
+  /* fix: nessun accesso senza autenticazione. Questa e' solo la versione di riserva:
+     la versione con PIN (v25-pin) la sostituisce; se non si carica, serve una sessione valida. */
   doSaveConfig();
   if(!connect())return;
-  showApp({email: el('email').value.trim() || 'Cassa Staff'});
+  try{
+    var cur = await sb.auth.getSession();
+    if(cur && cur.data && cur.data.session){ showApp(cur.data.session.user); return; }
+  }catch(e){ bpWarn(e); }
+  setMsg('loginMsg','Accesso non autorizzato: effettua il login con il PIN staff.','error');
 }
 
 async function doSignUp(){
