@@ -9,7 +9,7 @@
 <meta name="apple-mobile-web-app-title" content="Buona Pizza">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="format-detection" content="telephone=no">
-<meta name="theme-color" content="#b42318"><title>Buona Pizza · POS Pro v38</title>
+<meta name="theme-color" content="#b42318"><title>Buona Pizza · POS Pro v58</title>
 <style id="bp-styles">
 /* ---- stile 1 ---- */
 :root{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;color:#202124;background:#f5f6f8;--red:#b42318;--green:#16794b;--blue:#175cd3;--orange:#b54708;--purple:#5925dc;--line:#e1e4e8}
@@ -899,7 +899,7 @@ html:not(.x) body .kt-go{width:100%;min-height:64px;margin-top:10px;font-size:ca
 </head>
 <body>
 <header class="no-print">
-  <div class="brand"><span class="logo">🍕</span><span>Buona Pizza <span class="muted">· POS Pro v38</span></span></div>
+  <div class="brand"><span class="logo">🍕</span><span>Buona Pizza <span class="muted">· POS Pro v58</span></span></div>
   <div id="userBar" class="hidden" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
     <button type="button" id="soundToggleBtn" onclick="toggleSoundAlert()" class="sound-btn" title="Attiva/Disattiva suono nuovo ordine">🔔 Audio ON</button>
     <button type="button" onclick="playOrderChime(true)" class="secondary btn-sm" title="Prova suono campanello">🔊 Test</button>
@@ -1254,6 +1254,21 @@ html:not(.x) body .kt-go{width:100%;min-height:64px;margin-top:10px;font-size:ca
             <button type="button" class="secondary" onclick="bpAddExtra(0)">✖ Azzera</button>
           </div>
         </div>
+        <div id="loyaltyBox"></div>
+        <div class="extra-box">
+          <label for="discountAmountInput">🏷️ Sconto (€) · خصم</label>
+          <div class="extra-row">
+            <input id="discountAmountInput" type="number" inputmode="decimal" step="0.5" min="0" placeholder="0,00 €" oninput="renderCart()">
+            <input id="discountReasonInput" type="text" maxlength="40" placeholder="Motivo (facoltativo) · السبب" oninput="renderCart()">
+          </div>
+          <div class="extra-quick">
+            <button type="button" class="secondary" onclick="bpAddDiscount(0.5)">−0,50</button>
+            <button type="button" class="secondary" onclick="bpAddDiscount(1)">−1</button>
+            <button type="button" class="secondary" onclick="bpAddDiscount(2)">−2</button>
+            <button type="button" class="secondary" onclick="bpAddDiscount(5)">−5</button>
+            <button type="button" class="secondary" onclick="bpAddDiscount(0)">✖ Azzera</button>
+          </div>
+        </div>
         <div id="subtotalsBox" class="subtotals-box"></div>
         <div class="total"><span>Totale Cliente</span><span id="total">€ 0,00</span></div>
 
@@ -1369,6 +1384,7 @@ html:not(.x) body .kt-go{width:100%;min-height:64px;margin-top:10px;font-size:ca
         <button type="button" onclick="bp36.openOrder()" class="orange" id="bp36OrdBtn">↕️ Ordina</button>
         <button type="button" onclick="openCategoryModal()" class="blue">📁 + Nuova Categoria</button>
         <button type="button" onclick="openProductModal(null)" class="green">+ Nuovo Prodotto</button>
+        <button type="button" onclick="bpIng.openSheet()" class="orange" id="bpIngBtn">🚫 Ingredienti esauriti <span id="bpIngBtnN"></span></button>
         <button type="button" onclick="loadMenu()" class="secondary">🔄 Ricarica</button>
       </div>
     </div>
@@ -1387,7 +1403,8 @@ html:not(.x) body .kt-go{width:100%;min-height:64px;margin-top:10px;font-size:ca
           <select id="adminStatusFilter" onchange="renderAdminMenu()">
             <option value="all">Tutti gli stati</option>
             <option value="active">✅ Solo Attivi</option>
-            <option value="inactive">🚫 Solo Esauriti / Nascosti</option>
+            <option value="inactive">🚫 Solo Nascosti</option>
+            <option value="ingout">⚠️ Con ingredienti esauriti</option>
           </select>
         </div>
         <div>
@@ -1401,7 +1418,7 @@ html:not(.x) body .kt-go{width:100%;min-height:64px;margin-top:10px;font-size:ca
     </div>
     <div id="bpBulk" class="bp-bulk hidden"><strong>✔ <span id="bpBulkN">0</span> selezionati</strong>
       <button type="button" class="green" onclick="bpBulk('on')">✅ Attiva</button>
-      <button type="button" class="orange" onclick="bpBulk('off')">⛔ Esaurito</button>
+      <button type="button" class="orange" onclick="bpBulk('off')">🚫 Nascondi</button>
       <button type="button" class="blue" onclick="bpBulk('cat')">📂 Sposta</button>
       <button type="button" class="purple" onclick="bpBulk('price')">💶 Prezzo ±</button>
       <button type="button" onclick="bpBulk('del')">🗑️ Elimina</button>
@@ -1764,9 +1781,12 @@ async function startEditOrder(o){
   }
 
   cart.clear();
-  { let _ex = items.find(i => bpIsExtraRow(i.product_name)), _xa = el('extraAmountInput'), _xr = el('extraReasonInput');
+  { let _ex = items.find(i => /^Aggiunta manuale/.test(String(i.product_name || ''))), _dx = items.find(i => /^Sconto manuale/.test(String(i.product_name || ''))),
+        _xa = el('extraAmountInput'), _xr = el('extraReasonInput'), _da = el('discountAmountInput'), _dr = el('discountReasonInput');
     if(_xa) _xa.value = _ex ? String(Number(_ex.unit_price || 0)) : '';
-    if(_xr) _xr.value = _ex ? String(_ex.product_name).replace(/^(Aggiunta|Sconto) manuale:?\s*/i, '') : ''; }
+    if(_xr) _xr.value = _ex ? String(_ex.product_name).replace(/^Aggiunta manuale:?\s*/i, '') : '';
+    if(_da) _da.value = _dx ? String(Math.abs(Number(_dx.unit_price || 0))) : '';
+    if(_dr) _dr.value = _dx ? String(_dx.product_name).replace(/^Sconto manuale:?\s*/i, '') : ''; }
   let delivServiceItem = items.find(i => i.product_name === 'Supplemento Consegna');
   if(delivServiceItem && el('deliveryFeeSelect')){
     let feeVal = String(Number(delivServiceItem.unit_price || 0));
@@ -1976,12 +1996,13 @@ function ingUnique(list){
 }
 function catRank(c){
   var s = String(c || "").toLowerCase();
-  var R = [/pizz/, /calzon/, /panin|kebab|burger/, /piadin/, /fritt|antipast|patatin/, /insalat/, /dolc|dessert/, /bibit|bevand|drink|birra|vin/];
-  var rk = [0, 1, 2, 3, 4, 5, 7, 8];
+  var R = [/pizz/, /calzon/, /panin|kebab|burger/, /piadin/, /^\s*men[uù]/, /fritt|antipast|patatin/, /insalat/, /dolc|dessert/, /bibit|bevand|drink|birra|vin/];
+  var rk = [0, 1, 2, 3, 4, 5, 6, 8, 9];
   for(var i=0;i<R.length;i++){ if(R[i].test(s)) return rk[i]; }
-  return 6;
+  return 7;
 }
-function catIcon(c){ return ["🍕","🥟","🥙","🫓","🍟","🥗","🍽️","🍰","🥤"][catRank(c)]; }
+function bpSortCats(a){ return a.slice().sort(function(x, y){ return catRank(x) - catRank(y) || String(x).localeCompare(String(y), 'it'); }); }
+function catIcon(c){ return ["🍕","🥟","🥙","🫓","🍱","🍟","🥗","🍽️","🍰","🥤"][catRank(c)]; }
 function ingPrice(ing){
   var l = ingNorm(ing);
   if(/doppia mozzarella/.test(l)) return 2;
@@ -3571,6 +3592,24 @@ function extraRowFor(amount, reason){
   if(!(amount > 0)) return null;
   return {product_name: 'Aggiunta manuale' + (reason ? ': ' + reason : ''), size: 'Servizio', quantity: 1, unit_price: amount, line_total: amount};
 }
+function getDiscountAmount(){
+  var e = el('discountAmountInput'); if(!e) return 0;
+  var v = parseFloat(String(e.value || '').replace(',', '.'));
+  if(isNaN(v) || v <= 0) return 0;
+  var base = Math.round(getItemsSubtotal() * 100) + Math.round(Number(getActiveDeliveryFee() || 0) * 100) + Math.round(getExtraAmount() * 100);
+  return Math.min(Math.round(v * 100), base) / 100;
+}
+function getDiscountReason(){ var e = el('discountReasonInput'); return e ? String(e.value || '').replace(/[()]/g, '').trim() : ''; }
+function discountRowFor(amount, reason){
+  amount = Number(amount || 0); if(!(amount > 0)) return null;
+  return {product_name: 'Sconto manuale' + (reason ? ': ' + reason : ''), size: 'Servizio', quantity: 1, unit_price: -amount, line_total: -amount};
+}
+function bpAddDiscount(d){
+  var e = el('discountAmountInput'); if(!e) return;
+  var cur = parseFloat(String(e.value || '').replace(',', '.')); if(isNaN(cur)) cur = 0;
+  e.value = d === 0 ? '' : String(Math.round((cur + d) * 100) / 100);
+  renderCart();
+}
 function bpAddExtra(d){
   var e = el('extraAmountInput'); if(!e) return;
   e.value = d === 0 ? '' : String(Math.round((getExtraAmount() + d) * 100) / 100);
@@ -3629,7 +3668,7 @@ function getItemsSubtotal(){
 
 function getGrandTotal(){
   if(!cart.size) return 0;
-  return (Math.round(getItemsSubtotal() * 100) + Math.round(Number(getActiveDeliveryFee() || 0) * 100) + Math.round(getExtraAmount() * 100)) / 100;
+  return (Math.round(getItemsSubtotal() * 100) + Math.round(Number(getActiveDeliveryFee() || 0) * 100) + Math.round(getExtraAmount() * 100) - Math.round(getDiscountAmount() * 100)) / 100;
 }
 
 function onDeliveryFeeChange(){
@@ -5193,7 +5232,7 @@ function onAdminCategoryDropdownChange(val){
 
 function renderCategories(){
   let activeMenu = getActiveMenu();
-  let cats = ['Tutti', ...new Set(activeMenu.map(x=>x.category).filter(Boolean))];
+  let cats = ['Tutti', ...bpSortCats([...new Set(activeMenu.map(x=>x.category).filter(Boolean))])];
   if(!cats.includes(category)) category = 'Tutti';
 
   let catSel = el('categorySelect');
@@ -5205,7 +5244,7 @@ function renderCategories(){
     }).join('');
   }
 
-  let allCats = [...new Set(allMenu.map(x=>x.category).filter(Boolean))];
+  let allCats = bpSortCats([...new Set(allMenu.map(x=>x.category).filter(Boolean))]);
   el('catSuggestions').innerHTML = allCats.map(c=>`<option value="${esc(c)}">`).join('');
   el('prodCatSelect').innerHTML = '<option value="">📂 Scegli categoria esistente...</option>' + allCats.map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join('');
   el('oldCatSelect').innerHTML = allCats.map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join('');
@@ -5259,17 +5298,19 @@ function renderCart(){
 
   let itemsSub = getItemsSubtotal();
   let delivFee = cart.size ? getActiveDeliveryFee() : 0;
-  if(!cart.size){ let _xa = el('extraAmountInput'), _xr = el('extraReasonInput'); if(_xa && _xa.value) _xa.value = ''; if(_xr && _xr.value) _xr.value = ''; }
+  if(!cart.size){ let _xa = el('extraAmountInput'), _xr = el('extraReasonInput'); if(_xa && _xa.value) _xa.value = ''; if(_xr && _xr.value) _xr.value = ''; let _da = el('discountAmountInput'), _dr = el('discountReasonInput'); if(_da && _da.value) _da.value = ''; if(_dr && _dr.value) _dr.value = ''; }
   let extraAmt = cart.size ? getExtraAmount() : 0;
-  let grandTotal = cart.size ? Math.round((itemsSub + delivFee + extraAmt) * 100) / 100 : 0;
+  let discAmt = cart.size ? getDiscountAmount() : 0;
+  let grandTotal = cart.size ? Math.round((itemsSub + delivFee + extraAmt - discAmt) * 100) / 100 : 0;
 
   let subBox = el('subtotalsBox');
   if(subBox){
-    if(cart.size && (delivFee > 0 || extraAmt > 0)){
+    if(cart.size && (delivFee > 0 || extraAmt > 0 || discAmt > 0)){
       subBox.innerHTML = `
         <div class="subtotals-row"><span>Subtotale Prodotti:</span><span>${euro(itemsSub)}</span></div>
         ${delivFee > 0 ? `<div class="subtotals-row"><span>🛵 Supplemento Consegna:</span><span>+ ${euro(delivFee)}</span></div>` : ''}
         ${extraAmt > 0 ? `<div class="subtotals-row"><span>➕ Aggiunta${getExtraReason() ? ' (' + esc(getExtraReason()) + ')' : ''}:</span><span>+ ${euro(extraAmt)}</span></div>` : ''}
+        ${discAmt > 0 ? `<div class="subtotals-row"><span>🏷️ Sconto${getDiscountReason() ? ' (' + esc(getDiscountReason()) + ')' : ''}:</span><span>− ${euro(discAmt)}</span></div>` : ''}
       `;
     }else{
       subBox.innerHTML = '';
@@ -5385,7 +5426,7 @@ function doClearCart(){
   setMsg('orderMsg','Carrello svuotato.','');
 }
 
-async function insertOrderItemsForOrder(orderId, items, delivFee, extra, extraReason){
+async function insertOrderItemsForOrder(orderId, items, delivFee, extra, extraReason, disc, discWhy){
   let basePayload = items.map(x=>{
     let remUnique = [...new Set(x.removedIngs||[])];
     let addUnique = [...new Set(x.addedIngs||[])];
@@ -5416,6 +5457,8 @@ async function insertOrderItemsForOrder(orderId, items, delivFee, extra, extraRe
 
   let _xr = extraRowFor(extra, extraReason);
   if(_xr) basePayload.push({order_id: orderId, ..._xr, _raw_menu_id: null});
+  let _dr = discountRowFor(disc, discWhy);
+  if(_dr) basePayload.push({order_id: orderId, ..._dr, _raw_menu_id: null});
 
   let cleanRows = basePayload.map(({_raw_menu_id, ...rest}) => rest);
   let result = await sb.from('order_items').insert(cleanRows);
@@ -5470,6 +5513,7 @@ async function _doSaveOrderCore(){
         });
         if(delivFee > 0) __rows.push({product_name: 'Supplemento Consegna', size: 'Servizio', quantity: 1, unit_price: delivFee, line_total: delivFee});
         { const __x = extraRowFor(extraAmt, extraWhy); if(__x) __rows.push(__x); }
+        { const __d = discountRowFor(getDiscountAmount(), getDiscountReason()); if(__d) __rows.push(__d); }
         const __r = await sb.rpc('update_order_with_items', {p_order_id: targetId,
           p_order: {customer_name: custNameVal, phone: phoneVal, order_type: el('type').value, address: addrVal, payment_method: el('payment').value, notes: combinedNotes, total: total},
           p_items: __rows});
@@ -5498,7 +5542,7 @@ async function _doSaveOrderCore(){
     }
 
     let {data: oldRows} = await sb.from('order_items').select('id').eq('order_id', targetId);
-    let insRes = await insertOrderItemsForOrder(targetId, items, delivFee, extraAmt, extraWhy);
+    let insRes = await insertOrderItemsForOrder(targetId, items, delivFee, extraAmt, extraWhy, getDiscountAmount(), getDiscountReason());
     if(!insRes.error && oldRows && oldRows.length){
       let __oldIds = oldRows.map(function(r){return r.id;});
       let __del = await sb.from('order_items').delete().in('id', __oldIds);
@@ -5540,7 +5584,7 @@ async function _doSaveOrderCore(){
   if(error){setMsg('orderMsg','Errore: '+error.message,'error');el('saveOrder').disabled=false;return;}
   knownOrderIds.add(ord.id); window.__lastSavedOrderId = ord.id;
 
-  let result = await insertOrderItemsForOrder(ord.id, items, delivFee, extraAmt, extraWhy);
+  let result = await insertOrderItemsForOrder(ord.id, items, delivFee, extraAmt, extraWhy, getDiscountAmount(), getDiscountReason());
 
   if(result.error){
     setMsg('orderMsg','Ordine creato ma errore negli articoli: '+result.error.message,'error');
@@ -5790,7 +5834,7 @@ function renderAdminMenu(){
   el('menuStats').innerHTML=`
     <div class="stat-box"><span>Totale Prodotti</span><strong>${total}</strong></div>
     <div class="stat-box"><span>Prodotti Attivi</span><strong style="color:var(--green)">${activeCount}</strong></div>
-    <div class="stat-box"><span>Esauriti / Nascosti</span><strong style="color:var(--red)">${total-activeCount}</strong></div>
+    <div class="stat-box"><span>Prodotti nascosti</span><strong style="color:var(--red)">${total-activeCount}</strong></div>
     <div class="stat-box"><span>Categorie</span><strong>${catsCount}</strong></div>`;
   let cats=['Tutti',...new Set(allMenu.map(x=>x.category).filter(Boolean))];
   if(!cats.includes(adminCategory))adminCategory='Tutti';
@@ -5801,6 +5845,7 @@ function renderAdminMenu(){
     if(adminCategory!=='Tutti'&&x.category!==adminCategory)return false;
     if(st==='active'&&x.active===false)return false;
     if(st==='inactive'&&x.active!==false)return false;
+    if(st==='ingout'&&!(window.bpIng&&bpIng.hasOut(x)))return false;
     return bpAdminMatch(x,q);
   });
   let cmp=so==='price'?(a,b)=>(a.price_normal||0)-(b.price_normal||0):(a,b)=>String(a.name).localeCompare(String(b.name),'it');
@@ -5837,7 +5882,7 @@ function renderAdminMenu(){
         <button type="button" class="btn-sm blue hidden" data-save-price>💾 Salva</button>
       </div>
       <div class="admin-actions">
-        <button type="button" class="toggle-pill ${on?'on':'off'}" data-toggle>${on?'✅ Attivo':'🚫 Esaurito'}</button>
+        <button type="button" class="toggle-pill ${on?'on':'off'}" data-toggle>${on?'✅ Attivo':'🚫 Nascosto'}</button>
         <button type="button" class="secondary btn-sm" data-dup title="Duplica">📄</button>
         <button type="button" class="secondary btn-sm" data-edit>✏️ Modifica</button>
       </div>`;
@@ -5845,7 +5890,7 @@ function renderAdminMenu(){
     row.querySelector('[data-sel]').onchange=e=>{e.target.checked?bpSel.add(p.id):bpSel.delete(p.id);row.classList.toggle('sel',e.target.checked);bpBulkBar();};
     let nm=row.querySelector('[data-name]');
     nm.onkeydown=e=>{if(e.key==='Enter')nm.blur();if(e.key==='Escape'){nm.value=p.name;nm.blur();}};
-    nm.onchange=()=>{let v=nm.value.trim();if(!v){nm.value=p.name;return;}upd({name:v},'Errore rinomina');};
+    nm.onchange=()=>{let v=nm.value.trim();if(!v){nm.value=p.name;return;}if(allMenu.some(x=>x.id!==p.id&&String(x.category||'').trim().toLowerCase()===String(p.category||'').trim().toLowerCase()&&String(x.name||'').trim().toLowerCase()===v.toLowerCase())){alert('⛔ Esiste già «'+v+'» nella categoria «'+(p.category||'')+'». Non puoi creare prodotti duplicati.');nm.value=p.name;return;}upd({name:v},'Errore rinomina');};
     row.querySelectorAll('[data-rem-ing]').forEach(b=>b.onclick=()=>upd({description:formatIngredients(ings.filter((_,k)=>k!=b.getAttribute('data-rem-ing')))},'Errore ingrediente'));
     row.querySelector('[data-add-ing-select]').onchange=e=>{if(e.target.value)upd({description:formatIngredients([...new Set([...ings,e.target.value])])},'Errore ingrediente');};
     let iN=row.querySelector('[data-pnorm]'),iM=row.querySelector('[data-pmaxi]'),sv=row.querySelector('[data-save-price]');
@@ -7615,7 +7660,7 @@ try{
     try{
       if(!allMenu.length){
         var m = jget(CM, null);
-        if(m && m.length){ allMenu = m; var b = el('menuCountBadge'); if(b) b.textContent = allMenu.length; renderCategories(); populateProductDropdown(); renderAdminMenu(); }
+        if(m && m.length){ allMenu = (window.bp36 && bp36.sortMenu) ? bp36.sortMenu(m) : m; var b = el('menuCountBadge'); if(b) b.textContent = allMenu.length; renderCategories(); populateProductDropdown(); renderAdminMenu(); }
       }
       if(!orders.length){
         var c = jget(CO, null);
@@ -7642,6 +7687,7 @@ try{
     });
     if(q.delivFee > 0) rows.push({product_name: 'Supplemento Consegna', size: 'Servizio', quantity: 1, unit_price: q.delivFee, line_total: q.delivFee});
     { var xr = extraRowFor(q.extra, q.extraWhy); if(xr) rows.push(xr); }
+    { var dr = discountRowFor(q.disc, q.discWhy); if(dr) rows.push(dr); }
     return rows;
   }
   function localOrder(q){
@@ -7663,7 +7709,7 @@ try{
       order_type: el('type').value, address: el('type').value === 'Consegna' ? el('address').value.trim() : '',
       payment_method: el('payment').value,
       notes: '[⏰ ' + selectedTime + ']' + (cashTag ? ' ' + cashTag : '') + (userNotes ? ' ' + userNotes : ''),
-      total: total, items: items, delivFee: delivFee, extra: getExtraAmount(), extraWhy: getExtraReason()
+      total: total, items: items, delivFee: delivFee, extra: getExtraAmount(), extraWhy: getExtraReason(), disc: getDiscountAmount(), discWhy: getDiscountReason()
     };
   }
   function enqueueCurrent(){
@@ -7781,7 +7827,7 @@ try{
             if(ins.error) throw ins.error;
             oid = ins.data.id; knownOrderIds.add(oid);
           }
-          var ir = await insertOrderItemsForOrder(oid, q.items, q.delivFee, q.extra, q.extraWhy);
+          var ir = await insertOrderItemsForOrder(oid, q.items, q.delivFee, q.extra, q.extraWhy, q.disc, q.discWhy);
           if(ir.error) throw ir.error;
           sent++; arr[i] = null;
         }catch(e){ break; }
@@ -8728,68 +8774,7 @@ el('kitchenTab').addEventListener('click', function(e){
 
 // (avviso ordine duplicato: ora bpConfirmDuplicateOrder(), chiamata da doSaveOrder)
 
-  // --- زر Esaurito السريع لتخفيض أو إخفاء الأصناف النافدة بلمسة واحدة (v31) ---
-(function(){
-  if(window.__esauritoEnhanced) return;
-  window.__esauritoEnhanced = true;
-
-  // حقن زر Esaurito السريع بجوار اسم المنتج في لوحة إدارة المنيو وتعديل اللون
-  var _origRenderAdminMenu = window.renderAdminMenu;
-  if(typeof _origRenderAdminMenu === 'function'){
-    window.renderAdminMenu = function(){
-      _origRenderAdminMenu.apply(this, arguments);
-      
-      document.querySelectorAll('#adminMenuList .menu-admin-row').forEach(function(row){
-        var actDiv = row.querySelector('.admin-actions');
-        if(!actDiv || row.querySelector('.quick-esaurito-btn')) return;
-
-        var toggleBtn = actDiv.querySelector('[data-toggle]');
-        if(!toggleBtn) return;
-
-        var esauritoQuickBtn = document.createElement('button');
-        esauritoQuickBtn.type = 'button';
-        esauritoQuickBtn.className = 'secondary btn-sm quick-esaurito-btn';
-        esauritoQuickBtn.style.cssText = 'background:#fee4e2;color:var(--red);border:1px solid #fecdca;font-weight:900';
-        esauritoQuickBtn.textContent = '⛔ Esaurito';
-        
-        esauritoQuickBtn.onclick = async function(){
-          // استخراج معرف المنتج أو الضغط مباشرة على زر التفعيل/التعطيل الأصلي بوضع active = false
-          toggleBtn.click();
-        };
-
-        actDiv.insertBefore(esauritoQuickBtn, toggleBtn);
-      });
-    };
-  }
-
-  // تمييز الأصناف غير المتوفرة (Esaurito) في قائمة اختيار المنتجات أو المنيو بوضع علامة واضحة
-  var _origPopulateDropdown = window.populateProductDropdown;
-  if(typeof _origPopulateDropdown === 'function'){
-    window.populateProductDropdown = function(){
-      _origPopulateDropdown.apply(this, arguments);
-      var prodSel = el('productDropdownSelect');
-      if(!prodSel) return;
-      
-      // إضافة علامة مميزة للأصناف غير النشطة أو النافدة في القائمة المنسدلة
-      let activeMenu = allMenu; // يشمل الكل لتمييز النافد
-      var q = (el('ddQuickFilterInput')?.value || '').toLowerCase().trim();
-      var filtered = activeMenu.filter(x => {
-        if(typeof category !== 'undefined' && category !== 'Tutti' && x.category !== category) return false;
-        if(!q) return true;
-        return (`${x.name} ${x.description||''} ${x.category||''}`).toLowerCase().includes(q);
-      });
-
-      if(filtered.length && prodSel.options.length === filtered.length){
-        filtered.forEach(function(p, idx){
-          if(p.active === false && prodSel.options[idx]){
-            prodSel.options[idx].textContent = '⛔ [ESAURITO] ' + prodSel.options[idx].textContent;
-            prodSel.options[idx].style.color = '#b42318';
-          }
-        });
-      }
-    };
-  }
-})();
+  /* v58: l'esaurito riguarda solo gli ingredienti (vedi bp-v58). Il vecchio pulsante «Esaurito» sul prodotto è stato rimosso. */
 
 // (QR recensione Google: ora nella funzione principale buildReceiptHtml)
 
@@ -12549,7 +12534,7 @@ html.bp-dark .bp36-badge.due{background:#3a1512;color:#fda29b;border-color:#7a27
     if(!catPos){ catPos = {}; orderedCats().forEach(function(n, i){ catPos[n] = i; }); }
     var i = catPos[c]; return i == null ? 1000 + _catRank(c) : i;
   };
-  catIcon = function(c){ return ['🍕', '🥟', '🥙', '🫓', '🍟', '🥗', '🍽️', '🍰', '🥤'][_catRank(c)]; };
+  catIcon = function(c){ return ['🍕', '🥟', '🥙', '🫓', '🍱', '🍟', '🥗', '🍽️', '🍰', '🥤'][_catRank(c)]; };
   function prodMode(cat){ return C.prodMode[cat] || C.prodMode['*'] || 'default'; }
   function sortInCat(list, cat, f, skipPins){
     var mode = prodMode(cat), arr = list.slice();
@@ -12579,7 +12564,7 @@ html.bp-dark .bp36-badge.due{background:#3a1512;color:#fda29b;border-color:#7a27
   function sortMenu(list){
     list = list || [];
     raw = list.slice(); catPos = null;
-    if(isDefaultOrder()) return list;
+    if(isDefaultOrder()) return list.map(function(p, i){ return [p, i]; }).sort(function(a, b){ return _catRank(a[0].category || 'Menu') - _catRank(b[0].category || 'Menu') || a[1] - b[1]; }).map(function(x){ return x[0]; });
     var cats = orderedCats(list), f = salesFreq(), g = {}, out = [];
     list.forEach(function(p){ var c = p.category || 'Menu'; (g[c] = g[c] || []).push(p); });
     cats.forEach(function(c){ if(g[c]) out = out.concat(sortInCat(g[c], c, f)); });
@@ -12685,7 +12670,7 @@ html.bp-dark .bp36-badge.due{background:#3a1512;color:#fda29b;border-color:#7a27
       items = sortInCat(items, OS.cat, salesFreq(), true);
       h += '<div class="bp36-list" data-list="prod">' + items.map(function(p){
         var pin = C.pins.map(String).indexOf(String(p.id)) >= 0;
-        return rowHtml(String(p.id), p.name, eur(p.price_normal) + (p.active === false ? ' · esaurito' : ''), '<button type="button" class="bp36-star' + (pin ? ' on' : '') + '" data-pin="' + E(String(p.id)) + '" title="Preferito">' + (pin ? '⭐' : '☆') + '</button>');
+        return rowHtml(String(p.id), p.name, eur(p.price_normal) + (p.active === false ? ' · nascosto' : ''), '<button type="button" class="bp36-star' + (pin ? ' on' : '') + '" data-pin="' + E(String(p.id)) + '" title="Preferito">' + (pin ? '⭐' : '☆') + '</button>');
       }).join('') + '</div>';
     }else{
       h += '<div class="bp36-seg"><button type="button" data-os="grp" class="' + (OS.sub === 'grp' ? 'on' : '') + '">📂 Gruppi</button><button type="button" data-os="items" class="' + (OS.sub === 'items' ? 'on' : '') + '">➕ Aggiunte nel gruppo</button></div>';
@@ -13882,6 +13867,7 @@ html.bp-dark .bp36-badge.due{background:#3a1512;color:#fda29b;border-color:#7a27
     PF.data = d;
     box.innerHTML = profitHtml(d);
     afterBox.insertAdjacentElement('afterend', box);
+    try{ if(window.bp55Rep) window.bp55Rep(v, box); }catch(e){}
     box.addEventListener('click', function(ev){
       var t = ev.target.closest ? ev.target.closest('[data-b54s]') : null; if(!t) return;
       var k = t.getAttribute('data-b54s');
@@ -14771,6 +14757,332 @@ try{
 
 }catch(e){ console.error("[bp] v45", e); }
 </script>
+<script id="bp-v58">
+/* ================= v58: Esaurito = SOLO ingredienti · avviso prima di cambiare/rifiutare · niente prodotti duplicati ================= */
+try{(function(){
+if(window.bpIng) return;
+var LS = 'bp_ing_out', KEY = 'ing_out';
+function W(e){ try{ bpWarn(e); }catch(_){} }
+function S(f){ try{ return f(); }catch(e){ W(e); } }
+function N(s){ return String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,' ').trim(); }
+function E(s){ return (typeof esc === 'function') ? esc(s) : String(s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+function wrap(name, fn){ var o = window[name]; if(typeof o !== 'function') return; window[name] = fn(o); }
+function uniq(arr){ var seen = {}, res = []; (arr||[]).forEach(function(x){ var k = N(x); if(!k || seen[k]) return; seen[k] = 1; res.push(String(x).trim()); }); return res; }
+
+/* ---------- stato: ingredienti esauriti (locale + condiviso tra dispositivi) ---------- */
+var out = new Map(), shared = false;
+function loadLocal(){ try{ (JSON.parse(localStorage.getItem(LS) || '[]') || []).forEach(function(n){ out.set(N(n), String(n)); }); }catch(e){} }
+function saveLocal(){ try{ localStorage.setItem(LS, JSON.stringify(Array.from(out.values()))); }catch(e){} }
+loadLocal();
+async function pull(){
+  try{
+    if(typeof sb === 'undefined' || !sb) return;
+    var r = await sb.from('bp36_data').select('data').eq('key', KEY).maybeSingle();
+    if(r && !r.error){
+      shared = true;
+      if(r.data && r.data.data && Array.isArray(r.data.data.list)){
+        var sig0 = Array.from(out.keys()).sort().join('|');
+        out = new Map(); r.data.data.list.forEach(function(n){ out.set(N(n), String(n)); });
+        saveLocal();
+        if(sig0 !== Array.from(out.keys()).sort().join('|')) refresh();
+      }
+    }else shared = false;
+  }catch(e){ shared = false; }
+}
+async function push(){
+  saveLocal();
+  try{ if(typeof sb !== 'undefined' && sb){ var r = await sb.from('bp36_data').upsert({key: KEY, data: {list: Array.from(out.values())}, updated_at: new Date().toISOString()}); shared = !(r && r.error); } }catch(e){ shared = false; }
+}
+function isOut(name){ return out.has(N(name)); }
+function setOut(name, val){ var k = N(name); if(!k) return; if(val) out.set(k, String(name).trim()); else out.delete(k); push(); refresh(); }
+function list(){ return Array.from(out.values()); }
+function count(){ return out.size; }
+
+/* ---------- ingredienti: niente doppioni ---------- */
+wrap('parseIngredients', function(o){ return function(){ return uniq(o.apply(this, arguments)); }; });
+wrap('getAllKnownIngredients', function(o){ return function(){ return uniq(o.apply(this, arguments)); }; });
+
+function prodOut(p){ return uniq(parseIngredients(p && p.description)).filter(isOut); }
+function hasOut(p){ return prodOut(p).length > 0; }
+
+/* ---------- prodotti: niente doppioni (stessa categoria + stesso nome) ---------- */
+var dupHidden = [];
+function dedupeMenu(){
+  try{
+    if(!Array.isArray(allMenu)){ dupHidden = []; return; }
+    var seen = new Map(), keep = [], drop = [];
+    allMenu.forEach(function(p){
+      var k = N(p.category) + '|' + N(p.name), ex = seen.get(k);
+      if(!ex){ seen.set(k, p); keep.push(p); }
+      else if(ex.active === false && p.active !== false){ keep[keep.indexOf(ex)] = p; seen.set(k, p); drop.push(ex); }
+      else drop.push(p);
+    });
+    if(drop.length) allMenu.splice.apply(allMenu, [0, allMenu.length].concat(keep));
+    dupHidden = drop;
+  }catch(e){ W(e); }
+}
+wrap('getActiveMenu', function(o){ return function(){ dedupeMenu(); return o.apply(this, arguments); }; });
+wrap('renderCategories', function(o){ return function(){ dedupeMenu(); return o.apply(this, arguments); }; });
+
+/* blocco duplicati in salvataggio prodotto */
+function clash(cat, name, selfId){
+  var k = N(cat) + '|' + N(name);
+  return (allMenu || []).find(function(x){ return (N(x.category) + '|' + N(x.name)) === k && String(x.id) !== String(selfId || ''); });
+}
+wrap('doSaveProduct', function(o){ return async function(){
+  try{
+    var id = el('prodId').value, name = el('prodName').value.trim(), cat = el('prodCat').value.trim() || 'Altro';
+    var vars = (typeof bpVars !== 'undefined' && bpVars) ? bpVars : [], targets = [];
+    if(name && (id || !vars.length)) targets.push({n: name, self: id});
+    vars.forEach(function(v){ targets.push({n: name + ' ' + v.label, self: ''}); });
+    var seenT = {}, bad = null;
+    targets.forEach(function(t){ var k = N(t.n); if(!bad && (seenT[k] || clash(cat, t.n, t.self))) bad = t.n; seenT[k] = 1; });
+    if(bad){ setMsg('prodModalMsg', '⛔ Esiste già «' + bad + '» nella categoria «' + cat + '». Non puoi creare prodotti duplicati.', 'error'); return; }
+  }catch(e){ W(e); }
+  return o.apply(this, arguments);
+}; });
+wrap('doSaveCategory', function(o){ return async function(){
+  try{
+    if(el('catActionType').value === 'new'){
+      var c = el('newCatName').value.trim(), n = el('newCatFirstProd').value.trim();
+      if(c && n && clash(c, n)){ setMsg('catModalMsg', '⛔ Esiste già «' + n + '» nella categoria «' + c + '». Non puoi creare prodotti duplicati.', 'error'); return; }
+    }
+  }catch(e){ W(e); }
+  return o.apply(this, arguments);
+}; });
+
+/* ---------- stile ---------- */
+var css = document.createElement('style');
+css.textContent =
+'.bpi-ov{position:fixed;inset:0;background:#000a;z-index:2147483400;display:none;align-items:flex-end;justify-content:center}.bpi-ov.show{display:flex}' +
+'.bpi-sh{background:#fff;color:#101828;width:100%;max-width:640px;max-height:90vh;border-radius:18px 18px 0 0;display:flex;flex-direction:column;padding:12px;gap:8px}' +
+'.bpi-h{display:flex;justify-content:space-between;align-items:center;gap:8px}.bpi-h b{font-size:17px}.bpi-sub{font-size:12.5px;color:#475467;font-weight:650}' +
+'.bpi-sh input{min-height:46px;border-radius:12px;border:2px solid #d0d5dd;padding:0 12px;font-size:16px}' +
+'.bpi-f{display:flex;gap:6px;flex-wrap:wrap}.bpi-f button{border-radius:99px;padding:7px 14px;font-weight:800;background:#eceff3;color:#344054}.bpi-f button.on{background:#b42318;color:#fff}' +
+'.bpi-l{overflow:auto;display:flex;flex-direction:column;gap:8px;padding-bottom:6px}.bpi-g{font-size:12.5px;font-weight:900;color:#475467;margin:6px 2px 0}' +
+'.bpi-gr{display:grid;gap:6px;grid-template-columns:repeat(auto-fill,minmax(150px,1fr))}' +
+'.bpi-gr button{min-height:50px;border-radius:12px;border:2px solid #abefc6;background:#ecfdf3;font-weight:850;text-align:start;padding:6px 10px;color:#067647;display:flex;flex-direction:column;gap:1px}' +
+'.bpi-gr button small{font-weight:700;font-size:11px;color:inherit;opacity:.85}.bpi-gr button.off{border-color:#fda29b;background:#fef3f2;color:#b42318}' +
+'.bpi-dlg{background:#fff;color:#101828;width:min(92vw,460px);border-radius:18px;padding:16px;display:flex;flex-direction:column;gap:10px;margin:auto;box-shadow:0 20px 50px #0006}' +
+'.bpi-dlg h3{margin:0;font-size:18px;color:#b42318}.bpi-dlg .p{font-size:14px;font-weight:700;line-height:1.5}.bpi-dlg .chips{display:flex;gap:6px;flex-wrap:wrap}' +
+'.bpi-dlg .chips span{background:#fef3f2;color:#b42318;border:1px solid #fecdca;border-radius:99px;padding:3px 10px;font-weight:850;font-size:13px}' +
+'.bpi-dlg .hint{font-size:13px;color:#475467;font-weight:650}.bpi-dlg button{width:100%;text-align:start;padding:12px 14px;border-radius:12px;font-weight:850;font-size:14.5px}' +
+'.bpi-dlg button.c1{background:#175cd3}.bpi-dlg button.c2{background:#b54708}.bpi-dlg button.c3{background:#16794b}.bpi-dlg button.c4{background:#eceff3;color:#344054}' +
+'.bp-ing-out{background:#fee4e2!important;color:#b42318!important;border-color:#fda29b!important}.bp-ing-out::before{content:"⛔ "}' +
+'.bpi-note{border:1.5px solid #fedf89;background:#fffaeb;border-radius:12px;padding:10px 12px;font-weight:750;font-size:13.5px;display:flex;gap:8px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin-bottom:8px}' +
+'body.dark-mode .bpi-sh,body.dark-mode .bpi-dlg{background:#131c2e;color:#e5e7eb}';
+document.head.appendChild(css);
+
+/* ---------- scheda gestione ingredienti esauriti ---------- */
+var sheetFilter = 'all';
+function groupOf(n){
+  try{ var l = String(n).toLowerCase(); for(var i = 0; i < PKG_RULES.length; i++){ if(PKG_RULES[i][1].test(l)) return PKG_LABEL[PKG_RULES[i][0]] || PKG_RULES[i][0]; } }catch(e){}
+  return '✨ Altro';
+}
+function universe(){
+  var all = uniq(getAllKnownIngredients().concat(list()));
+  return all.sort(function(a, b){ return a.localeCompare(b, 'it'); });
+}
+function usedBy(ing){
+  var k = N(ing), n = 0;
+  (allMenu || []).forEach(function(p){ if(parseIngredients(p.description).some(function(g){ return N(g) === k; })) n++; });
+  return n;
+}
+function drawSheet(){
+  var o = document.getElementById('bpIngSheet'); if(!o || !o.classList.contains('show')) return;
+  var q = N(document.getElementById('bpiQ').value), all = universe(), groups = {}, order = [];
+  all.forEach(function(g){
+    if(q && N(g).indexOf(q) < 0) return;
+    if(sheetFilter === 'out' && !isOut(g)) return;
+    var gr = groupOf(g); if(!groups[gr]){ groups[gr] = []; order.push(gr); } groups[gr].push(g);
+  });
+  var h = order.map(function(gr){
+    return '<div class="bpi-g" data-noar>' + E(gr) + '</div><div class="bpi-gr">' + groups[gr].map(function(g){
+      var of = isOut(g), n = usedBy(g);
+      return '<button type="button" class="' + (of ? 'off' : '') + '" data-ing="' + E(g) + '"><span data-noar>' + (of ? '⛔ ' : '✅ ') + E(g) + '</span>' + (of ? '<small>Esaurito · ' + n + ' prodotti</small>' : '') + '</button>';
+    }).join('') + '</div>';
+  }).join('');
+  document.getElementById('bpiL').innerHTML = h || '<div class="bpi-sub">Nessun ingrediente trovato.</div>';
+  var cn = document.getElementById('bpiOutN'); if(cn) cn.textContent = count();
+  var all2 = document.querySelector('#bpIngSheet [data-f="all"]'), out2 = document.querySelector('#bpIngSheet [data-f="out"]');
+  if(all2) all2.classList.toggle('on', sheetFilter === 'all'); if(out2) out2.classList.toggle('on', sheetFilter === 'out');
+}
+function openSheet(){
+  var o = document.getElementById('bpIngSheet');
+  if(!o){
+    o = document.createElement('div'); o.id = 'bpIngSheet'; o.className = 'bpi-ov';
+    o.innerHTML = '<div class="bpi-sh"><div class="bpi-h"><b>🚫 Ingredienti esauriti</b><button type="button" class="secondary" data-x>✕</button></div>' +
+      '<div class="bpi-sub">Tocca un ingrediente per segnarlo come esaurito. Alla cassa ti avviso quando un prodotto lo contiene, così puoi chiedere al cliente cosa preferisce.</div>' +
+      '<input id="bpiQ" type="search" placeholder="🔍 Cerca ingrediente..." autocomplete="off">' +
+      '<div class="bpi-f"><button type="button" data-f="all" class="on">Tutti</button><button type="button" data-f="out">Esauriti (<span id="bpiOutN">0</span>)</button></div>' +
+      '<div id="bpiL" class="bpi-l"></div>' +
+      '<button type="button" class="secondary" data-all>🔄 Riattiva tutti</button></div>';
+    document.body.appendChild(o);
+    document.getElementById('bpiQ').oninput = drawSheet;
+    o.onclick = function(e){
+      var b = e.target.closest('button');
+      if(e.target === o || (b && b.hasAttribute('data-x'))){ o.classList.remove('show'); return; }
+      if(!b) return;
+      if(b.hasAttribute('data-f')){ sheetFilter = b.getAttribute('data-f'); drawSheet(); return; }
+      if(b.hasAttribute('data-all')){ if(count() && confirm('Riattivare tutti gli ingredienti esauriti (' + count() + ')?')){ out = new Map(); push(); refresh(); } return; }
+      var g = b.getAttribute('data-ing'); if(g){ try{ navigator.vibrate && navigator.vibrate(12); }catch(_){} setOut(g, !isOut(g)); }
+    };
+  }
+  o.classList.add('show'); drawSheet();
+}
+
+/* ---------- avviso: prodotto con ingrediente esaurito ---------- */
+function itemOut(it){
+  var removed = (it.removedIngs || []).map(N);
+  var base = uniq(parseIngredients(it.baseDesc)).filter(function(g){ return removed.indexOf(N(g)) < 0 && isOut(g); });
+  var extra = uniq(it.addedIngs || []).filter(isOut);
+  return {base: base, extra: extra};
+}
+function pending(it){
+  if(!it || it.menu_id == null && !it.baseDesc) return {base: [], extra: [], n: 0};
+  var o = itemOut(it), ack = it.ingAck || [];
+  function nack(g){ return ack.indexOf(N(g)) < 0; }
+  var b = o.base.filter(nack), e = o.extra.filter(nack);
+  return {base: b, extra: e, n: b.length + e.length};
+}
+var dlgOpen = false;
+function closeDlg(){ var d = document.getElementById('bpIngDlg'); if(d) d.classList.remove('show'); dlgOpen = false; }
+function showDlg(key, it, pd){
+  dlgOpen = true;
+  var d = document.getElementById('bpIngDlg');
+  if(!d){ d = document.createElement('div'); d.id = 'bpIngDlg'; d.className = 'bpi-ov'; d.style.alignItems = 'center'; document.body.appendChild(d); }
+  var names = pd.base.map(function(g){ return '<span data-noar>⛔ ' + E(g) + '</span>'; }).concat(pd.extra.map(function(g){ return '<span data-noar>⛔ ' + E(g) + ' (extra)</span>'; })).join('');
+  d.innerHTML = '<div class="bpi-dlg"><h3>⚠️ Ingrediente esaurito</h3>' +
+    '<div class="p"><b data-noar>' + E(it.name) + ' (' + E(it.size || 'Normale') + ')</b> contiene un ingrediente esaurito:</div>' +
+    '<div class="chips">' + names + '</div>' +
+    '<div class="hint">Avvisa il cliente e chiedi cosa preferisce prima di continuare.</div>' +
+    '<button type="button" class="c1" data-a="change">🔁 Il cliente cambia prodotto</button>' +
+    '<button type="button" class="c2" data-a="without">✂️ Il cliente accetta senza l\'ingrediente esaurito</button>' +
+    '<button type="button" class="c3" data-a="asis">✅ Il cliente accetta così com\'è</button>' +
+    '<button type="button" class="c4" data-a="later">⏳ Decido dopo</button></div>';
+  d.classList.add('show');
+  d.onclick = function(e){
+    var b = e.target.closest('[data-a]'); if(!b) return;
+    var a = b.getAttribute('data-a'), cur = cart.get(key);
+    closeDlg();
+    if(!cur) { setTimeout(function(){ checkCart(false); }, 50); return; }
+    var p2 = pending(cur);
+    if(a === 'change'){ cart.delete(key); }
+    else if(a === 'without'){
+      cur.removedIngs = uniq((cur.removedIngs || []).concat(p2.base));
+      cur.addedIngs = (cur.addedIngs || []).filter(function(x){ return p2.extra.map(N).indexOf(N(x)) < 0; });
+    }
+    else if(a === 'asis'){ cur.ingAck = (cur.ingAck || []).concat(p2.base.concat(p2.extra).map(N)); }
+    else if(a === 'later'){ cur.ingSnooze = true; }
+    S(renderCart);
+  };
+}
+function checkCart(force){
+  if(dlgOpen) return;
+  try{
+    var found = null;
+    cart.forEach(function(it, key){
+      if(found) return;
+      var pd = pending(it);
+      if(pd.n && (force || !it.ingSnooze)) found = {key: key, it: it, pd: pd};
+    });
+    if(found) showDlg(found.key, found.it, found.pd);
+  }catch(e){ W(e); }
+}
+wrap('renderCart', function(o){ return function(){
+  var r = o.apply(this, arguments);
+  S(markCart);
+  setTimeout(function(){ checkCart(false); }, 60);
+  return r;
+}; });
+function markCart(){
+  var box = document.getElementById('cart'); if(!box) return;
+  Array.prototype.forEach.call(box.querySelectorAll('.p-ing-pill'), function(s){ s.classList.toggle('bp-ing-out', isOut(s.textContent.replace(/^⛔\s*/, ''))); });
+}
+/* salvataggio ordine: ogni avviso va risolto prima */
+wrap('doSaveOrder', function(o){ return async function(){
+  try{
+    var bad = false; cart.forEach(function(it){ if(pending(it).n) bad = true; });
+    if(bad){ cart.forEach(function(it){ delete it.ingSnooze; }); checkCart(true); return null; }
+  }catch(e){ W(e); }
+  return o.apply(this, arguments);
+}; });
+/* ordine in modifica: le righe già salvate non vengono contestate */
+wrap('startEditOrder', function(o){ return async function(){
+  var r = await o.apply(this, arguments);
+  try{ cart.forEach(function(it){ var p = itemOut(it); it.ingAck = (it.ingAck || []).concat(p.base.concat(p.extra).map(N)); }); }catch(e){ W(e); }
+  return r;
+}; });
+
+/* ---------- segnali visivi: menu a tendina, gestione menu ---------- */
+function markDropdowns(){
+  var sel = document.getElementById('productDropdownSelect');
+  if(sel){
+    Array.prototype.forEach.call(sel.options, function(op){
+      if(!op.value || op.getAttribute('data-bpi')) return;
+      var p = (allMenu || []).find(function(x){ return String(x.id) === String(op.value); });
+      var ou = p ? prodOut(p) : [];
+      if(ou.length){ op.textContent = '⚠️ ' + op.textContent + '  [esaurito: ' + ou.join(', ') + ']'; op.style.color = '#b42318'; }
+      op.setAttribute('data-bpi', '1');
+    });
+  }
+  var bt = document.getElementById('ddBaseIngText'), p0 = (typeof getSelectedDropdownProduct === 'function') ? getSelectedDropdownProduct() : null;
+  if(bt && p0){ var ings = parseIngredients(p0.description); if(ings.length) bt.textContent = ings.map(function(g){ return isOut(g) ? '⛔ ' + g + ' (esaurito)' : g; }).join(', '); }
+  ['ddRemoveIngSelect', 'ddAddIngSelect', 'modalCartRemoveSelect', 'modalCartExtraSelect'].forEach(function(id){
+    var s = document.getElementById(id); if(!s) return;
+    Array.prototype.forEach.call(s.options, function(op){ if(op.value && isOut(op.value) && !op.getAttribute('data-bpi')){ op.textContent += ' ⛔ esaurito'; op.style.color = '#b42318'; op.setAttribute('data-bpi', '1'); } });
+  });
+}
+wrap('populateProductDropdown', function(o){ return function(){ dedupeMenu(); var r = o.apply(this, arguments); S(markDropdowns); return r; }; });
+wrap('onProductDropdownChange', function(o){ return function(){ var r = o.apply(this, arguments); S(markDropdowns); return r; }; });
+wrap('renderCartIngModalContent', function(o){ return function(){ var r = o.apply(this, arguments); S(markDropdowns); return r; }; });
+
+wrap('renderAdminMenu', function(o){ return function(){
+  dedupeMenu();
+  var r = o.apply(this, arguments);
+  S(function(){
+    var st = document.getElementById('menuStats');
+    if(st && !st.querySelector('[data-bpi-stat]')){
+      var b = document.createElement('div'); b.className = 'stat-box'; b.setAttribute('data-bpi-stat', '1');
+      b.innerHTML = '<span>Ingredienti esauriti</span><strong style="color:' + (count() ? 'var(--red)' : 'var(--green)') + '">' + count() + '</strong>';
+      st.appendChild(b);
+    }
+    var listEl = document.getElementById('adminMenuList');
+    if(listEl){
+      Array.prototype.forEach.call(listEl.querySelectorAll('.ing-chip'), function(c){ var s = c.querySelector('span'); if(s) c.classList.toggle('bp-ing-out', isOut(s.textContent)); });
+      if(dupHidden.length){
+        var n = document.createElement('div'); n.className = 'bpi-note';
+        n.innerHTML = '<span>ℹ️ Nascosti ' + dupHidden.length + ' prodotti duplicati (stesso nome nella stessa categoria).</span><button type="button" class="orange btn-sm" id="bpDupDel">🗑️ Elimina i duplicati dal database</button>';
+        listEl.insertBefore(n, listEl.firstChild);
+        n.querySelector('#bpDupDel').onclick = async function(){
+          var ids = dupHidden.map(function(p){ return p.id; });
+          if(!confirm('Eliminare definitivamente ' + ids.length + ' prodotti duplicati? Non si può annullare.')) return;
+          try{ var r2 = await sb.from('menu').delete().in('id', ids); if(r2 && r2.error){ alert('Errore: ' + r2.error.message); return; } }catch(e){ alert('Errore: ' + (e.message || e)); return; }
+          await loadMenu();
+        };
+      }
+    }
+  });
+  return r;
+}; });
+
+/* ---------- aggiornamenti globali ---------- */
+function paintBadges(){
+  var a = document.getElementById('bpIngBtnN'); if(a) a.textContent = count() ? '(' + count() + ')' : '';
+  var b = document.getElementById('b52OutN'); if(b) b.textContent = count() ? '(' + count() + ')' : '';
+}
+function refresh(){
+  S(paintBadges); S(drawSheet);
+  S(populateProductDropdown); S(renderCart); S(renderAdminMenu);
+}
+setTimeout(function(){ S(pull); }, 3500);
+setInterval(function(){ if(!document.hidden) S(pull); }, 45000);
+setInterval(function(){ S(paintBadges); }, 1500);
+document.addEventListener('visibilitychange', function(){ if(!document.hidden) S(pull); });
+
+window.bpIng = {isOut: isOut, setOut: setOut, list: list, count: count, hasOut: hasOut, prodOut: prodOut, openSheet: openSheet, drawSheet: drawSheet, check: checkCart, dupHidden: function(){ return dupHidden; }};
+})()}catch(e){ console.error('[bp] v58', e); }
+</script>
 <script id="bp-v52">
 try{(function(){
 if(window.__bpV52)return;window.__bpV52=1;
@@ -14808,32 +15120,21 @@ function isOff(name){var n=N(base(name));return off().some(function(p){return N(
 
 /* ---- 6) esauriti: avvisi ---- */
 function warnOff(list){var u=[],seen={};list.forEach(function(p){if(!seen[p.id]){seen[p.id]=1;u.push(p)}});if(!u.length)return;
-  var m='⛔ ESAURITO · خلص: '+u.map(function(p){var a=alts(p);return p.name+(a.length?' (alt: '+a.join(', ')+')':'')}).join(' · ');toast(m,true);S(function(){setVoiceMsg(m,'error')});vib([180,80,180])}
+  var m='🙈 NASCOSTO: '+u.map(function(p){var a=alts(p);return p.name+(a.length?' (alt: '+a.join(', ')+')':'')}).join(' · ');toast(m,true);S(function(){setVoiceMsg(m,'error')});vib([180,80,180])}
 function offIn(text){var t=' '+N(D(text))+' ';return off().filter(function(p){var n=N(p.name).replace(/^(pizza|panino|piadina) /,'');return n.length>=3&&t.indexOf(' '+n)>=0})}
 function cartOff(){var r=[];cart.forEach(function(it){var p=allMenu.filter(function(x){return String(x.id)===String(it.menu_id)})[0];if((p&&p.active===false)||(!p&&isOff(it.name)))r.push(it.name)});return r}
-var _ds=doSaveOrder;doSaveOrder=async function(){var o=cartOff();if(o.length){setMsg('orderMsg','⛔ Esaurito: '+o.join(', ')+' — toglilo dal carrello · شيله من الأوردر','error');vib([180,80,180]);return null}return _ds.apply(this,arguments)};
-var _aq=addQuick;addQuick=function(p){if(p&&p.active===false){toast('⛔ '+p.name+' esaurito · خلص',true);return}return _aq.apply(this,arguments)};
-var _ro=repeatOrderIntoCart;repeatOrderIntoCart=function(o,items,f){var bad=[];var ok=(items||[]).filter(function(i){if(!bpIsSvc(i.product_name)&&isOff(i.product_name)){bad.push(base(i.product_name));return false}return true});if(bad.length)toast('⛔ Esaurito, saltato: '+bad.join(', '),true);return _ro.call(this,o,ok,f)};
+var _ds=doSaveOrder;doSaveOrder=async function(){var o=cartOff();if(o.length){setMsg('orderMsg','🙈 Prodotto nascosto: '+o.join(', ')+' — toglilo dal carrello','error');vib([180,80,180]);return null}return _ds.apply(this,arguments)};
+var _aq=addQuick;addQuick=function(p){if(p&&p.active===false){toast('🙈 '+p.name+' nascosto',true);return}return _aq.apply(this,arguments)};
+var _ro=repeatOrderIntoCart;repeatOrderIntoCart=function(o,items,f){var bad=[];var ok=(items||[]).filter(function(i){if(!bpIsSvc(i.product_name)&&isOff(i.product_name)){bad.push(base(i.product_name));return false}return true});if(bad.length)toast('🙈 Nascosto, saltato: '+bad.join(', '),true);return _ro.call(this,o,ok,f)};
 var _ps=processSpokenOrder;processSpokenOrder=function(t){S(function(){warnOff(offIn(t))});return _ps.apply(this,arguments)};
 var _gp=gemBuildPrompt;gemBuildPrompt=function(){var s=_gp.apply(this,arguments),o=off();return o.length?s+'\n\nPRODOTTI ESAURITI OGGI (non disponibili): '+o.map(function(p){return p.name}).join(', ')+'. Se il cliente ne chiede uno, riportalo in items con il suo nome ESATTO come scritto qui.':s};
 var _ae=applyExtractedOrderObject;applyExtractedOrderObject=function(parsed){S(function(){var hit=[];((parsed&&parsed.items)||[]).forEach(function(it){var nm=it.name||it.rawText||'',mi=gemMatchInfo(nm,getActiveMenu()),mo=gemMatchInfo(nm,off());if(mo.prod&&(!mi.prod||(!mi.sure&&mo.sure)))hit.push(mo.prod)});if(hit.length){parsed.__off=hit;warnOff(hit)}});return _ae.apply(this,arguments)};
-var _gs=gemShowReview;gemShowReview=function(parsed){var r=_gs.apply(this,arguments);S(function(){var m=$('#gemReview');if(m&&parsed&&parsed.__off&&parsed.__off.length){var d=document.createElement('div');d.className='gem-warn red';d.innerHTML='⛔ Esaurito: '+parsed.__off.map(function(p){return esc(p.name)}).join(', ');m.insertBefore(d,m.children[1]||null)}});return r};
+var _gs=gemShowReview;gemShowReview=function(parsed){var r=_gs.apply(this,arguments);S(function(){var m=$('#gemReview');if(m&&parsed&&parsed.__off&&parsed.__off.length){var d=document.createElement('div');d.className='gem-warn red';d.innerHTML='🙈 Nascosto: '+parsed.__off.map(function(p){return esc(p.name)}).join(', ');m.insertBefore(d,m.children[1]||null)}});return r};
 
 /* esauriti: schermata di gestione */
 function sync(){S(renderCategories);S(populateProductDropdown);S(renderCart);S(drawSheet);S(paint)}
-async function setActive(p,val){var prev=p.active;p.active=val;sync();
-  try{if(!sb)throw new Error('offline');var r=await sb.from('menu').update({active:val}).eq('id',p.id);if(r.error)throw r.error}catch(e){p.active=prev;sync();alert('Errore: '+(e.message||e));return}
-  if(!val&&cart.size&&cartOff().length)toast('⚠️ '+p.name+' è nel carrello: toglilo · شيله',true)}
-function drawSheet(){var o=$('#b52Sheet');if(!o||o.style.display!=='flex')return;var q=N($('#b52Q').value),f=freq();
-  var l=allMenu.filter(function(p){return!q||N(p.name+' '+(p.category||'')).indexOf(q)>=0}).sort(function(a,b){return((a.active===false?0:1)-(b.active===false?0:1))||((f[N(b.name)]||0)-(f[N(a.name)]||0))||a.name.localeCompare(b.name)});
-  $('#b52L').innerHTML=l.map(function(p){var of=p.active===false;return'<button type="button" class="'+(of?'off':'')+'" data-id="'+esc(p.id)+'">'+(of?'⛔ ':'✅ ')+esc(p.name)+(of?'<br><small>ESAURITO · خلص</small>':'')+'</button>'}).join('')}
-function openSheet(){var o=$('#b52Sheet');if(!o){o=document.createElement('div');o.id='b52Sheet';o.className='b52-ov';
-  o.innerHTML='<div class="b52-sh"><div class="b52-sh-h"><b>⛔ Esauriti · الأصناف الخلصانة</b><button type="button" data-x>✕</button></div><input id="b52Q" type="search" placeholder="🔍 Cerca · ابحث" autocomplete="off"><div id="b52L" class="b52-l"></div><button type="button" data-all class="secondary">🔄 Riattiva tutti · رجّع الكل</button></div>';
-  document.body.appendChild(o);$('#b52Q').oninput=drawSheet;
-  o.onclick=function(e){var b=e.target.closest('button');if(e.target===o||(b&&b.hasAttribute('data-x'))){o.style.display='none';return}
-    if(b&&b.hasAttribute('data-all')){var l=off();if(l.length&&confirm('Riattivare '+l.length+' prodotti?'))l.forEach(function(p){setActive(p,true)});return}
-    if(b&&b.getAttribute('data-id')){var p=allMenu.filter(function(x){return String(x.id)===b.getAttribute('data-id')})[0];if(p){vib();setActive(p,p.active===false)}}}}
-  o.style.display='flex';drawSheet()}
+function drawSheet(){ if(window.bpIng) bpIng.drawSheet(); }
+function openSheet(){ if(window.bpIng) bpIng.openSheet(); }
 
 /* ---- 4) riga veloce ---- */
 var NW={una:1,un:1,uno:1,due:2,tre:3,quattro:4,cinque:5,sei:6,sette:7,otto:8,nove:9,dieci:10};
@@ -14877,7 +15178,7 @@ function runLine(raw){var msg=$('#b52Msg');
   if(added.length)renderCart();
   if(!added.length&&!outs.length&&bad.length){var f2=processSpokenOrder(raw,false);if(f2){msg.innerHTML=chip('','✓ Ordine letto · اتقرا');return true}}
   var h=added.map(function(a){return chip(a.fz||a.nomx?'warn':'',(a.fz?'≈ ':'✓ ')+a.qty+'× '+esc(a.p.name)+(a.mx?' Maxi':'')+(a.nomx?' (no Maxi)':'')+(a.rem.length?' 🚫'+esc(a.rem.join(',')):'')+(a.add.length?' ➕'+esc(a.add.join(',')):''))});
-  outs.forEach(function(p){h.push(chip('bad','⛔ '+esc(p.name)+' esaurito'+(alts(p).length?' · alt: '+esc(alts(p).join(', ')):'')))});
+  outs.forEach(function(p){h.push(chip('bad','🙈 '+esc(p.name)+' nascosto'+(alts(p).length?' · alt: '+esc(alts(p).join(', ')):'')))});
   bad.forEach(function(b){h.push(chip('bad','❓ «'+esc(b)+'»'))});
   msg.innerHTML=h.join('');if(outs.length){warnOff(outs)}else if(added.length)vib();
   return added.length>0||outs.length>0}
@@ -14939,11 +15240,11 @@ function paintTime(){var box=$('#b52Time');if(!box)return;var L=loads(),c=cartPz
   if(box.getAttribute('data-s')!==h){box.setAttribute('data-s',h);box.innerHTML=h}}
 
 /* ---- montaggio ---- */
-function paint(){S(paintSells);var n=off().length,b=$('#b52OutN');if(b)b.textContent=n?'('+n+')':''}
+function paint(){S(paintSells);var n=(window.bpIng?bpIng.count():0),b=$('#b52OutN');if(b)b.textContent=n?'('+n+')':''}
 function mount(){
   var p=$('#newTab .grid>section.panel');
   if(p&&!$('#bp52Bar')){var b=document.createElement('div');b.id='bp52Bar';
-    b.innerHTML='<div class="b52-line"><input id="b52Line" enterkeyhint="send" autocomplete="off" autocapitalize="off" placeholder="⚡ 2 marg, 1 diav maxi senza cipolla  ↵"><button type="button" id="b52Go">↵</button></div><div id="b52Msg" class="b52-msg"></div><div class="b52-hd"><b>⭐ Più venduti · الأكتر مبيعًا</b><button type="button" id="b52Out">⛔ Esauriti · خلصت <i id="b52OutN" style="font-style:normal"></i></button></div><div id="b52Sells" class="b52-sells"></div>';
+    b.innerHTML='<div class="b52-line"><input id="b52Line" enterkeyhint="send" autocomplete="off" autocapitalize="off" placeholder="⚡ 2 marg, 1 diav maxi senza cipolla  ↵"><button type="button" id="b52Go">↵</button></div><div id="b52Msg" class="b52-msg"></div><div class="b52-hd"><b>⭐ Più venduti · الأكتر مبيعًا</b><button type="button" id="b52Out">🚫 Ingredienti esauriti <i id="b52OutN" style="font-style:normal"></i></button></div><div id="b52Sells" class="b52-sells"></div>';
     p.insertBefore(b,p.firstChild);
     $('#b52Go').onclick=go;$('#b52Out').onclick=openSheet;
     $('#b52Sells').onclick=function(e){var t=e.target.closest('.b52-s');if(!t)return;var pr=getActiveMenu().filter(function(x){return String(x.id)===t.getAttribute('data-id')})[0];if(!pr)return;var a=e.target.closest('[data-a]');vib();
@@ -15218,5 +15519,600 @@ setInterval(function(){
   }
 },1500);
 })()}catch(e){console.error('[bp] v53 automazioni',e)}
+</script>
+<script id="bpArModule">
+/* ===== Buona Pizza · v55 · v57 · Traduzione AR/IT dell'intera interfaccia (prodotti e menu restano in italiano) ===== */
+(function(){
+'use strict';
+/* ---------- DIZIONARIO IT → AR (chiavi in minuscolo) ---------- */
+var D = {
+/* titoli e barra */
+'report vendite & prestazioni':'تقرير المبيعات والأداء','report vendite &amp; prestazioni':'تقرير المبيعات والأداء',
+'report giornaliero':'تقرير يومي','report settimanale':'تقرير أسبوعي','report mensile':'تقرير شهري','report':'التقارير',
+'cruscotto pro':'لوحة المؤشرات Pro','stampato il':'تمت الطباعة في',
+'giorno':'اليوم','giorni':'أيام','settimana':'الأسبوع','mese':'الشهر','oggi':'اليوم','ieri':'أمس',
+'giorno prec.':'اليوم السابق','settimana prec.':'الأسبوع السابق','mese prec.':'الشهر السابق',
+'periodo precedente':'الفترة السابقة','periodo successivo':'الفترة التالية',
+'stampa':'طباعة','aggiorna':'تحديث','modifica':'تعديل','elimina':'حذف','salva':'حفظ','annulla':'إلغاء','chiudi':'إغلاق','csv':'CSV',
+/* KPI */
+'incasso netto':'صافي الإيراد','incasso':'الإيراد','ordini validi':'الطلبات الصحيحة','ordini':'الطلبات','ordine':'الطلب',
+'ticket medio':'متوسط الفاتورة','scontrino medio':'متوسط الفاتورة','consegne':'التوصيل','consegna':'توصيل',
+'annullati':'الملغاة','annullato':'ملغي','pezzi venduti':'القطع المباعة','pronto in (media)':'الجاهزية خلال (المتوسط)',
+'oltre':'أكثر من','clienti nuovi / abituali':'عملاء جدد / دائمون','valore perso':'القيمة المفقودة','suppl.':'رسوم التوصيل',
+'nessun annullamento':'لا توجد إلغاءات',
+/* pannelli */
+'ore di punta':'ساعات الذروة','più venduti':'الأكثر مبيعًا','migliori clienti':'أفضل العملاء','pagamenti':'المدفوعات',
+'tipo ordine':'نوع الطلب','tipo di ordine':'نوع الطلب','metodo di pagamento':'طريقة الدفع','stato degli ordini':'حالة الطلبات',
+'andamento giornaliero dell\'incasso':'الإيراد اليومي','andamento giornaliero':'الأداء اليومي','andamento orario dell\'incasso':'الإيراد على مدار الساعات',
+'fasce orarie (somma del periodo)':'الفترات الزمنية (مجموع الفترة)','dettaglio giorno per giorno':'التفاصيل يومًا بيوم',
+'riepilogo intelligente':'ملخص ذكي','prodotti più venduti':'المنتجات الأكثر مبيعًا','vendite per categoria':'المبيعات حسب الفئة',
+'formato / taglia':'الحجم / المقاس','operatori (chi ha registrato gli ordini)':'المشغّلون (من سجّل الطلبات)',
+'zone / vie più servite (consegne)':'المناطق / الشوارع الأكثر خدمةً (التوصيل)','elenco ordini del periodo':'قائمة طلبات الفترة',
+'nessun dato nel periodo.':'لا توجد بيانات في هذه الفترة.','nessun ordine registrato in questo periodo.':'لا توجد طلبات مسجّلة في هذه الفترة.',
+'scegli un\'altra data dal calendario.':'اختر تاريخًا آخر من التقويم.',
+'mostrati i primi 600 ordini. usa «esporta csv» per l\'elenco completo.':'يتم عرض أول ٦٠٠ طلب. استخدم «تصدير CSV» للقائمة الكاملة.',
+'database non raggiungibile: i dati mostrati provengono solo dagli ordini presenti su questo dispositivo e potrebbero essere incompleti.':'قاعدة البيانات غير متاحة: البيانات المعروضة مصدرها الطلبات الموجودة على هذا الجهاز فقط وقد تكون غير مكتملة.',
+'connessione non disponibile (offline): il cruscotto si aggiorna al ritorno della rete.':'لا يوجد اتصال (غير متصل): ستتحدّث اللوحة عند عودة الشبكة.',
+'caricamento del report…':'جارٍ تحميل التقرير…','caricamento…':'جارٍ التحميل…','costi e consumi…':'التكاليف والاستهلاك…',
+/* redditività */
+'costo materie prime ÷ vendite':'تكلفة المواد الخام ÷ المبيعات',
+'nessun dato di costo in questo periodo. registra gli acquisti collegandoli al magazzino (con prezzo) e inserisci le ricette per vedere consumi e margine.':'لا توجد بيانات تكلفة في هذه الفترة. سجّل المشتريات واربطها بالمخزون (مع السعر) وأدخل الوصفات لعرض الاستهلاك والهامش.',
+'redditività dei prodotti':'ربحية المنتجات','utile lordo prodotti':'إجمالي ربح المنتجات','più redditizio':'الأكثر ربحية',
+'food cost più alto':'أعلى نسبة تكلفة غذائية','ricavi con ricetta':'الإيرادات ذات الوصفة','prodotti senza ricetta o senza prezzo d\'acquisto (utile non calcolabile):':'منتجات بدون وصفة أو بدون سعر شراء (الربح غير قابل للحساب):',
+'totale (con ricetta)':'الإجمالي (ذات الوصفة)','totale articoli':'إجمالي الأصناف','totale':'الإجمالي',
+'prodotto':'المنتج','ricavi':'الإيرادات','costo':'التكلفة','utile/pz':'الربح/قطعة','utile':'الربح','margine':'الهامش','food cost':'نسبة التكلفة (Food cost)',
+'utile = ricavi − costo degli ingredienti della ricetta (prezzi d\'acquisto medi).':'الربح = الإيرادات − تكلفة مكوّنات الوصفة (متوسط أسعار الشراء).',
+'ottimo ·':'ممتاز ·','da controllare ·':'يحتاج مراجعة ·','troppo alto.':'مرتفع جدًا.','le pizze a gusti sono divise in parti uguali.':'بيتزا النكهات المتعددة تُقسَّم بالتساوي.',
+'extra/aggiunte non hanno costo, quindi l\'utile è leggermente sovrastimato.':'الإضافات بلا تكلفة، لذا فالربح مُقدَّر بزيادة طفيفة.','tocca le intestazioni per ordinare.':'اضغط على عناوين الأعمدة للفرز.',
+'lo scarico automatico è spento: i consumi non vengono registrati.':'الخصم التلقائي متوقف: لا يتم تسجيل الاستهلاك.',
+/* insight (frammenti di riserva) */
+'incasso in crescita del':'ارتفاع الإيراد بنسبة','incasso in calo del':'انخفاض الإيراد بنسبة',
+'rispetto al giorno precedente':'مقارنةً باليوم السابق','rispetto alla settimana precedente':'مقارنةً بالأسبوع السابق','rispetto al mese precedente':'مقارنةً بالشهر السابق',
+'ora di punta:':'ساعة الذروة:','giorno migliore:':'أفضل يوم:','media per giorno lavorativo:':'المتوسط لكل يوم عمل:','prodotto più venduto:':'المنتج الأكثر مبيعًا:',
+'le consegne valgono il':'التوصيل يمثّل','pagamenti: contanti':'المدفوعات: نقدًا','ordini annullati:':'الطلبات الملغاة:',
+'carta/altro':'بطاقة/أخرى','contanti':'نقدًا','carta':'بطاقة','asporto':'استلام من المحل','non indicato':'غير محدد','altro':'أخرى','tutti':'الكل',
+'nuovo':'جديد','pronto':'جاهز','completato':'مكتمل','in preparazione':'قيد التحضير','in consegna':'قيد التوصيل',
+/* tabella ordini */
+'data e ora':'التاريخ والوقت','data':'التاريخ','ora':'الوقت','ore':'ساعات','n°':'الرقم','cliente':'العميل','clienti':'العملاء','tipo':'النوع','pagamento':'الدفع','stato':'الحالة','operatore':'المشغّل',
+'normale':'عادي','maxi':'ماكسي','pz':'قطعة','pezzi':'قطع','min':'دقيقة','su':'من',
+/* date */
+'lunedì':'الاثنين','martedì':'الثلاثاء','mercoledì':'الأربعاء','giovedì':'الخميس','venerdì':'الجمعة','sabato':'السبت','domenica':'الأحد',
+'lun':'اثنين','mar':'ثلاثاء','mer':'أربعاء','gio':'خميس','ven':'جمعة','sab':'سبت','dom':'أحد',
+'gennaio':'يناير','febbraio':'فبراير','marzo':'مارس','aprile':'أبريل','maggio':'مايو','giugno':'يونيو','luglio':'يوليو','agosto':'أغسطس','settembre':'سبتمبر','ottobre':'أكتوبر','novembre':'نوفمبر','dicembre':'ديسمبر',
+'gen':'يناير','feb':'فبراير','apr':'أبريل','mag':'مايو','giu':'يونيو','lug':'يوليو','ago':'أغسطس','set':'سبتمبر','ott':'أكتوبر','nov':'نوفمبر','dic':'ديسمبر',
+/* magazzino / scorte */
+'gestione magazzino & materie prime':'إدارة المخزون والمواد الخام','gestione magazzino &amp; materie prime':'إدارة المخزون والمواد الخام',
+'scorte basse / esaurite':'مخزون منخفض / منتهٍ','scorte':'المخزون','magazzino':'المخزون','scorta bassa!':'مخزون منخفض!',
+'aggiungi materia prima':'إضافة مادة خام','articolo':'صنف','articoli':'أصناف','giacenza attuale':'المخزون الحالي','soglia di allarme:':'حد التنبيه:',
+'magazzino condiviso: le modifiche sono visibili subito su tutti i dispositivi.':'المخزون المشترك: التعديلات تظهر فورًا على جميع الأجهزة.',
+'nessun articolo in magazzino. premi «aggiungi materia prima».':'لا توجد أصناف في المخزون. اضغط «إضافة مادة خام».',
+'il magazzino condiviso è vuoto.':'المخزون المشترك فارغ.','pz per ordine':'قطعة لكل طلب','per ordine':'لكل طلب','via':'شارع','viale':'جادة','corso':'كورسو','piazza':'ميدان','vicolo':'زقاق','strada':'طريق',
+'garibaldi':'غاريبالدي','roma':'روما','libertà':'ليبرتا','italia':'إيطاليا','mazzini':'مازيني','verdi':'فيردي','dante':'دانتي','marconi':'ماركوني','cavour':'كافور','matteotti':'ماتيوتي','gramsci':'غرامشي','milano':'ميلانو','lodi':'لودي','lodi vecchio':'لودي فيكيو','vittorio veneto':'فيتوريو فينيتو','trento':'ترينتو','trieste':'تريستي','kennedy':'كينيدي',
+'kg':'كجم','litri':'لتر','litro':'لتر','cl':'سل',
+/* ricette */
+'ricette & scarico automatico':'الوصفات والخصم التلقائي','ricette':'الوصفات','ricetta':'وصفة','scarico automatico del magazzino':'الخصم التلقائي من المخزون',
+'ogni vendita scala gli ingredienti della ricetta · كل بيعة بتخصم من المخزون':'كل عملية بيع تخصم مكوّنات الوصفة من المخزون',
+'attivo':'مفعّل','spento':'متوقف','con ricetta':'بوصفة','senza ricetta':'بدون وصفة','nessun prodotto trovato':'لم يتم العثور على منتجات','fino alle':'حتى الساعة',
+'🔍 cerca prodotto · ابحث':'🔍 ابحث عن منتج','cerca prodotto · ابحث':'ابحث عن منتج',
+'avviso «è un ordine di ieri?»':'تنبيه «هل هذا طلب أمس؟»',
+'se salvi un ordine dopo mezzanotte e la cassa di ieri non è ancora chiusa, ti chiede se registrarlo con la data di ieri.':'إذا حفظت طلبًا بعد منتصف الليل ولم يتم إقفال صندوق الأمس بعد، سيسألك إن كنت تريد تسجيله بتاريخ الأمس.',
+'quanto di ogni ingrediente serve per':'الكمية المطلوبة من كل مكوّن لـ','ingrediente…':'مكوّن…','qtà':'الكمية','＋ ingrediente':'＋ مكوّن',
+'copia la ricetta da un\'altra pizza…':'نسخ الوصفة من بيتزا أخرى…','copia dalla normale con moltiplicatore…':'نسخ من الحجم العادي بمعامل ضرب…',
+'◀ indietro':'◀ رجوع','salva ricetta':'حفظ الوصفة','ricetta salvata ·':'تم حفظ الوصفة ·','costo ingredienti:':'تكلفة المكوّنات:','· prezzo':'· السعر','· food cost':'· نسبة التكلفة','· margine':'· الهامش',
+'senza prezzo d\'acquisto (collega l\'acquisto al magazzino):':'بدون سعر شراء (اربط الشراء بالمخزون):',
+'il magazzino è vuoto: aggiungi prima le materie prime (magazzino o acquisti) per poterle usare nelle ricette.':'المخزون فارغ: أضف المواد الخام أولًا (من المخزون أو المشتريات) لتتمكن من استخدامها في الوصفات.',
+'consumi condivisi fra tutti i dispositivi':'الاستهلاك مشترك بين جميع الأجهزة','solo il responsabile può gestire le ricette':'المسؤول فقط يمكنه إدارة الوصفات',
+'📋 copia sql':'📋 نسخ SQL','copia sql':'نسخ SQL',
+/* messaggi nativi (prompt/alert/confirm) */
+'nome della nuova materia prima (es. pomodori, formaggio, scatole):':'اسم المادة الخام الجديدة (مثال: طماطم، جبن، علب):',
+'unità di misura (kg, litri, pz):':'وحدة القياس (كجم، لتر، قطعة):','giacenza attuale:':'المخزون الحالي:','soglia minima di allarme:':'الحد الأدنى للتنبيه:','nome materia prima:':'اسم المادة الخام:',
+'il nome non può essere vuoto.':'لا يمكن ترك الاسم فارغًا.','soglia non valida.':'الحد غير صالح.','eliminare questo articolo dal magazzino?':'هل تريد حذف هذا الصنف من المخزون؟',
+'impossibile salvare il magazzino su questo dispositivo.':'تعذّر حفظ المخزون على هذا الجهاز.','operazione non riuscita:':'تعذّرت العملية:','importazione non riuscita:':'تعذّر الاستيراد:',
+'nessun ordine da esportare per questo periodo.':'لا توجد طلبات لتصديرها في هذه الفترة.',
+'il browser ha bloccato la finestra di stampa. consenti i pop-up e riprova.':'منع المتصفح نافذة الطباعة. اسمح بالنوافذ المنبثقة وأعد المحاولة.',
+'moltiplicatore rispetto alla normale (es. 1,5):':'المعامل بالنسبة للحجم العادي (مثال: ١٫٥):',
+'spegnere lo scarico automatico? gli ordini nuovi non scaleranno più il magazzino.':'هل تريد إيقاف الخصم التلقائي؟ لن تخصم الطلبات الجديدة من المخزون بعد الآن.',
+'📋 sql copiato: incollalo in supabase › sql editor':'📋 تم نسخ SQL: الصقه في Supabase › SQL Editor'
+};
+
+
+/* ---------- v57 · interfaccia completa ---------- */
+var NEW = [
+"esci=خروج","audio on=الصوت مفعّل","audio off=الصوت متوقف","test=اختبار","attiva/disattiva suono nuovo ordine=تشغيل/إيقاف صوت الطلب الجديد","prova suono campanello=تجربة صوت الجرس",
+"nuovo ordine ricevuto!=تم استلام طلب جديد!","cassa pos=كاشير POS","sistema gestione ordini & consegne=نظام إدارة الطلبات والتوصيل",
+"premi il pulsante verde per entrare subito in cassa.=اضغط الزر الأخضر للدخول فورًا إلى الكاشير.","entra in cassa=ادخل إلى الكاشير","accesso diretto=دخول مباشر",
+"accesso con account / configurazione server=الدخول بحساب / إعداد الخادم","email operatore=بريد المشغّل","opzionale=اختياري","inserisci email operatore...=أدخل بريد المشغّل...",
+"inserisci password...=أدخل كلمة المرور...","password=كلمة المرور","accedi con password=الدخول بكلمة المرور","crea account=إنشاء حساب","salva configurazione=حفظ الإعداد",
+"nuovo ordine=طلب جديد","ordini aperti=الطلبات المفتوحة","cucina=المطبخ","gestione menu=إدارة المنيو","storico ordini=سجل الطلبات","cassa & incassi=الصندوق والإيرادات","acquisti=المشتريات",
+"modalità modifica ordine=وضع تعديل الطلب","aggiorna ordine=تحديث الطلب","annulla modifica=إلغاء التعديل","aggiungi, rimuovi o cambia pizze, ingredienti, orario o indirizzo e premi=أضف أو احذف أو غيّر المنتجات والمكوّنات والموعد أو العنوان ثم اضغط",
+"estrattore ordini da testo=مستخرج الطلبات من نص","foto/immagine=صورة","vocale=صوت","compila in automatico:=تعبئة تلقائية:","foto / immagine=صورة","parla ora=تحدّث الآن","registra=تسجيل","carica vocale whatsapp=رفع تسجيل واتساب",
+"audio=صوت","impostazioni ai gemini=إعدادات Gemini للذكاء الاصطناعي","incolla qui la tua gemini api key=الصق مفتاح Gemini API هنا","estrai veloce=استخراج سريع","estrai con ai=استخراج بالذكاء الاصطناعي","pulisci=مسح",
+"analisi ed estrazione automatica dei dati in corso...=جارٍ التحليل والاستخراج التلقائي للبيانات...","selezione prodotti & ingredienti=اختيار المنتجات والمكوّنات","menu a tendina=قائمة منسدلة","ricerca rapida nel menu a tendina=بحث سريع في القائمة",
+"categoria=الفئة","ingredienti del prodotto:=مكوّنات المنتج:","ingredienti=المكوّنات","ingrediente=مكوّن","seleziona un prodotto...=اختر منتجًا...","formato=الحجم","quantità=الكمية","supplemento extra=رسوم الإضافات","standard=عادي",
+"togli ingrediente=إزالة مكوّن","senza=بدون","aggiungi ingrediente=إضافة مكوّن","scegli ingrediente da togliere=اختر مكوّنًا لإزالته","scegli ingrediente extra da aggiungere=اختر مكوّنًا إضافيًا","scegli ingrediente dalla lista...=اختر مكوّنًا من القائمة...",
+"nessuna modifica ingrediente (prodotto standard).=لا تعديل على المكوّنات (منتج عادي).","azzera modifiche ingredienti=مسح تعديلات المكوّنات","reset modifiche=إعادة ضبط التعديلات","aggiungi al carrello=أضف إلى السلة",
+"dati cliente=بيانات العميل","orario=الموعد","pulisci campi=مسح الحقول","memoria clienti & vie attiva:=ذاكرة العملاء والشوارع مفعّلة:","ultimo ordine di questo cliente=آخر طلب لهذا العميل","ripeti nel carrello=كرّر في السلة",
+"nome cliente / citofono=اسم العميل / الجرس","scrivi nome o citofono...=اكتب الاسم أو الجرس...","telefono=الهاتف","scrivi telefono...=اكتب الهاتف...","indirizzo / via di consegna=العنوان / شارع التوصيل",
+"consegna a domicilio=توصيل للمنزل","ritiro in pizzeria=استلام من المطعم","carta / pos=بطاقة / POS","altro / già pagato=أخرى / مدفوع مسبقًا","orario richiesto=الموعد المطلوب","esatta=بالضبط","e un quarto=وربع","e mezza=ونصف","meno un quarto=إلا ربع",
+"note aggiuntive ordine=ملاحظات إضافية على الطلب","carrello=السلة","calcolo automatico cliente=حساب تلقائي للعميل","supplemento consegna=رسوم التوصيل","gratis=مجانًا","contanti ricevuti dal cliente=النقد المستلم من العميل",
+"esatto=مضبوط","resto da dare al cliente=الباقي للعميل","totale cliente=إجمالي العميل","salva ordine=حفظ الطلب","svuota=تفريغ","azzera=تصفير","aggiungi un importo al totale=إضافة مبلغ على الإجمالي","motivo (facoltativo)=السبب (اختياري)",
+"ordini aperti & consegne=الطلبات المفتوحة والتوصيل","ordinati automaticamente per=مرتبة تلقائيًا حسب","orario di consegna/ritiro=موعد التوصيل/الاستلام","per orario consegna=حسب موعد التوصيل","per ora inserimento=حسب وقت الإدخال",
+"seleziona consegne=اختيار التوصيلات","attenzione: ordini in scadenza o in ritardo!=تنبيه: طلبات قاربت على موعدها أو متأخرة!","mostra solo urgenti=عرض العاجلة فقط","mostra tutti=عرض الكل","giro consegne intelligente=جولة التوصيل الذكية",
+"tappe ordinate per orario=محطات مرتبة بالموعد","partenza e ritorno:=الانطلاق والعودة:","apri giro su google maps=افتح الجولة في خرائط جوجل","segna tutti \"in consegna\"=علّم الكل «قيد التوصيل»","svuota giro=تفريغ الجولة",
+"riepilogo cassa & incassi protetto=ملخص الصندوق والإيرادات (محمي)","mostra cassa & incassi=إظهار الصندوق والإيرادات","chiusura cassa & riepilogo giornata=إقفال الصندوق وملخص اليوم","stampa chiusura cassa=طباعة إقفال الصندوق","nascondi cassa=إخفاء الصندوق",
+"prodotti più venduti nella giornata=الأكثر مبيعًا اليوم","dettaglio per stato & pagamento=التفاصيل حسب الحالة والدفع","gestione categorie, prodotti & ingredienti=إدارة الفئات والمنتجات والمكوّنات","gestione aggiunte=إدارة الإضافات","ordina=ترتيب",
+"nuova categoria=فئة جديدة","nuovo prodotto=منتج جديد","ricarica=إعادة تحميل","cerca prodotto o ingrediente da modificare...=ابحث عن منتج أو مكوّن للتعديل...","tutti gli stati=كل الحالات","solo attivi=النشطة فقط","solo esauriti / nascosti=المنتهية / المخفية فقط",
+"per categoria=حسب الفئة","nome a-z=الاسم أ-ي","prezzo=السعر","selezionati=محدد","attiva=تفعيل","esaurito=منتهٍ","sposta=نقل","deseleziona=إلغاء التحديد","vai al carrello=اذهب إلى السلة",
+"stampa termica=طباعة حرارية","stampa a4 / comanda=طباعة A4 / كوماندا","nome prodotto=اسم المنتج","scegli categoria esistente...=اختر فئة موجودة...","o scrivi nuova=أو اكتب جديدة","prezzo normale=السعر العادي","prezzo maxi=سعر الماكسي",
+"lascia vuoto se non c'è=اتركه فارغًا إن لم يوجد","prodotto disponibile nel menu cassa=المنتج متاح في منيو الكاشير","varianti=متغيّرات","salva prodotto=حفظ المنتج","gestione categorie=إدارة الفئات","crea nuova categoria=إنشاء فئة جديدة",
+"rinomina categoria esistente=إعادة تسمية فئة موجودة","azione=الإجراء","nome nuova categoria=اسم الفئة الجديدة","primo prodotto in questa categoria=أول منتج في هذه الفئة","scegli categoria da rinominare=اختر الفئة لإعادة تسميتها","nuovo nome categoria=الاسم الجديد للفئة",
+"scrivi il nuovo nome...=اكتب الاسم الجديد...","salva categoria=حفظ الفئة","personalizza ingredienti=تخصيص المكوّنات","riepilogo modifiche selezionate=ملخص التعديلات المحددة","supplemento prezzo per extra=رسوم الإضافات","nessun supplemento=بدون رسوم",
+"conferma modifiche=تأكيد التعديلات","aggiungi=إضافة","es.=مثال:","a domicilio=للمنزل","aggiorna=تحديث","scegli=اختر"
+];
+NEW.forEach(function(l){ var i = l.indexOf('='); if(i > 0) D[l.slice(0, i).trim().toLowerCase()] = l.slice(i + 1).trim(); });
+var MORE = 'ripristina=استعادة|cliente=العميل|note=ملاحظات|fatto=تم|stop & estrai=إيقاف واستخراج|indirizzo=العنوان|nessun ordine=لا توجد طلبات|esporta csv=تصدير CSV|elimina cliente=حذف العميل|whatsapp=واتساب|personalizza=تخصيص|rinomina=إعادة تسمية|tocca ciò che va=اضغط على المطلوب|modifica lista=تعديل القائمة|tocca per=اضغط لـ|salse gratis=صلصات مجانية|cerca a voce=بحث بالصوت|aggiungi a voce=إضافة بالصوت|cambia=تغيير|apri il menu…=افتح القائمة…|subito=فورًا|scegli i minuti=اختر الدقائق|nessun ingrediente registrato=لا توجد مكوّنات مسجلة|testo, foto o voce — compila tutto da solo=نص أو صورة أو صوت — والتعبئة تلقائية|supplemento manuale=رسوم يدوية|aggiungi extra=إضافة إضافات|nessun ingrediente=لا توجد مكوّنات|scegli extra...=اختر إضافات...|aggiungi ingrediente extra...=إضافة مكوّن إضافي...|incolla la tua=الصق|compila tutto=املأ كل شيء|nessun indirizzo=لا يوجد عنوان|tocca per inserire la via e aggiungere il numero civico=اضغط لإدخال الشارع ورقم المبنى|scegli prodotto…=اختر منتجًا…|nessun orario/pagamento rilevato=لم يتم التعرف على موعد أو دفع|aggiungi riga=إضافة سطر|salta questa schermata quando tutto è riconosciuto=تخطَّ هذه الشاشة عند التعرف على كل شيء|conferma e aggiungi=تأكيد وإضافة|nomi appresi=الأسماء المحفوظة|ai incerta: verifica=الذكاء الاصطناعي غير متأكد: راجع|abbinato per somiglianza=مطابقة بالتشابه|ordine inserito!=تم إدخال الطلب!|imparato=تم الحفظ|o premi=أو اضغط|microfono della tastiera del telefono=ميكروفون لوحة مفاتيح الهاتف|ascolto attivo...=الاستماع شغّال...|ordine estratto e posizionato nei campi=تم استخراج الطلب ووضعه في الحقول|subtotale prodotti=إجمالي المنتجات الفرعي|totale prodotti=إجمالي المنتجات|prodotti attivi=المنتجات النشطة|esauriti / nascosti=المنتهية / المخفية|categorie=الفئات|ingrediente...=مكوّن...|nessun articolo caricato · clicca ricevuta=لا توجد أصناف · اضغط على الإيصال|online=أونلاين|ultima modifica=آخر تعديل|ordine online da confermare=طلب أونلاين بانتظار التأكيد|accetta=قبول|rifiuta=رفض|copia=نسخ|comanda / stampa=كوماندا / طباعة|link tracking=رابط التتبع|lasciaci una recensione su google!=اترك لنا تقييمًا على جوجل!|comanda=كوماندا|tavolo=طاولة|importo=المبلغ|grazie per aver scelto=شكرًا لاختياركم|buon appetito!=بالهنا والشفا!|menu prodotti=قائمة المنتجات|articoli nel carrello=الأصناف في السلة|elenco ordini=قائمة الطلبات|statistiche menu=إحصائيات المنيو|lista prodotti=قائمة المنتجات|totale ordini=إجمالي الطلبات|contanti da incassare=النقد المطلوب تحصيله|resto da portare=الفكة المطلوبة|ordini pos / carta=طلبات البطاقة / POS|pin staff=رمز الموظفين|invia ora=إرسال الآن|email dipendente=بريد الموظف|modalità autista=وضع السائق|report z=تقرير Z|nascondi=إخفاء|cassetto contanti=درج النقدية|fondo cassa iniziale=رصيد الصندوق الافتتاحي|incassi in contanti=الإيرادات النقدية|versamenti / entrate=الإيداعات / الواردات|spese pagate dalla cassa=مصروفات مدفوعة من الصندوق|prelievi=المسحوبات|fondo cassa per domani=رصيد الصندوق لباكر|resta nel cassetto per la prossima apertura=يبقى في الدرج للفتح القادم|da versare in banca / cassaforte=يُودَع في البنك / الخزنة|movimenti di cassa=حركات الصندوق|registra movimento=تسجيل حركة|conteggio banconote e monete=عدّ الأوراق النقدية والعملات|banconote=الأوراق النقدية|monete=العملات المعدنية|totale contato=إجمالي المعدود|totale dal terminale pos=الإجمالي من جهاز POS|scontrino di chiusura del pos=إيصال إقفال POS|note di chiusura=ملاحظات الإقفال|dettaglio per stato=التفاصيل حسب الحالة|incassi per metodo di pagamento=الإيرادات حسب طريقة الدفع|incassi per operatore=الإيرادات حسب المشغّل|storico chiusure=سجل الإقفالات|giornata=اليوم|chiusa=مقفل|questa giornata=هذا اليوم|non è stata chiusa=لم يتم إقفاله|aperta=مفتوح|medio=متوسط|saldo differenze=رصيد الفروقات|uscite=المصروفات|differenza=الفرق|chiusa da=أقفله|apri=فتح|riapri giornata=إعادة فتح اليوم|stampa report z=طباعة تقرير Z|chiudi giornata=إقفال اليوم|report provvisorio=تقرير مؤقت|firma responsabile:=توقيع المسؤول:|aggiorna clienti=تحديث العملاء|modifica dati cliente=تعديل بيانات العميل|nome=الاسم|consigliato: elimina i dati, tieni gli ordini=موصى به: احذف البيانات واحتفظ بالطلبات|elimina anche tutti gli ordini=احذف كل الطلبات أيضًا|elimina cliente e tutti gli ordini=حذف العميل وكل طلباته|torna agli ordini=العودة إلى الطلبات|copia e invia subito in cucina=نسخ وإرسال للمطبخ فورًا|vedi scontrino=عرض الإيصال|modifica dati=تعديل البيانات|invia menu online=إرسال المنيو أونلاين|ordini del cliente=طلبات العميل|caricamento clienti…=جارٍ تحميل العملاء…|clienti registrati=العملاء المسجلون|cliente fedele=عميل دائم|ordini e dati=الطلبات والبيانات|stampa report=طباعة التقرير|indietro=رجوع|gruppo=مجموعة|imposta prezzo=تحديد السعر|prezzo gruppo=سعر المجموعة|domicilio=توصيل|ritiro=استلام|pagato=مدفوع|vedi=عرض|articoli in caricamento…=جارٍ تحميل الأصناف…|forno=الفرن|per attivare il cruscotto pro esegui il file=لتفعيل Cruscotto Pro شغّل الملف|come ordinare le categorie=طريقة ترتيب الفئات|usa questa modalità per tutte le categorie=استخدم هذا الوضع لكل الفئات|preferiti sempre in cima=المفضلة دائمًا في الأعلى|gruppi=المجموعات|aggiunte nel gruppo=الإضافات في المجموعة|come ordinare le aggiunte=طريقة ترتيب الإضافات|nessuna aggiunta in questo gruppo=لا توجد إضافات في هذه المجموعة|nessuna pizza trovata=لم يتم العثور على بيتزا|non disponibile=غير متاح|prezzi delle pizze a gusti=أسعار البيتزا متعددة النكهات|nuovo acquisto=مشتريات جديدة|tutte le categorie=كل الفئات|totale spesa=إجمالي المصروفات|da pagare=المتبقي للدفع|media / giorno=المتوسط / اليوم|articoli più costosi=الأصناف الأعلى سعرًا|cassa=الصندوق|fornitore / negozio=المورّد / المحل|da riordinare · scorte basse=يحتاج إعادة طلب · مخزون منخفض|aggiungi rapido=إضافة سريعة|verrà registrata come=سيتم تسجيلها كـ|uscita=مصروف|salva acquisto=حفظ المشتريات|non collegare=بدون ربط|crea nuova voce in magazzino…=إنشاء صنف جديد في المخزون…|quanti=كم|entrano in magazzino?=تدخل المخزون؟|data attuale=التاريخ الحالي|nuova data e ora=التاريخ والوقت الجديد|continua=متابعة|gli incassi e i report passeranno dal giorno=ستنتقل الإيرادات والتقارير من يوم|al giorno=إلى يوم|sì, cambia la data=نعم، غيّر التاريخ|−1 giorno=−1 يوم|+1 giorno=+1 يوم|−7 giorni=−7 أيام|scegli prima un prodotto=اختر منتجًا أولًا|il riconoscimento vocale non è supportato da questo browser.=التعرف على الصوت غير مدعوم في هذا المتصفح.|usa il microfono della tastiera.=استخدم ميكروفون لوحة المفاتيح.|vuoi uscire dal programma?=هل تريد الخروج من البرنامج؟|seleziona un prodotto dal menu a tendina!=اختر منتجًا من القائمة المنسدلة!|nessun articolo trovato in questo ordine.=لا توجد أصناف في هذا الطلب.|copia ed esegui in supabase > sql editor:=انسخ ونفّذ في Supabase > SQL Editor:|vuoi davvero eliminare definitivamente questo prodotto dal menu?=هل تريد فعلًا حذف هذا المنتج نهائيًا من المنيو؟|eliminare definitivamente=حذف نهائي|errore:=خطأ:|esistono già:=موجود بالفعل:|formato non valido=صيغة غير صالحة|nessun ordine di consegna con indirizzo trovato tra gli ordini aperti.=لا يوجد طلب توصيل بعنوان بين الطلبات المفتوحة.|seleziona almeno un ordine con indirizzo di consegna!=اختر طلبًا واحدًا على الأقل له عنوان توصيل!|errore aggiornamento stato:=خطأ في تحديث الحالة:|segnare tutte le consegne del giro come completate?=هل تريد تعليم كل توصيلات الجولة كمكتملة؟|eliminare questo ordine non ancora inviato?=هل تريد حذف هذا الطلب غير المُرسل؟|stato salvato offline=تم حفظ الحالة دون اتصال|offline=غير متصل|connessione ripristinata=عاد الاتصال|inserisci un importo valido.=أدخل مبلغًا صحيحًا.|indica il motivo del movimento.=اكتب سبب الحركة.|eliminare il movimento=هل تريد حذف الحركة|chiudere la giornata del=هل تريد إقفال يوم|riaprire la giornata del=هل تريد إعادة فتح يوم|nessuna chiusura da esportare.=لا توجد إقفالات للتصدير.|il carrello contiene già degli articoli: verranno sostituiti da quelli di questo ordine. continuare?=السلة فيها أصناف بالفعل وسيتم استبدالها بأصناف هذا الطلب. هل تريد المتابعة؟|stai modificando un ordine: la modifica verrà annullata. continuare?=أنت تعدّل طلبًا والتعديل سيُلغى. هل تريد المتابعة؟|salvare subito e inviare in cucina?=هل تريد الحفظ والإرسال للمطبخ فورًا؟|impossibile leggere questo ordine (sei offline?).=تعذّر قراءة هذا الطلب (هل أنت غير متصل؟).|solo il responsabile può eliminare un cliente.=المسؤول فقط يمكنه حذف عميل.|sei offline: questa operazione richiede la connessione.=أنت غير متصل: هذه العملية تحتاج اتصالًا بالإنترنت.|inserisci il nome del cliente.=أدخل اسم العميل.|inserisci un numero di telefono valido.=أدخل رقم هاتف صحيحًا.|questo numero appartiene già a=هذا الرقم مسجّل بالفعل لـ|modifica non riuscita:=تعذّر التعديل:|eliminazione non riuscita:=تعذّر الحذف:|attenzione: verranno cancellati per sempre=تنبيه: سيتم الحذف نهائيًا|solo il responsabile può modificare le aggiunte.=المسؤول فقط يمكنه تعديل الإضافات.|solo il responsabile può modificare il menu e le aggiunte.=المسؤول فقط يمكنه تعديل المنيو والإضافات.|nuovo nome=الاسم الجديد|eliminare questa categoria? gli acquisti già registrati restano.=هل تريد حذف هذه الفئة؟ المشتريات المسجلة ستبقى.|svuotare il carrello?=هل تريد تفريغ السلة؟|eliminare?=هل تريد الحذف؟|esiste già.=موجود بالفعل.|riattivare=إعادة تفعيل|cliente riconosciuto=تم التعرف على العميل|gli ordini online sono spenti.=الطلبات الأونلاين متوقفة.|questo cliente non ha un numero di telefono.=هذا العميل ليس لديه رقم هاتف.|copia il link:=انسخ الرابط:|automazioni=الأتمتة|responsabile=المسؤول|modalità notte=وضع الليل|modalità giorno=وضع النهار|passa alla modalità giorno=التبديل إلى وضع النهار|passa alla modalità notte=التبديل إلى وضع الليل'.split('|');
+MORE.forEach(function(l){ var i = l.indexOf('='); if(i > 0) D[l.slice(0, i).trim().toLowerCase()] = l.slice(i + 1).trim(); });
+var MORE2 = 'copiato=تم النسخ|nessun prodotto venduto in questa data.=لا توجد منتجات مبيعة في هذا التاريخ.|totale giornata=إجمالي اليوم|cambia utente=تغيير المستخدم|togli (senza)=إزالة (بدون)|prima possibile (subito)=في أقرب وقت (فورًا)|usa via=استخدم الشارع|righe saltate (nessun prodotto scelto)=أسطر متخطّاة (لم يُختر منتج)|parla liberamente=تكلّم براحتك|nessuna modifica selezionata.=لا توجد تعديلات محددة.|nessun prodotto trovato con questi filtri.=لا توجد منتجات بهذه الفلاتر.|nessun ingrediente aggiunto.=لم تتم إضافة مكوّنات.|nessun ordine da mostrare in questa sezione.=لا توجد طلبات لعرضها في هذا القسم.|nessun prodotto registrato.=لا توجد منتجات مسجلة.|storia non disponibile (offline o tabella mancante).=السجل غير متاح (لا يوجد اتصال أو الجدول ناقص).|nessun evento registrato per questo ordine.=لا توجد أحداث مسجلة لهذا الطلب.|contanti attesi nel cassetto=النقدية المتوقعة في الدرج|contanti contati (reali)=النقدية المعدودة (الفعلية)|incassi carta attesi (sistema)=إيرادات البطاقة المتوقعة (النظام)|nessun incasso.=لا توجد إيرادات.|completa il conteggio e chiudila.=أكمل العدّ ثم أقفل اليوم.|i totali si aggiornano con gli ordini.=الإجماليات بتتحدث مع الطلبات.|ancora nessuna giornata chiusa. le chiusure compariranno qui.=لسه مفيش يوم اتقفل. الإقفالات هتظهر هنا.|elimina cliente (ordini anonimi)=حذف العميل (طلبات مجهولة)|copia nel carrello (con i dati del cliente)=نسخ إلى السلة (مع بيانات العميل)|clienti fedeli=العملاء الدائمون|clienti vip=عملاء VIP|cliente vip=عميل VIP|gestione aggiunte (extra)=إدارة الإضافات|nessuna aggiunta trovata.=لا توجد إضافات.|come ordinare i gruppi=طريقة ترتيب المجموعات|ripristina predefinito (questa scheda)=استعادة الإعداد الافتراضي (هذه الصفحة)|nessun acquisto in questo periodo.=لا توجد مشتريات في هذه الفترة.|totale pagato=إجمالي المدفوع|nella cassa del giorno e scalata dal contante atteso.=في صندوق اليوم وتُخصم من النقدية المتوقعة.|resta «da pagare» finché non la segni come pagata.=تفضل «متبقي للدفع» لحد ما تعلّمها مدفوعة.|trascina per riordinare. tocca il nome per rinominare.=اسحب لإعادة الترتيب. اضغط على الاسم لتغييره.|se la cassa di uno dei due giorni è già chiusa, ricontrollala.=لو صندوق أي من اليومين مقفل بالفعل، راجعه تاني.|modifica registrata a nome di chi sta usando questo account.=التعديل بيتسجّل باسم مستخدم هذا الحساب.|sql per supabase (una volta sola)=SQL لـ Supabase (مرة واحدة فقط)|materia prima=مادة خام|consumato=المستهلك|costo medio=متوسط التكلفة|costo consumo=تكلفة الاستهلاك|acquistato nel periodo=المشتريات في الفترة|sono le=الساعة الآن|e la giornata di=ويوم|non è ancora chiusa.=لسه مش مقفل.|vuoi registrare questo ordine con la data di ieri?=تحب تسجّل هذا الطلب بتاريخ أمس؟|no, è di oggi=لا، ده طلب النهارده|annulla salvataggio=إلغاء الحفظ|senza / extra=بدون / إضافات|bottone nota=زر الملاحظة|solo icone=أيقونات فقط|fine=تم|modifica note rapide=تعديل الملاحظات السريعة|altri prodotti=منتجات أخرى|nessun extra rapido.=لا توجد إضافات سريعة.|rinomina lista=إعادة تسمية القائمة|lista vuota.=القائمة فاضية.|ripristina tutto=استعادة الكل|nascosti=المخفية|ultimo=الأخير|spesso=كثيرًا|cucina piena fino a chiusura=المطبخ ممتلئ لحد الإقفال|ordini online (menu per i clienti)=الطلبات الأونلاين (منيو للعملاء)|ordine minimo=الحد الأدنى للطلب|aperto dalle / alle=مفتوح من / إلى|copia link=نسخ الرابط|stampa qr=طباعة QR|feedback clienti=آراء العملاء|clienti inattivi=العملاء غير النشطين|messaggio al cliente quando cambia lo stato=رسالة للعميل عند تغيّر الحالة|richiesta recensione dopo la consegna=طلب تقييم بعد التوصيل|dopo quanti minuti=بعد كام دقيقة|salvato su supabase: vale per tutti i dispositivi.=تم الحفظ على Supabase: ينطبق على كل الأجهزة.|salvato solo su questo dispositivo.=تم الحفظ على هذا الجهاز فقط.|qr menu=منيو QR|ordina online=اطلب أونلاين|inquadra il qr code con il telefono=امسح رمز QR بالهاتف|ancora nessun voto.=لسه مفيش تقييمات.|media=المتوسط|scrivi al cliente=اكتب للعميل|gestito=تمت المعالجة|invia=إرسال|non contattare=عدم التواصل|modifica extra rapidi=تعديل الإضافات السريعة|dettatura vocale=الإملاء الصوتي|orario di consegna / ritiro=موعد التوصيل / الاستلام|contanti ricevuti=النقد المستلم|disconnetti=تسجيل الخروج|esci dal programma=الخروج من البرنامج|immagine non leggibile=الصورة غير مقروءة|inserisci la tua gemini api key qui sopra per leggere la foto!=أدخل مفتاح Gemini API بالأعلى لقراءة الصورة!|lettura immagine e compilazione campi in corso...=جارٍ قراءة الصورة وتعبئة الحقول...|foto letta con successo! controlla i dati inseriti.=تمت قراءة الصورة بنجاح! راجع البيانات المدخلة.|errore lettura foto=خطأ في قراءة الصورة|rimuovi riga=حذف السطر|errore caricamento menu=خطأ في تحميل المنيو|seleziona tutta la categoria=تحديد الفئة كلها|clicca per rinominare=اضغط لإعادة التسمية|rimuovi=حذف|duplica prodotto=تكرار المنتج|duplica=تكرار|modifica prodotto & ingredienti=تعديل المنتج والمكوّنات|sposta su=نقل لأعلى|sposta giù=نقل لأسفل|rimuovi dal giro=إزالة من الجولة|modifica questo ordine=تعديل هذا الطلب|crea un nuovo ordine identico=إنشاء طلب جديد مطابق|libero=متاح|tocca per cambiare contanti / carta=اضغط لتغيير نقدًا / بطاقة|storia ordine=سجل الطلب|storia=السجل|aggiornamento...=جارٍ التحديث...|giorno precedente=اليوم السابق|giorno successivo=اليوم التالي|importo €=المبلغ €|nota (facoltativa)=ملاحظة (اختيارية)|prova il suono di avviso=تجربة صوت التنبيه|cerca aggiunta...=ابحث عن إضافة...|seleziona gruppo=اختر المجموعة|ordine rapido=طلب سريع|stampa automatica=طباعة تلقائية|togli uno=إزالة واحد|postazione=المحطة|soglia ritardo=حد التأخير|schermo cucina=شاشة المطبخ|trascina=اسحب|in cima=في الأعلى|preferito=مفضّل|categorie acquisti=فئات المشتريات|cerca fornitore o articolo...=ابحث عن مورّد أو صنف...|cambia data=تغيير التاريخ|solo responsabile=للمسؤول فقط|alcuni pezzi senza ricetta=بعض القطع بدون وصفة|personalizza barra=تخصيص الشريط|nessun ordine inviato=لا توجد طلبات مُرسلة|esaurito, saltato=منتهٍ، تم تخطيه|dettaglio=التفاصيل|conferma=تأكيد|indietro=رجوع|errore=خطأ'.split('|');
+MORE2.forEach(function(l){ var i = l.indexOf('='); if(i > 0) D[l.slice(0, i).trim().toLowerCase()] = l.slice(i + 1).trim(); });
+['salse gratis','salse'].forEach(function(k){ delete D[k]; });   /* nomi di gruppi/ingredienti: restano in italiano */
+['normale','maxi'].forEach(function(k){ delete D[k]; });   /* formati = parte del prodotto: restano in italiano */
+
+/* ---------- v58 · traduzione completa in arabo egiziano ---------- */
+var V58 = [["esaurito", "خلصان"], ["esauriti", "الخلصانة"], ["ingredienti esauriti", "المكوّنات الخلصانة"], ["ingrediente esaurito", "مكوّن خلصان"], ["tocca un ingrediente per segnarlo come esaurito. alla cassa ti avviso quando un prodotto lo contiene, così puoi chiedere al cliente cosa preferisce.", "اضغط على المكوّن عشان تعلّمه إنه خلصان. وفي الكاشير هنبّهك لما أي صنف يكون فيه المكوّن ده، وتسأل الزبون يحب إيه."], ["cerca ingrediente...", "ابحث عن مكوّن..."], ["riattiva tutti", "رجّع الكل متاح"], ["riattivare tutti gli ingredienti esauriti", "هل تريد إرجاع كل المكوّنات الخلصانة لمتاحة"], ["nessun ingrediente trovato.", "مفيش مكوّنات بالاسم ده."], ["contiene un ingrediente esaurito:", "فيه مكوّن خلصان:"], ["avvisa il cliente e chiedi cosa preferisce prima di continuare.", "نبّه الزبون واسأله يفضّل إيه قبل ما تكمّل."], ["il cliente cambia prodotto", "الزبون هيغيّر الصنف"], ["il cliente accetta senza l'ingrediente esaurito", "الزبون موافق من غير المكوّن الخلصان"], ["il cliente accetta così com'è", "الزبون موافق زي ما هو"], ["decido dopo", "هقرر بعدين"], ["con ingredienti esauriti", "فيها مكوّنات خلصانة"], ["solo nascosti", "المخفية فقط"], ["prodotti nascosti", "الأصناف المخفية"], ["nascondi", "إخفاء"], ["nascosto", "مخفي"], ["nascosti", "مخفية"], ["nascosti ", "مخفية "], ["prodotto nascosto:", "صنف مخفي:"], ["nascosto, saltato:", "مخفي، اتخطّى:"], ["✓ esaurito", "✓ خلصان"], ["prodotti duplicati (stesso nome nella stessa categoria).", "أصناف مكرّرة (نفس الاسم في نفس الفئة)."], ["elimina i duplicati dal database", "امسح التكرارات من قاعدة البيانات"], ["eliminare definitivamente", "حذف نهائي لعدد"], ["prodotti duplicati? non si può annullare.", "صنف مكرّر؟ مش هينفع تتراجع."], ["esiste già", "موجود بالفعل"], ["nella categoria", "في الفئة"], ["non puoi creare prodotti duplicati.", "مينفعش تكرّر الأصناف."], ["ingredienti esauriti", "المكوّنات الخلصانة"], ["offline — gli ordini nuovi restano sul dispositivo e partono appena torna la connessione", "أوفلاين — الطلبات الجديدة بتفضل على الجهاز وتتبعت أول ما النت يرجع"], ["gli ordini nuovi verranno salvati sul dispositivo", "الطلبات الجديدة هتتحفظ على الجهاز"], ["nessuna connessione e nessun accesso salvato su questo dispositivo: collegati almeno una volta online con il pin.", "مفيش اتصال ومفيش دخول محفوظ على الجهاز ده: اتصل بالنت مرة واحدة على الأقل وادخل بالـPIN."], ["verrà inviato appena torna la connessione", "هيتبعت أول ما النت يرجع"], ["connessione non ancora disponibile", "الاتصال لسه مش متاح"], ["sincronizzazione in corso…", "جاري المزامنة…"], ["📴 modifica non disponibile offline: riprova quando torna la connessione.", "📴 التعديل مش متاح وأنت أوفلاين: جرّب تاني لما النت يرجع."], ["modifica non disponibile offline: riprova quando torna la connessione.", "التعديل مش متاح وأنت أوفلاين: جرّب تاني لما النت يرجع."], ["supabase project url", "رابط مشروع Supabase"], ["supabase anon key", "مفتاح Supabase العام (Anon Key)"], ["inserisci url e chiave supabase!", "أدخل رابط ومفتاح Supabase!"], ["libreria supabase non caricata! verifica internet.", "مكتبة Supabase ماتحمّلتش! اتأكد من النت."], ["connessione a supabase in corso...", "جاري الاتصال بـSupabase..."], ["errore login:", "خطأ في تسجيل الدخول:"], ["errore di rete:", "خطأ في الشبكة:"], ["account creato! ora premi accedi.", "اتعمل الحساب! دوس دلوقتي على دخول."], ["inserisci il pin staff.", "أدخل PIN الموظفين."], ["inserisci il pin staff per entrare.", "أدخل PIN الموظفين عشان تدخل."], ["stampa auto: on", "الطباعة التلقائية: شغّالة"], ["stampa auto: off", "الطباعة التلقائية: مقفولة"], ["fedeltà", "الولاء"], ["suono", "الصوت"], ["per analizzare foto/immagini, vocali whatsapp e testi complessi", "عشان يحلّل الصور وتسجيلات واتساب والنصوص المعقّدة"], ["usa proxy sicuro (edge function «gemini-proxy»): la chiave non resta nel browser", "استخدم بروكسي آمن (Edge Function «gemini-proxy»): المفتاح مبيفضلش محفوظ في المتصفح"], ["senza il proxy la chiave gemini resta salvata in questo browser. attiva il proxy sicuro (vedi gemini_proxy_setup.md).", "من غير البروكسي مفتاح Gemini بيفضل محفوظ في المتصفح ده. فعّل البروكسي الآمن (شوف gemini_proxy_setup.md)."], ["immagine ordine caricata", "صورة الطلب اتحمّلت"], ["scatta foto a foglio/biglietto o carica screenshot whatsapp", "صوّر ورقة أو كارت أو ارفع سكرين شوت من واتساب"], ["ascolto vocale continuo", "استماع صوتي متواصل"], ["registra chiamata o nota vocale", "سجّل مكالمة أو ملاحظة صوتية"], ["usa ai gemini per testi complessi o in arabo/italiano", "استخدم الذكاء الاصطناعي Gemini للنصوص المعقّدة بالعربي أو الإيطالي"], ["per compilare tutto!", "عشان يملّا كل البيانات لوحده!"], ["scrivi", "اكتب"], ["salvati", "محفوظين"], ["cliente, via, telefono, ⏰ orario, pizze/panini/piadine, ingredienti (+/-) e resto", "العميل، الشارع، التليفون، ⏰ الميعاد، Pizze/Panini/Piadine، المكوّنات (+/-) والباقي"], ["inserisci qui l'ordine", "اكتب الطلب هنا"], ["estrai", "استخرج"], ["incolla un testo, scatta una", "الصق نص أو صوّر"], ["tocca la casella qui sopra e usa il", "اضغط على الخانة اللي فوق واستخدم"], ["microfono 🎤 della tastiera del telefono", "ميكروفون 🎤 كيبورد التليفون"], ["il riconoscimento vocale non è supportato da questo browser. usa il microfono 🎤 della tastiera.", "التعرّف على الصوت مش مدعوم في المتصفح ده. استخدم ميكروفون 🎤 الكيبورد."], ["inserisci la tua gemini api key qui sopra per leggere la foto!", "أدخل مفتاح Gemini API فوق عشان يقرا الصورة!"], ["controlla l'ordine prima di aggiungerlo", "راجع الطلب قبل ما تضيفه"], ["ordine annullato. il testo resta nella casella: puoi rielaborarlo.", "اتلغى الطلب. النص لسه في الخانة: تقدر تعدّله."], ["analisi ai già in corso, attendi qualche secondo...", "التحليل شغّال بالفعل، استنى ثواني..."], ["server ai momentaneamente occupato. riprova.", "سيرفر الذكاء الاصطناعي مشغول دلوقتي. جرّب تاني."], ["errore sconosciuto", "خطأ غير معروف"], ["nessun prodotto riconosciuto in", "مفيش صنف اتعرّف عليه في"], ["cerca prima un prodotto", "ابحث عن صنف الأول"], ["tocca per aprire il menu", "اضغط عشان تفتح المنيو"], ["tocca + per aggiungere", "اضغط + عشان تضيف"], ["menu", "المنيو"], ["extra", "إضافات"], ["extra & senza", "الإضافات وبدون"], ["(opzionale: scrivi es. \"diav\", \"keb\", \"coca\" per filtrare la lista)", "(اختياري: اكتب مثلًا \"diav\" أو \"keb\" أو \"coca\" عشان تفلتر القايمة)"], ["opzionale: scrivi es. \"diav\", \"keb\", \"coca\" per filtrare la lista", "اختياري: اكتب مثلًا \"diav\" أو \"keb\" أو \"coca\" عشان تفلتر القايمة"], ["ricerca rapida nel menu a tendina", "بحث سريع في القايمة المنسدلة"], ["digita per filtrare istantaneamente il menu a tendina dei prodotti...", "اكتب عشان تفلتر قايمة الأصناف على طول..."], ["seleziona un prodotto dal menu a tendina...", "اختار صنف من القايمة المنسدلة..."], ["scegli categoria, prodotto e ingredienti (+/-)", "اختار الفئة والصنف والمكوّنات (+/-)"], ["togli ingrediente (senza)...", "شيل مكوّن (بدون)..."], ["(del prodotto)", "(من الصنف)"], ["(lista)", "(من القايمة)"], ["aggiungi ingrediente extra...", "ضيف مكوّن إضافي..."], ["nessun ingrediente registrato", "مفيش مكوّنات مسجّلة"], ["nessun ingrediente base registrato", "مفيش مكوّنات أساسية مسجّلة"], ["nessuna modifica ingrediente (prodotto standard).", "مفيش تعديل على المكوّنات (صنف عادي)."], ["nessuna modifica selezionata.", "مفيش تعديلات مختارة."], ["nessuna modifica", "مفيش تعديلات"], ["prima possibile", "في أقرب وقت"], ["tocca per cambiare", "اضغط للتغيير"], ["orario già passato", "الميعاد عدّى"], ["minuti", "الدقايق"], ["quarto", "ربع"], ["mezza", "نص"], ["nessuna nota", "مفيش ملاحظة"], ["comprimi carrello", "تصغير السلة"], ["espandi carrello", "توسيع السلة"], ["nel carrello:", "في السلة:"], ["usa i menu a tendina qui a sinistra o l'estrattore da testo/foto", "استخدم القوائم المنسدلة أو مستخرج الطلبات من نص/صورة"], ["sconto", "الخصم"], ["resto", "الباقي"], ["paga con €", "الزبون هيدفع بـ €"], ["paga con: €", "الزبون هيدفع بـ: €"], ["cerca per via per trovare cliente e telefono", "ابحث بالشارع عشان تلاقي العميل والتليفون"], ["ingredienti (+/- menu tendina)", "المكوّنات (+/- من القايمة)"], ["ingredienti del prodotto:", "مكوّنات الصنف:"], ["ingredienti del prodotto (scegli dal menu a tendina o scrivi)", "مكوّنات الصنف (اختار من القايمة المنسدلة أو اكتب)"], ["scegli dal menu a tendina o scrivi nuova", "اختار من القايمة المنسدلة أو اكتب جديدة"], ["togli ingrediente base (menu a tendina senza):", "شيل مكوّن أساسي (قايمة «بدون»):"], ["aggiungi ingrediente extra (menu a tendina extra):", "ضيف مكوّن إضافي (قايمة «الإضافات»):"], ["usa i menu a tendina per togliere ingredienti (🚫 senza) o aggiungere extra (➕).", "استخدم القوائم المنسدلة عشان تشيل مكوّنات (🚫 بدون) أو تضيف إضافات (➕)."], ["tocca × per annullare", "اضغط × للإلغاء"], ["aggiungi almeno un prodotto.", "ضيف صنف واحد على الأقل."], ["inserisci l'indirizzo di consegna.", "أدخل عنوان التوصيل."], ["carrello svuotato.", "السلة اتفضّت."], ["menu non ancora caricato.", "المنيو لسه ماتحمّلش."], ["aggiungere comunque?", "تضيف برضه؟"], ["possibile doppione: ordine #", "ممكن يكون مكرّر: الطلب #"], ["con gli stessi articoli.", "بنفس الأصناف."], ["cancellare tutti i nomi appresi su tutti i dispositivi?", "تمسح كل الأسماء المحفوظة من كل الأجهزة؟"], ["pizza a gusti · metà metà", "بيتزا بأكتر من نكهة · نص ونص"], ["trascina qui un'aggiunta", "اسحب إضافة هنا"], ["solo extra", "الإضافات فقط"], ["eliminare il gruppo? le aggiunte tornano al gruppo automatico.", "تحذف المجموعة؟ الإضافات هترجع للمجموعة التلقائية."], ["esiste già un extra con questo nome.", "فيه إضافة بنفس الاسم بالفعل."], ["ripristinare gli extra rapidi predefiniti?", "ترجّع الإضافات السريعة للوضع الافتراضي؟"], ["ripristinare tutte le modifiche alle liste extra su questo dispositivo?", "ترجّع كل تعديلات قوائم الإضافات على الجهاز ده؟"], ["ripristinare le note predefinite?", "ترجّع الملاحظات للوضع الافتراضي؟"], ["ripristinare la barra predefinita?", "ترجّع الشريط للوضع الافتراضي؟"], ["eliminare il bottone?", "تحذف الزر؟"], ["extra rapidi · إضافات سريعة", "إضافات سريعة"], ["il prezzo segue «gestione aggiunte». · السعر حسب إعدادات الإضافات", "السعر بيتبع «إدارة الإضافات»."], ["nuova nota · ملاحظة جديدة", "ملاحظة جديدة"], ["barra rapida · تخصيص الشريط", "الشريط السريع"], ["trasparenza · الشفافية:", "الشفافية:"], ["riduci a bolla laterale · ضم في جنب الشاشة", "تصغير لفقاعة جانبية"], ["ordina menu · ترتيب", "ترتيب المنيو"], ["🍕 pizza a gusti · بيتزا متعددة", "🍕 بيتزا بأكتر من نكهة"], ["gusti · الأنواع", "النكهات"], ["cerca · ابحث", "ابحث"], ["ingredienti / materie prime", "مكوّنات / مواد خام"], ["per cambiare un ordine", "لتغيير الطلب"], ["clicca", "اضغط على"], ["inserito", "اتسجّل"], ["giro", "الجولة"], ["parti", "انطلق"], ["rider", "الدليفري"], ["urgenti", "العاجلة"], ["nuovi", "الجديدة"], ["pronti", "الجاهزة"], ["da iniziare", "لسه ماتبدأتش"], ["riordina con", "رتّب بـ"], ["hai", "عندك"], ["ordini hanno superato l'orario richiesto!", "طلبات عدّت ميعادها المطلوب!"], ["ordini in scadenza nei prossimi 20 minuti!", "طلبات ميعادها خلال 20 دقيقة جاية!"], ["segna pronto ✅", "علّم «جاهز» ✅"], ["segna completato 🏁", "علّم «اتسلّم» 🏁"], ["ordini pos / carta", "طلبات POS / بطاقة"], ["cliente al banco", "زبون عند الكاونتر"], ["👆 tocca un ordine per copiarlo, reinviarlo in cucina o vederne lo scontrino", "👆 اضغط على الطلب عشان تنسخه أو تبعته للمطبخ تاني أو تشوف الإيصال"], ["invia al cliente il link per seguire l'ordine", "ابعت للزبون لينك يتابع بيه الطلب"], ["rifiutare l'ordine online #", "ترفض الطلب أونلاين #"], ["ordine online da confermare", "طلب أونلاين محتاج تأكيد"], ["ordine salvato offline: andrà in cucina appena torna la connessione.", "الطلب اتحفظ أوفلاين: هيروح للمطبخ أول ما النت يرجع."], ["errore aggiornamento ordine:", "خطأ في تحديث الطلب:"], ["errore aggiornamento stato su supabase:", "خطأ في تحديث الحالة على Supabase:"], ["errore negli articoli: modifica annullata, l'ordine è rimasto com'era.", "خطأ في الأصناف: التعديل اتلغى والطلب فضل زي ما كان."], ["ordine creato ma errore negli articoli:", "الطلب اتعمل بس فيه خطأ في الأصناف:"], ["vuoi davvero salvare questo ordine duplicato?", "متأكد إنك عايز تحفظ الطلب المكرّر ده؟"], ["articoli dell'ordine #", "أصناف الطلب #"], ["caricati nel carrello!", "اتحمّلت في السلة!"], ["mancano ancora:", "لسه ناقص:"], ["mostrati i primi 600 ordini. usa «esporta csv» per l'elenco completo.", "معروض أول 600 طلب. استخدم «تصدير CSV» للقايمة الكاملة."], ["🔵 da iniziare", "🔵 لسه ماتبدأتش"], ["schermo cucina", "شاشة المطبخ"], ["gestione menu", "إدارة المنيو"], ["nuovo prodotto", "منتج جديد"], ["vuoi davvero eliminare definitivamente questo prodotto dal menu?", "متأكد إنك عايز تحذف الصنف ده من المنيو نهائيًا؟"], ["impossibile eliminare (disattivalo invece!):", "مقدرناش نحذف (اخفيه بدل كده!):"], ["inserisci almeno nome e prezzo normale.", "أدخل الاسم وسعر الحجم العادي على الأقل."], ["crearli comunque?", "تعملهم برضه؟"], ["errore supabase:", "خطأ Supabase:"], ["compila nome categoria, primo prodotto e prezzo!", "املأ اسم الفئة وأول صنف والسعر!"], ["inserisci il nuovo nome della categoria!", "أدخل الاسم الجديد للفئة!"], ["errore cambio stato", "خطأ في تغيير الحالة"], ["nessun prodotto trovato con questi filtri.", "مفيش أصناف بالفلاتر دي."], ["clicca per rinominare", "اضغط لتغيير الاسم"], ["seleziona tutta la categoria", "اختار الفئة كلها"], ["rimuovi", "شيل"], ["duplica", "نسخ"], ["duplica prodotto", "نسخ صنف"], ["(copia)", "(نسخة)"], ["scrivi le opzioni (es. pollo, manzo, misto) separate da virgola e premi invio: ognuna diventa un prodotto separato con stessi ingredienti e categoria. il prezzo è opzionale per variante.", "اكتب الاختيارات (مثلًا: Pollo, Manzo, Misto) مفصولة بفاصلة واضغط Enter: كل اختيار هيبقى صنف منفصل بنفس المكوّنات والفئة. السعر اختياري لكل اختيار."], ["crea una nuova categoria con il suo primo prodotto, oppure rinomina una categoria esistente.", "اعمل فئة جديدة مع أول صنف فيها، أو غيّر اسم فئة موجودة."], ["prodotto disponibile nel menu cassa", "الصنف متاح في منيو الكاشير"], ["varianti", "الاختيارات"], ["crea altre varianti di questo prodotto (come prodotti separati)", "اعمل اختيارات تانية للصنف ده (كأصناف منفصلة)"], ["varianti (ogni variante = prodotto separato)", "الاختيارات (كل اختيار = صنف منفصل)"], ["🧩 varianti", "🧩 الاختيارات"], ["trascina ⠿ o usa ▲ ▼ per scegliere tu l'ordine: passa automaticamente a «manuale». vale per i filtri categoria della cassa e per la gestione menu.", "اسحب ⠿ أو استخدم ▲ ▼ عشان ترتّب بنفسك: هيتحوّل تلقائي لـ«يدوي». ده بيطبّق على فلاتر الفئات في الكاشير وعلى إدارة المنيو."], ["come ordinare i prodotti di «", "إزاي ترتّب أصناف «"], ["tocca ⭐ per mettere un prodotto in cima alla sua categoria. trascina ⠿ per l'ordine manuale.", "اضغط ⭐ عشان تطلّع الصنف أول الفئة. اسحب ⠿ للترتيب اليدوي."], ["solo il responsabile può modificare l'ordine.", "المسؤول بس هو اللي يقدر يعدّل الترتيب."], ["ripristinare l'ordine predefinito per questa scheda?", "ترجّع الترتيب الافتراضي للتبويب ده؟"], ["più vendute", "الأكتر مبيعًا"], ["più prodotti", "أصناف أكتر"], ["più usate", "الأكتر استخدامًا"], ["prezzo più alto", "أعلى سعر"], ["media dei prezzi", "متوسط الأسعار"], ["prezzo fisso", "سعر ثابت"], ["metà metà", "نص ونص"], ["esiste già", "موجود بالفعل"], ["salse gratis", "صلصات مجانية"], ["salvato su supabase: vale per tutti i dispositivi.", "اتحفظ على Supabase: بيشتغل على كل الأجهزة."], ["salvato solo su questo dispositivo. per condividerlo esegui", "اتحفظ على الجهاز ده بس. عشان يتشارك شغّل"], ["sincronizzato con tutti i dispositivi", "متزامن مع كل الأجهزة"], ["solo su questo dispositivo — crea la tabella su supabase per sincronizzare", "على الجهاز ده بس — اعمل الجدول على Supabase عشان يتزامن"], ["solo su questo dispositivo — per sincronizzare crea la tabella su supabase", "على الجهاز ده بس — عشان يتزامن اعمل الجدول على Supabase"], ["solo su questo dispositivo", "على الجهاز ده بس"], ["copia sql", "نسخ SQL"], ["solo il responsabile", "المسؤول بس"], ["solo il responsabile può modificare", "المسؤول بس هو اللي يقدر يعدّل"], ["solo il responsabile può cambiare la data", "المسؤول بس هو اللي يقدر يغيّر التاريخ"], ["solo il responsabile può modificare le automazioni.", "المسؤول بس هو اللي يقدر يعدّل الأتمتة."], ["solo il responsabile può modificare la promo.", "المسؤول بس هو اللي يقدر يعدّل العرض."], ["anno", "السنة"], ["tutto", "الكل"], ["date", "التواريخ"], ["storico", "السجل"], ["supermercato", "سوبر ماركت"], ["verdura e frutta", "خضار وفاكهة"], ["mozzarella e latticini", "موتزاريلا وألبان"], ["salumi e carne", "لحوم باردة ولحوم"], ["farina e impasto", "دقيق وعجين"], ["imballaggi", "عبوات وتغليف"], ["bibite in lattina", "مشروبات علب"], ["tocca «＋ nuovo acquisto» per registrare la spesa di supermercato, verdura, mozzarella…", "اضغط «＋ مشتريات جديدة» عشان تسجّل مشتريات السوبر ماركت والخضار والموتزاريلا…"], ["non ci sono ancora abbastanza ordini con numero di telefono per creare l'archivio fedeltà. continua a registrare ordini: i clienti verranno raccolti automaticamente.", "لسه مفيش طلبات كفاية برقم تليفون عشان نعمل أرشيف الولاء. كمّل تسجيل الطلبات: العملاء هيتجمّعوا تلقائيًا."], ["i totali della cassa e gli incassi giornalieri sono nascosti per privacy. premi il pulsante qui sotto solo quando vuoi consultarli.", "إجماليات الصندوق وإيرادات اليوم مخفية للخصوصية. دوس على الزر اللي تحت بس لما تحتاج تشوفها."], ["spesa / uscita", "مصروف / خارج"], ["versamento in banca", "إيداع في البنك"], ["da versare", "المطلوب إيداعه"], ["da versare in banca", "المطلوب إيداعه في البنك"], ["fondo per domani", "رصيد بكرة"], ["chiusura giornata", "إقفال اليوم"], ["riapertura giornata", "إعادة فتح اليوم"], ["valore non incassato", "قيمة غير محصّلة"], ["contanti reali", "النقدية الفعلية"], ["atteso dal sistema", "المتوقع من النظام"], ["differenza pos", "فرق الـPOS"], ["carta / pos", "بطاقة / POS"], ["asporto / banco", "استلام / كاونتر"], ["⚠️ non hai inserito i contanti contati.", "⚠️ ماكتبتش النقدية المعدودة."], ["ordini non ancora completati.", "طلبات لسه ماخلصتش."], ["📅 date", "📅 التواريخ"], ["food cost", "تكلفة الخامات"], ["margine lordo", "هامش الربح الإجمالي"], ["acquisti collegati", "مشتريات مربوطة"], ["costo reale consumato", "التكلفة الفعلية المستهلكة"], ["incassi, cassa e margine lordo sono già al netto degli sconti. l'utile per prodotto sopra è sui prezzi di listino: sottrai gli sconti per l'utile reale.", "الإيرادات والصندوق وهامش الربح محسوبين بعد الخصومات. ربح كل صنف فوق على أسعار القايمة: اطرح الخصومات عشان تعرف الربح الفعلي."], ["unità", "الوحدة"], ["prezzo unit.", "سعر الوحدة"], ["totale riga", "إجمالي السطر"], ["totale acquisto", "إجمالي الشراء"], ["modifica acquisto", "تعديل الشراء"], ["acquisto", "شراء"], ["inserisci l'importo totale", "أدخل المبلغ الإجمالي"], ["segnato come pagato", "اتعلّم إنه مدفوع"], ["nome della nuova voce di magazzino:", "اسم الصنف الجديد في المخزون:"], ["attivare comunque?", "تفعّله برضه؟"], ["attivare?", "تفعّله؟"], ["trascina ⠿ per riordinare. tocca il nome per rinominare.", "اسحب ⠿ عشان تعيد الترتيب. اضغط على الاسم عشان تغيّره."], ["promo fedeltà attiva", "عرض الولاء شغّال"], ["sconti e regali fedeltà", "خصومات وهدايا الولاء"], ["margherite in regalo", "مارجريتا هدية"], ["aggiungi margherita in regalo", "أضف مارجريتا هدية"], ["promo fedeltà · asporto", "عرض الولاء · الاستلام"], ["promo attiva", "العرض شغّال"], ["punti per 1 premio", "نقط لكل جائزة"], ["oggi la promo è attiva.", "العرض شغّال النهارده."], ["regali nel carrello oltre i premi disponibili.", "هدايا في السلة أكتر من الجوايز المتاحة."], ["feedback clienti", "آراء العملاء"], ["ancora nessun voto. appena un cliente vota dal link, lo vedi qui.", "لسه مفيش تقييمات. أول ما زبون يقيّم من اللينك هتشوفه هنا."]];
+V58.forEach(function(p){ D[String(p[0]).trim().toLowerCase()] = p[1]; });
+
+/* ---------- MOTORE ---------- */
+var AD = '٠١٢٣٤٥٦٧٨٩';
+function escRx(s){ return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
+var EXTRA = {}; try{ EXTRA = JSON.parse(localStorage.getItem('bp_ar_extra') || '{}') || {}; }catch(e){}
+var DICT = {}; Object.keys(D).forEach(function(k){ DICT[k] = D[k]; }); Object.keys(EXTRA).forEach(function(k){ DICT[String(k).toLowerCase()] = EXTRA[k]; });
+var RX = null, RXM = null;
+function buildRx(){
+  var keys = Object.keys(DICT).filter(function(k){ return DICT[k] !== ''; }).sort(function(a, b){ return b.length - a.length; });
+  RX = new RegExp('(^|[^\\p{L}\\p{N}])(' + keys.map(escRx).join('|') + ')(?![\\p{L}\\p{N}])', 'giu');
+  var mk = keys.filter(function(k){ return k.indexOf(' ') >= 0; });
+  RXM = mk.length ? new RegExp('(^|[^\\p{L}\\p{N}])(' + mk.map(escRx).join('|') + ')(?![\\p{L}\\p{N}])', 'giu') : null;
+}
+buildRx();
+function norm(s){ return String(s).replace(/[’‘]/g, "'").replace(/\s+/g, ' ').trim(); }
+function nums(s){ return s; }
+function post(s){
+  s = s.replace(/[٠-٩]/g, function(d){ return AD.indexOf(d); }).replace(/٫/g, ',').replace(/٬/g, '.');
+  s = s.replace(/(\d)k(?![\p{L}])/gu, '$1 ألف');
+  s = nums(s);
+  s = s.replace(/([٠-٩])\s?%/g, '$1٪').replace(/,(?=\s)/g, '،').replace(/\?/g, '؟');
+  return s;
+}
+function pre(s){
+  s = s.replace(/(\d)\s?cl(?![\p{L}])/giu, '$1 سل');
+  s = s.replace(/(\d[\d.,]*)\s+(?:ordini|ordine|ord\.)(?![\p{L}])/giu, '$1 طلب');
+  s = s.replace(/(\d[\d.,]*)\s+cons\./gi, '$1 توصيلة');
+  s = s.replace(/(\d[\d.,]*)\s+giorni(?![\p{L}])/giu, '$1 يوم');
+  s = s.replace(/(\d)\s+mar(?![\p{L}])/giu, '$1 مارس');
+  return s;
+}
+function phr(s){ return s.replace(RX, function(m, p, k){ var v = DICT[k.toLowerCase()]; return p + (v === undefined ? k : v); }); }
+var HAS_IT = /[A-Za-zÀ-ÿ]/, HAS_NUM = /\d/;
+var PREV = {'al giorno precedente':'اليوم السابق','alla settimana precedente':'الأسبوع السابق','al mese precedente':'الشهر السابق'};
+function W(x){ return phr(pre(x)); }
+var RULES = [
+ {multi:1, re:/^([📈📉]) Incasso (in crescita|in calo) del (.+?) rispetto (al giorno precedente|alla settimana precedente|al mese precedente) \((.+?) → (.+?)\)\.$/u,
+  f:function(m,B){ return m[1] + ' ' + (m[2] === 'in crescita' ? 'ارتفع الإيراد' : 'انخفض الإيراد') + ' بنسبة ' + B(m[3]) + ' مقارنةً بـ' + PREV[m[4]] + ' (' + m[5] + ' ← ' + m[6] + ').'; }},
+ {multi:1, re:/^⏰ Ora di punta: (\d\d:\d\d – \d\d:\d\d) con (\d+) ordini e (.+?)\.$/u,
+  f:function(m,B){ return '⏰ ساعة الذروة: ' + B(m[1]) + ' بعدد ' + m[2] + ' طلب وإيراد ' + m[3] + '.'; }},
+ {multi:1, re:/^🏅 Giorno migliore: (.+?) con (.+?) \((\d+) ordini\)\.$/u,
+  f:function(m,B){ return '🏅 أفضل يوم: ' + B(W(m[1])) + ' بإيراد ' + m[2] + ' (' + m[3] + ' طلب).'; }},
+ {multi:1, re:/^📊 Media per giorno lavorativo: (.+?) e ([\d,]+) ordini \(su (\d+) giorni con vendite\)\.$/u,
+  f:function(m,B){ return '📊 المتوسط لكل يوم عمل: ' + B(m[1]) + ' و' + m[2] + ' طلب (من ' + m[3] + ' يوم فيه مبيعات).'; }},
+ {multi:1, re:/^🍕 Prodotto più venduto: (.+?) \((\d+) pz · (.+?)\)\.$/u,
+  f:function(m,B){ return '🍕 المنتج الأكثر مبيعًا: ' + B(W(m[1])) + ' (' + m[2] + ' قطعة · ' + m[3] + ').'; }},
+ {multi:1, re:/^🛵 Le consegne valgono il (.+?) dell'incasso \((\d+) ordini\), l'asporto il (.+?) \((\d+) ordini\)\.$/u,
+  f:function(m,B){ return '🛵 التوصيل يمثّل ' + B(m[1]) + ' من الإيراد (' + m[2] + ' طلب)، والاستلام من المحل ' + B(m[3]) + ' (' + m[4] + ' طلب).'; }},
+ {multi:1, re:/^💳 Pagamenti: contanti (.+?) · carta\/altro (.+?)\.$/u,
+  f:function(m,B){ return '💳 المدفوعات: نقدًا ' + B(m[1]) + ' · بطاقة/أخرى ' + B(m[2]) + '.'; }},
+ {multi:1, re:/^❌ Ordini annullati: (\d+) \((.+?) del totale\) per un valore di (.+?)\.$/u,
+  f:function(m,B){ return '❌ الطلبات الملغاة: ' + B(m[1]) + ' (' + m[2] + ' من الإجمالي) بقيمة ' + m[3] + '.'; }},
+ {re:/^⚠️ Modalità locale: la tabella «(.+?)» non è stata trovata, i dati restano solo su questo dispositivo\.$/u,
+  f:function(m){ return '⚠️ الوضع المحلي: لم يتم العثور على الجدول «' + m[1] + '»، وتبقى البيانات على هذا الجهاز فقط.'; }},
+ {re:/^Importare le (\d+) scorte salvate su questo dispositivo\?$/u,
+  f:function(m){ return 'هل تريد استيراد ' + m[1] + ' صنفًا محفوظًا على هذا الجهاز؟'; }}
+];
+var PROT = null, PSIG = '';
+function protSync(){
+  try{
+    var m = (typeof allMenu !== 'undefined' && allMenu) || [];
+    var ING = []; try{ ING = (typeof getAllKnownIngredients === 'function') ? getAllKnownIngredients() : []; }catch(e){}
+    var sig = m.length + '|' + m.map(function(x){ return (x.name || '') + (x.category || '') + (x.description || ''); }).join('').length + '|' + ING.join('|').length;
+    if(sig === PSIG) return; PSIG = sig;
+    var set = {};
+    ING.forEach(function(v){ v = String(v || '').trim(); if(v.length > 2) set[v.toLowerCase()] = 1; });
+    m.forEach(function(x){
+      [x.name, x.category, x.base_name, x.label].forEach(function(v){ if(v && String(v).trim().length > 2) set[String(v).trim().toLowerCase()] = 1; });
+      String(x.description || '').split(/[,;·]/).forEach(function(v){ v = v.trim(); if(v.length > 2) set[v.toLowerCase()] = 1; });
+    });
+    var ks = Object.keys(set).sort(function(a, b){ return b.length - a.length; });
+    PROT = ks.length ? new RegExp('(^|[^\\p{L}\\p{N}])(' + ks.map(escRx).join('|') + ')(?![\\p{L}\\p{N}])', 'giu') : null;
+  }catch(e){}
+}
+function T(s, B){
+  var t = norm(s);
+  if(!t || !(HAS_IT.test(t) || HAS_NUM.test(t))) return s;
+  var lead = s.match(/^\s*/)[0], trail = s.match(/\s*$/)[0], out = null, keep = [], tr = [];
+  var low = t.toLowerCase();
+  if(DICT[low] !== undefined && DICT[low] !== '') return lead + post(DICT[low]) + trail;      /* frase intera */
+  var tp = t;
+  if(PROT) tp = tp.replace(PROT, function(a, p, k){ keep.push(k); return p + '\uE000' + (keep.length - 1) + '\uE001'; });
+  for(var i = 0; i < RULES.length && out === null; i++){
+    var m = tp.match(RULES[i].re); if(m) out = RULES[i].f(m, B || function(x){ return x; });
+  }
+  if(out === null){
+    keep = [];
+    var u = t;
+    /* 1) le frasi del dizionario hanno la precedenza (non vengono spezzate dai nomi protetti) */
+    if(RXM) u = u.replace(RXM, function(a, p, k){ tr.push(DICT[k.toLowerCase()]); return p + '\uE002' + (tr.length - 1) + '\uE003'; });
+    /* 2) nomi di prodotti, categorie e ingredienti restano in italiano */
+    if(PROT) u = u.replace(PROT, function(a, p, k){ keep.push(k); return p + '\uE000' + (keep.length - 1) + '\uE001'; });
+    out = phr(pre(u));
+  }
+  return lead + post(out).replace(/\uE002(\d+)\uE003/g, function(a, i){ return tr[i]; }).replace(/\uE000(\d+)\uE001/g, function(a, i){ return keep[i]; }) + trail;
+}
+function fromAr(s){
+  return String(s).replace(/[٠-٩]/g, function(d){ return AD.indexOf(d); }).replace(/[٫]/g, '.').replace(/[٬]/g, '');
+}
+
+/* ---------- LAYER DOM ---------- */
+var ROOTS = ['#analyticsTab', '#inventoryTab'];
+var OUTSIDE = '.bpar-none';
+var on = false, obs = null, busy = false, raf = 0, pend = [];
+var tNodes = new Map();      // text node -> {it, ar}
+var aNodes = new Map();      // element -> {attr: it}
+var hEls = new Map();        // element -> original innerHTML (regole multi-nodo)
+var inputs = new Map();      // input -> {type, value}
+var dirEls = new Set();
+var SKIP = /^(SCRIPT|STYLE|TEXTAREA|CODE|NOSCRIPT)$/;
+var ATTRS = ['placeholder', 'title', 'aria-label'];
+
+function qs(s, r){ return (r || document).querySelector(s); }
+function rootsEl(){ return [document.body]; }
+/* v58: queste zone NON si traducono mai: prodotti, ingredienti, extra, liste del menu a tendina, comande e scontrino */
+var NOAR_SEL = [
+  '[data-noar]', '#receiptContainer', '.receipt-card',
+  '#productDropdownSelect option:not([value=""])', '#ddSizeSelect option',
+  '#ddRemoveIngSelect option:not([value=""])', '#ddAddIngSelect option:not([value=""])',
+  '#modalCartRemoveSelect option:not([value=""])', '#modalCartExtraSelect option:not([value=""])',
+  '#ddBaseIngText', '.dd-mods-preview .pill', '.dd-mods-preview .ing-chip',
+  '#cart .cartrow strong', '#cart .pill', '#cart .p-ing-pill',
+  '.p-ing-pill', '.ing-chip', '.order-items-box', '.kt-item', '.kt-mod', '.bp22-k-details', '.gx'
+].join(',');
+function inScope(n){
+  var el = n.nodeType === 1 ? n : n.parentElement; if(!el) return false;
+  if(el.closest('.bpar-btn')) return false;
+  return !el.closest(NOAR_SEL);
+}
+function viewOpen(){ return true; }
+
+function tagDir(el){ if(!el || dirEls.has(el)) return; el.setAttribute('dir', 'rtl'); el.setAttribute('lang', 'ar'); el.classList.add('bpar'); dirEls.add(el); }
+
+function doText(n){
+  var v = n.nodeValue, rec = tNodes.get(n);
+  if(rec && rec.ar === v) return;                    // già tradotto da noi
+  var ar = T(v);
+  if(ar !== v){ tNodes.set(n, {it: v, ar: ar}); n.nodeValue = ar; }
+}
+function doAttrs(el){
+  ATTRS.forEach(function(a){
+    var v = el.getAttribute(a); if(!v) return;
+    var rec = aNodes.get(el); if(rec && rec[a] && rec[a].ar === v) return;
+    var ar = T(v);
+    if(ar !== v){ rec = rec || {}; rec[a] = {it: v, ar: ar}; aNodes.set(el, rec); el.setAttribute(a, ar); }
+  });
+  if(el.tagName === 'INPUT' && /^(button|submit)$/.test(el.type) && el.value){ var ar2 = T(el.value); if(ar2 !== el.value){ el.value = ar2; } }
+}
+function doNumInput(el){
+  return;
+  if(inputs.has(el)) return;
+  inputs.set(el, {type: 'number', value: el.value});
+  el.type = 'text'; el.setAttribute('inputmode', 'decimal'); el.setAttribute('data-bpar-num', '1');
+  el.value = nums(String(el.value).replace('.', ','));
+}
+function doRules(root){
+  var list = root.querySelectorAll ? root.querySelectorAll('div,li,p,span,td,small') : [];
+  var arr = Array.prototype.slice.call(list); if(root.nodeType === 1) arr.unshift(root);
+  arr.forEach(function(el){
+    if(hEls.has(el) || !el.children.length || el.children.length > 8 || el.closest('.bpar-btn') || !inScope(el)) return;
+    var t = norm(el.textContent); if(t.length > 400 || t.length < 12) return;
+    for(var i = 0; i < RULES.length; i++){
+      if(!RULES[i].multi) continue;
+      var m = t.match(RULES[i].re);
+      if(m){
+        hEls.set(el, el.innerHTML);
+        el.innerHTML = post(RULES[i].f(m, function(x){ return '<b>' + x + '</b>'; }));
+        return;
+      }
+    }
+  });
+}
+function doTree(root){
+  if(!root) return;
+  if(root.nodeType === 3){ if(!SKIP.test(root.parentNode.nodeName) && inScope(root)) doText(root); return; }
+  if(root.nodeType !== 1 || SKIP.test(root.nodeName) || !inScope(root)) return;
+  if(root.matches && root.matches(OUTSIDE)) tagDir(root);
+  doRules(root);
+  var w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null), n, nodes = [];
+  while((n = w.nextNode())){ if(!SKIP.test(n.parentNode.nodeName) && !n.parentNode.closest('.bpar-btn') && inScope(n)) nodes.push(n); }
+  nodes.forEach(doText);
+  doAttrs(root);
+  var els = root.querySelectorAll('[placeholder],[title],[aria-label],input[type=button],input[type=submit],input[type=number]');
+  Array.prototype.forEach.call(els, function(e){ if(e.closest('.bpar-btn') || !inScope(e)) return; doAttrs(e); if(e.tagName === 'INPUT' && e.type === 'number') doNumInput(e); });
+  if(root.tagName === 'INPUT' && root.type === 'number') doNumInput(root);
+}
+function flush(){
+  raf = 0; if(!on) return; protSync();
+  var list = pend; pend = [];
+  stopObs();
+  try{
+    list.forEach(function(n){ if(n.isConnected !== false) doTree(n); });
+  }finally{ startObs(); }
+}
+function schedule(n){ pend.push(n); if(!raf) raf = requestAnimationFrame(flush); }
+function startObs(){
+  if(!obs){
+    obs = new MutationObserver(function(recs){
+      if(!on) return;
+      recs.forEach(function(r){
+        if(r.type === 'characterData'){ schedule(r.target); }
+        else if(r.type === 'attributes'){ if(r.target.nodeType === 1) schedule(r.target); }
+        else { Array.prototype.forEach.call(r.addedNodes, function(n){ if(n.nodeType === 1 || n.nodeType === 3) schedule(n); }); }
+      });
+    });
+  }
+  obs.observe(document.body, {childList: true, subtree: true, characterData: true});
+}
+function stopObs(){ if(obs){ obs.takeRecords(); obs.disconnect(); } }
+
+function applyAll(){
+  protSync();
+  loadFont();
+  rootsEl().forEach(tagDir);
+  Array.prototype.forEach.call(document.querySelectorAll(OUTSIDE), function(o){ tagDir(o); });
+  stopObs();
+  try{ rootsEl().concat(Array.prototype.slice.call(document.querySelectorAll(OUTSIDE))).forEach(doTree); }finally{ startObs(); }
+}
+function restoreAll(){
+  stopObs();
+  hEls.forEach(function(html, el){ try{ el.innerHTML = html; }catch(e){} }); hEls.clear();
+  tNodes.forEach(function(rec, n){ try{ if(n.nodeValue === rec.ar) n.nodeValue = rec.it; }catch(e){} }); tNodes.clear();
+  aNodes.forEach(function(rec, el){ Object.keys(rec).forEach(function(a){ try{ if(el.getAttribute(a) === rec[a].ar) el.setAttribute(a, rec[a].it); }catch(e){} }); }); aNodes.clear();
+  inputs.forEach(function(rec, el){ try{ var v = fromAr(el.value); el.type = 'number'; el.removeAttribute('data-bpar-num'); el.value = v; }catch(e){} }); inputs.clear();
+  dirEls.forEach(function(el){ el.removeAttribute('dir'); el.removeAttribute('lang'); el.classList.remove('bpar'); }); dirEls.clear();
+}
+var fontDone = false;
+function loadFont(){
+  if(fontDone) return; fontDone = true;
+  try{ var l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 'https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap'; document.head.appendChild(l); }catch(e){}
+}
+
+/* ---------- CONTROLLI ---------- */
+function TL(m){ return String(m).split('\n').map(function(l){ return T(l); }).join('\n'); }
+var _al = window.alert, _co = window.confirm, _pr = window.prompt;
+window.alert = function(m){ return _al.call(window, (on && viewOpen()) ? TL(m) : m); };
+window.confirm = function(m){ return _co.call(window, (on && viewOpen()) ? TL(m) : m); };
+window.prompt = function(m, d){
+  if(!(on && viewOpen())) return _pr.apply(window, arguments);
+  var dv = (d == null) ? d : (/^[\d.,]+$/.test(String(d)) ? nums(String(d).replace('.', ',')) : d);
+  var r = _pr.call(window, TL(m), dv);
+  if(r != null && /^[٠-٩٫٬.,\-\s\d]+$/.test(r)) r = fromAr(r).replace(',', '.');
+  return r;
+};
+document.addEventListener('change', function(e){
+  var t = e.target; if(!t || !t.getAttribute || !t.getAttribute('data-bpar-num')) return;
+  var w = fromAr(t.value).replace(',', '.'); t.value = w;
+  setTimeout(function(){ if(on) t.value = nums(String(t.value).replace('.', ',')); }, 0);
+}, true);
+
+/* stampa del report in arabo */
+function patchWin(w){
+  var d = w.document, oc = d.close.bind(d);
+  d.close = function(){
+    oc();
+    try{
+      var tw = d.createTreeWalker(d.body, NodeFilter.SHOW_TEXT, null), n, a = [];
+      while((n = tw.nextNode())) a.push(n);
+      a.forEach(function(x){ if(!SKIP.test(x.parentNode.nodeName)) x.nodeValue = T(x.nodeValue); });
+      d.title = T(d.title);
+      d.documentElement.setAttribute('dir', 'rtl'); d.documentElement.setAttribute('lang', 'ar');
+      var st = d.createElement('style');
+      st.textContent = "body{font-family:'Cairo','Segoe UI',Tahoma,'Noto Naskh Arabic',sans-serif}*{letter-spacing:0!important;text-transform:none!important}.ph{flex-direction:row-reverse}";
+      d.head.appendChild(st);
+    }catch(err){}
+  };
+}
+var _rp = window.rpPrint;
+if(typeof _rp === 'function'){
+  window.rpPrint = function(){
+    if(!on) return _rp.apply(this, arguments);
+    var _open = window.open;
+    window.open = function(){ var w = _open.apply(window, arguments); try{ if(w) patchWin(w); }catch(err){} return w; };
+    try{ return _rp.apply(this, arguments); }finally{ window.open = _open; }
+  };
+}
+
+/* pulsante */
+function syncBtns(){
+  Array.prototype.forEach.call(document.querySelectorAll('.bpar-btn'), function(b){
+    b.textContent = on ? '🇮🇹' : '🇪🇬';
+    b.setAttribute('dir', 'ltr'); b.style.cssText = 'font-size:18px;line-height:1;white-space:nowrap';
+    var t = on ? "Passa all'italiano" : 'التحويل إلى العربية';
+    b.setAttribute('title', t); b.setAttribute('aria-label', t);
+  });
+}
+function mkBtn(){
+  var b = document.createElement('button'); b.type = 'button'; b.id = 'bpLangBtn'; b.className = 'secondary bp-theme-btn bpar-btn';
+  b.onclick = function(){ set(!on); }; return b;
+}
+function ensureBtns(){
+  Array.prototype.forEach.call(document.querySelectorAll('.bpar-btn:not(#bpLangBtn)'), function(x){ x.remove(); });
+  var host = qs('#bpHdrR') || qs('header');
+  if(!host || qs('#bpLangBtn')) return;
+  host.insertBefore(mkBtn(), qs('#bpThemeBtn', host) || host.firstChild); syncBtns();
+}
+function set(v){
+  v = !!v; if(v === on) return; on = v;
+  document.documentElement.setAttribute('lang', on ? 'ar' : 'it');
+  try{ localStorage.setItem('bp_lang', on ? 'ar' : 'it'); }catch(e){}
+  if(on) applyAll(); else { stopObs(); pend = []; restoreAll(); }
+  syncBtns();
+}
+function reapply(){ if(!on) return; stopObs(); restoreAll(); applyAll(); }
+function missing(){
+  var out = {};
+  rootsEl().concat(Array.prototype.slice.call(document.querySelectorAll(OUTSIDE))).forEach(function(r){
+    var w = document.createTreeWalker(r, NodeFilter.SHOW_TEXT, null), n;
+    while((n = w.nextNode())){
+      if(SKIP.test(n.parentNode.nodeName) || n.parentNode.closest('.bpar-btn')) continue;
+      (n.nodeValue.match(/[A-Za-zÀ-ÿ][A-Za-zÀ-ÿ'’.\-]{2,}/g) || []).forEach(function(t){ out[t] = 1; });
+    }
+  });
+  return Object.keys(out).sort();
+}
+window.BPAR = {
+  set: set, toggle: function(){ set(!on); }, isOn: function(){ return on; }, missing: missing,
+  add: function(map){ Object.keys(map || {}).forEach(function(k){ EXTRA[k.toLowerCase()] = map[k]; DICT[k.toLowerCase()] = map[k]; });
+    try{ localStorage.setItem('bp_ar_extra', JSON.stringify(EXTRA)); }catch(e){} buildRx(); reapply(); },
+  tr: function(s){ return T(s); }
+};
+
+var css = document.createElement('style'); css.id = 'bpArStyles';
+css.textContent =
+ ".bpar-btn{background:linear-gradient(135deg,#14213d,#1f3a6b)!important;color:#fff!important;font-weight:800!important;border-radius:99px!important;padding:8px 16px!important;border:0!important;box-shadow:0 2px 8px #14213d44;font-family:'Cairo','Segoe UI',system-ui,sans-serif}" +
+ ".bpar-btn:hover{filter:brightness(1.12)}" +
+ ".bpar{text-align:right;font-family:'Cairo','Segoe UI',Tahoma,'Noto Naskh Arabic',system-ui,sans-serif}" +
+ ".bpar *{letter-spacing:0!important;text-transform:none!important}" +
+ ".bpar input,.bpar select,.bpar textarea,.bpar button{font-family:inherit}" +
+ ".bpar input[data-bpar-num]{direction:rtl;text-align:right}" +
+ ".bpar .menu-admin-row[style*='border-left']{border-left:0!important;border-right:6px solid var(--red,#b42318)!important}" +
+ ".bpar .rp-bar,.bpar .bp35-bar{margin-left:0;margin-right:0}" +
+ ".bpar .rp-panel h3,.bpar .bp35-card h3{text-align:right}";
+document.head.appendChild(css);
+ensureBtns(); setInterval(ensureBtns, 800);
+try{ if(localStorage.getItem('bp_lang') === 'ar') setTimeout(function(){ set(true); }, 400); }catch(e){}
+
+})();
+
+/* ================= v55: Sconto + Promo fedeltà asporto (1 punto ogni €X di pizza, Margherita in regalo) ================= */
+try{(function(){
+var KEY='promo_settings', LS='bp_promo_cfg', DEF={on:false,from:'',to:'',eur:5,pts:5}, CFG=DEF, cache={}, ov=null, tm=null;
+function $q(s,r){return (r||document).querySelector(s)}
+function pn(v,d){v=Number(v);return v>0?v:d}
+function norm(c){c=c||{};var D=/^\d{4}-\d\d-\d\d$/;return {on:!!c.on,from:D.test(c.from||'')?c.from:'',to:D.test(c.to||'')?c.to:'',eur:pn(c.eur,5),pts:Math.round(pn(c.pts,5))||5}}
+try{CFG=norm(JSON.parse(localStorage.getItem(LS)||'null'))}catch(e){CFG=norm(null)}
+function active(){ if(!CFG.on) return false; var d=toLocalDateStr(new Date()); return (!CFG.from||d>=CFG.from)&&(!CFG.to||d<=CFG.to); }
+async function pull(){
+  try{ var r=await sb.from('bp36_data').select('data').eq('key',KEY).maybeSingle();
+    if(r&&!r.error&&r.data&&r.data.data&&r.data.data.cfg){ CFG=norm(r.data.data.cfg); localStorage.setItem(LS,JSON.stringify(CFG)); cache={}; } }catch(e){}
+  paint();
+}
+async function push(){
+  try{localStorage.setItem(LS,JSON.stringify(CFG))}catch(e){} cache={};
+  try{ await sb.from('bp36_data').upsert({key:KEY,data:{cfg:CFG},updated_at:new Date().toISOString()}); }catch(e){}
+  paint();
+}
+function giftInCart(){var n=0; cart.forEach(function(x){ if(/Regalo fedeltà/i.test(x.itemNote||'')) n+=Number(x.qty||1); }); return n;}
+async function stats(phone){
+  var k=normalizePhoneKey(phone); if(k.length<6) return null;
+  var ck=k+'|'+(editingOrderId||''), c=cache[ck]; if(c&&Date.now()-c.t<45000) return c.v;
+  var s=new Date((CFG.from||'2020-01-01')+'T00:00:00'), e=CFG.to?new Date(CFG.to+'T23:59:59.999'):new Date(Date.now()+864e5);
+  var r=await sb.from('orders').select('id,phone,order_type,status,created_at').gte('created_at',s.toISOString()).lte('created_at',e.toISOString()).limit(5000);
+  if(r.error) throw r.error;
+  var ids=(r.data||[]).filter(function(o){ return normalizePhoneKey(o.phone)===k && !/consegna/i.test(o.order_type||'') && normStatus(o.status)!=='Annullato' && String(o.id)!==String(editingOrderId||''); }).map(function(o){return o.id});
+  var rows=[]; for(var i=0;i<ids.length;i+=150){ var q=await sb.from('order_items').select('order_id,product_name,line_total,quantity').in('order_id',ids.slice(i,i+150)); if(q.error) throw q.error; rows=rows.concat(q.data||[]); }
+  var cat={}; (allMenu||[]).forEach(function(m){ cat[String(m.name||'').trim().toLowerCase()]=m.category||''; });
+  var spend=0,gifts=0;
+  rows.forEach(function(it){
+    var n=String(it.product_name||''); if(/Regalo fedeltà/i.test(n)){ gifts+=Number(it.quantity||1); return; }
+    if(bpIsSvc(n)) return;
+    var b=splitProductAndMods(n).baseName, g=cat[String(b).trim().toLowerCase()]||'';
+    if(/pizz/i.test(g)||/^pizza\b/i.test(b)) spend+=Number(it.line_total||0);
+  });
+  var pts=Math.floor(spend/CFG.eur+1e-9), earned=Math.floor(pts/CFG.pts);
+  var v={spend:spend,pts:pts,earned:earned,gifts:gifts,avail:Math.max(0,earned-gifts),toNext:(earned+1)*CFG.pts-pts};
+  cache[ck]={t:Date.now(),v:v}; return v;
+}
+function addGift(){
+  var m=(allMenu||[]).find(function(x){ return /^\s*(pizza\s+)?margherita\s*$/i.test(x.name||''); });
+  if(!m){ alert('Pizza «Margherita» non trovata nel menu.'); return; }
+  var key='gift55-'+m.id, ex=cart.get(key); if(ex) return;
+  cart.set(key,{menu_id:m.id,name:m.name,category:m.category||'',baseDesc:m.description||'',size:'Normale',basePrice:0,extraPrice:0,price:0,qty:1,removedIngs:[],addedIngs:[],itemNote:'Regalo fedeltà'});
+  renderCart();
+}
+async function paint(){
+  var b=el('loyaltyBox'); if(!b) return;
+  if(!active()||/consegna/i.test(el('type').value||'')){ b.innerHTML=''; return; }
+  var st=null; try{ st=await stats(el('phone').value); }catch(e){ b.innerHTML='<div class="extra-box">🎁 Fedeltà: impossibile leggere i punti ('+esc(e.message||'errore')+')</div>'; return; }
+  if(!st){ b.innerHTML='<div class="extra-box" style="border-color:#16794b">🎁 <b>Promo fedeltà attiva</b> · inserisci il telefono del cliente per vedere i punti</div>'; return; }
+  var left=st.avail-giftInCart();
+  b.innerHTML='<div class="extra-box" style="border-color:#16794b"><b>🎁 Fedeltà</b> · '+st.pts+' punti ('+euro(st.spend)+' di pizza) · premi guadagnati: '+st.earned+' · usati: '+st.gifts+' · <b>disponibili: '+Math.max(0,left)+'</b>'
+   +(left<0?'<div class="notice error" style="margin-top:6px">⚠️ Regali nel carrello oltre i premi disponibili.</div>':'')
+   +(left<=0?'<div class="muted">Mancano '+st.toNext+' punti (= '+euro(st.toNext*CFG.eur)+' di pizza) al prossimo premio. I punti di questo ordine si contano dopo il salvataggio.</div>':'')
+   +(left>0?'<div style="margin-top:6px"><button type="button" class="green btn-sm" id="gift55">🎁 Aggiungi Margherita in regalo</button></div>':'')+'</div>';
+  var g=$q('#gift55',b); if(g) g.onclick=addGift;
+}
+function sched(ms){ clearTimeout(tm); tm=setTimeout(paint,ms||300); }
+var _rc=renderCart; renderCart=function(){ var r=_rc.apply(this,arguments); if(!cart.size) cache={}; sched(300); return r; };
+document.addEventListener('input',function(e){ if(e.target&&e.target.id==='phone') sched(700); });
+document.addEventListener('change',function(e){ if(e.target&&e.target.id==='type') sched(100); });
+
+/* ---------- pannello impostazioni (Responsabile) ---------- */
+function panel(){
+  if(typeof BP_ROLE!=='undefined'&&BP_ROLE!=='manager'){ alert('Solo il Responsabile può modificare la promo.'); return; }
+  if(ov) ov.remove(); ov=document.createElement('div'); ov.className='au-ov';
+  ov.onclick=function(e){ if(e.target===ov){ ov.remove(); ov=null; } };
+  ov.innerHTML='<div class="au-box"><h2>🎁 Promo fedeltà · Asporto</h2><p class="au-note">Ogni <b>€ '+CFG.eur+'</b> di pizza (solo ritiro in pizzeria) = 1 punto. Ogni <b>'+CFG.pts+' punti</b> = 1 Margherita in regalo (prezzo € 0). I punti si calcolano dal telefono del cliente, sul totale della durata della promo.</p>'
+   +'<div class="au-sec"><div class="au-row"><label for="pmOn">Promo attiva</label><input type="checkbox" class="au-sw" id="pmOn"'+(CFG.on?' checked':'')+'></div>'
+   +'<div class="au-row"><label for="pmFrom">Dal</label><input type="date" id="pmFrom" value="'+CFG.from+'"></div>'
+   +'<div class="au-row"><label for="pmTo">Al (incluso)</label><input type="date" id="pmTo" value="'+CFG.to+'"></div>'
+   +'<div class="au-row"><label for="pmEur">€ di pizza per 1 punto</label><input type="number" id="pmEur" min="1" step="0.5" value="'+CFG.eur+'" style="width:90px"></div>'
+   +'<div class="au-row"><label for="pmPts">Punti per 1 premio</label><input type="number" id="pmPts" min="1" step="1" value="'+CFG.pts+'" style="width:90px"></div></div>'
+   +'<p class="au-note">'+(active()?'✅ Oggi la promo è attiva.':'⏸️ Oggi la promo non è attiva (spenta o fuori dalle date).')+'</p>'
+   +'<button type="button" class="secondary" id="pmClose" style="width:100%;margin-top:10px;padding:12px">Chiudi</button></div>';
+  document.body.appendChild(ov);
+  function bind(id,fn){ var e=$q('#'+id,ov); if(e) e.onchange=function(){ fn(e); CFG=norm(CFG); push(); }; }
+  bind('pmOn',function(e){CFG.on=e.checked}); bind('pmFrom',function(e){CFG.from=e.value}); bind('pmTo',function(e){CFG.to=e.value});
+  bind('pmEur',function(e){CFG.eur=pn(e.value,5)}); bind('pmPts',function(e){CFG.pts=Math.round(pn(e.value,5))});
+  $q('#pmClose',ov).onclick=function(){ ov.remove(); ov=null; };
+}
+function mountBtn(){
+  var bar=$q('#userBar'); if(!bar) return;
+  var b=$q('#promoBtn'), isM=(typeof BP_ROLE!=='undefined'&&BP_ROLE==='manager');
+  if(!b){ b=document.createElement('button'); b.type='button'; b.id='promoBtn'; b.className='btn-sm'; b.style.cssText='background:#16794b;color:#fff'; b.textContent='🎁 Promo'; b.onclick=panel; bar.insertBefore(b,bar.firstChild); }
+  b.style.display=isM?'':'none';
+}
+/* ---------- report: sconti e regali nel periodo ---------- */
+window.bp55Rep=function(v,afterBox){
+  var disc=0,nd=0,gifts=0,items=v.items||new Map();
+  v.orders.forEach(function(o){
+    if(normStatus(o.status)==='Annullato') return; var hasD=false;
+    (items.get(o.id)||[]).forEach(function(it){
+      var n=String(it.product_name||'');
+      if(/^Sconto manuale/.test(n)){ disc+=Math.abs(Number(it.line_total||0)); hasD=true; }
+      else if(/Regalo fedeltà/i.test(n)) gifts+=Number(it.quantity||1);
+    }); if(hasD) nd++;
+  });
+  if(!disc&&!gifts) return;
+  var d=document.createElement('div'); d.className='rp-panel';
+  d.innerHTML='<h3>🏷️ Sconti e regali fedeltà</h3><div class="rp-kpis"><div class="rp-kpi"><div class="rp-k-l">Sconti concessi</div><div class="rp-k-v" style="color:#b42318">− '+euro(disc)+'</div><span>'+nd+' ordini</span></div>'
+   +'<div class="rp-kpi"><div class="rp-k-l">🎁 Margherite in regalo</div><div class="rp-k-v">'+gifts+'</div><span>incasso € 0, costo ricetta incluso nell\'utile</span></div></div>'
+   +'<div class="rp-muted" style="margin-top:8px">Incassi, cassa e margine lordo sono già al netto degli sconti. L\'utile per prodotto sopra è sui prezzi di listino: sottrai gli sconti per l\'utile reale.</div>';
+  afterBox.insertAdjacentElement('afterend',d);
+};
+var _ar=bpApplyRole; bpApplyRole=function(){ var r=_ar.apply(this,arguments); try{mountBtn()}catch(e){} return r; };
+var inited=false;
+setInterval(function(){
+  var a=$q('#app'); if(!a||a.classList.contains('hidden')) return;
+  mountBtn();
+  if(!inited&&typeof sb!=='undefined'&&sb){ inited=true; pull(); try{ sb.channel('bp-promo').on('postgres_changes',{event:'*',schema:'public',table:'bp36_data',filter:'key=eq.'+KEY},function(){pull()}).subscribe(); }catch(e){} }
+},1500);
+})()}catch(e){console.error('[bp] v55 promo',e)}
+
 </script>
 </body></html>
