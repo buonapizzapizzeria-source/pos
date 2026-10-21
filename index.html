@@ -1715,7 +1715,8 @@ html.pos64.p64-ticket #newTab>.grid>section.panel:nth-child(2)>#p64Foot{order:4;
 html.pos64.p64-ticket .calc-box.rd-pay{padding:8px!important;gap:6px!important}
 html.pos64.p64-ticket .calc-box.rd-pay button{min-height:40px!important;padding:6px 8px!important;font-size:14px!important}
 </style>
- </head>
+ <style id="bpV93boot">html.bp-boot header{height:30px!important;min-height:0!important;padding-top:0!important;padding-bottom:0!important;overflow:hidden!important;border-bottom:0!important;transition:none!important}html.bp-boot header>*{visibility:hidden}</style><script id="bpV93bootJs">document.documentElement.classList.add('bp-boot')</script>
+</head>
  <body>
   <header class="no-print">
    <div class="brand">
@@ -16458,11 +16459,36 @@ function protSync(){
     PROT = ks.length ? new RegExp('(^|[^\\p{L}\\p{N}])(' + ks.map(escRx).join('|') + ')(?![\\p{L}\\p{N}])', 'giu') : null;
   }catch(e){}
 }
+/* v93: nomi dei clienti, indirizzi e nomi di vie NON si traducono mai */
+var NTOK = null, EXACT = null, NSIG = '';
+var NSTOP = {cliente:1, banco:1, ordine:1, consegna:1, asporto:1, anonimo:1, nessuno:1};
+var ST_RX = new RegExp('(^|[^\\p{L}\\p{N}])((?:[Vv]ia|[Vv]iale|[Pp]iazza|[Pp]iazzale|[Cc]orso|[Vv]icolo|[Cc]ascina|[Ff]razione|[Ss]trada|[Ll]argo|VIA|VIALE|PIAZZA|CORSO)\\s+(?!(?:WhatsApp|Email|Mail|SMS|Telegram|App|Web)\\b)(?:(?:dei|degli|delle|della|dello|del|di|da|de|dell\')\\s+)?[\\p{Lu}][\\p{L}\'\u2019.]*(?:\\s+(?:(?:dei|degli|delle|della|del|di|da|de)\\s+)?(?:[\\p{Lu}][\\p{L}\'\u2019.]*|[IVXL]+\\b)){0,4}(?:\\s*,?\\s*(?:n\\.?\\s*|civico\\s+)?\\d+\\s?[A-Za-z]?(?![\\p{L}\\p{N}]))?)', 'gu');
+function nameSync(){
+  try{
+    var o = (typeof orders !== 'undefined' && orders) || [], cd = (typeof customerDirectory !== 'undefined' && customerDirectory) || [], ks = (typeof knownStreets !== 'undefined' && knownStreets) || [];
+    var sig = o.length + '|' + cd.length + '|' + (ks.size || 0); if(sig === NSIG) return; NSIG = sig;
+    var tk = new Set(), ex = new Set();
+    var addName = function(v){ v = String(v || '').trim(); if(v.length < 3) return; var l = v.toLowerCase(); if(/^cliente\b/.test(l)) return; ex.add(l);
+      v.split(/[\s,;·\-]+/).forEach(function(w){ w = w.replace(/[^\p{L}'’]/gu, ''); var k = w.toLowerCase(); if(k.length >= 3 && !NSTOP[k] && /^\p{Lu}/u.test(w)) tk.add(k); }); };
+    var addAddr = function(v){ v = String(v || '').trim(); if(v.length >= 4) ex.add(v.toLowerCase()); };
+    o.forEach(function(r){ addName(r.customer_name); addAddr(r.address); });
+    cd.forEach(function(c){ addName(c.name); addAddr(c.address); });
+    ks.forEach(addAddr);
+    NTOK = tk; EXACT = ex;
+  }catch(e){}
+}
+function protNames(t, keep){
+  t = t.replace(ST_RX, function(a, p, k){ keep.push(k); return p + '\uE000' + (keep.length - 1) + '\uE001'; });
+  if(NTOK && NTOK.size) t = t.replace(/\p{Lu}[\p{L}'’]*/gu, function(w){ if(NTOK.has(w.toLowerCase())){ keep.push(w); return '\uE000' + (keep.length - 1) + '\uE001'; } return w; });
+  return t;
+}
 function T(s, B){
   var t = norm(s);
   if(!t || !(HAS_IT.test(t) || HAS_NUM.test(t))) return s;
+  nameSync(); if(EXACT && EXACT.has(t.toLowerCase())) return s;
   var lead = s.match(/^\s*/)[0], trail = s.match(/\s*$/)[0], out = null, keep = [];
   if(PROT) t = t.replace(PROT, function(a, p, k){ keep.push(k); return p + '\uE000' + (keep.length - 1) + '\uE001'; });
+  t = protNames(t, keep);
   for(var i = 0; i < RULES.length && out === null; i++){
     var m = t.match(RULES[i].re); if(m) out = RULES[i].f(m, B || function(x){ return x; });
   }
@@ -19816,31 +19842,77 @@ html.pos64.p64-ticket #newTab>.grid>section.panel:nth-child(2){top:var(--p64-top
 </style>
 <script id="bpV93shutter">
 (function(){try{
- var root=document.documentElement,shut=false,anim=0,userOpen=false,wasTk=false,tm=0;
+ var root=document.documentElement,shut=false,anim=0,tm=0;
  var H=function(){return document.querySelector('header')};
- function newOn(){var n=document.getElementById('newTab'),a=document.getElementById('app');return !!n&&!n.classList.contains('hidden')&&(!a||!a.classList.contains('hidden'))}
  /* durante l'animazione: aggiorna --p64-top e tieni ferma la pagina (niente salti) */
  function run(ms){var h=H();if(!h)return;cancelAnimationFrame(anim);var t0=performance.now(),last=h.offsetHeight;
   (function f(t){var cur=h.offsetHeight;root.style.setProperty('--p64-top',Math.max(0,Math.round(h.getBoundingClientRect().bottom))+'px');
    if(!root.classList.contains('pos64')&&cur!==last)window.scrollBy(0,cur-last);last=cur;if(t-t0<ms)anim=requestAnimationFrame(f)})(t0)}
- function shutNow(){var h=H();if(!h||shut)return;shut=true;var h0=h.offsetHeight;h.style.height=h0+'px';void h.offsetHeight;root.classList.add('bp-shut');h.style.height='30px';run(520)}
+ function shutNow(instant){var h=H();if(!h||shut)return;shut=true;
+  if(instant){h.style.transition='none';root.classList.add('bp-shut');h.style.height='30px';void h.offsetHeight;h.style.transition='';root.classList.remove('bp-boot');run(80);return}
+  var h0=h.offsetHeight;h.style.height=h0+'px';void h.offsetHeight;root.classList.add('bp-shut');h.style.height='30px';run(520)}
  function openNow(){var h=H();if(!h||!shut)return;shut=false;h.style.transition='none';root.classList.remove('bp-shut');h.style.height='auto';var th=h.offsetHeight;h.style.height='30px';void h.offsetHeight;h.style.transition='';h.style.height=th+'px';run(520);
   setTimeout(function(){if(!shut)h.style.height=''},560)}
  function mount(){var h=H();if(!h||document.getElementById('bp93Strip'))return;var s=document.createElement('div');s.id='bp93Strip';s.setAttribute('role','button');s.setAttribute('aria-label','Apri barra strumenti');
   s.innerHTML='<span class="pill"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>Strumenti</span>';
   h.appendChild(s);
-  s.addEventListener('click',function(){userOpen=true;openNow()});
-  var b=h.querySelector('.brand');if(b)b.addEventListener('click',function(){if(!shut){userOpen=false;shutNow()}});
+  s.addEventListener('click',openNow);
+  var b=h.querySelector('.brand');if(b)b.addEventListener('click',function(){if(!shut)shutNow()});
   var y0=null;h.addEventListener('touchstart',function(e){y0=e.touches[0].clientY},{passive:true});
-  h.addEventListener('touchmove',function(e){if(y0==null)return;var dy=e.touches[0].clientY-y0;if(!shut&&dy<-40){y0=null;shutNow()}else if(shut&&dy>12){y0=null;userOpen=true;openNow()}},{passive:true});
-  h.addEventListener('touchend',function(){y0=null},{passive:true})}
- /* quando lavori sull'ordine (tocchi menu, carrello, pagamento) la saracinesca si abbassa da sola */
- document.addEventListener('click',function(e){if(shut||!newOn())return;var t=e.target;if(!t||!t.closest||t.closest('header,#bpNav,#bpMore,.modal-backdrop,#bpActSheet')||!t.closest('#newTab'))return;
+  h.addEventListener('touchmove',function(e){if(y0==null)return;var dy=e.touches[0].clientY-y0;if(!shut&&dy<-40){y0=null;shutNow()}else if(shut&&dy>12){y0=null;openNow()}},{passive:true});
+  h.addEventListener('touchend',function(){y0=null},{passive:true});
+  shutNow(true)}                       /* di default l'header parte alzato */
+ /* clic su una voce dell'header (anche Stampa) = si richiude SUBITO, prima dell'azione;
+    clic nel resto dell'app = si richiude dopo un attimo */
+ document.addEventListener('click',function(e){var t=e.target;if(shut||!t||!t.closest)return;
+  if(t.closest('#bp93Strip'))return;
+  if(t.closest('header')){if(!t.closest('.brand'))shutNow();return}
+  if(t.closest('#bpNav,#bpMore,.modal-backdrop,#bpActSheet'))return;
   clearTimeout(tm);tm=setTimeout(shutNow,320)},true);
- setInterval(function(){try{mount();var tk=root.classList.contains('p64-ticket');
-  if(!newOn()){if(shut)openNow();userOpen=false;wasTk=tk;return}
-  if(tk&&!wasTk&&!userOpen&&!shut)shutNow();wasTk=tk}catch(e){}},500);
-}catch(x){console.error('[bp] shutter',x)}})();
+ window.addEventListener('afterprint',function(){shutNow()});
+ mount();setInterval(function(){try{mount()}catch(e){}},500);
+ setTimeout(function(){root.classList.remove('bp-boot')},3000);
+}catch(x){root.classList.remove('bp-boot');console.error('[bp] shutter',x)}})();
+</script>
+<style id="bpV93fee">
+#bp93FeeHint{margin:6px 0 2px;padding:7px 12px;border-radius:12px;font-size:13px;font-weight:800;line-height:1.35;display:none}
+#bp93FeeHint.free{display:block;background:rgba(31,122,58,.12);color:#1f7a3a}
+#bp93FeeHint.pay{display:block;background:rgba(244,182,63,.18);color:#8a5a00}
+#bp93FeeHint.man{display:block;background:rgba(71,84,103,.12);color:var(--bp-ink,#101828)}
+#bp93FeeHint button{margin-inline-start:8px;min-height:28px;padding:2px 10px;border-radius:99px;font-size:12px;font-weight:900}
+html.bp-dark #bp93FeeHint.pay,body.dark-mode #bp93FeeHint.pay{color:#f4b63f}
+html.bp-dark #bp93FeeHint.free,body.dark-mode #bp93FeeHint.free{color:#5ee08a}
+</style>
+<script id="bpV93fee">
+(function(){try{
+ /* Lodi Vecchio: ordine >= 10 € = consegna gratis; sotto 10 € = 2 € di servizio. Fuori Lodi Vecchio restano le regole esistenti. */
+ var FREE_FROM=10,FEE=2,manual=false,lastOuter=false;
+ var OUTER=/tavazzano|salerano|borgo\s*san\s*giovanni|pieve|cornegliano|casalmaiocco|sordio|melegnano|mulazzano|cervignano|zelo|senna|ospedaletto|lodi\b(?!\s*vecchio)/i;
+ var $=function(i){return document.getElementById(i)};
+ var eur=function(n){return (typeof euro==='function')?euro(n):'€ '+n.toFixed(2).replace('.',',')};
+ function base(){var v=getItemsSubtotal();try{v+=getExtraAmount()-getDiscountAmount()}catch(e){}return Math.round(v*100)/100}
+ function hint(){var h=$('bp93FeeHint');if(h)return h;var r=$('deliveryFeeRow');if(!r)return null;
+  h=document.createElement('div');h.id='bp93FeeHint';r.parentNode.insertBefore(h,r.nextSibling);
+  h.addEventListener('click',function(e){if(e.target.closest('button')){manual=false;renderCart()}});return h}
+ function say(cls,html){var h=hint();if(!h)return;if(h.className!==cls)h.className=cls;if(h.getAttribute('data-h')!==html){h.setAttribute('data-h',html);h.innerHTML=html}}
+ function auto(){
+  var s=$('deliveryFeeSelect');if(!s)return;
+  var t=$('type');if(!t||t.value!=='Consegna'||!cart.size){if(!cart.size)manual=false;say('','');return}
+  if(typeof editingOrderId!=='undefined'&&editingOrderId){say('','');return}
+  if(OUTER.test(($('address')||{}).value||'')){say('','');return}
+  if(manual){say('man','Supplemento impostato a mano <button type="button" class="secondary">↺ Automatico</button>');return}
+  var b=base(),free=b>=FREE_FROM,want=free?'0':String(FEE);
+  if(s.value!==want){s.value=want;try{refreshFeeSeg()}catch(e){}}
+  if(free)say('free','✓ Consegna gratuita a Lodi Vecchio (da '+eur(FREE_FROM)+') · التوصيل مجاني');
+  else say('pay','Servizio consegna '+eur(FEE)+' · mancano '+eur(FREE_FROM-b)+' per la consegna gratis')}
+ /* scelta manuale dell'operatore = vince sulla regola automatica */
+ document.addEventListener('change',function(e){if(e.isTrusted&&e.target&&e.target.id==='deliveryFeeSelect')manual=true},true);
+ document.addEventListener('click',function(e){if(e.isTrusted&&e.target.closest&&e.target.closest('#pkFeeSeg [data-fee]'))manual=true},true);
+ /* indirizzo: se passa da fuori a dentro Lodi Vecchio (o viceversa) ricalcola */
+ document.addEventListener('input',function(e){if(!e.target||e.target.id!=='address')return;var o=OUTER.test(e.target.value||'');if(o!==lastOuter){lastOuter=o;setTimeout(function(){renderCart()},0)}},true);
+ var _rc=renderCart;
+ window.renderCart=renderCart=function(){try{auto()}catch(e){console.error('[bp] fee',e)}return _rc.apply(this,arguments)};
+}catch(x){console.error('[bp] v93 fee',x)}})();
 </script>
 </body>
 </html>
