@@ -3984,6 +3984,7 @@ function enhanceNav(){
       for(var i = 0; i < ms.length; i++){ var m = el(ms[i]); if(m && !m.classList.contains("hidden")){ m.classList.add("hidden"); return; } }
       var act = document.querySelector("[data-tab].active"), tb = act ? act.getAttribute("data-tab") : "new";
       if(tb !== "new" && !el("app").classList.contains("hidden")){ switchTab("new"); return; }
+      if(window.__bpSkipToast){ window.__bpSkipToast = 0; return; }
       rdToast("↩️ Indietro non esce dal programma", "Per uscire usa il pulsante 🚪 in alto");
     });
     document.addEventListener("pointerdown", function(){ if(rdFresh){ rdFresh = false; try{ history.pushState({rd: 1}, ""); }catch(e){ bpWarn(e); } } }, true);
@@ -17918,8 +17919,14 @@ try{(function(){
   var bar = document.querySelector('#voiceOrderBox .voice-actions-bar');
   if(bar){
     var b = document.createElement('button'); b.type = 'button'; b.id = 'bpSmartBack'; b.className = 'secondary';
-    b.textContent = '↩️ Indietro'; b.title = "Annulla l'ultima estrazione; se non c'è nulla da annullare, torna alla tab precedente";
-    b.onclick = back; bar.insertBefore(b, bar.firstChild);
+    b.textContent = '✕ Chiudi'; b.title = "Chiudi la schermata dell'ordine con l'AI";
+    b.onclick = function(){
+      var rt = document.documentElement;
+      if(rt.classList.contains('p64-voice')){ rt.classList.remove('p64-voice'); return; }
+      var ra = document.getElementById('rdAccVoice'); if(ra) ra.open = false;
+    };
+    b.style.cssText = 'background:linear-gradient(135deg,#d9362a,#a81e15)!important;color:#fff!important;border:0!important;font-weight:900';
+    bar.insertBefore(b, bar.firstChild);
   }
 
   /* ===== sezioni comprimibili (aperte di default) ===== */
@@ -18064,7 +18071,7 @@ try{(function(){
   new MutationObserver(function(){
     var o = rt.classList.contains('p64-voice');
     if(o && !vopen){ try{ history.pushState({bpVoice: 1}, ''); }catch(e){} }
-    else if(!o && vopen && history.state && history.state.bpVoice){ try{ history.back(); }catch(e){} }
+    else if(!o && vopen && history.state && history.state.bpVoice){ window.__bpSkipToast = 1; setTimeout(function(){ window.__bpSkipToast = 0; }, 700); try{ history.back(); }catch(e){} }
     vopen = o; fab();
   }).observe(rt, {attributes: true, attributeFilter: ['class']});
   window.addEventListener('popstate', function(){ if(rt.classList.contains('p64-voice')) rt.classList.remove('p64-voice'); });
