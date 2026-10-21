@@ -19124,5 +19124,358 @@ html:not(.bp-mgr) #bpmSort,html:not(.bp-mgr) #bpmSortBar,html:not(.bp-mgr) .bpm-
 })();
 </script>
 
+<style id="bp-v85-voice">
+/* ===== v85 · كبسولة الصوت (عربي / Italiano) ===== */
+#bpVc{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + var(--p64-bot,0px) + 14px);transform:translate(-50%,24px);opacity:0;pointer-events:none;z-index:2147483300;width:min(94vw,520px);box-sizing:border-box;display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:30px;background:rgba(16,24,40,.88);-webkit-backdrop-filter:blur(14px) saturate(1.4);backdrop-filter:blur(14px) saturate(1.4);color:#fff;box-shadow:0 18px 50px rgba(0,0,0,.45),0 0 0 1px rgba(255,255,255,.08);transition:opacity .22s,transform .22s}
+#bpVc.on{opacity:1;transform:translate(-50%,0);pointer-events:auto}
+#bpVc .orb{flex:0 0 auto;width:46px;height:46px;border-radius:50%;background:radial-gradient(circle at 30% 30%,#ff6b5b,#d92d20);display:flex;align-items:center;justify-content:center;gap:3px;box-shadow:0 0 0 0 rgba(217,45,32,.55);animation:bpvcPulse 1.6s infinite}
+#bpVc.talk .orb{animation-duration:.8s}
+#bpVc.proc .orb{background:radial-gradient(circle at 30% 30%,#60a5fa,#2563eb);animation:none}
+#bpVc.err .orb{background:radial-gradient(circle at 30% 30%,#fbbf24,#d97706);animation:none}
+#bpVc .orb i{display:block;width:4px;border-radius:3px;background:#fff;height:10px;animation:bpvcBar 1s ease-in-out infinite}
+#bpVc .orb i:nth-child(2){animation-delay:.12s}#bpVc .orb i:nth-child(3){animation-delay:.24s}#bpVc .orb i:nth-child(4){animation-delay:.36s}
+#bpVc:not(.talk) .orb i{animation-duration:2s;opacity:.7}
+#bpVc.proc .orb i,#bpVc.err .orb i{animation:none;height:8px}
+@keyframes bpvcBar{0%,100%{height:8px}50%{height:calc(12px + var(--lv,.35)*22px)}}
+@keyframes bpvcPulse{0%{box-shadow:0 0 0 0 rgba(217,45,32,.5)}70%{box-shadow:0 0 0 14px rgba(217,45,32,0)}100%{box-shadow:0 0 0 0 rgba(217,45,32,0)}}
+#bpVc .tx{flex:1 1 auto;min-width:0}
+#bpVc .st{display:block;font-size:11px;font-weight:800;opacity:.7;letter-spacing:.3px}
+#bpVc .lv{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;font-size:16px;line-height:1.35;font-weight:700;unicode-bidi:plaintext;text-align:start;word-break:break-word}
+#bpVc .lv .i{opacity:.55}
+#bpVc .lv .h{opacity:.5;font-weight:600;font-size:13px}
+#bpVc button{flex:0 0 auto;min-height:0;border:0;border-radius:18px;padding:9px 12px;font-weight:900;font-size:13px;color:#fff;background:rgba(255,255,255,.14)}
+#bpVc button.stop{background:#16a34a;width:42px;height:42px;padding:0;border-radius:50%;font-size:17px}
+#bpVc button:active{transform:scale(.94)}
+@media(prefers-reduced-motion:reduce){#bpVc .orb,#bpVc .orb i{animation:none!important}}
+</style>
+<script id="bp-v85-voice">
+(function(){
+  if(window.__bpVoice85) return; window.__bpVoice85 = 1;
+  var Native = window.SpeechRecognition || window.webkitSpeechRecognition || null;
+  var UA = navigator.userAgent || '';
+  var isIOS = /iPhone|iPad|iPod/i.test(UA) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  var standalone = navigator.standalone === true || (window.matchMedia && matchMedia('(display-mode: standalone)').matches);
+  var nativeOK = !!Native && !(isIOS && standalone);          /* آيفون: التطبيق المثبّت على الشاشة الرئيسية ما بيدعمش التعرف الصوتي */
+  var canRec = !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia && window.MediaRecorder);
+  function key(){ try{ return ((document.getElementById('geminiApiKey') || {}).value || localStorage.getItem('bp_gemini_key') || '').trim(); }catch(e){ return ''; } }
+  function lang(){ try{ return bpVoiceLang(); }catch(e){ return 'ar-EG'; } }
+  function isAr(){ return lang().indexOf('ar') === 0; }
+  function vib(n){ try{ if(navigator.vibrate) navigator.vibrate(n); }catch(e){} }
+  function esc2(s){ return String(s).replace(/[&<>]/g, function(c){ return {'&': '&amp;', '<': '&lt;', '>': '&gt;'}[c]; }); }
+  function digits(t){ return String(t || '').replace(/[٠-٩]/g, function(d){ return String(d.charCodeAt(0) - 1632); }).replace(/[۰-۹]/g, function(d){ return String(d.charCodeAt(0) - 1776); }); }
+  function nrm(s){
+    s = String(s || '').toLowerCase().replace(/[\u064B-\u065F\u0670\u0640]/g, '').replace(/[أإآ]/g, 'ا').replace(/ى/g, 'ي').replace(/ة/g, 'ه');
+    try{ s = s.normalize('NFD').replace(/[\u0300-\u036f]/g, ''); }catch(e){}
+    return s.replace(/[^a-z0-9\u0600-\u06ff\s]/g, ' ').replace(/\s+/g, ' ').trim();
+  }
+
+  /* ---------- مفردات المنيو لاختيار أفضل بديل ---------- */
+  var VC = {t: 0, set: null};
+  function vocab(){
+    if(VC.set && Date.now() - VC.t < 15000) return VC.set;
+    var s = {};
+    function add(x){ nrm(x).split(' ').forEach(function(w){ if(w.length > 2) s[w] = 1; }); }
+    try{ (allMenu || []).forEach(function(p){ add(p.name); add(p.description); add(p.category); }); }catch(e){}
+    try{ getAllKnownIngredients().forEach(add); }catch(e){}
+    try{ Object.keys(AR_ALIAS || {}).forEach(add); }catch(e){}
+    ['senza', 'con', 'più', 'extra', 'maxi', 'normale', 'consegna', 'asporto', 'contanti', 'carta', 'بدون', 'زياده', 'مع', 'ماكسي', 'توصيل', 'استلام', 'كاش'].forEach(add);
+    VC.set = s; VC.t = Date.now(); return s;
+  }
+  function pickAlts(res){
+    var alts = []; for(var j = 0; j < res.length; j++) alts.push({transcript: digits(String(res[j].transcript || '').trim()), confidence: res[j].confidence || 0});
+    if(alts.length < 2) return alts;
+    var V = vocab(), bi = 0, bs = -1;
+    alts.forEach(function(a, i){
+      var sc = 0; nrm(a.transcript).split(' ').forEach(function(w){ if(V[w]) sc++; });
+      sc += a.confidence * 0.8 - i * 0.02;
+      if(sc > bs){ bs = sc; bi = i; }
+    });
+    if(bi) alts.unshift(alts.splice(bi, 1)[0]);
+    return alts;
+  }
+  function mkRes(alts, fin){ var r = alts.slice(); r.isFinal = fin; r.item = function(i){ return this[i]; }; return r; }
+  function mkEvt(list, idx){ list.item = function(i){ return this[i]; }; return {resultIndex: idx, results: list}; }
+
+  /* ---------- أوامر الإنهاء الصوتية (للإملاء المستمر فقط) ---------- */
+  var STOP_RX = [/(?:^|\s)(fine ordine|basta così|basta cosi|è tutto|e tutto|invia ordine|chiudi ordine)\s*$/i, /(?:^|\s)(خلاص|تمام كده|كده تمام|ده كل حاجه|ده كل حاجة|ابعت الاوردر|ابعت الأوردر|ابعت)\s*$/];
+  function stripStop(t){
+    var n = String(t || '');
+    for(var i = 0; i < STOP_RX.length; i++){ var m = n.match(STOP_RX[i]); if(m){ return {text: n.slice(0, m.index).trim(), hit: true}; } }
+    return {text: n, hit: false};
+  }
+
+  /* ---------- الكبسولة ---------- */
+  var UI = {el: null, hideT: 0, talkT: 0};
+  function ui(){
+    if(UI.el) return UI.el;
+    var d = document.createElement('div'); d.id = 'bpVc'; d.className = 'no-print'; d.setAttribute('role', 'status'); d.setAttribute('aria-live', 'polite');
+    d.innerHTML = '<div class="orb"><i></i><i></i><i></i><i></i></div><div class="tx"><span class="st"></span><div class="lv" dir="auto"></div></div><button type="button" class="lg"></button><button type="button" class="stop" aria-label="Stop">■</button>';
+    document.body.appendChild(d); UI.el = d;
+    d.querySelector('.stop').onclick = function(){ if(CUR) CUR.stop(); };
+    d.querySelector('.lg').onclick = function(){ if(CUR) CUR._switchLang(); };
+    return d;
+  }
+  UI.show = function(){ clearTimeout(UI.hideT); var d = ui(); d.classList.remove('proc', 'err', 'talk'); d.classList.add('on'); UI.lang(); UI.set('start', ''); };
+  UI.hide = function(delay){ clearTimeout(UI.hideT); UI.hideT = setTimeout(function(){ if(UI.el) UI.el.classList.remove('on', 'talk', 'proc', 'err'); }, delay == null ? 350 : delay); };
+  UI.lang = function(){ var d = ui(); d.querySelector('.lg').textContent = isAr() ? '🇪🇬 عربي' : '🇮🇹 Italiano'; };
+  UI.talk = function(){ var d = ui(); d.classList.add('talk'); clearTimeout(UI.talkT); UI.talkT = setTimeout(function(){ d.classList.remove('talk'); }, 900); };
+  UI.level = function(v){ var d = ui(); d.style.setProperty('--lv', String(Math.max(0.1, Math.min(1, v)))); if(v > 0.22) d.classList.add('talk'); else d.classList.remove('talk'); };
+  var ST = {
+    start: ['جاري التشغيل… · Avvio…', ''], listen: ['🎙️ اتكلم دلوقتي · Parla ora', ''], proc: ['⏳ جاري التفريغ · Trascrizione…', 'proc']
+  };
+  UI.set = function(state, text, interim){
+    var d = ui(), st = d.querySelector('.st'), lv = d.querySelector('.lv'), s = ST[state] || ST.listen;
+    d.classList.toggle('proc', state === 'proc'); d.classList.remove('err');
+    st.textContent = s[0];
+    var t = (text || '').trim(), i = (interim || '').trim();
+    if(!t && !i){
+      lv.innerHTML = '<span class="h">' + (isAr() ? 'مثال: اتنين مارجريتا بدون بصل، وواحد كباب' : 'Es.: due margherita senza cipolla, un kebab') + '</span>';
+    }else{
+      var all = (t + ' ' + i).trim(); if(all.length > 160) { var cut = all.length - 160; t = t.slice(Math.max(0, cut)); if(cut > t.length) { i = i.slice(cut - t.length); } }
+      lv.innerHTML = esc2(t) + (i ? ' <span class="i">' + esc2(i) + '</span>' : '');
+    }
+  };
+  UI.note = function(msg, hideAfter){
+    var d = ui(); d.classList.add('on', 'err'); d.classList.remove('talk', 'proc');
+    d.querySelector('.st').textContent = '⚠️'; d.querySelector('.lv').textContent = msg; UI.lang();
+    UI.hide(hideAfter || 3200);
+  };
+  var MSG = {
+    'not-allowed': 'الميكروفون مرفوض — فعّله من إعدادات المتصفح · Microfono negato: abilitalo nelle impostazioni',
+    'service-not-allowed': 'التعرف الصوتي مش متاح هنا — استخدم ميكروفون الكيبورد · Non disponibile qui: usa il microfono della tastiera',
+    'audio-capture': 'الميكروفون مشغول أو مش موجود · Microfono occupato o assente',
+    'network': 'محتاج إنترنت للتعرف الصوتي · Serve la connessione internet',
+    'no-speech': 'ما سمعتش صوت · Non ho sentito nulla',
+    'language-not-supported': 'اللغة دي مش مدعومة على الجهاز · Lingua non supportata'
+  };
+
+  /* ---------- Wake Lock ---------- */
+  var WL = null;
+  function wlOn(){ try{ if(navigator.wakeLock && !WL) navigator.wakeLock.request('screen').then(function(l){ WL = l; l.addEventListener('release', function(){ WL = null; }); }).catch(function(){}); }catch(e){} }
+  function wlOff(){ try{ if(WL){ WL.release(); WL = null; } }catch(e){} }
+
+  var CUR = null;
+
+  /* ============ المحرك الأساسي: غلاف فوق SpeechRecognition ============ */
+  function Base(){
+    this.lang = lang(); this.continuous = false; this.interimResults = false; this.maxAlternatives = 1;
+    this.onstart = this.onresult = this.onerror = this.onend = this.onspeechstart = this.onaudiostart = this.onnomatch = null;
+    this._L = {}; this._s = {active: false};
+  }
+  Base.prototype.addEventListener = function(n, f){ (this._L[n] = this._L[n] || []).push(f); };
+  Base.prototype.removeEventListener = function(n, f){ this._L[n] = (this._L[n] || []).filter(function(x){ return x !== f; }); };
+  Base.prototype._emit = function(n, ev){
+    ev = ev || {}; ev.type = n; ev.target = this;
+    try{ if(typeof this['on' + n] === 'function') this['on' + n](ev); }catch(e){ console.warn('[bp-voice]', n, e); }
+    (this._L[n] || []).forEach(function(f){ try{ f.call(this, ev); }catch(e){} }, this);
+  };
+  Base.prototype._compose = function(interimAlts){
+    var s = this._s, list = s.fin.slice(), idx = s.fin.length;
+    if(interimAlts && interimAlts.length && this.interimResults) list.push(mkRes(interimAlts, false));
+    return mkEvt(list, idx);
+  };
+  Base.prototype._text = function(){
+    return this._s.fin.map(function(r){ return r[0].transcript; }).join(' ').trim();
+  };
+  Base.prototype._pushFinal = function(alts){
+    var s = this._s; if(!alts.length || !alts[0].transcript) return;
+    var stopHit = false;
+    if(this.continuous){ var sp = stripStop(alts[0].transcript); if(sp.hit){ stopHit = true; alts[0].transcript = sp.text; } }
+    if(alts[0].transcript){
+      s.fin.push(mkRes(alts, true));
+      var e = mkEvt(s.fin.slice(), s.fin.length - 1); this._emit('result', e);
+      vib(8);
+    }
+    UI.set('listen', this._text(), '');
+    if(stopHit){ UI.note(isAr() ? '✅ تمام — بنبعت الأوردر' : '✅ Ok — invio', 1200); var me = this; setTimeout(function(){ me.stop(); }, 150); }
+  };
+  Base.prototype._switchLang = function(){
+    try{ bpVoiceToggle(); }catch(e){}
+    this.lang = lang(); UI.lang();
+    var s = this._s; if(!s.active) return;
+    UI.set('start', this._text(), ''); s.switching = true;
+    try{ if(s.native) s.native.abort(); }catch(e){}
+    if(this._abortGem) this._abortGem();
+  };
+  Base.prototype._finish = function(){
+    var s = this._s; if(!s.active) return; s.active = false;
+    clearTimeout(s.wd); clearTimeout(s.fs);
+    if(CUR === this) CUR = null;
+    wlOff(); UI.hide(); vib(6);
+    this._emit('end');
+  };
+
+  /* ---------- النسخة الأصلية (أندرويد / سفاري) ---------- */
+  function NativeRec(){ Base.call(this); }
+  NativeRec.prototype = Object.create(Base.prototype); NativeRec.prototype.constructor = NativeRec;
+  NativeRec.prototype.start = function(){
+    var s = this._s; if(s.active) throw new Error('InvalidStateError: already started');
+    if(CUR && CUR !== this){ try{ CUR.abort(); }catch(e){} }
+    CUR = this; s.active = true; s.stopping = false; s.fatal = false; s.fin = []; s.cur = null; s.started = false; s.fast = 0; s.tries = 0; s.heard = false;
+    UI.show(); wlOn(); this._spawn();
+  };
+  NativeRec.prototype._spawn = function(){
+    var self = this, s = this._s, r;
+    try{ r = new Native(); }catch(e){ s.fatal = true; this._err('service-not-allowed'); return this._finish(); }
+    s.native = r; s.t0 = Date.now(); s.cur = null; s.switching = false;
+    r.lang = this.lang; r.interimResults = true; r.continuous = false; r.maxAlternatives = Math.max(4, this.maxAlternatives || 1);
+    r.onstart = function(){ if(!s.started){ s.started = true; self._emit('start'); } clearTimeout(s.wd); UI.set('listen', self._text(), ''); };
+    r.onaudiostart = function(){ self._emit('audiostart'); };
+    r.onspeechstart = function(){ s.heard = true; UI.talk(); self._emit('speechstart'); };
+    r.onnomatch = function(){ self._emit('nomatch'); };
+    r.onresult = function(e){
+      s.heard = true; UI.talk();
+      var parts = [], res = e.results, last = res[res.length - 1], fin = !!last.isFinal, alts;
+      if(res.length > 1){ var t = ''; for(var i = 0; i < res.length; i++){ t += pickAlts(res[i])[0].transcript + ' '; } alts = pickAlts(last); alts[0] = {transcript: t.trim(), confidence: alts[0] ? alts[0].confidence : 0}; }
+      else alts = pickAlts(last);
+      if(fin){ s.cur = null; self._pushFinal(alts); }
+      else{ s.cur = alts; UI.set('listen', self._text(), alts[0] ? alts[0].transcript : ''); if(self.interimResults) self._emit('result', self._compose(alts)); }
+    };
+    r.onerror = function(e){
+      var er = e && e.error;
+      if(er === 'aborted' || s.switching) return;
+      if(er === 'no-speech'){ if(self.continuous && !s.stopping) return; s.noSpeech = true; return; }
+      s.fatal = true; self._err(er || 'unknown');
+    };
+    r.onend = function(){
+      clearTimeout(s.wd);
+      if(s.native !== r) return;
+      if(s.cur && s.cur.length){ var a = s.cur; s.cur = null; self._pushFinal(a); }
+      if(!s.active) return;
+      if(s.switching){ s.switching = false; setTimeout(function(){ if(s.active) self._spawn(); }, 180); return; }
+      if(self.continuous && !s.stopping && !s.fatal){
+        s.fast = (Date.now() - s.t0 < 700) ? s.fast + 1 : 0;
+        if(s.fast >= 5){ self._err('audio-capture'); return self._finish(); }
+        setTimeout(function(){ if(s.active && !s.stopping) self._spawn(); }, s.fast ? 260 : 40);
+        return;
+      }
+      if(s.noSpeech && !s.fin.length && !s.fatal) UI.note(MSG['no-speech'], 1800);
+      self._finish();
+    };
+    s.wd = setTimeout(function(){
+      if(s.started || !s.active) return;
+      try{ r.abort(); }catch(e){}
+      if(s.tries < 2){ s.tries++; s.native = null; setTimeout(function(){ if(s.active) self._spawn(); }, 150); }
+      else{ self._err('audio-capture'); self._finish(); }
+    }, 5000);
+    try{ r.start(); }catch(err){
+      if(s.tries < 2){ s.tries++; setTimeout(function(){ if(s.active) self._spawn(); }, 250); }
+      else{ this._err('audio-capture'); this._finish(); }
+    }
+  };
+  NativeRec.prototype._err = function(code){
+    UI.note(MSG[code] || ('⚠️ ' + code), 3600); vib([30, 40, 30]);
+    this._emit('error', {error: code, message: MSG[code] || code});
+  };
+  NativeRec.prototype.stop = function(){
+    var s = this._s; if(!s.active) return; s.stopping = true; UI.set('proc', this._text(), '');
+    try{ if(s.native) s.native.stop(); }catch(e){}
+    var self = this; clearTimeout(s.fs);
+    s.fs = setTimeout(function(){ if(s.active){ if(s.cur && s.cur.length){ var a = s.cur; s.cur = null; self._pushFinal(a); } self._finish(); } }, 2200);
+  };
+  NativeRec.prototype.abort = function(){
+    var s = this._s; if(!s.active) return; s.stopping = true; s.cur = null;
+    try{ if(s.native) s.native.abort(); }catch(e){}
+    this._finish();
+  };
+
+  /* ---------- نسخة الاحتياط: تسجيل + Gemini (آيفون المثبّت / متصفحات بدون دعم) ---------- */
+  function GemRec(){ Base.call(this); }
+  GemRec.prototype = Object.create(Base.prototype); GemRec.prototype.constructor = GemRec;
+  GemRec.prototype.start = function(){
+    var self = this, s = this._s; if(s.active) throw new Error('InvalidStateError');
+    if(CUR && CUR !== this){ try{ CUR.abort(); }catch(e){} }
+    CUR = this; s.active = true; s.stopping = false; s.fin = []; s.chunks = []; s.heard = false; s.silentSince = 0; s.t0 = Date.now();
+    UI.show(); wlOn();
+    navigator.mediaDevices.getUserMedia({audio: {channelCount: 1, echoCancellation: true, noiseSuppression: true, autoGainControl: true}}).then(function(stream){
+      if(!s.active){ stream.getTracks().forEach(function(t){ t.stop(); }); return; }
+      s.stream = stream;
+      var mimes = ['audio/mp4', 'audio/webm;codecs=opus', 'audio/webm', 'audio/ogg;codecs=opus'], mt = '';
+      for(var i = 0; i < mimes.length; i++){ try{ if(MediaRecorder.isTypeSupported(mimes[i])){ mt = mimes[i]; break; } }catch(e){} }
+      try{ s.mr = mt ? new MediaRecorder(stream, {mimeType: mt, audioBitsPerSecond: 32000}) : new MediaRecorder(stream); }catch(e){ s.mr = new MediaRecorder(stream); }
+      s.mr.ondataavailable = function(e){ if(e.data && e.data.size) s.chunks.push(e.data); };
+      s.mr.onstop = function(){ self._transcribe(mt || s.mr.mimeType || 'audio/webm'); };
+      s.mr.start(250);
+      try{
+        var AC = window.AudioContext || window.webkitAudioContext; s.ac = new AC(); var src = s.ac.createMediaStreamSource(stream), an = s.ac.createAnalyser(); an.fftSize = 512; src.connect(an);
+        var buf = new Uint8Array(an.fftSize);
+        s.lv = setInterval(function(){
+          an.getByteTimeDomainData(buf); var sum = 0; for(var k = 0; k < buf.length; k++){ var v = (buf[k] - 128) / 128; sum += v * v; }
+          var rms = Math.sqrt(sum / buf.length), lvl = Math.min(1, rms * 6); UI.level(lvl);
+          var now = Date.now();
+          if(rms > 0.035){ s.heard = true; s.silentSince = 0; }
+          else if(s.heard){ if(!s.silentSince) s.silentSince = now; else if(now - s.silentSince > (self.continuous ? 5000 : 1800)) self.stop(); }
+          if(now - s.t0 > 90000) self.stop();
+        }, 120);
+      }catch(e){}
+      self._emit('start'); UI.set('listen', '', '');
+    }).catch(function(err){
+      var c = (err && /denied|permission|notallowed/i.test(err.name + err.message)) ? 'not-allowed' : 'audio-capture';
+      UI.note(MSG[c], 3600); self._emit('error', {error: c}); self._finish();
+    });
+  };
+  GemRec.prototype._cleanup = function(){
+    var s = this._s; clearInterval(s.lv);
+    try{ if(s.ac) s.ac.close(); }catch(e){} try{ if(s.stream) s.stream.getTracks().forEach(function(t){ t.stop(); }); }catch(e){}
+  };
+  GemRec.prototype.stop = function(){
+    var s = this._s; if(!s.active || s.stopping) return; s.stopping = true; UI.set('proc', '', '');
+    try{ if(s.mr && s.mr.state !== 'inactive') s.mr.stop(); else this._finish(); }catch(e){ this._finish(); }
+  };
+  GemRec.prototype.abort = function(){ var s = this._s; if(!s.active) return; s.aborted = true; s.stopping = true; this._cleanup(); try{ if(s.mr && s.mr.state !== 'inactive') s.mr.stop(); }catch(e){} this._finish(); };
+  GemRec.prototype._abortGem = function(){ /* تبديل اللغة أثناء التسجيل: بنكمل التسجيل بس اللغة الجديدة بتتطبق على التفريغ */ };
+  GemRec.prototype._switchLang = function(){ try{ bpVoiceToggle(); }catch(e){} this.lang = lang(); UI.lang(); };
+  GemRec.prototype._transcribe = async function(mime){
+    var self = this, s = this._s; this._cleanup();
+    if(s.aborted || !s.active) return;
+    try{
+      var blob = new Blob(s.chunks, {type: mime}); if(blob.size < 1200 || !s.heard){ UI.note(MSG['no-speech'], 1800); this._emit('error', {error: 'no-speech'}); return this._finish(); }
+      UI.set('proc', '', '');
+      var b64 = await new Promise(function(res, rej){ var fr = new FileReader(); fr.onload = function(){ res(String(fr.result).split(',')[1]); }; fr.onerror = rej; fr.readAsDataURL(blob); });
+      var text = await geminiTranscribe(b64, mime, this.lang);
+      if(s.aborted) return;
+      text = digits(text);
+      if(text){ var alts = [{transcript: text, confidence: 0.9}]; this._pushFinal(alts); }
+      else{ UI.note(MSG['no-speech'], 1800); this._emit('error', {error: 'no-speech'}); }
+    }catch(err){
+      console.warn('[bp-voice] transcribe', err);
+      UI.note(/connessione|network|fetch/i.test(String(err && err.message)) ? MSG['network'] : ('⚠️ ' + String((err && err.message) || err).slice(0, 120)), 4200); this._emit('error', {error: 'network'});
+    }
+    this._finish();
+  };
+  async function geminiTranscribe(b64, mime, lg){
+    var k = key(); if(!k) throw new Error('Gemini API key mancante · ⚙️ AI');
+    var models = await getAvailableGeminiModels(k), mm = gemAudioMime(mime), last = '';
+    var prompt = 'Transcribe this audio exactly as spoken. Speaker language hint: ' + (lg.indexOf('ar') === 0 ? 'Egyptian Arabic (may include Italian food names)' : 'Italian (may include Arabic words)') + '. It is a pizzeria phone/counter order: pizza names, extras, quantities, street names, phone numbers. Keep each word in the language it was spoken; write Italian dish names in Latin letters; write numbers and phone numbers as digits. Output ONLY the transcript text, nothing else.';
+    for(var i = 0; i < Math.min(3, models.length); i++){
+      try{
+        var r = await gemFetch('https://generativelanguage.googleapis.com/v1beta/models/' + models[i] + ':generateContent?key=' + encodeURIComponent(k),
+          {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({contents: [{role: 'user', parts: [{text: prompt}, {inlineData: {mimeType: mm, data: b64}}]}], generationConfig: {maxOutputTokens: 2048, temperature: 0, thinkingConfig: {thinkingLevel: 'low'}}})}, 25000);
+        var d = await r.json();
+        if(d && d.error){ last = String(d.error.message || d.error); if(/api key/i.test(last)) throw new Error(last); continue; }
+        var parts = (((d.candidates || [])[0] || {}).content || {}).parts || [], t = parts.map(function(p){ return p.text || ''; }).join(' ').trim();
+        if(t){ try{ localStorage.setItem('bp_gemini_model_ok', models[i]); }catch(e){} return t.replace(/^["“”«»]+|["“”«»]+$/g, ''); }
+      }catch(e){ last = e.message || String(e); if(/api key|chiave/i.test(last)) throw e; }
+    }
+    throw new Error(last || 'Trascrizione non riuscita');
+  }
+
+  /* ---------- تركيب الغلاف مكان SpeechRecognition ---------- */
+  function pick(){
+    if(nativeOK) return NativeRec;
+    if(canRec && key()) return GemRec;
+    return undefined;
+  }
+  ['SpeechRecognition', 'webkitSpeechRecognition'].forEach(function(n){
+    try{ Object.defineProperty(window, n, {configurable: true, get: pick, set: function(){}}); }catch(e){ try{ window[n] = pick(); }catch(x){} }
+  });
+  window.bpVoice = {native: nativeOK, ios: isIOS, standalone: standalone, fallback: function(){ return !nativeOK && canRec && !!key(); }, cancel: function(){ if(CUR) CUR.abort(); }};
+  document.addEventListener('visibilitychange', function(){ if(document.hidden && CUR){ try{ CUR.stop(); }catch(e){} } });
+  /* لو بدّلت اللغة من برّه والكبسولة ظاهرة */
+  var _t = window.bpVoiceToggle;
+  if(typeof _t === 'function'){ window.bpVoiceToggle = function(){ var r = _t.apply(this, arguments); try{ if(UI.el) UI.lang(); }catch(e){} return r; }; }
+})();
+</script>
+
  </body>
 </html>
