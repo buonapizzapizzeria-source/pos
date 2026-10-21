@@ -4464,7 +4464,7 @@ function loadSavedCustomerDirectory(){
 
 function saveCustomerDirectoryToStorage(){
   try{
-    localStorage.setItem('bp_crm_customers_v7', JSON.stringify(customerDirectory.slice(0, 600)));
+    localStorage.setItem('bp_crm_customers_v7', JSON.stringify(customerDirectory.slice(0, 5000)));
     localStorage.setItem('bp_crm_streets_v7', JSON.stringify([...knownStreets].slice(0, 400)));
   }catch(e){ bpWarn(e); }
   updateCrmCountBadge();
@@ -17699,7 +17699,7 @@ function drawQuick(){var c=$('#bpOrder');if(!c)return;var q=$('#bpoQuick');if(!q
   var n=$('#notes');if(!n)return;if((n.value||'').toLowerCase().indexOf(t2.toLowerCase())<0){n.value=(n.value?n.value.replace(/[,\s]+$/,'')+', ':'')+t2;n.dispatchEvent(new Event('input',{bubbles:true}))}}}
  var a=chips(),sig=a.join('|')+'#'+ed;if(q.getAttribute('data-sig')===sig)return;q.setAttribute('data-sig',sig);
  q.innerHTML='<button type="button" class="menu60" data-menu>🍟🥤 Menu pizza (+3 €) · ultima pizza</button>'+a.map(function(t){return '<button type="button" class="chip60 chip62'+(ed?' del':'')+'" data-chip="'+E(t)+'">'+(ed?'✕ ':'＋ ')+E(t)+'</button>'}).join('')+(ed?'<button type="button" class="chip60 chip62" data-add>＋ Nuova nota</button>':'')+'<button type="button" class="chip60 ed62" data-ed title="Modifica elenco note rapide">'+(ed?'✔️':'✏️')+'</button>'}
-setInterval(drawQuick,600);
+/* v86: sostituito da bpV86 */
 /* ---- promemoria bibita negli ordini aperti (cassa / autista) ---- */
 function badges(){try{[].forEach.call(document.querySelectorAll('#openOrders .order'),function(card){var h=card.querySelector('h3'),m=h&&/#(\d+)/.exec(h.textContent);if(!m)return;var id=m[1],its=itemsByOrder.get(Number(id))||itemsByOrder.get(id)||[],n=0;
   its.forEach(function(i){if(bpIsMenu(splitProductAndMods(i.product_name)))n+=Number(i.quantity||1)});
@@ -19477,5 +19477,235 @@ html:not(.bp-mgr) #bpmSort,html:not(.bp-mgr) #bpmSortBar,html:not(.bp-mgr) .bpm-
 })();
 </script>
 
- </body>
+ 
+<style id="bpV86">
+/* ===== v86 · Note rapide (pizzaiolo edition) + ricerca che si espande ===== */
+#bpoQuick.q85{display:flex!important;flex-direction:column;gap:10px;width:100%;container-type:inline-size;margin:0;padding:0;background:none;border:0}
+#bpoQuick.q85 .q85h{display:flex;align-items:center;gap:8px;flex-wrap:wrap;position:sticky;top:0;z-index:2;background:var(--bp-card,#fff);padding:4px 0 8px}
+#bpoQuick.q85 .q85h b{font-size:1.05em;flex:1 1 auto}
+#bpoQuick.q85 .q85n{font-size:.78em;font-weight:800;padding:3px 10px;border-radius:99px;background:#eef2f6;color:#475467}
+#bpoQuick.q85 button.q85b{flex:0 0 auto;min-height:38px;padding:0 12px;border-radius:12px;border:1.5px solid #d0d5dd;background:var(--bp-soft,#f2f4f7);color:var(--bp-ink,#101828);font-weight:800;font-size:.85em}
+#bpoQuick.q85 button.q85b.on{background:#16794b;color:#fff;border-color:#16794b}
+#bpoQuick.q85 .q85g{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:10px}
+#bpoQuick.q85 .q85sec{border-radius:16px;padding:8px;background:color-mix(in srgb,var(--c) 7%,transparent);border:1px solid color-mix(in srgb,var(--c) 22%,transparent)}
+#bpoQuick.q85 .q85sec h4{margin:0 0 6px;font-size:.75em;letter-spacing:.07em;text-transform:uppercase;color:var(--c)}
+#bpoQuick.q85 .q85grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(clamp(84px,24cqw,150px),1fr));gap:6px}
+#bpoQuick.q85 button.q85t{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;min-height:clamp(58px,11cqw,86px);padding:6px 4px;border-radius:14px;border:2px solid color-mix(in srgb,var(--c) 35%,#fff);background:var(--bp-card,#fff);color:var(--bp-ink,#101828);font-weight:800;line-height:1.1;text-align:center;flex:initial;transition:transform .12s}
+#bpoQuick.q85 button.q85t:active{transform:scale(.95)}
+#bpoQuick.q85 .q85i{font-size:clamp(20px,5.5cqw,30px);line-height:1}
+#bpoQuick.q85 .q85l{font-size:clamp(11px,2.9cqw,15px);overflow-wrap:anywhere}
+#bpoQuick.q85 button.q85t.on{background:var(--c)!important;color:#fff!important;border-color:var(--c)!important;box-shadow:0 3px 10px color-mix(in srgb,var(--c) 45%,transparent)}
+#bpoQuick.q85 button.q85t.on::after{content:'✓';position:absolute;top:3px;right:7px;font-size:.85em}
+#bpoQuick.q85 .q85d{position:absolute;top:-6px;right:-6px;width:22px;height:22px;border-radius:50%;background:#d92d20;color:#fff;font-style:normal;font-size:12px;display:flex;align-items:center;justify-content:center}
+#bpoQuick.q85 button.q85t.add{border-style:dashed}
+/* ricerca: compatta = si adatta agli altri elementi; in focus = occupa tutta la riga */
+html.pos64 .bpm-top .bpm-search{max-width:none!important;flex:1 1 120px;transition:flex-basis .2s,min-height .2s}
+html.pos64 .bpm-top.sx .bpm-search{flex:1 1 100%!important;min-height:56px!important;box-shadow:0 4px 16px #0002;border-color:var(--bp-brand,#d92d20)}
+html.pos64 .bpm-top.sx>:not(.bpm-search){display:none!important}
+html.pos64 .bpm-top.sx .bpm-search input{font-size:19px!important;font-weight:700}
+</style>
+<script id="bpV86">
+(function(){ try{
+var $=function(s,r){return (r||document).querySelector(s)};
+var E=function(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})};
+var K='bp85_notes',OLD='bp62_chips',ed=false,G=null,sig='';
+var DEF=[
+{id:'cot',t:'🔥 Cottura',c:'#d92d20',i:[['🔥','Ben cotta'],['🥖','Poco cotta'],['✨','Croccante'],['🍕','Ben condita']]},
+{id:'tag',t:'✂️ Taglio & confezione',c:'#7a5af8',i:[['✂️','Pizza tagliata'],['🚫','Non tagliare'],['🔪','Taglio a 8'],['📦','Cartoni separati']]},
+{id:'gus',t:'🧂 Gusto',c:'#f79009',i:[['🧅','Senza cipolla'],['🧀','Extra formaggio'],['🌶️','Olio piccante'],['🧂','Poco sale']]},
+{id:'con',t:'🛵 Consegna',c:'#0e9384',i:[['🔔','Citofono'],['📞','Chiamare all\'arrivo'],['🚪','Lasciare alla porta'],['💱','Resto pronto']]},
+{id:'ser',t:'🧾 Cassa & servizio',c:'#175cd3',i:[['💶','Già pagato'],['🍴','Senza posate'],['🧻','Tovaglioli'],['⚠️','Allergia!']]}];
+function ico(t){t=String(t).toLowerCase();var m=[[/cott/,'🔥'],[/tagli/,'✂️'],[/senza/,'🚫'],[/extra|doppi/,'➕'],[/citofon|suon/,'🔔'],[/pagat|carta|pos/,'💶'],[/allerg|celiac/,'⚠️'],[/posate/,'🍴'],[/piccant/,'🌶️'],[/chiam|telefon/,'📞'],[/resto/,'💱'],[/cartone|scatol|box/,'📦']];for(var i=0;i<m.length;i++)if(m[i][0].test(t))return m[i][1];return '📝'}
+function load(){try{var v=JSON.parse(localStorage.getItem(K));if(Array.isArray(v)&&v.length)return v}catch(e){}
+ var g=JSON.parse(JSON.stringify(DEF)),all=[];g.forEach(function(x){x.i.forEach(function(y){all.push(y[1].toLowerCase())})});var mine=[];
+ try{(JSON.parse(localStorage.getItem(OLD))||[]).forEach(function(t){if(all.indexOf(String(t).toLowerCase())<0)mine.push([ico(t),t])})}catch(e){}
+ if(mine.length)g.push({id:'mie',t:'⭐ Miei',c:'#16794b',i:mine});return g}
+function save(){try{localStorage.setItem(K,JSON.stringify(G))}catch(e){}sig=''}
+function segs(){var n=$('#notes');return n&&n.value?n.value.split(/\s*[,;\n]\s*/).filter(Boolean):[]}
+function toggle(t){var n=$('#notes');if(!n)return;var a=segs(),k=-1;a.forEach(function(s,i){if(s.toLowerCase()===t.toLowerCase())k=i});if(k>=0)a.splice(k,1);else a.push(t);n.value=a.join(', ');n.dispatchEvent(new Event('input',{bubbles:true}));sync()}
+function html(){return '<div class="q85h"><b>📝 Note rapide</b><span class="q85n" id="q85n"></span><button type="button" class="q85b" data-act="clr">🧹 Svuota</button>'+(ed?'<button type="button" class="q85b" data-act="rst">↺ Ripristina</button>':'')+'<button type="button" class="q85b'+(ed?' on':'')+'" data-act="ed">'+(ed?'✔️ Fatto':'✏️ Modifica')+'</button></div><div class="q85g">'+
+ G.map(function(g,gi){return '<section class="q85sec" style="--c:'+E(g.c)+'"><h4>'+E(g.t)+'</h4><div class="q85grid">'+g.i.map(function(it,ii){return '<button type="button" class="q85t" data-g="'+gi+'" data-x="'+ii+'" data-t="'+E(it[1])+'"><span class="q85i">'+E(it[0])+'</span><span class="q85l">'+E(it[1])+'</span>'+(ed?'<i class="q85d">✕</i>':'')+'</button>'}).join('')+(ed?'<button type="button" class="q85t add" data-add="'+gi+'"><span class="q85i">＋</span><span class="q85l">Nuova</span></button>':'')+'</div></section>'}).join('')+'</div>'}
+function sync(){var q=$('#bpoQuick');if(!q)return;var a=segs().map(function(s){return s.toLowerCase()});
+ [].forEach.call(q.querySelectorAll('.q85t[data-t]'),function(b){var on=a.indexOf(b.getAttribute('data-t').toLowerCase())>=0;if(b.classList.contains('on')!==on)b.classList.toggle('on',on)});
+ var n=$('#q85n',q);if(n){var t=a.length?a.length+' selezionat'+(a.length>1?'e':'a'):'tocca per aggiungere';if(n.textContent!==t)n.textContent=t}}
+function build(){var c=$('#bpOrder'),q=$('#bpoQuick');
+ if(!q){if(!c)return;q=document.createElement('div');q.id='bpoQuick';var seg=c.querySelectorAll('.bpo-seg'),last=seg[seg.length-1];if(last)last.after(q);else c.prepend(q)}
+ if(!q.classList.contains('q85')){q.classList.add('q85');q.innerHTML='';q.onclick=function(e){var b=e.target.closest('button');if(!b)return;
+  var act=b.getAttribute('data-act');
+  if(act==='ed'){ed=!ed;sig='';return}
+  if(act==='clr'){var n=$('#notes');if(n){n.value='';n.dispatchEvent(new Event('input',{bubbles:true}))}sync();return}
+  if(act==='rst'){if(confirm('Ripristinare le note rapide originali?')){try{localStorage.removeItem(K)}catch(x){}G=load();sig=''}return}
+  if(b.hasAttribute('data-add')){var t=prompt('Nuova nota rapida (es. Senza origano):');if(t&&t.trim()){G[+b.getAttribute('data-add')].i.push([ico(t),t.trim()]);save()}return}
+  if(b.hasAttribute('data-t')){if(ed){var gi=+b.getAttribute('data-g'),ii=+b.getAttribute('data-x');if(confirm('Eliminare «'+b.getAttribute('data-t')+'»?')){G[gi].i.splice(ii,1);save()}return}toggle(b.getAttribute('data-t'))}}}
+ if(!G)G=load();
+ var s=JSON.stringify(G)+'#'+ed;if(s!==sig||!q.firstChild){sig=s;q.innerHTML=html()}
+ sync()}
+document.addEventListener('input',function(e){if(e.target&&e.target.id==='notes')sync()});
+setInterval(build,500);build();
+/* ricerca: si espande a tutta riga mentre scrivi, poi torna compatta */
+function topOf(t){return t&&t.closest&&t.closest('.bpm-top')}
+document.addEventListener('focusin',function(e){if(e.target.closest&&e.target.closest('.bpm-search')){var t=topOf(e.target);if(t)t.classList.add('sx')}});
+document.addEventListener('focusout',function(e){var t=topOf(e.target);if(t&&e.target.closest('.bpm-search'))setTimeout(function(){if(!t.querySelector('.bpm-search:focus-within'))t.classList.remove('sx')},120)});
+document.addEventListener('keydown',function(e){if(e.key==='Enter'&&e.target&&e.target.id==='bpmQ')e.target.blur()});
+document.addEventListener('pointerdown',function(e){if(e.target.closest&&e.target.closest('#bpmX'))e.preventDefault()});
+}catch(x){console.error('[bp] v86',x)} })();
+</script>
+
+<style id="bpV87">
+/* ===== v87 · Schermata ordine a tutta altezza: contenuto elastico + Totale/Salva/Stampa ancorati in basso ===== */
+html.pos64.p64-ticket #newTab>.grid>section.panel:nth-child(2){display:flex!important;flex-direction:column!important}
+html.pos64.p64-ticket #newTab>.grid>section.panel:nth-child(2)>#p64Mid{flex:1 1 auto!important;position:relative;display:flex;flex-direction:column;min-height:min(48vh,360px)}
+html.pos64.p64-ticket #p64Mid>#bpAccCart{flex:1 1 auto;min-height:220px}
+html.pos64.p64-ticket #newTab>.grid>section.panel:nth-child(2)>#p64Foot{margin-top:auto;padding-bottom:calc(2px + env(safe-area-inset-bottom,0px));box-shadow:0 -8px 16px -12px #0003}
+/* finestra Note: i tasti si allungano per riempire tutta l'altezza disponibile */
+html.pos64 #p64Win[data-open="note"]>.p64w[data-w="note"]{display:flex!important;flex-direction:column;gap:8px;min-height:100%}
+html.pos64 #p64Win .p64w[data-w="note"] #bpoQuick.q85{flex:1 1 auto}
+#bpoQuick.q85 .q85g{flex:1 1 auto;grid-auto-rows:1fr;align-content:stretch}
+#bpoQuick.q85 .q85sec{display:flex;flex-direction:column}
+#bpoQuick.q85 .q85sec .q85grid{flex:1 1 auto;grid-auto-rows:minmax(clamp(58px,11cqw,86px),1fr)}
+/* intestazione: icone in file bilanciate (niente icona orfana), larghezza piena */
+@media (max-width:700px){
+ html.pos64 header #userBar{display:grid!important;grid-template-columns:repeat(var(--hc,5),minmax(0,1fr));gap:6px!important;flex:1 1 0;min-width:0;width:auto!important;max-width:none!important}
+ html.pos64 header #userBar button[type=button]{width:100%!important;min-width:0!important;height:auto!important;aspect-ratio:1/1;max-height:54px}
+ html.pos64 header #userBar #userEmail{grid-column:span 3;order:99;max-width:none!important;min-width:0;text-align:center;overflow:hidden;text-overflow:ellipsis}
+}
+</style>
+<script id="bpV87">
+setInterval(function(){try{var ub=document.getElementById('userBar');if(!ub)return;var n=0;[].forEach.call(ub.children,function(c){if(c.tagName==='BUTTON'&&c.offsetParent!==null)n++});
+var chip=ub.querySelector('#userEmail'),ne=n+(chip&&chip.offsetParent!==null?3:0),cols=Math.max(4,Math.floor((ub.clientWidth+6)/46));if(ne>2*cols)cols=Math.ceil(ne/2);var v=String(cols);if(ub.style.getPropertyValue('--hc')!==v)ub.style.setProperty('--hc',v)}catch(e){}},800);
+</script>
+
+<style id="bpV88">
+#rbOv{position:fixed;inset:0;z-index:2147483000;background:var(--bp-card,#fff);color:var(--bp-ink,#101828);display:flex;flex-direction:column;padding-top:env(safe-area-inset-top,0)}
+#rbOv *{box-sizing:border-box}
+#rbOv .rb-h{display:flex;align-items:center;gap:8px;padding:10px 12px 4px}
+#rbOv .rb-h b{font-size:1.15em;flex:1}#rbOv .rb-h small{font-weight:700;color:#667085}
+#rbOv .rb-x{width:42px;height:42px;border-radius:12px;border:0;background:var(--bp-soft,#f2f4f7);font-size:18px;color:inherit}
+#rbOv .rb-t{padding:4px 12px 8px;display:grid;gap:8px}
+#rbOv .rb-q{width:100%;min-height:48px;border-radius:14px;border:2px solid #d0d5dd;padding:0 14px;font-size:17px;background:var(--bp-soft,#f2f4f7);color:inherit}
+#rbOv .rb-q:focus{border-color:var(--bp-brand,#d92d20);background:var(--bp-card,#fff)}
+#rbOv .rb-chips{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none}
+#rbOv .rb-chips button{flex:0 0 auto;min-height:36px;padding:0 12px;border-radius:99px;border:1.5px solid #d0d5dd;background:var(--bp-card,#fff);color:inherit;font-weight:800;font-size:13px}
+#rbOv .rb-chips button.on{background:var(--bp-brand,#d92d20);border-color:var(--bp-brand,#d92d20);color:#fff}
+#rbOv .rb-l{flex:1 1 auto;overflow-y:auto;padding:4px 12px 12px;display:grid;gap:8px;align-content:start;-webkit-overflow-scrolling:touch}
+#rbOv .rb-c{border:1.5px solid #e4e7ec;border-radius:16px;padding:10px;display:grid;grid-template-columns:44px 1fr;gap:4px 10px;background:var(--bp-card,#fff)}
+#rbOv .rb-av{width:44px;height:44px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:19px;color:#fff;grid-row:span 2}
+#rbOv .rb-m{display:grid;gap:1px;min-width:0}#rbOv .rb-m b{font-size:1.02em}#rbOv .rb-m span{font-size:.88em;overflow-wrap:anywhere}
+#rbOv .rb-bd{display:flex;gap:5px;flex-wrap:wrap;margin-top:3px}
+#rbOv .rb-bd i{font-style:normal;font-size:.72em;font-weight:800;padding:2px 8px;border-radius:99px;background:#eef2f6;color:#475467}
+#rbOv .rb-a{grid-column:1/-1;display:flex;gap:6px}
+#rbOv .rb-a>*{flex:1;min-height:42px;border-radius:12px;border:1.5px solid #d0d5dd;background:var(--bp-soft,#f2f4f7);color:inherit;font-size:19px;display:flex;align-items:center;justify-content:center;text-decoration:none}
+#rbOv .rb-a .go{background:var(--bp-brand,#d92d20);border-color:var(--bp-brand,#d92d20);color:#fff;flex:2;font-size:14px;font-weight:900}
+#rbOv .rb-his{grid-column:1/-1;border-top:1px dashed #d0d5dd;padding-top:6px;display:grid;gap:4px;font-size:.85em}
+#rbOv .rb-his div{display:flex;justify-content:space-between;gap:8px}
+#rbOv .rb-f{display:flex;gap:8px;padding:8px 12px calc(8px + env(safe-area-inset-bottom,0));border-top:1px solid #e4e7ec;background:var(--bp-card,#fff)}
+#rbOv .rb-f button{flex:1;min-height:48px;border-radius:14px;border:0;font-weight:900;font-size:14px;background:var(--bp-soft,#f2f4f7);color:inherit}
+#rbOv .rb-f .pri{background:#16794b;color:#fff}
+#rbOv .rb-s{position:absolute;inset:0;background:#10182899;display:flex;align-items:flex-end}
+#rbOv .rb-s>div{width:100%;max-height:92%;overflow:auto;background:var(--bp-card,#fff);border-radius:22px 22px 0 0;padding:14px 14px calc(14px + env(safe-area-inset-bottom,0));display:grid;gap:8px}
+#rbOv .rb-s input,#rbOv .rb-s textarea{width:100%;border-radius:12px;border:1.5px solid #d0d5dd;padding:11px;font-size:16px;background:var(--bp-soft,#f2f4f7);color:inherit}
+#rbOv .rb-s textarea{min-height:150px}
+#rbOv .rb-s .r{display:flex;gap:8px}#rbOv .rb-s .r button{flex:1;min-height:46px;border-radius:12px;border:0;font-weight:900;background:var(--bp-soft,#f2f4f7);color:inherit}
+#rbOv .rb-s .r .pri{background:#16794b;color:#fff}#rbOv .rb-s .r .del{background:#fee4e2;color:#b42318}
+#rbOv .rb-e{text-align:center;color:#667085;padding:30px 10px}
+</style>
+<script id="bpV88">
+(function(){ try{
+var $=function(s,r){return (r||document).querySelector(s)};
+var E=function(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})};
+var ST={q:'',f:'all',s:'rec',open:-1,lim:60,full:null,view:[],cloud:''},COL=['#d92d20','#7a5af8','#0e9384','#f79009','#175cd3','#c11574','#16794b'];
+var STREET=/\b(via|viale|v\.le|piazza|p\.zza|piazzale|corso|c\.so|vicolo|strada|largo|loc\.?|localit[aà]|frazione|cascina|borgo)\b/i;
+var _up=upsertCustomerProfile;upsertCustomerProfile=function(n,p,a,i,o){if(String(p||'').replace(/\D+/g,'').length<6)return;return _up.apply(this,arguments)};
+function pk(p){try{return normalizePhoneKey(p)}catch(e){return String(p||'').replace(/\D+/g,'')}}
+function keyOf(p,n,a){var k=pk(p);return k.length>=6?'p'+k:(n&&a?'n'+String(n).toLowerCase()+'|'+String(a).toLowerCase():'')}
+function ords(){return ST.full||((typeof orders!=='undefined'&&orders)||[])}
+function index(){var m={};ords().forEach(function(o){if(o.status==='Annullato')return;var k=keyOf(o.phone,o.customer_name,o.address);if(k)(m[k]=m[k]||[]).push(o)});return m}
+function dstr(t){var d=new Date(t);return isNaN(d)?'':d.toLocaleDateString('it-IT',{day:'2-digit',month:'2-digit',year:'2-digit'})}
+function stat(c,m){var l=m[keyOf(c.phone,c.name,c.address)]||[],t=0,last=c.lastSeen||0;l.forEach(function(o){t+=Number(o.total||0);var x=+new Date(o.created_at||o.date||0);if(x>last)last=x});return {l:l,n:Math.max(l.length,c.ordersCount||0),t:t,last:last}}
+function wa(p){var k=pk(p);return k?'https://wa.me/'+(k.length<=10?'39'+k:k):'#'}
+/* ---- cloud (tabella opzionale customers) ---- */
+async function pushMany(cs){try{if(typeof sb==='undefined')return;var rows=cs.filter(function(c){return pk(c.phone).length>=6}).map(function(c){return {name:c.name||'',phone:c.phone,address:c.address||'',notes:c.note||'',last_seen:new Date(c.lastSeen||Date.now()).toISOString()}});
+ for(var i=0;i<rows.length;i+=200){var part=rows.slice(i,i+200),r=await sb.from('customers').upsert(part,{onConflict:'phone'});if(r.error){part.forEach(function(x){delete x.notes});r=await sb.from('customers').upsert(part,{onConflict:'phone'})}ST.cloud=r.error?'⚠️ solo su questo dispositivo':'☁️ sincronizzato'}
+ if(!rows.length)ST.cloud=''}catch(e){ST.cloud='⚠️ solo su questo dispositivo'}draw()}
+function persist(){try{saveCustomerDirectoryToStorage()}catch(e){}}
+/* ---- parsing import ---- */
+function splitCsv(l){var d=l.indexOf('\t')>=0?'\t':(l.indexOf(';')>=0?';':',');return (d===','?l.split(/,(?=(?:[^"]*"[^"]*")*[^"]*$)/):l.split(d)).map(function(x){return x.trim().replace(/^"|"$/g,'').trim()})}
+function isPhone(x){return /^\+?[\d\s.\-\/()]{6,}$/.test(x)&&x.replace(/\D/g,'').length>=6}
+function parse(txt){var out=[];txt=String(txt||'');
+ if(/BEGIN:VCARD/i.test(txt)){txt.split(/BEGIN:VCARD/i).slice(1).forEach(function(v){var fn=(v.match(/^FN[^:]*:(.*)$/mi)||[])[1]||'',tel=(v.match(/^TEL[^:]*:(.*)$/mi)||[])[1]||'',ad=(v.match(/^ADR[^:]*:(.*)$/mi)||[])[1]||'';ad=ad.split(';').map(function(x){return x.trim()}).filter(Boolean).join(' ');if(fn||tel)out.push({name:fn.trim(),phone:tel.trim(),address:ad})});return out}
+ txt.split(/\r?\n/).forEach(function(line,i){line=line.trim();if(!line)return;if(i===0&&/\b(nome|name|telefono|phone|indirizzo)\b/i.test(line)&&!/\d{6}/.test(line))return;
+  var f=/[\t;,]/.test(line)?splitCsv(line):[line],r={name:'',phone:'',address:''};
+  if(f.length===1){var m=line.match(/\+?\d[\d\s.\-]{6,}\d/);if(m){r.phone=m[0].trim();var rest=line.replace(m[0],' ').replace(/\s+/g,' ').trim(),s=rest.search(STREET);if(s>=0){r.address=rest.slice(s).trim();r.name=rest.slice(0,s).trim()}else r.name=rest}else return}
+  else{f.forEach(function(x){if(!x)return;if(!r.phone&&isPhone(x))r.phone=x;else if(!r.address&&STREET.test(x))r.address=x;else if(!r.name)r.name=x;else if(!r.address)r.address=x});}
+  if(r.name||r.phone)out.push(r)});return out}
+/* ---- UI ---- */
+function open(){if($('#rbOv'))return;var o=document.createElement('div');o.id='rbOv';document.body.appendChild(o);o.addEventListener('click',onClick);o.addEventListener('input',function(e){if(e.target.id==='rbQ'){ST.q=e.target.value;ST.lim=60;list()}});
+ if(typeof fetchAllOrders==='function'&&!ST.full)fetchAllOrders().then(function(r){if(Array.isArray(r)&&r.length){ST.full=r;list()}}).catch(function(){});
+ draw()}
+function close(){var o=$('#rbOv');if(o)o.remove()}
+function draw(){var o=$('#rbOv');if(!o)return;var keep=($('#rbQ',o)||{}).value;
+ var CH=[['all','👥 Tutti'],['fed','⭐ Fedeli'],['new','🆕 Nuovi'],['ina','💤 Inattivi']],SO=[['rec','🕒 Recenti'],['az','🔤 A–Z'],['top','🏆 Più ordini']];
+ o.innerHTML='<div class="rb-h"><b>📒 Rubrica clienti · دفتر العملاء</b><small id="rbN"></small><button class="rb-x" data-a="close">✕</button></div><div class="rb-t"><input id="rbQ" class="rb-q" type="search" placeholder="🔍 Nome, telefono o via · ابحث" autocomplete="off" value="'+E(ST.q)+'"><div class="rb-chips">'+CH.map(function(c){return '<button data-f="'+c[0]+'" class="'+(ST.f===c[0]?'on':'')+'">'+c[1]+'</button>'}).join('')+'<span style="flex:0 0 8px"></span>'+SO.map(function(c){return '<button data-s="'+c[0]+'" class="'+(ST.s===c[0]?'on':'')+'">'+c[1]+'</button>'}).join('')+'</div></div><div class="rb-l" id="rbL"></div><div class="rb-f"><button class="pri" data-a="new">＋ Nuovo</button><button data-a="imp">⬆️ Importa</button><button data-a="exp">⬇️ Esporta</button></div>';
+ list()}
+function list(){var L=$('#rbL');if(!L)return;var m=index(),q=ST.q.toLowerCase().trim(),qd=q.replace(/\D/g,''),now=Date.now();
+ ST.np=customerDirectory.filter(function(c){return pk(c.phone).length<6}).length;
+ var arr=customerDirectory.map(function(c){return {c:c,s:stat(c,m)}}).filter(function(x){var c=x.c;if(pk(c.phone).length<6)return false;
+  if(q){var h=(c.name+' '+c.address+' '+(c.note||'')).toLowerCase();if(h.indexOf(q)<0&&!(qd.length>=3&&pk(c.phone).indexOf(qd)>=0))return false}
+  if(ST.f==='fed')return x.s.n>=5;if(ST.f==='new')return x.s.n<=1;if(ST.f==='ina')return x.s.n>0&&x.s.last&&now-x.s.last>60*864e5;return true});
+ arr.sort(function(a,b){return ST.s==='az'?(a.c.name||'~').localeCompare(b.c.name||'~','it'):ST.s==='top'?b.s.n-a.s.n:(b.s.last||0)-(a.s.last||0)});
+ ST.view=arr;var N=$('#rbN');if(N)N.textContent=arr.length+(arr.length!==customerDirectory.length-ST.np?' / '+(customerDirectory.length-ST.np):'')+(ST.cloud?' · '+ST.cloud:'');
+ if(!arr.length){L.innerHTML=(ST.np?'<button data-a="clean" style="min-height:42px;border-radius:12px;border:1.5px dashed #f04438;background:#fef3f2;color:#b42318;font-weight:800">🧹 Rimuovi '+ST.np+' contatti senza telefono dalla rubrica</button>':'')+'<div class="rb-e">Nessun cliente. Usa «＋ Nuovo» o «⬆️ Importa» per incollare nomi, telefoni e indirizzi.</div>';return}
+ var clean=ST.np?'<button data-a="clean" style="min-height:42px;border-radius:12px;border:1.5px dashed #f04438;background:#fef3f2;color:#b42318;font-weight:800">🧹 Rimuovi '+ST.np+' contatti senza telefono dalla rubrica</button>':'';
+ L.innerHTML=clean+arr.slice(0,ST.lim).map(function(x,i){var c=x.c,s=x.s,ini=(c.name||c.phone||'?').trim().charAt(0).toUpperCase(),bd='<i>🧾 '+s.n+' ordini</i>'+(s.t?'<i>💶 '+euro(s.t)+'</i>':'')+(s.last?'<i>🕒 '+dstr(s.last)+'</i>':'')+(s.n>=5?'<i style="background:#fef0c7;color:#93370d">⭐ fedele</i>':'')+(c.note?'<i style="background:#e0f2fe;color:#075985">📝 '+E(c.note.slice(0,28))+'</i>':'');
+  var his='';if(ST.open===i){his='<div class="rb-his">'+(s.l.length?s.l.slice().sort(function(a,b){return +new Date(b.created_at||0)-+new Date(a.created_at||0)}).slice(0,8).map(function(o){var it='';try{var li=itemsByOrder.get(o.id)||itemsByOrder.get(Number(o.id))||[];it=li.slice(0,3).map(function(z){return z.quantity+'× '+String(z.product_name).replace(/\s*\(.*$/,'')}).join(', ')}catch(e){}return '<div><span>#'+E(o.id)+' · '+dstr(o.created_at)+(it?' · '+E(it):'')+'</span><b>'+euro(o.total)+'</b></div>'}).join(''):'<div>Nessun ordine nello storico caricato.</div>')+'</div>'}
+  return '<div class="rb-c" data-i="'+i+'"><div class="rb-av" style="background:'+COL[ini.charCodeAt(0)%COL.length]+'">'+E(ini)+'</div><div class="rb-m"><b>'+E(c.name||'(senza nome)')+'</b>'+(c.phone?'<span>📞 '+E(c.phone)+'</span>':'')+(c.address?'<span>📍 '+E(c.address)+'</span>':'')+'<div class="rb-bd">'+bd+'</div></div><div class="rb-a"><button class="go" data-a="use">🛒 Ordina</button>'+(c.phone?'<a href="tel:'+E(c.phone)+'">📞</a><a href="'+wa(c.phone)+'" target="_blank" rel="noopener">💬</a>':'')+'<button data-a="his">📜</button><button data-a="edit">✏️</button></div>'+his+'</div>'}).join('')+(arr.length>ST.lim?'<button class="rb-chips" data-a="more" style="min-height:46px;border-radius:14px;border:1.5px dashed #d0d5dd;background:none;color:inherit;font-weight:800">Mostra altri '+(arr.length-ST.lim)+'…</button>':'')}
+function sheet(h){var o=$('#rbOv');var s=document.createElement('div');s.className='rb-s';s.innerHTML='<div>'+h+'</div>';o.appendChild(s);s.addEventListener('click',function(e){if(e.target===s)s.remove()});return s}
+function setF(id,v){var e=document.getElementById(id);if(!e)return;e.value=v||'';e.dispatchEvent(new Event('input',{bubbles:true}));e.dispatchEvent(new Event('change',{bubbles:true}))}
+function form(c){var isNew=!c,s=sheet('<b>'+(isNew?'＋ Nuovo cliente':'✏️ Modifica cliente')+'</b><input id="rfN" placeholder="Nome / citofono" value="'+E(c&&c.name)+'"><input id="rfP" type="tel" placeholder="Telefono" value="'+E(c&&c.phone)+'"><input id="rfA" placeholder="Indirizzo (via, civico)" value="'+E(c&&c.address)+'"><input id="rfT" placeholder="📝 Note (es. suonare 2 volte)" value="'+E(c&&c.note)+'"><div class="r">'+(isNew?'':'<button class="del" data-x="del">🗑️</button>')+'<button data-x="no">Annulla</button><button class="pri" data-x="ok">Salva</button></div>');
+ s.addEventListener('click',function(e){var b=e.target.closest('[data-x]');if(!b)return;var x=b.getAttribute('data-x');if(x==='no'){s.remove();return}
+  if(x==='del'){if(confirm('Eliminare questo cliente dalla rubrica? (gli ordini restano)')){var i=customerDirectory.indexOf(c);if(i>=0)customerDirectory.splice(i,1);persist();try{if(c.phone&&typeof sb!=='undefined')sb.from('customers').delete().eq('phone',c.phone)}catch(e){}s.remove();list()}return}
+  var n=$('#rfN',s).value.trim(),p=$('#rfP',s).value.trim(),a=$('#rfA',s).value.trim(),t=$('#rfT',s).value.trim();if(pk(p).length<6){alert('Il telefono è obbligatorio (almeno 6 cifre).');return}
+  if(isNew){var before=customerDirectory.length;upsertCustomerProfile(n,p,a,false,null);if(customerDirectory.length>before)customerDirectory[0].ordersCount=0;var f=customerDirectory.find(function(z){return (p&&pk(z.phone)===pk(p))||(!p&&z.name===n)});if(f&&t)f.note=t;c=f||customerDirectory[0]}
+  else{c.name=n;c.phone=p;c.address=a;c.note=t;c.lastSeen=c.lastSeen||Date.now()}
+  persist();pushMany([c]);s.remove();list()})}
+function importSheet(){var s=sheet('<b>⬆️ Importa clienti</b><div style="font-size:.85em;color:#667085">Incolla una riga per cliente: <i>Nome; Telefono; Indirizzo</i> (anche da Excel/Fogli Google o testo libero come «Mario Rossi 333 1234567 Via Roma 5»). Oppure carica un file .csv / .vcf (rubrica telefono).</div><textarea id="riT" placeholder="Mario Rossi; 333 1234567; Via Roma 5"></textarea><input id="riF" type="file" accept=".csv,.txt,.vcf,text/*"><div id="riP" style="font-weight:800"></div><div class="r"><button data-x="no">Annulla</button><button class="pri" data-x="ok">Importa</button></div>');
+ var T=$('#riT',s),P=$('#riP',s);function pv(){var all=parse(T.value),r=all.filter(function(x){return pk(x.phone).length>=6});P.textContent=all.length?'Con telefono: '+r.length+(all.length>r.length?' · senza telefono (saltati): '+(all.length-r.length):''):''}
+ T.addEventListener('input',pv);$('#riF',s).addEventListener('change',function(e){var f=e.target.files[0];if(!f)return;var rd=new FileReader();rd.onload=function(){T.value=rd.result;pv()};rd.readAsText(f)});
+ s.addEventListener('click',function(e){var b=e.target.closest('[data-x]');if(!b)return;if(b.getAttribute('data-x')==='no'){s.remove();return}
+  var all=parse(T.value),r=all.filter(function(x){return pk(x.phone).length>=6}),sk=all.length-r.length;if(!r.length){alert('Nessun cliente con telefono riconosciuto.');return}var nw=0,up=0,touched=[];
+  r.forEach(function(x){var before=customerDirectory.length;upsertCustomerProfile(x.name,x.phone,x.address,false,null);if(customerDirectory.length>before){customerDirectory[0].ordersCount=0;nw++;touched.push(customerDirectory[0])}else{up++;var f=customerDirectory.find(function(z){return x.phone&&pk(z.phone)===pk(x.phone)});if(f)touched.push(f)}});
+  persist();pushMany(touched);s.remove();list();alert('✅ Importati: '+nw+' nuovi, '+up+' aggiornati.'+(sk?' Saltati senza telefono: '+sk+'.':''))})}
+function exportCsv(){var m=index(),rows=[['Nome','Telefono','Indirizzo','Note','Ordini','Totale','Ultimo ordine']];customerDirectory.forEach(function(c){var s=stat(c,m);rows.push([c.name,c.phone,c.address,c.note||'',s.n,s.t.toFixed(2),s.last?dstr(s.last):''])});
+ var csv='\ufeff'+rows.map(function(r){return r.map(function(v){return '"'+String(v==null?'':v).replace(/"/g,'""')+'"'}).join(';')}).join('\r\n'),a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));a.download='rubrica-clienti.csv';document.body.appendChild(a);a.click();setTimeout(function(){a.remove()},500)}
+function onClick(e){var t=e.target.closest('[data-a],[data-f],[data-s]');if(!t)return;
+ if(t.hasAttribute('data-f')){ST.f=t.getAttribute('data-f');draw();return}if(t.hasAttribute('data-s')){ST.s=t.getAttribute('data-s');draw();return}
+ var a=t.getAttribute('data-a'),card=t.closest('.rb-c'),x=card?ST.view[+card.getAttribute('data-i')]:null;
+ if(a==='close')close();else if(a==='new')form(null);else if(a==='imp')importSheet();else if(a==='exp')exportCsv();else if(a==='more'){ST.lim+=60;list()}
+ else if(a==='clean'){if(confirm('Rimuovere dalla rubrica i contatti senza telefono? (gli ordini non vengono toccati)')){for(var q=customerDirectory.length-1;q>=0;q--)if(pk(customerDirectory[q].phone).length<6)customerDirectory.splice(q,1);persist();list()}}
+ else if(a==='his'&&x){var i=+card.getAttribute('data-i');ST.open=ST.open===i?-1:i;list()}
+ else if(a==='edit'&&x)form(x.c);
+ else if(a==='use'&&x){var c=x.c;close();try{switchTab('new')}catch(z){}setTimeout(function(){setF('customer',c.name);setF('phone',c.phone);setF('address',c.address);var n=document.getElementById('notes');if(n&&c.note&&n.value.toLowerCase().indexOf(c.note.toLowerCase())<0)setF('notes',(n.value?n.value+', ':'')+c.note);if(document.activeElement)document.activeElement.blur()},200)}}
+/* ---- punti di ingresso ---- */
+function mount(){
+ var sh=$('#bpMore .sheet');if(sh&&!$('#rbMore',sh)){var f=sh.querySelector('button'),b=document.createElement('button');b.type='button';b.id='rbMore';if(f)b.className=f.className;b.innerHTML='<span style="font-size:24px;display:block">📒</span><span>Rubrica</span>';b.onclick=function(){var m=$('#bpMore');if(m)m.classList.add('hidden');open()};sh.appendChild(b)}
+ var body=$('#rdAccCust .rd-acc-body')||$('#rdAccCust');if(body&&!$('#rbCust')){var c=document.createElement('button');c.type='button';c.id='rbCust';c.textContent='📒 Rubrica clienti · دفتر العملاء';c.style.cssText='width:100%;min-height:46px;margin:0 0 8px;border-radius:12px;font-weight:900;border:2px solid var(--bp-brand,#d92d20);background:var(--bp-card,#fff);color:var(--bp-ink,#101828)';c.onclick=open;body.prepend(c)}}
+setInterval(mount,1000);setInterval(function(){if($('#rbOv')&&!$('.rb-s'))list()},4000);
+window.bpRubrica=open;
+}catch(x){console.error('[bp] v88',x)} })();
+</script>
+
+<style id="bpV91">
+/* ===== v91 · Header e barra strumenti menu: tutto in griglie ordinate e uniformi ===== */
+@media (max-width:700px){
+ html.pos64 header #userBar #bpLangBtn,html.pos64 header #userBar #bpThemeBtn{font-size:21px!important;width:100%!important;height:auto!important;aspect-ratio:1/1;min-width:0!important;max-height:54px;border-radius:14px!important;background:var(--bp-soft,#f2f4f7)!important;box-shadow:none!important;border:0!important;padding:0!important;display:inline-flex!important;align-items:center;justify-content:center;color:var(--bp-ink,#101828)!important;margin:0!important}
+ html.pos64 .bpm-top{display:grid!important;grid-template-columns:repeat(8,minmax(0,1fr));gap:6px;align-items:stretch}
+ html.pos64 .bpm-top .bpm-search{grid-column:1/-1;max-width:none!important;min-width:0}
+ html.pos64 .bpm-top .bpm-ib{width:100%!important;min-width:0!important;height:46px!important}
+ html.pos64 .bpm-top .bpm-zoom{grid-column:span 3;min-height:46px;justify-content:space-around;min-width:0}
+}
+</style>
+<script id="bpV91">
+setInterval(function(){try{var ub=document.getElementById('userBar');if(!ub)return;['bpLangBtn','bpThemeBtn'].forEach(function(id){var b=document.getElementById(id);if(b&&b.parentNode!==ub)ub.appendChild(b)})}catch(e){}},700);
+</script>
+</body>
 </html>
