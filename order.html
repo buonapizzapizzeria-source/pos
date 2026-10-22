@@ -2,7 +2,7 @@
 <html lang="it">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,interactive-widget=resizes-content">
 <meta name="theme-color" content="#150a09">
 <title>Ordina · Buona Pizza</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -115,6 +115,63 @@ input:focus,select:focus,textarea:focus{outline:0;border-color:var(--rd);box-sha
 .done{text-align:center;padding:8px 0}
 .done .no{font:800 68px/1 var(--f);color:var(--rd);margin:8px 0}
 @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
+
+/* ===== ADATTAMENTO SCHERMO (Android + iPhone) ===== */
+html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
+html.lock,html.lock body{overflow:hidden}
+body{min-height:100vh;min-height:100dvh;overflow-x:hidden;overflow-x:clip;padding-bottom:calc(120px + env(safe-area-inset-bottom))}
+button,.tb,.bt,.lk{touch-action:manipulation}
+input:not([type=checkbox]):not([type=radio]),textarea{-webkit-appearance:none;appearance:none}
+img,svg{max-width:100%}
+/* notch / bordi curvi in orizzontale */
+.hero{padding-left:max(20px,env(safe-area-inset-left));padding-right:max(20px,env(safe-area-inset-right))}
+.row,.tabs{padding-left:max(16px,env(safe-area-inset-left));padding-right:max(16px,env(safe-area-inset-right))}
+#list{padding-left:max(16px,env(safe-area-inset-left));padding-right:max(16px,env(safe-area-inset-right))}
+#note{margin-left:max(16px,env(safe-area-inset-left));margin-right:max(16px,env(safe-area-inset-right))}
+.bar{padding-left:max(16px,env(safe-area-inset-left));padding-right:max(16px,env(safe-area-inset-right))}
+.ov{overscroll-behavior:contain;padding-left:env(safe-area-inset-left);padding-right:env(safe-area-inset-right)}
+.box{max-height:92vh;max-height:92dvh;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;padding-left:max(20px,env(safe-area-inset-left));padding-right:max(20px,env(safe-area-inset-right))}
+/* misure fluide: si adattano da 320px in su */
+.lg{width:clamp(110px,36vw,148px);height:clamp(110px,36vw,148px)}
+.ring b{font-size:clamp(46px,16vw,64px)}
+#tv h2,.box h2{font-size:clamp(24px,7.6vw,30px)}
+.cat{font-size:clamp(22px,6.8vw,27px)}
+.nm,.pr{font-size:clamp(18px,5.4vw,21px)}
+.nm{overflow-wrap:anywhere}
+.ds{overflow-wrap:anywhere}
+.tot.g{font-size:clamp(21px,6.4vw,26px)}
+.done .no{font-size:clamp(52px,17vw,68px)}
+/* schermi molto stretti (iPhone SE, Android piccoli) */
+@media(max-width:360px){
+  .it{padding:13px;border-radius:20px}
+  .bt{padding:9px 14px;font-size:15px}
+  .lk{padding:9px 10px;font-size:14px}
+  .bar .l{font-size:15px;padding-left:10px}
+  .bar .t{font-size:18px;padding-right:12px}
+  .box{padding-top:20px}
+  .seg{flex-wrap:wrap}
+}
+/* tablet e schermi larghi: carta a due colonne */
+@media(min-width:760px){
+  .wrap{max-width:960px}
+  #list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));column-gap:16px;align-items:start}
+  #list .cat,#list .empty,#list .err{grid-column:1/-1}
+  .ov{align-items:center}
+  .box{border-radius:28px;max-height:88vh;max-height:88dvh}
+}
+@media(min-width:1200px){.wrap{max-width:1080px}}
+/* telefono in orizzontale (altezza ridotta) */
+@media(orientation:landscape) and (max-height:500px){
+  .hero{padding-top:max(10px,env(safe-area-inset-top))}
+  .lg{width:76px;height:76px;margin-top:0}
+  .halo{inset:-24px}
+  .sub{margin-top:12px}
+  .ring{padding:6px 16px;min-width:90px}
+  .ring b{font-size:40px}
+  .box{max-height:96vh;max-height:96dvh}
+  .ov{align-items:flex-end}
+  body{padding-bottom:calc(96px + env(safe-area-inset-bottom))}
+}
 </style>
 </head>
 <body>
@@ -335,6 +392,12 @@ async function send(){
 }
 (function(){var u=getComputedStyle(document.documentElement).getPropertyValue('--logo').trim().slice(5,-2),l=document.createElement('link');l.rel='icon';l.href=u;document.head.appendChild(l);var t=document.querySelector('.top');addEventListener('scroll',function(){t.classList.toggle('sc',scrollY>190)},{passive:true})})();
 init();
+</script>
+<script>
+/* blocca lo scroll sotto i fogli aperti (iPhone e Android) */
+(function(){var a=document.getElementById('ov'),b=document.getElementById('sov');if(!a||!b||!window.MutationObserver)return;
+function sync(){document.documentElement.classList.toggle('lock',!a.classList.contains('hide')||!b.classList.contains('hide'))}
+var o=new MutationObserver(sync);o.observe(a,{attributes:true,attributeFilter:['class']});o.observe(b,{attributes:true,attributeFilter:['class']});sync()})();
 </script>
 </body>
 </html>
