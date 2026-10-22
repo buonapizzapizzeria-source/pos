@@ -12466,7 +12466,7 @@ openCartIngModal = function(key){
     Object.keys(C.groups).forEach(function(g){PKG_LABEL[g]=C.groups[g];Object.keys(PKG_ORDER).forEach(function(k){var a=PKG_ORDER[k];if(a.indexOf(g)<0)a.splice(Math.max(0,a.indexOf('Altro')),0,g);});});
     Object.keys(PKG_LABEL).forEach(function(g){PK_PRICE[g]=C.gp[g]!=null?C.gp[g]:(PP0[g]||0);});
   }
-  function save(){if(BP_ROLE!=='manager')return;try{localStorage.setItem(KEY,JSON.stringify(C));}catch(e){}apply();push();}
+  function save(){if(BP_ROLE!=='manager')return;try{localStorage.setItem(KEY,JSON.stringify(C));}catch(e){}apply();push();try{setTimeout(function(){if(window.bpPublishExtras)window.bpPublishExtras();},400);}catch(e){}}
   ingGroup=function(i){var o=C.ov[ingNorm(i)];return o&&o.g&&PKG_LABEL[o.g]?o.g:_ig(i);};
   ingPrice=function(i){var o=C.ov[ingNorm(i)];return o&&o.p!=null?o.p:_ip(i);};
   getAllKnownIngredients=function(){var l=_gk(),sn=new Set(l.map(ingNorm));C.custom.forEach(function(n){if(!sn.has(ingNorm(n))){sn.add(ingNorm(n));l.push(n);}});return l;};
@@ -19999,7 +19999,7 @@ try{
     }catch(e){ console.warn('[bp] extra online', e); }
     busy = false;
   }
-  setInterval(pub, 15000); setTimeout(pub, 5000);
+  setInterval(pub, 4000); setTimeout(pub, 3000);
   window.bpPublishExtras = function(){ return pub(true); };
 })();
 }catch(e){console.error("[bp] extra",e)}
