@@ -132,8 +132,22 @@ async function init(){
     else if(now<open||now>=close) note('🕒 Ordini online dalle <b>'+esc(M.open)+'</b> alle <b>'+esc(M.close)+'</b>.');
     else{canOrder=true; var x=[]; if(M.fee>0&&M.free_from>0&&!TV)x.push('consegna '+euro(M.fee)+' per ordini inferiori a '+euro(M.free_from)); x.push(TV?'pagamento al tavolo':'pagamento alla consegna / al ritiro'); note('<span class="mut">'+esc(x.join(' · '))+'</span>');}
     if(TV){var t=$('tv');t.classList.remove('hide');t.innerHTML='<small>BUONA PIZZA</small><h2>Benvenuti al <b>Tavolo '+TV+'</b>!</h2><p>Scegli le tue pizze, personalizzale con ⚙️ e invia: ti serviamo noi al tavolo. Buon appetito! 🍕</p>'}
+    /* ordine sincronizzato dalla cassa (bp36_data / menu_order) */
+    var OC=null;
+    try{
+      var ro=await sb.from('bp36_data').select('data').eq('key','menu_order').maybeSingle();
+      var O=ro&&ro.data&&ro.data.data;
+      if(O&&O.cats&&O.cats.length){
+        OC={};O.cats.forEach(function(c,i){OC[c]=i});
+        var PP={};Object.keys(O.prods||{}).forEach(function(c){PP[c]={};O.prods[c].forEach(function(x,i){PP[c]['i'+x[0]]=i;PP[c]['n'+String(x[1]).toLowerCase()]=i})});
+        var ppos=function(p){var m=PP[p.category||'Menu'];if(!m)return 9999;var v=m['i'+p.id];if(v==null)v=m['n'+String(p.name||'').toLowerCase()];return v==null?9999:v};
+        M.menu=M.menu.map(function(p,i){return [p,i]}).sort(function(a,b){return ppos(a[0])-ppos(b[0])||a[1]-b[1]}).map(function(x){return x[0]});
+      }
+    }catch(e){OC=null}
     var seen=[];M.menu.forEach(function(p){var c=p.category||'Altro';if(seen.indexOf(c)<0)seen.push(c)});
-    CATS=seen.map(function(c,i){return [c,i]}).sort(function(a,b){return rank(a[0])-rank(b[0])||a[1]-b[1]}).map(function(x){return x[0]});
+    CATS=seen.map(function(c,i){return [c,i]}).sort(function(a,b){
+      if(OC){var x=OC[a[0]],y=OC[b[0]];if(x!=null||y!=null)return (x==null?1000+rank(a[0]):x)-(y==null?1000+rank(b[0]):y)||a[1]-b[1]}
+      return rank(a[0])-rank(b[0])||a[1]-b[1]}).map(function(x){return x[0]});
     cat=CATS[0]||'';
     $('chips').innerHTML=CATS.map(function(c){return '<button data-c="'+esc(c)+'"><span>'+cico(c)+'</span>'+esc(c)+'</button>'}).join('');
     paintList();

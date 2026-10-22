@@ -12466,7 +12466,7 @@ openCartIngModal = function(key){
     Object.keys(C.groups).forEach(function(g){PKG_LABEL[g]=C.groups[g];Object.keys(PKG_ORDER).forEach(function(k){var a=PKG_ORDER[k];if(a.indexOf(g)<0)a.splice(Math.max(0,a.indexOf('Altro')),0,g);});});
     Object.keys(PKG_LABEL).forEach(function(g){PK_PRICE[g]=C.gp[g]!=null?C.gp[g]:(PP0[g]||0);});
   }
-  function save(){if(BP_ROLE!=='manager')return;try{localStorage.setItem(KEY,JSON.stringify(C));}catch(e){}apply();push();try{setTimeout(function(){if(window.bpPublishExtras)window.bpPublishExtras();},400);}catch(e){}}
+  function save(){if(BP_ROLE!=='manager')return;try{localStorage.setItem(KEY,JSON.stringify(C));}catch(e){}apply();push();}
   ingGroup=function(i){var o=C.ov[ingNorm(i)];return o&&o.g&&PKG_LABEL[o.g]?o.g:_ig(i);};
   ingPrice=function(i){var o=C.ov[ingNorm(i)];return o&&o.p!=null?o.p:_ip(i);};
   getAllKnownIngredients=function(){var l=_gk(),sn=new Set(l.map(ingNorm));C.custom.forEach(function(n){if(!sn.has(ingNorm(n))){sn.add(ingNorm(n));l.push(n);}});return l;};
@@ -13452,6 +13452,7 @@ openCartIngModal = function(key){
     "drop policy if exists \"bp36_read\" on bp36_data;\ndrop policy if exists \"bp36_write\" on bp36_data;\n" +
     "create policy \"bp36_read\" on bp36_data for select to authenticated using (key = 'cfg' or exists (select 1 from staff_profiles s where lower(s.email)=lower(auth.jwt()->>'email') and s.role='manager'));\n" +
     "create policy \"bp36_write\" on bp36_data for all to authenticated using (exists (select 1 from staff_profiles s where lower(s.email)=lower(auth.jwt()->>'email') and s.role='manager')) with check (exists (select 1 from staff_profiles s where lower(s.email)=lower(auth.jwt()->>'email') and s.role='manager'));\n" +
+    "drop policy if exists \"bp36_public_order\" on bp36_data;\ncreate policy \"bp36_public_order\" on bp36_data for select to anon using (key = 'menu_order');\n" +
     "alter publication supabase_realtime add table bp36_data;";
   function hasSb(){ try{ return typeof sb !== 'undefined' && !!sb; }catch(e){ return false; } }
   function statusHtml(){
@@ -13469,7 +13470,7 @@ openCartIngModal = function(key){
   }
   function saveCfg(){
     if(!isMgr()){ flash('Solo il responsabile può modificare', true); return false; }
-    C._u = Date.now(); jset(CFGK, C); push('cfg', C); apply(); return true;
+    C._u = Date.now(); jset(CFGK, C); push('cfg', C); apply(); publishOrder(); return true;
   }
 
   /* ---------- acquisti: archivio con merge ---------- */
@@ -13502,6 +13503,7 @@ openCartIngModal = function(key){
       });
       if(isMgr() && !(r.data || []).some(function(x){ return x.key === 'purchases'; }) && purAll().length) push('purchases', {list: purAll()});
       if(isMgr() && !(r.data || []).some(function(x){ return x.key === 'cfg'; }) && C._u) push('cfg', C);
+      if(isMgr()){ clearTimeout(pubTimer); pubTimer = setTimeout(publishOrder, 500); }
     }catch(e){ remote = 'off'; }
     paintStatus();
   }
@@ -13588,6 +13590,25 @@ openCartIngModal = function(key){
     cats.forEach(function(c){ if(g[c]) out = out.concat(sortInCat(g[c], c, f)); });
     return out;
   }
+  /* ---------- sync ordine -> menu online (order.html) ---------- */
+  var lastOrderSig = '', pubTimer = null;
+  function publishOrder(){
+    try{
+      if(!isMgr()) return;
+      var list = (raw && raw.length) ? raw : allMenu;
+      if(!list || !list.length) return;
+      var cats = orderedCats(list), f = salesFreq(), g = {}, prods = {};
+      list.forEach(function(p){ var c = p.category || 'Menu'; (g[c] = g[c] || []).push(p); });
+      cats.forEach(function(c){ if(g[c]) prods[c] = sortInCat(g[c], c, f).map(function(p){ return [String(p.id), String(p.name || '')]; }); });
+      var sig = JSON.stringify([cats, prods]);
+      if(sig === lastOrderSig) return;
+      if(remote !== 'on') return;
+      lastOrderSig = sig;
+      push('menu_order', {_u: Date.now(), cats: cats, prods: prods});
+    }catch(e){}
+  }
+  var _sortMenuOrig = sortMenu;
+  sortMenu = function(list){ var r = _sortMenuOrig(list); clearTimeout(pubTimer); pubTimer = setTimeout(publishOrder, 2000); return r; };
   function refreshViews(){
     safe(function(){ renderCategories(); });
     safe(function(){ populateProductDropdown(); });
@@ -19999,7 +20020,7 @@ try{
     }catch(e){ console.warn('[bp] extra online', e); }
     busy = false;
   }
-  setInterval(pub, 4000); setTimeout(pub, 3000);
+  setInterval(pub, 15000); setTimeout(pub, 5000);
   window.bpPublishExtras = function(){ return pub(true); };
 })();
 }catch(e){console.error("[bp] extra",e)}
