@@ -31,6 +31,7 @@ h1{font-size:22px;margin:0 0 4px}
 .upd{text-align:center;color:var(--mut);font-size:12px}
 .cancel .big{filter:grayscale(1)}
 .rb{display:block;text-align:center;margin-top:14px;padding:12px;border-radius:12px;background:var(--ok);color:#fff;font-weight:800;text-decoration:none}
+@keyframes bpflash{0%{box-shadow:0 0 0 0 rgba(18,183,106,.7)}100%{box-shadow:0 0 0 22px rgba(18,183,106,0)}}.bpflash{animation:bpflash 1.1s ease-out 2}
 </style>
 </head>
 <body>
@@ -93,22 +94,43 @@ function render(o){
   document.getElementById('upd').textContent = 'Aggiornato alle '+new Date().toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'})+' · si aggiorna da solo';
 }
 
-var timer = null;
+var timer = null, busy = false, lastSig = '', lastStatus = null, fails = 0, done = false;
+var POLL_MS = 3000;
+function stamp(){
+  document.getElementById('upd').textContent = 'Aggiornato alle '+new Date().toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit',second:'2-digit'})+' · si aggiorna da solo';
+}
 async function load(){
   if(!token){ root.innerHTML='<div class="card err">Link non valido.</div>'; return; }
+  if(busy || done) return;
+  busy = true;
   try{
     var r = await sb.rpc('get_order_tracking', {p_token: token});
     if(r.error) throw r.error;
-    if(!r.data){ root.innerHTML='<div class="card err">Ordine non trovato. Controlla il link.</div>'; return; }
-    render(r.data);
-    if(r.data.status==='Completato' || r.data.status==='Annullato'){ clearInterval(timer); }
+    if(!r.data){ root.innerHTML='<div class="card err">Ordine non trovato. Controlla il link.</div>'; done = true; return; }
+    fails = 0;
+    var o = r.data, sig = JSON.stringify([o.status, o.pending, o.total, o.items]);
+    if(sig !== lastSig){
+      var changed = lastStatus !== null && o.status !== lastStatus;
+      lastSig = sig; lastStatus = o.status;
+      render(o);
+      if(changed){
+        try{ if(navigator.vibrate) navigator.vibrate([200,100,200]); }catch(e){}
+        var c = document.querySelector('.card'); if(c){ c.classList.add('bpflash'); }
+      }
+    }
+    stamp();
+    if(o.status==='Completato' || o.status==='Annullato'){ done = true; clearInterval(timer); }
   }catch(e){
+    fails++;
     if(!document.querySelector('.steps')) root.innerHTML='<div class="card err">Impossibile caricare l’ordine. Riprova tra poco.<br><small>'+esc((e&&e.message)||e)+'</small></div>';
-  }
+  }finally{ busy = false; }
 }
+function tick(){ if(!document.hidden && (fails < 5 || Date.now()%5 === 0)) load(); }
 load();
-timer = setInterval(function(){ if(!document.hidden) load(); }, 15000);
+timer = setInterval(tick, POLL_MS);
 document.addEventListener('visibilitychange', function(){ if(!document.hidden) load(); });
+window.addEventListener('online', load);
+window.addEventListener('focus', load);
 </script>
 </body>
 </html>
