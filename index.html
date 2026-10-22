@@ -19921,5 +19921,39 @@ html.bp-dark #bp93FeeHint.free,body.dark-mode #bp93FeeHint.free{color:#5ee08a}
  window.renderCart=renderCart=function(){try{auto()}catch(e){console.error('[bp] fee',e)}return _rc.apply(this,arguments)};
 }catch(x){console.error('[bp] v93 fee',x)}})();
 </script>
+<script>
+/* ===== Extra online: pubblica la lista extra (nomi, ordine, prezzi) per la pagina ordini online ===== */
+(function(){
+  if(window.__bpPubX) return; window.__bpPubX = 1;
+  var LK = 'bp_pubx_hash', busy = false;
+  function build(){
+    var all = ingUnique(getAllKnownIngredients()), out = {};
+    ['pizza', 'panino', 'piadina', 'altro'].forEach(function(k){
+      out[k] = ingSections(k, all).map(function(s){
+        return {g: s.short, i: s.items.map(function(n){ return [n, Math.round((Number(ingPrice(n)) || 0) * 100) / 100]; })};
+      });
+    });
+    return out;
+  }
+  async function pub(force){
+    if(busy || typeof BP_ROLE === 'undefined' || BP_ROLE !== 'manager' || !sb || !navigator.onLine) return;
+    if(!allMenu || !allMenu.length) return;
+    var d, h;
+    try{ d = build(); }catch(e){ return; }
+    if(!d.pizza.length && !d.altro.length) return;
+    h = JSON.stringify(d);
+    try{ if(force !== true && h === localStorage.getItem(LK)) return; }catch(e){}
+    busy = true;
+    try{
+      var r = await sb.from('extras_config').upsert({id: 2, data: d, updated_at: new Date().toISOString()});
+      if(r.error){ console.warn('[bp] extra online non pubblicati:', r.error.message); }
+      else{ try{ localStorage.setItem(LK, h); }catch(e){} try{ rdToast('🌐 Extra online aggiornati', 'Visibili subito ai clienti'); }catch(e){} }
+    }catch(e){ console.warn('[bp] extra online', e); }
+    busy = false;
+  }
+  setInterval(pub, 15000); setTimeout(pub, 5000);
+  window.bpPublishExtras = function(){ return pub(true); };
+})();
+</script>
 </body>
 </html>
