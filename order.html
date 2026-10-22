@@ -160,7 +160,7 @@ async function init(){
     var open=mins(M.open),close=mins(M.close),now=mins(M.now);
     if(!M.enabled) note('Gli ordini online sono momentaneamente chiusi.<br><span class="mut">Chiamaci in pizzeria.</span>');
     else if(now<open||now>=close) note('Ordini online dalle <b>'+esc(M.open)+'</b> alle <b>'+esc(M.close)+'</b>.');
-    else{canOrder=true;var x=[];if(M.fee>0&&M.free_from>0&&!TV)x.push('consegna a domicilio '+euro(M.fee)+' per ordini sotto '+euro(M.free_from)+', gratis da '+euro(M.free_from));x.push(TV?'si paga al tavolo':'si paga alla consegna o al ritiro');note('<span class="mut">'+esc(x.join(' · '))+'</span>')}
+    else{canOrder=true;var x=[];if(M.fee>0&&M.free_from>0&&!TV)x.push('consegna '+euro(M.fee)+' per ordini inferiori a '+euro(M.free_from));x.push(TV?'si paga al tavolo':'si paga alla consegna o al ritiro');note('<span class="mut">'+esc(x.join(' · '))+'</span>')}
     if(TV){document.title='Tavolo '+TV+' · Buona Pizza';var t=$('tv');t.classList.remove('hide');t.innerHTML='<div class="ring"><small>Tavolo</small><b>'+TV+'</b></div><h2>Benvenuti</h2><p>Scegli, personalizza e invia: ti serviamo noi al tavolo. Buon appetito!</p>'}
     var seen=[];M.menu.forEach(function(p){var c=p.category||'Altro';if(seen.indexOf(c)<0)seen.push(c)});
     CATS=seen.map(function(c,i){return [c,i]}).sort(function(a,b){return rank(a[0])-rank(b[0])||a[1]-b[1]}).map(function(x){return x[0]});
@@ -287,7 +287,7 @@ function upd(){
   $('ls').innerHTML=ls.map(function(l){var k=l.id+'|'+l.size+'|'+l.rem.slice().sort().join(',')+'#'+l.add.slice().sort().join(',');
     return '<div class="ln"><div><b>'+esc(l.name)+'</b>'+(l.size==='Maxi'?' <span class="tag ex">Maxi</span>':'')+'<div class="mu">'+euro(l.price)+'</div>'+(modsHtml(l)?'<div class="mods">'+modsHtml(l)+'</div>':'')+'</div><div class="q2"><button data-m="'+esc(k)+'" aria-label="Togli uno">−</button><b>'+l.qty+'</b><button data-p="'+esc(k)+'" aria-label="Aggiungi uno">+</button></div></div>'}).join('');
   var del=$('ft')&&$('ft').value==='Consegna'&&!TV,fee=del&&sub()<Number(M.free_from||0)?Number(M.fee||0):0;
-  $('tt').innerHTML='<div class="tot"><span>Prodotti</span><span>'+euro(sub())+'</span></div>'+(fee>0?'<div class="tot"><span>Consegna</span><span>'+euro(fee)+'</span></div>':'')+'<div class="tot g"><span>Totale</span><span>'+euro(sub()+fee)+'</span></div>'+(fee>0?'<div class="mut" style="font-size:13px;margin-top:8px">Ordine sotto '+euro(M.free_from)+': aggiunti '+euro(fee)+' di consegna. Aggiungi ancora '+euro(M.free_from-sub())+' di prodotti per averla gratis.</div>':'');
+  $('tt').innerHTML='<div class="tot"><span>Prodotti</span><span>'+euro(sub())+'</span></div>'+(fee>0?'<div class="tot"><span>Consegna</span><span>'+euro(fee)+'</span></div>':'')+'<div class="tot g"><span>Totale</span><span>'+euro(sub()+fee)+'</span></div>'+(fee>0?'<div class="mut" style="font-size:13px;margin-top:8px">Consegna '+euro(fee)+' per ordini inferiori a '+euro(M.free_from)+'</div>':'');
   paintBar();paintList();
 }
 $('box').onclick=function(e){
