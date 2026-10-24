@@ -18020,8 +18020,8 @@ function drawQuick(){var c=$('#bpOrder');if(!c)return;var q=$('#bpoQuick');if(!q
 /* ---- promemoria bibita negli ordini aperti (cassa / autista) ---- */
 function badges(){try{[].forEach.call(document.querySelectorAll('#openOrders .order'),function(card){var h=card.querySelector('h3'),m=h&&/#(\d+)/.exec(h.textContent);if(!m)return;var id=m[1],its=itemsByOrder.get(Number(id))||itemsByOrder.get(id)||[],n=0;
   its.forEach(function(i){n+=bpMenuUnits(i)});
-  var old=card.querySelector('.b62d');var fd=bpFryDrink(its);if(!n&&!fd.fri){if(old)old.remove();return}
-  var o=orders.find(function(x){return String(x.id)===id}),dv=/consegna|domicilio/i.test(o&&o.order_type||''),t=(fd.fri?'🍟 '+fd.fri+'× fritti':'')+(fd.fri&&n?' · ':'')+(n?'🥤 '+n+'× bibita (menu) → '+(dv?'ricordarla all\'AUTISTA 🛵':'darla al cliente dalla CASSA 🛍️'):'');
+  var old=card.querySelector('.b62d');var fd=bpFryDrink(its);var nb=fd.bib;if(!nb&&!fd.fri){if(old)old.remove();return}
+  var o=orders.find(function(x){return String(x.id)===id}),dv=/consegna|domicilio/i.test(o&&o.order_type||''),t=(fd.fri?'🍟 '+fd.fri+'× fritti':'')+(fd.fri&&nb?' · ':'')+(nb?'🥤 '+nb+'× bibite'+(n?' (di cui '+n+' menu)':'')+' → '+(dv?'ricordarle all\'AUTISTA 🛵':'darle al cliente dalla CASSA 🛍️'):'');
   if(old){if(old.textContent!==t)old.textContent=t}else{var d=document.createElement('div');d.className='b62d';d.textContent=t;card.insertBefore(d,card.firstChild)}})}catch(e){}}
 setInterval(badges,1200);
 /* ---- header: solo icone · Sconto/QR con disegno ---- */
