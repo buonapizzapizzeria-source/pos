@@ -285,6 +285,28 @@ h1{font-size:24px;margin:4px 0 14px}h2{font-size:18px;margin:0 0 12px}.grid{disp
 .rc-mod-line{font-size:13px;font-weight:850;color:#000;display:flex;align-items:center;gap:4px}
 .rc-mod-line.senza{color:#b42318}
 .rc-mod-line.extra{color:#16794b}
+/* v72: scontrino professionale — ingredienti / senza / extra / note */
+.rc-ing-box{margin-top:6px;padding:4px 0 4px 8px;border-left:3px solid #000}
+.rc-ing-row{display:flex;gap:7px;align-items:baseline;font-size:13px;font-weight:800;line-height:1.4;color:#000;padding:3px 0;border-top:1px dotted #98a2b3}
+.rc-ing-row:first-child{border-top:0}
+.rc-ing-lbl{flex:0 0 86px;font-size:10.5px;font-weight:950;letter-spacing:.4px;padding:2px 4px;border-radius:4px;background:#000;color:#fff;text-align:center;text-transform:uppercase;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.rc-ing-row.base .rc-ing-lbl{background:#fff;color:#000;border:1.5px solid #000}
+.rc-ing-row.senza .rc-ing-lbl{background:#b42318}
+.rc-ing-row.extra .rc-ing-lbl{background:#16794b}
+.rc-ing-row.note .rc-ing-lbl{background:#b54708}
+.rc-ing-txt{flex:1;min-width:0;word-break:break-word}
+.rc-ing-txt i{font-style:normal;margin:0 4px;opacity:.55}
+.rc-ing-row.base .rc-ing-txt{font-weight:700;color:#344054}
+.rc-ing-x{text-decoration:line-through;text-decoration-thickness:2px;color:#b42318;font-weight:950}
+.rc-ing-row.senza .rc-ing-txt{color:#b42318;font-weight:950;text-transform:uppercase}
+.rc-ing-row.extra .rc-ing-txt{color:#16794b;font-weight:950;text-transform:uppercase}
+.rc-ing-row.note .rc-ing-txt{color:#000;font-weight:950;text-transform:uppercase}
+.rc-ing-row.other{font-weight:850}
+@media print{body.bp23-kitchen-print .rc-ing-row{font-size:15px!important}body.bp23-kitchen-print .rc-ing-lbl{font-size:12px!important;flex-basis:96px!important}}
+.pk-tab.note{border-color:#f79009!important;color:#93370d}
+.pk-tab.note.on{background:#b54708!important;color:#fff!important;border-color:#b54708!important}
+.pk-tile.note{border-style:dashed!important;border-color:#f79009!important;background:#fffaeb}
+.pk-tile.note.sel{border-style:solid!important;background:#fef0c7}
 .rc-note-alert{margin:4px 14px 12px;padding:9px 12px;background:#fff8eb;border:2px dashed #000;border-radius:8px;color:#000;font-size:13.5px;font-weight:800}
 .rc-summary-box{border-top:2px solid #101828;background:#f8f9fb;padding:10px 14px;display:grid;gap:5px;font-size:13.5px;font-weight:800}
 .rc-summary-row{display:flex;justify-content:space-between}
@@ -3486,6 +3508,10 @@ function pkOpen(){ pkEnsure().classList.remove("hidden"); document.body.style.ov
 function pkClose(){ var d = el("pkRoot"); if(d) d.classList.add("hidden"); document.body.style.overflow = ""; }
 function pkSizePrice(p, size){ return (size === "Maxi" && p.price_maxi != null && Number(p.price_maxi) > 0) ? Number(p.price_maxi) : Number(p.price_normal || 0); }
 
+function bpNoteList(kind){
+  try{ if(window.bpQuickGet) return window.bpQuickGet(kind); }catch(e){}
+  return kind === "pizza" ? [["Ben cotta","🔥",0],["Doppia mozzarella","🧀",2],["Poco mozzarella","🧀",0]] : [];
+}
 function openIngPicker(cfg){
   var all = ingUnique(getAllKnownIngredients()), kind = getProductKind(cfg.product), secs = ingSections(kind, all);
   var hasBase = !!(cfg.baseIngs && cfg.baseIngs.length);
@@ -3530,11 +3556,21 @@ function openIngPicker(cfg){
       var n = 0; s.items.forEach(function(i){ if(cfg.added.has(i)) n++; });
       h += '<button type="button" class="pk-tab' + (tab === s.key ? " on" : "") + '" data-t="' + esc(s.key) + '">' + s.short + (n ? '<i class="pk-bdg">' + n + '</i>' : '') + '</button>';
     });
+    var nl = bpNoteList(kind), nn = 0; nl.forEach(function(x){ if(cfg.added.has(x[0])) nn++; });
+    h += '<button type="button" class="pk-tab note' + (tab === "__note" ? " on" : "") + '" data-t="__note">📝 Note · ملاحظات' + (nn ? '<i class="pk-bdg">' + nn + '</i>' : '') + '</button>';
     el("pkTop").innerHTML = h;
+  }
+  function toggleNote(n){
+    if(cfg.added.has(n)) cfg.added.delete(n);
+    else { cfg.added.add(n); if(n === "Doppia mozzarella") cfg.added.delete("Poco mozzarella"); if(n === "Poco mozzarella") cfg.added.delete("Doppia mozzarella"); }
+  }
+  function noteTile(x){
+    var pr = ingPrice(x[0]);
+    return '<button type="button" class="pk-tile note' + (cfg.added.has(x[0]) ? " sel" : "") + '" data-note="' + esc(x[0]) + '"><span class="pk-ico">' + esc(x[1] || "📝") + '</span><span class="pk-name">' + esc(x[0]) + '</span>' + (pr > 0 ? '<span class="pk-price">+ ' + euro(pr) + '</span>' : '<span class="pk-price free">GRATIS</span>') + '</button>';
   }
   var QUICK = kind === "pizza" ? [["Ben cotta","🔥",0],["Doppia mozzarella","🧀",2],["Poco mozzarella","🧀",0]] : [];
   function drawQuick(){
-    window.__pkQuickRedraw = drawQuick;
+    window.__pkQuickRedraw = function(){ drawQuick(); drawTabs(); if(tab === "__note") drawBody(true); };
     var qb = el("pkQuick");
     if(window.bpQuickGet) QUICK = window.bpQuickGet(kind);
     qb.classList.remove("hidden");
@@ -3551,7 +3587,10 @@ function openIngPicker(cfg){
   }
   function drawBody(keep){
     var b = el("pkBody"), st = keep ? b.scrollTop : 0, html = "";
-    if(tab === "senza"){
+    if(tab === "__note"){
+      var nl = bpNoteList(kind);
+      html = '<div class="pk-hint"><button type="button" class="pk-qk" data-qedit="' + esc(kind) + '" style="margin-inline-end:8px">✏️ Modifica note · تعديل الملاحظات</button>Tocca per <b>AGGIUNGERE / TOGLIERE</b> · اضغط للإضافة أو الإزالة</div>' + (nl.length ? '<div class="pk-grid">' + nl.map(noteTile).join("") + '</div>' : '<p class="muted" style="padding:14px">Nessuna nota rapida · لا توجد ملاحظات، اضغط ✏️ للإضافة</p>');
+    } else if(tab === "senza"){
       var pool = (cfg.baseIngs && cfg.baseIngs.length) ? ingUnique(cfg.baseIngs) : all;
       html = '<div class="pk-hint">Tocca ciò che va <b>TOLTO</b> (Senza)</div><div class="pk-grid">' + pool.map(function(i){ return tile(i, "senza"); }).join("") + '</div>';
     } else {
@@ -3577,6 +3616,8 @@ function openIngPicker(cfg){
   el("pkTop").onclick = function(e){ var c = e.target.closest("[data-t]"); if(!c) return; tab = c.getAttribute("data-t"); drawTabs(); drawBody(false); };
   el("pkBody").onclick = function(e){
     var t = e.target.closest(".pk-tile"); if(!t) return;
+    var nt = t.getAttribute("data-note");
+    if(nt != null){ toggleNote(nt); cfg.onChange(); drawAll(true); return; }
     var ing = t.getAttribute("data-ing"), set = tab === "senza" ? cfg.removed : cfg.added;
     if(set.has(ing)) set.delete(ing); else set.add(ing);
     cfg.onChange(); drawAll(true);
@@ -7953,6 +7994,39 @@ function splitProductAndMods(rawName){
   return {baseName, mods: modsRaw};
 }
 
+/* v72: scontrino — ingredienti originali + senza + extra + note */
+function bpRcNoteSet(){
+  var o = {};
+  ["ben cotta","doppia mozzarella","poco mozzarella"].forEach(function(n){ o[n] = 1; });
+  try{ ["pizza","altro"].forEach(function(k){ bpNoteList(k).forEach(function(x){ o[ingNorm(x[0])] = 1; }); }); }catch(e){ bpWarn(e); }
+  return o;
+}
+function bpRcFindProd(baseName){
+  var n = String(baseName || "").replace(/^Menu\s+/i, "").trim().toLowerCase();
+  try{ return allMenu.find(function(p){ return String(p.name).toLowerCase() === n; }) || null; }catch(e){ return null; }
+}
+function bpRcModsHtml(parsed, isService){
+  var rem = [], add = [], notes = [], other = [], ns = bpRcNoteSet();
+  parsed.mods.forEach(function(m){
+    if(/^senza\b/i.test(m)) rem.push(m.replace(/^senza\s+/i, "").trim());
+    else if(m.charAt(0) === "+"){ var n = m.replace(/^\+\s*/, "").trim(); (ns[ingNorm(n)] ? notes : add).push(n); }
+    else other.push(m);
+  });
+  function row(cls, lbl, txt){ return '<div class="rc-ing-row ' + cls + '"><span class="rc-ing-lbl">' + lbl + '</span><span class="rc-ing-txt">' + txt + '</span></div>'; }
+  var up = function(a){ return a.map(function(x){ return esc(x.toUpperCase()); }).join(' <i>•</i> '); };
+  var h = "", prod = isService ? null : bpRcFindProd(parsed.baseName);
+  var base = (prod && !(typeof bpGustiInfo === "function" && bpGustiInfo(parsed.baseName))) ? ingUnique(parseIngredients(prod.description)) : [];
+  if(base.length){
+    var rn = rem.map(ingNorm);
+    h += row("base", "🍕 Ingredienti", base.map(function(b){ return rn.indexOf(ingNorm(b)) >= 0 ? '<s class="rc-ing-x">' + esc(b) + '</s>' : '<span>' + esc(b) + '</span>'; }).join('<i>·</i>'));
+  }
+  if(rem.length) h += row("senza", "🚫 Senza", up(rem));
+  if(add.length) h += row("extra", "➕ Extra", up(add));
+  if(notes.length) h += row("note", "📝 Note", up(notes));
+  other.forEach(function(m){ h += row("other note", "📝 Note", esc(m)); });
+  return h ? '<div class="rc-ing-box">' + h + '</div>' : "";
+}
+
 function buildReceiptHtml(o, items){
   let when = new Date(o.created_at).toLocaleString('it-IT',{dateStyle:'short',timeStyle:'short'});
   let isConsegna = String(o.order_type||'').toLowerCase().includes('consegna');
@@ -7970,18 +8044,7 @@ function buildReceiptHtml(o, items){
       ? `<span class="rc-size-tag maxi">MAXI</span>`
       : `<span class="rc-size-tag normale">Normale</span>`);
 
-    let modsLines = parsed.mods.map(m=>{
-      let ml = m.toLowerCase();
-      if(ml.startsWith('senza')){
-        let ingName = m.replace(/^senza\s+/i,'').trim();
-        return `<div class="rc-mod-line senza">🚫 SENZA: ${esc(ingName.toUpperCase())}</div>`;
-      }
-      if(ml.startsWith('+')){
-        let ingName = m.replace(/^\+\s*/,'').trim();
-        return `<div class="rc-mod-line extra">➕ EXTRA: ${esc(ingName.toUpperCase())}</div>`;
-      }
-      return `<div class="rc-mod-line">📝 ${esc(m)}</div>`;
-    }).join('');
+    let modsLines = bpRcModsHtml(parsed, isService);
 
     return `
       <div class="rc-item">
@@ -7993,7 +8056,7 @@ function buildReceiptHtml(o, items){
           </div>
           <div class="rc-item-price">${euro(i.line_total)}</div>
         </div>
-        ${modsLines ? `<div class="rc-mods-list">${modsLines}</div>` : ''}
+        ${modsLines}
       </div>
     `;
   }).join('') : '<p class="muted">Nessun prodotto registrato.</p>';
@@ -12228,7 +12291,7 @@ function ssCustVoice(t){
 }
 function ssDrawCust(b, i){
   var c = ssCtx(); if(!c){ b.innerHTML = ""; return; }
-  var secs = ingSections(getProductKind(c.prod), ingUnique(getAllKnownIngredients())), q = ss.q;
+  var secs = ingSections(getProductKind(c.prod), ingUnique(getAllKnownIngredients())).concat([{key: "__note", short: "📝 Note · ملاحظات", items: bpNoteList(getProductKind(c.prod)).map(function(x){ return x[0]; })}]), q = ss.q;
   if(!ss.sec || !secs.some(function(s){ return s.key === ss.sec; })) ss.sec = secs.length ? secs[0].key : null;
   var h = ssSearchBox(i, "🔍 Ingrediente · مكوّن (بدون بصل، زيادة جبنة)", false);
   h += '<div class="ss-lb" style="margin-top:0">📏 Formato · الحجم والكمية</div>';
@@ -12238,7 +12301,7 @@ function ssDrawCust(b, i){
   if(base.length) h += '<div class="ss-lb">🚫 Senza · بدون</div>' + base.map(function(x){ return '<button type="button" class="ss-ch rm' + (c.removed.has(x) ? " on" : "") + '" data-r="' + esc(x) + '">' + ingIcon(x) + " " + esc(x) + '</button>'; }).join("");
   var items = [];
   if(q) secs.forEach(function(s){ s.items.forEach(function(x){ if(ssIngQMatch(x, q) && items.indexOf(x) < 0) items.push(x); }); });
-  else { var cs = secs.filter(function(s){ return s.key === ss.sec; })[0]; if(cs) items = cs.items; h += secs.length ? '<div class="ss-lb">➕ Extra · إضافات <button type="button" class="ss-ch" data-xedit="' + esc(ss.sec) + '" data-xkind="' + esc(getProductKind(c.prod)) + '">✏️ Modifica lista · تعديل القائمة</button></div><div class="ss-tabs">' + secs.map(function(s){ var n = 0; s.items.forEach(function(x){ if(c.added.has(x)) n++; }); return '<button type="button" class="ss-ch sz' + (s.key === ss.sec ? " on" : "") + '" data-s="' + esc(s.key) + '">' + s.short + (n ? " (" + n + ")" : "") + '</button>'; }).join("") + '</div>' : ""; }
+  else { var cs = secs.filter(function(s){ return s.key === ss.sec; })[0]; if(cs) items = cs.items; h += secs.length ? '<div class="ss-lb">➕ Extra · إضافات <button type="button" class="ss-ch" ' + (ss.sec === "__note" ? 'data-qedit="' + esc(getProductKind(c.prod)) + '"' : 'data-xedit="' + esc(ss.sec) + '"') + ' data-xkind="' + esc(getProductKind(c.prod)) + '">✏️ Modifica lista · تعديل القائمة</button></div><div class="ss-tabs">' + secs.map(function(s){ var n = 0; s.items.forEach(function(x){ if(c.added.has(x)) n++; }); return '<button type="button" class="ss-ch sz' + (s.key === ss.sec ? " on" : "") + '" data-s="' + esc(s.key) + '">' + s.short + (n ? " (" + n + ")" : "") + '</button>'; }).join("") + '</div>' : ""; }
   if(q) h += '<div class="ss-lb">➕ Extra · إضافات</div>';
   h += items.map(function(x){ var pr = ingPrice(x); return '<button type="button" class="ss-ch ex' + (c.added.has(x) ? " on" : "") + '" data-e="' + esc(x) + '">' + ingIcon(x) + " " + esc(x) + ' <small>' + (pr > 0 ? "+" + euro(pr) : "gratis") + '</small></button>'; }).join("");
   if(q && !items.length && !AR_RX.test(q)) h += '<button type="button" class="ss-ch ex" data-e="' + esc(q) + '">＋ ' + esc(q) + '</button>';
@@ -12249,7 +12312,7 @@ function ssDrawCust(b, i){
     if((t = e.target.closest("[data-sz]"))){ cc.setSize(t.getAttribute("data-sz")); cc.sync(); ssRedrawTop(); return; }
     if((t = e.target.closest("[data-q]"))){ cc.setQty(Number(t.getAttribute("data-q"))); cc.sync(); ssRedrawTop(); return; }
     if((t = e.target.closest("[data-r]"))){ var r = t.getAttribute("data-r"); if(cc.removed.has(r)) cc.removed.delete(r); else cc.removed.add(r); cc.sync(); ssRedrawTop(); return; }
-    if((t = e.target.closest("[data-e]"))){ var x = t.getAttribute("data-e"); if(cc.added.has(x)) cc.added.delete(x); else cc.added.add(x); cc.sync(); ssRedrawTop(); return; }
+    if((t = e.target.closest("[data-e]"))){ var x = t.getAttribute("data-e"); if(cc.added.has(x)) cc.added.delete(x); else { cc.added.add(x); if(x === "Doppia mozzarella") cc.added.delete("Poco mozzarella"); if(x === "Poco mozzarella") cc.added.delete("Doppia mozzarella"); } cc.sync(); ssRedrawTop(); return; }
     if((t = e.target.closest("[data-s]"))){ ss.sec = t.getAttribute("data-s"); ssRedrawTop(); }
   };
 }
@@ -19923,7 +19986,7 @@ try{
 /* ===== bpV93shutter ===== */
 try{
 (function(){try{
- var root=document.documentElement,shut=false,anim=0,tm=0;
+ var root=document.documentElement,shut=false,anim=0,tm=0,openedAt=0,mounted=false;
  var H=function(){return document.querySelector('header')};
  /* durante l'animazione: aggiorna --p64-top e tieni ferma la pagina (niente salti) */
  function run(ms){var h=H();if(!h)return;cancelAnimationFrame(anim);var t0=performance.now(),last=h.offsetHeight;
@@ -19932,24 +19995,26 @@ try{
  function shutNow(instant){var h=H();if(!h||shut)return;shut=true;
   if(instant){h.style.transition='none';root.classList.add('bp-shut');h.style.height='30px';void h.offsetHeight;h.style.transition='';root.classList.remove('bp-boot');run(80);return}
   var h0=h.offsetHeight;h.style.height=h0+'px';void h.offsetHeight;root.classList.add('bp-shut');h.style.height='30px';run(520)}
- function openNow(){var h=H();if(!h||!shut)return;shut=false;h.style.transition='none';root.classList.remove('bp-shut');h.style.height='auto';var th=h.offsetHeight;h.style.height='30px';void h.offsetHeight;h.style.transition='';h.style.height=th+'px';run(520);
+ function openNow(){var h=H();if(!h||!shut)return;shut=false;openedAt=Date.now();clearTimeout(tm);h.style.transition='none';root.classList.remove('bp-shut');h.style.height='auto';var th=h.offsetHeight;h.style.height='30px';void h.offsetHeight;h.style.transition='';h.style.height=th+'px';run(520);
   setTimeout(function(){if(!shut)h.style.height=''},560)}
  function mount(){var h=H();if(!h||document.getElementById('bp93Strip'))return;var s=document.createElement('div');s.id='bp93Strip';s.setAttribute('role','button');s.setAttribute('aria-label','Apri barra strumenti');
   s.innerHTML='<span class="pill"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>Strumenti</span>';
   h.appendChild(s);
-  s.addEventListener('click',openNow);
+  s.addEventListener('click',function(){if(!shut&&root.classList.contains('bp-shut'))shut=true;openNow()});
   var b=h.querySelector('.brand');if(b)b.addEventListener('click',function(){if(!shut)shutNow()});
   var y0=null;h.addEventListener('touchstart',function(e){y0=e.touches[0].clientY},{passive:true});
-  h.addEventListener('touchmove',function(e){if(y0==null)return;var dy=e.touches[0].clientY-y0;if(!shut&&dy<-40){y0=null;shutNow()}else if(shut&&dy>12){y0=null;openNow()}},{passive:true});
+  h.addEventListener('touchmove',function(e){if(y0==null)return;var dy=e.touches[0].clientY-y0;if(!shut&&dy<-70&&Date.now()-openedAt>1500){y0=null;shutNow()}else if(shut&&dy>12){y0=null;openNow()}},{passive:true});
   h.addEventListener('touchend',function(){y0=null},{passive:true});
-  shutNow(true)}                       /* di default l'header parte alzato */
+  if(!mounted){mounted=true;shutNow(true)}}   /* l'header parte alzato SOLO al primo montaggio: il remount ogni 500ms non deve richiuderlo */
  /* clic su una voce dell'header (anche Stampa) = si richiude SUBITO, prima dell'azione;
     clic nel resto dell'app = si richiude dopo un attimo */
- document.addEventListener('click',function(e){var t=e.target;if(shut||!t||!t.closest)return;
+ document.addEventListener('click',function(e){var t=e.target;if(shut||!t||!t.closest||e.isTrusted===false)return;
   if(t.closest('#bp93Strip'))return;
-  if(t.closest('header')){if(!t.closest('.brand'))shutNow();return}
+  if(Date.now()-openedAt<700)return;   /* tocco che ha appena aperto Strumenti: non richiudere */
+   if(t.closest('header')){if(!t.closest('.brand')&&t.closest('button,a,summary,[role="button"]')){clearTimeout(tm);tm=setTimeout(shutNow,450)}return}
   if(t.closest('#bpNav,#bpMore,.modal-backdrop,#bpActSheet'))return;
-  clearTimeout(tm);tm=setTimeout(shutNow,320)},true);
+  if(Date.now()-openedAt<2500)return;   /* appena aperto: lascia il tempo di scegliere */
+  clearTimeout(tm);tm=setTimeout(shutNow,450)},true);
  window.addEventListener('afterprint',function(){shutNow()});
  mount();setInterval(function(){try{mount()}catch(e){}},500);
  setTimeout(function(){root.classList.remove('bp-boot')},3000);
