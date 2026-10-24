@@ -4074,7 +4074,6 @@ function enhanceNav(){
       var act = document.querySelector("[data-tab].active"), tb = act ? act.getAttribute("data-tab") : "new";
       if(tb !== "new" && !el("app").classList.contains("hidden")){ switchTab("new"); return; }
       if(window.__bpSkipToast){ window.__bpSkipToast = 0; return; }
-      rdToast("↩️ Indietro non esce dal programma", "Per uscire usa il pulsante 🚪 in alto");
     });
     document.addEventListener("pointerdown", function(){ if(rdFresh){ rdFresh = false; try{ history.pushState({rd: 1}, ""); }catch(e){ bpWarn(e); } } }, true);
     var ub = el("userBar"), lo = ub && ub.querySelector('button[onclick*="doLogout"]');
