@@ -10869,7 +10869,11 @@ el('kitchenTab').addEventListener('click', function(e){
       </div>
       <div id="loyaltyMsg" class="muted" style="margin:4px 0"></div>
       <div id="loyaltyStatsBar" class="stats-bar"></div>
-      <div id="loyaltyListContainer" class="menu-admin-list" style="margin-top:16px"></div>
+      <div style="margin-top:14px;position:relative">
+        <input id="bpLoySearch" type="search" autocomplete="off" placeholder="🔍 Cerca per nome, telefono o via…" style="width:100%;box-sizing:border-box;padding:14px 16px;font-size:17px;font-weight:800;border:2px solid #d9c9a8;border-radius:14px;background:#fff">
+        <div id="bpLoyCount" class="muted" style="margin:6px 4px 0;font-size:13px;font-weight:800"></div>
+      </div>
+      <div id="loyaltyListContainer" class="menu-admin-list" style="margin-top:10px"></div>
     `;
     appMain.appendChild(loyTab);
     if(typeof BP_TABS !== 'undefined'){
@@ -11289,7 +11293,22 @@ el('kitchenTab').addEventListener('click', function(e){
       return;
     }
 
-    listContainer.innerHTML = clientsArr.map(function(c){
+    function bpLoyNorm(t){ return String(t || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, ''); }
+    clientsArr.forEach(function(c){
+      var addrs = {}; (c.orders || []).forEach(function(o){ if(o && o.address) addrs[o.address] = 1; });
+      if(c.address) addrs[c.address] = 1;
+      c._txt = bpLoyNorm([c.name, c.phone].concat(Object.keys(addrs)).join(' '));
+      c._dig = String(c.phone || '').replace(/[^0-9]/g, '');
+    });
+    var bpDraw = function(){
+      var qEl = el('bpLoySearch'), cEl = el('bpLoyCount');
+      var terms = bpLoyNorm(qEl ? qEl.value : '').split(/\s+/).filter(Boolean);
+      var shown = !terms.length ? clientsArr : clientsArr.filter(function(c){
+        return terms.every(function(t){ var d = t.replace(/[^0-9]/g, ''); return c._txt.indexOf(t) >= 0 || (d.length >= 2 && d === t.replace(/^\+/, '') && c._dig.indexOf(d) >= 0); });
+      });
+      if(cEl) cEl.textContent = terms.length ? (shown.length + ' / ' + clientsArr.length + ' clienti') : '';
+      if(!shown.length){ listContainer.innerHTML = '<div class="panel" style="text-align:center;padding:24px"><p class="muted">Nessun cliente trovato.</p></div>'; return; }
+      listContainer.innerHTML = shown.map(function(c){
       var isVip = c.totalOrders >= 5;
       var isRegular = c.totalOrders >= 3 && !isVip;
       return `
@@ -11313,6 +11332,9 @@ el('kitchenTab').addEventListener('click', function(e){
         </div>
       `;
     }).join('');
+    };
+    var bpSi = el('bpLoySearch'); if(bpSi) bpSi.oninput = bpDraw;
+    bpDraw();
 
     listContainer.onclick = function(ev){
       var open = ev.target.closest && ev.target.closest('[data-loy-open]');
