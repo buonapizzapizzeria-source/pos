@@ -10268,7 +10268,12 @@ function renderKitchen(){
 el('kitchenTab').addEventListener('click', function(e){
   var c = e.target.closest('[data-st]'); if(c){ BP_STATION = c.getAttribute('data-st'); renderKitchen(); return; }
   if(e.target.closest('[data-fs]')){ try{ if(document.fullscreenElement) document.exitFullscreen(); else document.documentElement.requestFullscreen(); }catch(err){ bpWarn(err); } return; }
-  var g = e.target.closest('.kt-go'); if(g) updateOrderStatus(Number(g.getAttribute('data-oid')), g.getAttribute('data-next'));
+  var g = e.target.closest('.kt-go, .k35-go');
+  if(g){
+    var oid = g.getAttribute('data-oid'); oid = /^\d+$/.test(oid) ? Number(oid) : oid;
+    g.disabled = true; g.textContent = '⏳';
+    Promise.resolve(updateOrderStatus(oid, g.getAttribute('data-next'))).then(function(){ try{ renderKitchen(); }catch(err){ bpWarn(err); } }, function(err){ bpWarn(err); try{ renderKitchen(); }catch(e2){} });
+  }
 });
 }catch(e){ console.error("[bp] sezione non caricata: ruoli/storia/cucina", e); }
 
@@ -14142,7 +14147,7 @@ openCartIngModal = function(key){
     document.body.appendChild(kds); document.documentElement.classList.add('bp35-kds-on');
     kds.addEventListener('click', function(e){
       var g = e.target.closest('.k35-go');
-      if(g){ g.disabled = true; g.textContent = '⏳'; Promise.resolve(updateOrderStatus(Number(g.getAttribute('data-id')), g.getAttribute('data-next'))).then(function(){ renderKds(); }, function(){ renderKds(); }); return; }
+      if(g){ g.disabled = true; g.textContent = '⏳'; Promise.resolve(updateOrderStatus((function(v){ return /^\d+$/.test(v) ? Number(v) : v; })(g.getAttribute('data-id')), g.getAttribute('data-next'))).then(function(){ renderKds(); }, function(){ renderKds(); }); return; }
       var k = e.target.closest('[data-k]'); if(!k) return; var a = k.getAttribute('data-k');
       if(a === 'x') closeKds();
       else if(a === 'm' || a === 'p'){ var f = Math.max(.8, Math.min(1.8, (parseFloat(ls('bp35_kds_f')) || 1) + (a === 'p' ? .1 : -.1))); ls('bp35_kds_f', f.toFixed(1)); kds.style.setProperty('--k35f', f.toFixed(1)); }
@@ -21200,6 +21205,30 @@ try{
 })();
 </script>
 <script>(function(){var m=document.querySelector('img.logo61');var src=m&&m.getAttribute('src');if(!src)return;document.querySelectorAll('img[data-logo-copy]').forEach(function(i){i.src=src;});})();</script>
+<style id="bpFixKitchen">
+/* Cucina (tab): testo chiaro sulle carte scure */
+#kitchenTab .k35-col,#kitchenTab .k35-t{color:#f3f4f6}
+#kitchenTab .k35-th b{color:#fff;font-size:1.6em}
+#kitchenTab .k35-t .kt-item{color:#f9fafb;font-size:calc(var(--fs)*1.25);line-height:1.3;border-bottom:1px dashed #2a3753}
+#kitchenTab .k35-t .kt-q{background:#fbbf24;color:#111827}
+#kitchenTab .k35-t .kt-mod{font-size:.75em}
+#kitchenTab .k35-t .kt-mod.no,#bp35KDS .k35-mod.no{color:#fca5a5}
+#kitchenTab .k35-t .kt-mod.ex,#bp35KDS .k35-mod.ex{color:#86efac}
+#kitchenTab .k35-t .kt-mod.solo,#bp35KDS .k35-mod.solo{color:#fcd34d}
+#kitchenTab .k35-t .kt-top,#bp35KDS .kt-top{color:#fde68a}
+#kitchenTab .k35-t small,#bp35KDS .k35-t small{color:inherit;opacity:.9}
+/* box "bibite / ricordare alla cassa": fondo chiaro => testo scuro (nel KDS ereditava il bianco) */
+#kitchenTab .kt-note,#bp35KDS .kt-note{color:#7a2e0e}
+/* Schermo cucina grande: font piu' grande e leggibile */
+#bp35KDS .k35-it{font-size:1.35em;line-height:1.3;color:#f9fafb}
+#bp35KDS .k35-th b{font-size:1.8em}
+#bp35KDS .k35-when{font-size:1.1em}
+@media (max-width:900px){
+  #bp35KDS .k35-cols{display:block;overflow-y:auto;-webkit-overflow-scrolling:touch}
+  #bp35KDS .k35-col{min-height:0;margin-bottom:12px}
+  #bp35KDS .k35-list{overflow:visible}
+}
+</style>
 <style id="bpFixOrdersPad">
 #ordersTab,#allTab{padding-bottom:calc(120px + env(safe-area-inset-bottom,0px))!important}
 #app.wrap{padding-bottom:calc(120px + env(safe-area-inset-bottom,0px))!important}
