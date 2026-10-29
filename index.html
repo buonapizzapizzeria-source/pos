@@ -54,7 +54,7 @@
 })();
 </script>
   <title>
-   Buona Pizza · POS Pro v93
+   Buona Pizza · POS Pro v94
   </title>
   <style id="consolidated-styles">
    /* --- bp-styles --- */
@@ -21186,11 +21186,14 @@ try{
       window.doSaveOrder = async function(){
         try {
           var phoneInput = document.getElementById("phone");
-          var nameInput = document.getElementById("customer_name");
+          var nameInput = document.getElementById("customer") || document.getElementById("customer_name");
+          var typeInput = document.getElementById("type");
+          var isRitiro = !!typeInput && typeInput.value === "Asporto";
           var phoneVal = phoneInput ? phoneInput.value.trim() : "";
           var nameVal = nameInput ? nameInput.value.trim() : "";
           
-          if(phoneVal === "" && nameVal === ""){
+          /* Ritiro (Asporto): salva subito come cliente anonimo, senza conferma */
+          if(!isRitiro && phoneVal === "" && nameVal === ""){
             if(!confirm("⚠️ تنبيه: لم يتم إدخال بيانات العميل (الاسم أو الهاتف). هل تريد حفظ الطلب كعميل مجهول؟")){
                return;
             }
@@ -21217,6 +21220,17 @@ try{
 #kitchenTab .k35-t .kt-mod.solo,#bp35KDS .k35-mod.solo{color:#fcd34d}
 #kitchenTab .k35-t .kt-top,#bp35KDS .kt-top{color:#fde68a}
 #kitchenTab .k35-t small,#bp35KDS .k35-t small{color:inherit;opacity:.9}
+/* v94: forza leggibilità (alta specificità + !important) */
+html body #kitchenTab .k35-t,html body #kitchenTab .k35-t .k35-th,html body #kitchenTab .k35-t .kt-item,html body #kitchenTab .k35-t .kt-item *,html body #kitchenTab .k35-t .kt-sec span,html body #kitchenTab .k35-t small{color:#f9fafb!important}
+html body #kitchenTab .k35-t .kt-q{background:#fbbf24!important;color:#111827!important}
+html body #kitchenTab .k35-t .kt-sec em{background:#fff!important;color:#111!important}
+html body #kitchenTab .k35-t .kt-tag{background:#fde68a!important;color:#7c2d12!important}
+html body #kitchenTab .k35-t .kt-mod.no{color:#fca5a5!important}
+html body #kitchenTab .k35-t .kt-mod.ex{color:#86efac!important}
+html body #kitchenTab .k35-t .kt-mod.solo,html body #kitchenTab .k35-t .kt-top{color:#fcd34d!important}
+html body #kitchenTab .k35-t .kt-note{background:#fff4d6!important;color:#7a2e0e!important}
+html body #kitchenTab .k35-t .kt-note *{color:#7a2e0e!important}
+html body #kitchenTab .k35-t .k35-when{color:#fff!important}
 /* box "bibite / ricordare alla cassa": fondo chiaro => testo scuro (nel KDS ereditava il bianco) */
 #kitchenTab .kt-note,#bp35KDS .kt-note{color:#7a2e0e}
 /* Schermo cucina grande: font piu' grande e leggibile */
