@@ -8308,14 +8308,15 @@ function buildReceiptHtml(o, items){
     let nFri = (fd.fri || 0), nBib = Math.max(fd.bib || 0, q(G.bevanda) + (fd.menu || 0));
     let subF = fd.menu ? 'patatine dei menu: ' + fd.menu : '';
     let frPz = G.pizza.filter(function(i){ try{ return (bpWorkCat(i).fries || 0) > 0; }catch(e){ return false; } });
-    let frPzNames = frPz.map(function(i){ var nm = ''; try{ nm = splitProductAndMods(i.product_name).baseName; }catch(e){ nm = i.product_name; } return (Number(i.quantity||1) > 1 ? i.quantity + '× ' : '') + nm; }).join(' · ');
+    let frPzNames = frPz.map(function(i){ var nm = ''; try{ nm = splitProductAndMods(i.product_name).baseName; }catch(e){ nm = i.product_name; } return (Number(i.quantity||1) > 1 ? i.quantity + '× ' : '') + nm + (String(i.size||'').toLowerCase() === 'maxi' ? ' MAXI' : ''); }).join(' · ');
+    let frPzCount = q(frPz);
     const sec = (ico, title, n, arr, sub)=>`<div class="rc-sec"><div class="rc-sec-h"><span>${ico} ${title}</span><span>${n}</span></div>${sub ? `<div class="rc-sec-sub">${sub}</div>` : ''}${arr.map(bpRenderRcItem).join('')}</div>`;
     let out = '';
     if(G.pizza.length) out += sec('🍕', 'PIZZE', q(G.pizza), G.pizza, '');
     if(G.panino.length) out += sec('🥙', 'PANINI &amp; PIADINE', q(G.panino), G.panino, '');
     if(G.dolce.length) out += sec('🍰', 'DOLCI', q(G.dolce), G.dolce, '');
     if(nFri) out += sec('🍟', 'FRITTI', nFri, G.fritto, subF ? 'comprese ' + subF : '');
-    if(pzF) out += '<div class="rc-sec"><div class="rc-sec-h"><span>🍕 PATATINE SOPRA LA PIZZA</span><span>' + pzF + '</span></div><div class="rc-sec-sub">su ' + (pzF === 1 ? '1 pizza' : pzF + ' pizze') + (frPzNames ? ': ' + frPzNames : '') + ' · non da imballare</div></div>';
+    if(pzF) out += '<div class="rc-sec"><div class="rc-sec-h"><span>🍕 PATATINE SOPRA LA PIZZA</span><span>' + pzF + '</span></div><div class="rc-sec-sub">su ' + (frPzCount === 1 ? '1 pizza' : frPzCount + ' pizze') + (frPzCount !== pzF ? ' (' + pzF + ' porzioni)' : '') + (frPzNames ? ': ' + frPzNames : '') + ' · non da imballare</div></div>';
     if(nBib) out += sec('🥤', 'BEVANDE', nBib, G.bevanda, fd.menu ? 'comprese bibite dei menu: ' + fd.menu : '');
     if(G.servizio.length) out += `<div class="rc-sec">${G.servizio.map(bpRenderRcItem).join('')}</div>`;
     itemsHtml = out || itemsHtml;
@@ -8426,16 +8427,17 @@ function buildKitchenReceiptHtml(o, items){
 
   let foodItems = items.filter(i=>!bpIsSvc(i.product_name));
   /* المطبخ يشوف البيتزا اللي عليها بطاطس فقط */
-  let kebabPzItems = foodItems.filter(function(i){ try{ var w = bpWorkCat(i); return w.k === 'pizza' && w.kebabPizza; }catch(e){ return false; } });
+  const KS = bpKitchenSplit(foodItems);   /* motore unico cucina */
+  let kebabPzItems = KS.kebabPz;
   /* pizza kebab: SEMPRE in cucina (carne + salse da aggiungere sopra la pizza) */
-  let pizzaItems = foodItems.filter(function(i){ try{ return isPizzaItem(i) && bpWorkCat(i).fries > 0 && kebabPzItems.indexOf(i) < 0; }catch(e){ return false; } });
+  let pizzaItems = KS.pzFries;
   const krTag = i => {
     if(krIsSingleFries(i)) return `<span class="kr-fries kr-fill">🍟 SINGOLE${krSinglePrice(i) ? ' · ' + krSinglePrice(i) : ''}</span>`;
     try{ if(bpMenuUnits(i) > 0) return '<span class="kr-fries kr-menu">🍟🥤 MENU</span>'; }catch(e){}
     if(krIsFried(i)) return '<span class="kr-fries">🍤 DA FRIGGERE</span>';
     return '';
   };
-  let kitchenItems = foodItems.filter(krIsKitchenLine);
+  let kitchenItems = KS.panino.concat(KS.dolce, KS.fritto, KS.bevanda);
 
   const bpRenderRcItem = (i, isSmall)=>{
     let parsed = splitProductAndMods(i.product_name);
@@ -8483,14 +8485,7 @@ function buildKitchenReceiptHtml(o, items){
 
   let itemsHtml = '';
   if(kitchenItems.length){
-    let G = {panino: [], dolce: [], fritto: [], bevanda: []};
-    kitchenItems.forEach(function(i){
-      let base = splitProductAndMods(i.product_name).baseName.toLowerCase();
-      if(krIsFried(i) || /patatine|chips|fritti/.test(base)) G.fritto.push(i);
-      else if(/panin|piadin/.test(base)) G.panino.push(i);
-      else if(/dolc|dolce/.test(base)) G.dolce.push(i);
-      else G.bevanda.push(i);
-    });
+    let G = {panino: KS.panino, dolce: KS.dolce, fritto: KS.fritto, bevanda: KS.bevanda};
     if(G.panino.length) itemsHtml += sec('🥙', 'PANINI & PIADINE', G.panino);
     if(G.dolce.length) itemsHtml += sec('🍰', 'DOLCI', G.dolce);
     if(G.fritto.length) itemsHtml += sec('🍟', 'FRITTI', G.fritto);
@@ -8537,7 +8532,7 @@ function buildKitchenReceiptHtml(o, items){
     let singleQ = 0, singlePr = '', menuQ = 0, topQ = 0;
     foodItems.forEach(i => { if(krIsSingleFries(i)){ singleQ += qty(i); if(!singlePr) singlePr = krSinglePrice(i); } });
     try{ menuQ = bpFryDrink(items).menu || 0; }catch(e){}
-    pizzaItems.forEach(i => { topQ += krTopFries(i); });
+    pizzaItems.concat(kebabPzItems).forEach(i => { topQ += krTopFries(i); });
     let patQ = singleQ + menuQ + topQ;
 
     const otherFr = foodItems.filter(i => { try{
@@ -8631,6 +8626,94 @@ function bpCompletoLabel(i){   /* '' | 'Completo' (m.: panino, falafel) | 'Compl
   }catch(e){ return ''; }
 }
 function bpIsCompleto(i){ return !!bpCompletoLabel(i); }
+/* gruppo cucina: UNICA fonte per la comanda cucina e per la schermata Cucina */
+function krGroupOf(i){
+  var base = splitProductAndMods(i.product_name).baseName.toLowerCase();
+  if(krIsFried(i) || /patatine|chips|fritti/.test(base)) return 'fritto';
+  if(/panin|piadin|kebab|shawarma|falafel|durum|hot\s*dog|hotdog|salsiccia/.test(base)) return 'panino';
+  if(/dolc|dolce/.test(base)) return 'dolce';
+  return 'bevanda';
+}
+/* ingredienti da mettere sulla pizza kebab (senza base pomodoro/mozzarella, senza "senza", + extra) */
+function bpKebabTopList(it){
+  try{
+    var pp = splitProductAndMods(it.product_name), pr = bpRcFindProd(pp.baseName), list = pr ? parseIngredients(pr.description) : [];
+    while(list.length && /^(pom|pomodoro|mozz|mozzarella)/i.test(String(list[0]).trim())) list.shift();
+    var rem = [], add = [];
+    (pp.mods || []).forEach(function(m){ if(/^senza\b/i.test(m)) rem.push(m.replace(/^senza\s+/i, '').trim().toLowerCase()); else if(m.charAt(0) === '+' && !/^\+\s*(bibita|patatine)$/i.test(m.trim())) add.push(m.replace(/^\+\s*/, '').trim()); });
+    return list.filter(function(x){ return rem.indexOf(String(x).trim().toLowerCase()) < 0; }).concat(add);
+  }catch(e){ return []; }
+}
+/* ============================================================
+   MOTORE UNICO "COMANDA CUCINA"
+   Una sola definizione di: cosa va in cucina, come si raggruppa e come si scrive una riga.
+   Usato da: comanda cucina (ricevuta), schermata Cucina, schermo cucina grande.
+   Per cambiare una regola (anche in futuro) basta modificare QUI.
+   ============================================================ */
+var BP_KITCHEN_SECTIONS = [
+  ['kebabPz', '🍕', 'PIZZA KEBAB · DA COMPLETARE'],
+  ['panino',  '🥙', 'PANINI & PIADINE'],
+  ['dolce',   '🍰', 'DOLCI'],
+  ['fritto',  '🍟', 'FRITTI'],
+  ['bevanda', '🥤', 'BEVANDE'],
+  ['pzFries', '🍕', 'PIZZE CON PATATINE']
+];
+function bpKitchenSplit(items){
+  var out = {kebabPz: [], panino: [], dolce: [], fritto: [], bevanda: [], pzFries: [], all: []};
+  (items || []).forEach(function(i){
+    try{
+      if(!i || bpIsSvc(i.product_name)) return;
+      if(isPizzaItem(i)){
+        var w = bpWorkCat(i);
+        if(w.kebabPizza) out.kebabPz.push(i); else if(w.fries > 0) out.pzFries.push(i);
+      } else if(krIsKitchenLine(i)){
+        (out[krGroupOf(i)] || out.bevanda).push(i);
+      }
+    }catch(e){}
+  });
+  BP_KITCHEN_SECTIONS.forEach(function(sc){ out.all = out.all.concat(out[sc[0]]); });
+  return out;
+}
+function bpKitchenEnsureCss(){
+  if(document.getElementById('ktSecCss')) return;
+  var cs = document.createElement('style'); cs.id = 'ktSecCss';
+  cs.textContent = '.kt-sec{display:flex;justify-content:space-between;align-items:center;margin:8px 0 3px;padding:3px 9px;border-radius:8px;background:#2a3753;color:#fff;font-weight:900;font-size:.82em;letter-spacing:.4px}.kt-sec em{font-style:normal;background:#fff;color:#111;border-radius:6px;padding:0 7px}.kt-tag{display:inline-block;margin-inline-start:6px;padding:1px 7px;border-radius:7px;background:#fde68a;color:#7c2d12;font-weight:900;font-size:.72em;white-space:nowrap}.kt-completo{font-weight:900;white-space:nowrap}.kt-top{display:block;font-weight:800;opacity:.95;margin:1px 0 3px 22px;font-size:.9em}';
+  document.head.appendChild(cs);
+}
+/* HTML delle righe cucina per schermate (mode: 'tab' = tab Cucina, 'kds' = schermo grande) */
+function bpKitchenHtml(plan, mode){
+  bpKitchenEnsureCss();
+  var kds = mode === 'kds', ci = kds ? 'k35-it' : 'kt-item', cm = kds ? 'k35-mod' : 'kt-mod';
+  function line(i){
+    var p = splitProductAndMods(i.product_name), isF = false;
+    try{ isF = bpIsMenu(p); if(isF) p = bpMenuStrip(p); }catch(e){}
+    var disp = isF ? 'Menu ' + p.baseName : p.baseName.replace(/^men[uù]\s+/i, '');
+    var so = false; try{ so = bpSoloOf(p); }catch(e){}
+    var mods = (so ? '<div class="' + cm + ' solo">🥩 SOLO CARNE</div>' : '') + p.mods.map(function(m){
+      if(/^\+?\s*solo\b/i.test(m)) return '';
+      var no = /^senza\s+/i.test(m); if(no && so) return '';
+      return '<div class="' + cm + ' ' + (no ? 'no' : 'ex') + '">' + (no ? '🚫 SENZA ' : /^nota:/i.test(m) ? '📝 ' : '➕ EXTRA ') + esc(m.replace(/^senza\s+|^\+\s*|^nota:\s*/i, '').toUpperCase()) + '</div>';
+    }).join('');
+    var extra = '', top = '';
+    try{ var lb = bpCompletoLabel(i); if(lb) extra += ' <span class="kt-completo">(' + lb + ')</span>'; }catch(e){}
+    try{
+      if(krIsSingleFries(i)) extra += '<span class="kt-tag">🍟 SINGOLE</span>';
+      else{
+        if(isPizzaItem(i) && krTopFries(i) > 0) extra += '<span class="kt-tag">🍟 SU PIZZA ×' + krTopFries(i) + '</span>';
+        if(bpMenuUnits(i) > 0) extra += '<span class="kt-tag">🍟🥤 MENU</span>';
+      }
+    }catch(e){}
+    try{ if(isPizzaItem(i) && bpWorkCat(i).kebabPizza){ var tl = bpKebabTopList(i); if(tl.length) top = '<span class="kt-top">' + tl.map(esc).join(' · ') + '</span>'; } }catch(e){}
+    var q = kds ? '<b>' + esc(i.quantity) + '×</b> ' : '<span class="kt-q">' + i.quantity + '×</span> ';
+    var maxi = String(i.size).toLowerCase() === 'maxi' ? (kds ? ' <em>MAXI</em>' : ' <span class="kt-maxi">MAXI</span>') : '';
+    return '<div class="' + ci + '">' + q + bpNameHtml(disp) + maxi + extra + top + mods + '</div>';
+  }
+  var qty = function(a){ return a.reduce(function(n, i){ return n + Number(i.quantity || 1); }, 0); };
+  return BP_KITCHEN_SECTIONS.map(function(sc){
+    var a = plan[sc[0]]; if(!a || !a.length) return '';
+    return '<div class="kt-sec"><span>' + sc[1] + ' ' + sc[2] + '</span><em>' + qty(a) + '</em></div>' + a.map(line).join('');
+  }).join('');
+}
 function krIsKitchenLine(i){
   try{
     if(!i || bpIsSvc(i.product_name) || isPizzaItem(i)) return false;
@@ -8643,7 +8726,7 @@ function krSinglePrice(i){ try{ var v = Number(i.unit_price); return isFinite(v)
 function bpIsKitchenItem(productName){
   let base = splitProductAndMods(productName).baseName.toLowerCase();
   return /^men[uù]\s+(kebab|shawarma|panin|piadin|dolc|dolce|hot\s*dog)/.test(base) ||
-         /kebab|shawarma|panin|piadin|dolc|dolce|patatine|fritti|chips|hot\s*dog|hotdog|salsiccia/.test(base) ||
+         /kebab|shawarma|falafel|durum|panin|piadin|dolc|dolce|patatine|fritti|chips|hot\s*dog|hotdog|salsiccia/.test(base) ||
          /^fritti$|^patatine$|^chips$|^dolci$|^hot\s*dog$|^hotdog$/.test(base);
 }
 
@@ -8652,11 +8735,7 @@ function isPizzaItem(i){
 }
 
 function bpHasKitchenItems(items){
-  return items.some(function(i){
-    if(bpIsSvc(i.product_name)) return false;
-    if(isPizzaItem(i)){ try{ var w0 = bpWorkCat(i); return w0.fries > 0 || w0.kebabPizza; }catch(e){ return false; } }
-    return krIsKitchenLine(i);
-  });
+  return bpKitchenSplit(items).all.length > 0;
 }
 
 async function showDetails(o){
@@ -10163,85 +10242,26 @@ function bpStationOf(name){
 function renderKitchen(){
   var tab = el('kitchenTab'); if(!tab) return;
   var act = orders.filter(function(o){ var s = normStatus(o.status); return !o.online_pending && (s === 'Nuovo' || s === 'In preparazione'); });
-  var bd = el('kitchenCountBadge'); if(bd) bd.textContent = act.length;
+  var bd = el('kitchenCountBadge'); if(bd) bd.textContent = act.filter(function(o){ return bpKitchenSplit(itemsByOrder.get(o.id) || []).all.length > 0; }).length;
   if(tab.classList.contains('hidden')) return;
-  var ST = [['all', 'Tutti'], ['pizza', '🍕 Pizza'], ['kebab', '🥙 Kebab'], ['cucina', '🍟 Cucina']];
+  var ST = [];   /* niente filtri di postazione: la Cucina mostra solo la comanda cucina */
   el('kitchenChips').innerHTML = ST.map(function(s){ return '<button type="button" class="kt-chip' + (BP_STATION === s[0] ? ' on' : '') + '" data-st="' + s[0] + '">' + s[1] + '</button>'; }).join('') + '<button type="button" class="kt-chip" data-fs="1">⛶</button>';
   act.sort(function(a, b){ return getOrderUrgencyMeta(a).sortMinutes - getOrderUrgencyMeta(b).sortMinutes; });
   
-  /* === Funzione helper: mappa stazione moderna === */
-  function stationOf(name){
-    var base = splitProductAndMods(name).baseName.toLowerCase();
-    var p = allMenu.find(function(x){ return x.name.toLowerCase() === base; });
-    var k = p ? getProductKind(p) : (/pizz|calzon|margherita|diavola|marinara/.test(base) ? 'pizza' : (/kebab|shawarma/.test(base) ? 'kebab' : (/panin|piadin/.test(base) ? 'kebab' : 'cucina')));
-    return k === 'pizza' ? 'pizza' : (k === 'kebab' ? 'kebab' : 'cucina');
+  /* === Contenuto = comanda cucina (motore unico bpKitchenSplit / bpKitchenHtml). Colonne per stato. === */
+  function kCard(o, isNew){
+    var items = (itemsByOrder.get(o.id) || []).filter(function(i){ return !bpIsSvc(i.product_name); });
+    var plan = bpKitchenSplit(items);
+    if(!plan.all.length) return '';
+    var pt = splitTimeAndNotes(o.notes), deliv = /consegna|domicilio/i.test(o.order_type || '');
+    var lines = bpKitchenHtml(plan, 'tab') + bpPatatineLine(items) + bpDrinkRemind(items, deliv);
+    return '<div class="k35-t' + (isNew ? ' new' : '') + '"><div class="k35-th"><b>#' + o.id + '</b><span class="k35-when">' + esc(pt.time === 'Prima possibile' ? 'SUBITO' : pt.time) + '</span><span style="margin-inline-start:auto">' + (deliv ? '🛵' : '🛍️') + '</span></div><div class="rd-timer ok" data-id="' + o.id + '"></div>' + lines + (pt.cleanNotes ? '<div class="k35-note">📝 ' + esc(pt.cleanNotes) + '</div>' : '') + (isNew ? '<button type="button" class="k35-go a" data-oid="' + o.id + '" data-next="In preparazione">▶ INIZIA</button>' : '<button type="button" class="k35-go b" data-oid="' + o.id + '" data-next="Pronto">✅ PRONTO</button>') + '</div>';
   }
-  
-  /* === Colonna per stazione (pizza/kebab/cucina) con sotto-colonne per stato === */
-  function stationCol(station, title){
-    var stationOrders = act.filter(function(o){
-      var items = (itemsByOrder.get(o.id) || []).filter(function(i){ 
-        return !bpIsSvc(i.product_name) && (BP_STATION === 'all' || stationOf(i.product_name) === station);
-      });
-      return items.length > 0;
-    });
-    
-    if(!stationOrders.length) return '';
-    
-    var colHtml = '<div class="k35-col"><h2>' + title + '<span>' + stationOrders.length + '</span></h2><div class="k35-list">';
-    
-    /* Sotto-sezione: Nuovo */
-    var newCards = stationOrders.filter(function(o){ return normStatus(o.status) === 'Nuovo'; }).map(function(o){
-      var items = (itemsByOrder.get(o.id) || []).filter(function(i){ 
-        return !bpIsSvc(i.product_name) && stationOf(i.product_name) === station;
-      });
-      if(!items.length) return '';
-      var pt = splitTimeAndNotes(o.notes), deliv = /consegna|domicilio/i.test(o.order_type || '');
-      var full = (itemsByOrder.get(o.id) || []).filter(function(i){ return !bpIsSvc(i.product_name); });
-      var lines = items.map(function(i){
-        var p = splitProductAndMods(i.product_name), isF = bpIsMenu(p), mu = bpMenuUnits(i), out = '';
-        if(isF) p = bpMenuStrip(p);
-        var disp = isF ? 'Menu ' + p.baseName : p.baseName.replace(/^men[uù]\s+/i, '');
-        var __so = bpSoloOf(p); var mods = (__so ? '<div class="kt-mod solo">🥩 SOLO CARNE</div>' : '') + p.mods.map(function(m){ if(/^\+?\s*solo\b/i.test(m)) return ''; var no = /^senza\s+/i.test(m); if(no && __so) return ''; return '<div class="kt-mod ' + (no ? 'no' : 'ex') + '">' + (no ? '🚫 SENZA ' : /^nota:/i.test(m) ? '📝 ' : '➕ EXTRA ') + esc(m.replace(/^senza\s+|^\+\s*|^nota:\s*/i, '').toUpperCase()) + '</div>'; }).join('');
-        out += '<div class="kt-item"><span class="kt-q">' + i.quantity + '×</span> ' + bpNameHtml(disp) + (String(i.size).toLowerCase() === 'maxi' ? ' <span class="kt-maxi">MAXI</span>' : '') + mods + '</div>';
-        return out;
-      }).join('');
-      if(station === 'cucina') lines += bpPatatineLine(full);
-      if(station !== 'pizza') lines += bpDrinkRemind(full, deliv);
-      return '<div class="k35-t new"><div class="k35-th"><b>#' + o.id + '</b><span class="k35-when">' + esc(pt.time === 'Prima possibile' ? 'SUBITO' : pt.time) + '</span><span style="margin-inline-start:auto">' + (deliv ? '🛵' : '🛍️') + '</span></div><div class="rd-timer ok" data-id="' + o.id + '"></div>' + lines + (pt.cleanNotes ? '<div class="k35-note">📝 ' + esc(pt.cleanNotes) + '</div>' : '') + '<button type="button" class="k35-go a" data-oid="' + o.id + '" data-next="In preparazione">▶ INIZIA</button></div>';
-    }).join('');
-    
-    if(newCards) colHtml += '<div style="margin-bottom:12px;padding-bottom:12px;border-bottom:1px dashed #2a3753"><strong style="color:#fbbf24;font-size:0.95em">🔵 Da iniziare</strong>' + newCards + '</div>';
-    
-    /* Sotto-sezione: In preparazione */
-    var prepCards = stationOrders.filter(function(o){ return normStatus(o.status) === 'In preparazione'; }).map(function(o){
-      var items = (itemsByOrder.get(o.id) || []).filter(function(i){ 
-        return !bpIsSvc(i.product_name) && stationOf(i.product_name) === station;
-      });
-      if(!items.length) return '';
-      var pt = splitTimeAndNotes(o.notes), deliv = /consegna|domicilio/i.test(o.order_type || '');
-      var full = (itemsByOrder.get(o.id) || []).filter(function(i){ return !bpIsSvc(i.product_name); });
-      var lines = items.map(function(i){
-        var p = splitProductAndMods(i.product_name), isF = bpIsMenu(p), mu = bpMenuUnits(i), out = '';
-        if(isF) p = bpMenuStrip(p);
-        var disp = isF ? 'Menu ' + p.baseName : p.baseName.replace(/^men[uù]\s+/i, '');
-        var __so = bpSoloOf(p); var mods = (__so ? '<div class="kt-mod solo">🥩 SOLO CARNE</div>' : '') + p.mods.map(function(m){ if(/^\+?\s*solo\b/i.test(m)) return ''; var no = /^senza\s+/i.test(m); if(no && __so) return ''; return '<div class="kt-mod ' + (no ? 'no' : 'ex') + '">' + (no ? '🚫 SENZA ' : /^nota:/i.test(m) ? '📝 ' : '➕ EXTRA ') + esc(m.replace(/^senza\s+|^\+\s*|^nota:\s*/i, '').toUpperCase()) + '</div>'; }).join('');
-        out += '<div class="kt-item"><span class="kt-q">' + i.quantity + '×</span> ' + bpNameHtml(disp) + (String(i.size).toLowerCase() === 'maxi' ? ' <span class="kt-maxi">MAXI</span>' : '') + mods + '</div>';
-        return out;
-      }).join('');
-      if(station === 'cucina') lines += bpPatatineLine(full);
-      if(station !== 'pizza') lines += bpDrinkRemind(full, deliv);
-      return '<div class="k35-t"><div class="k35-th"><b>#' + o.id + '</b><span class="k35-when">' + esc(pt.time === 'Prima possibile' ? 'SUBITO' : pt.time) + '</span><span style="margin-inline-start:auto">' + (deliv ? '🛵' : '🛍️') + '</span></div><div class="rd-timer ok" data-id="' + o.id + '"></div>' + lines + (pt.cleanNotes ? '<div class="k35-note">📝 ' + esc(pt.cleanNotes) + '</div>' : '') + '<button type="button" class="k35-go b" data-oid="' + o.id + '" data-next="Pronto">✅ PRONTO</button></div>';
-    }).join('');
-    
-    if(prepCards) colHtml += '<div><strong style="color:#86efac;font-size:0.95em">👨‍🍳 In preparazione</strong>' + prepCards + '</div>';
-    
-    colHtml += '</div></div>';
-    return colHtml;
+  function kCol(title, status, isNew){
+    var cards = act.filter(function(o){ return normStatus(o.status) === status; }).map(function(o){ return kCard(o, isNew); }).filter(Boolean);
+    return '<div class="k35-col"><h2>' + title + '<span>' + cards.length + '</span></h2><div class="k35-list">' + (cards.join('') || '<p class="k35-empty">Nessun ordine</p>') + '</div></div>';
   }
-  
-  /* Renderizza le 3 colonne per banco (Pizza, Kebab, Cucina) */
-  var html = stationCol('pizza', '🍕 PIZZA') + stationCol('kebab', '🥙 KEBAB') + stationCol('cucina', '🍟 CUCINA');
+  var html = kCol('🔵 DA INIZIARE', 'Nuovo', true) + kCol('👨‍🍳 IN PREPARAZIONE', 'In preparazione', false);
   el('kitchenCols').innerHTML = html;
   if(typeof rdTickTimers === 'function') rdTickTimers();
 }
@@ -12499,12 +12519,17 @@ el('kitchenTab').addEventListener('click', function(e){
   // v39: porzioni di patatine su una pizza (x quantita'): normale = 1; maxi intera = 2; maxi con patatine solo su una meta' = 1
   window.bpPizzaFries = function(it){
     try{
-      /* un menu (pizza+patatine+bibita) conta le sue patatine solo in 'patatine dei menu' */
-      if(typeof bpMenuUnits === 'function' && bpMenuUnits(it) > 0) return 0;
+      /* MENU (pizza+patatine+bibita): le patatine del menu stanno in 'patatine dei menu', ma se la PIZZA stessa ha le patatine sopra
+         (es. Menu Wurstel e Patatine) vanno contate ANCHE come patatine sopra la pizza. Si guarda solo la pizza base (senza "Menu" e senza flag +Bibita/+Patatine). */
+      var isMenuItem = false; try{ isMenuItem = (typeof bpMenuUnits === 'function' && bpMenuUnits(it) > 0); }catch(e){}
       var q = Number(it.quantity || 1), maxi = String(it.size || '').toLowerCase() === 'maxi';
       var pa = splitProductAndMods(it.product_name), FR = /patatin|fritt|chips/i, NO = /^\s*(senza|no)\b/i;
+      if(isMenuItem){
+        pa = {baseName: String(pa.baseName || '').replace(/^men[uù]\s+/i, '').trim(), mods: (pa.mods || []).filter(function(m){ return !/^\+\s*(bibita|patatine)$/i.test(String(m).trim()); })};
+      }
       function hasFr(nm, mods){
         var pr = bpRcFindProd(String(nm || '').replace(/^men[uù]\s+/i, '')) || bpRcFindProd(nm);
+        if((mods || []).some(function(m){ return NO.test(m) && FR.test(m); })) return false;   /* "Senza patatine" */
         var blob = String(nm || '') + ' ' + String((pr && pr.description) || '') + ' ' + (mods || []).filter(function(m){ return !NO.test(m); }).join(' ');
         return FR.test(blob);
       }
@@ -14073,19 +14098,12 @@ openCartIngModal = function(key){
   }
   function ticket(o, st){
     var items = getItems(o.id).filter(function(i){ return !bpIsSvc(i.product_name); });
-    var shown = items.filter(function(i){ return stationOk(i.product_name) || (kdsStation === 'altro' && bpMenuUnits(i) > 0); });
-    if(kdsStation !== 'all' && !shown.length) return '';
+    var plan = bpKitchenSplit(items);   /* stessa comanda cucina: motore unico */
+    if(items.length && !plan.all.length) return '';
     var pt = {time: 'Prima possibile', cleanNotes: ''}; try{ pt = splitTimeAndNotes(o.notes); }catch(e){}
     var r = slaFor(o), dl = isDeliv(o);
-    var lines = shown.length ? shown.map(function(i){
-      var p = {baseName: i.product_name, mods: []}; try{ p = splitProductAndMods(i.product_name); }catch(e){}
-      var isF = false, mu = 0; try{ mu = bpMenuUnits(i); isF = bpIsMenu(p); if(isF) p = bpMenuStrip(p); }catch(e){}
-      if(mu > 0 && kdsStation === 'altro') return '';
-      var __so = bpSoloOf(p); var mods = (__so ? '<div class="k35-mod solo">🥩 SOLO CARNE</div>' : '') + p.mods.map(function(m){ if(/^\+?\s*solo\b/i.test(m)) return ''; var no = /^senza\s+/i.test(m); if(no && __so) return ''; return '<div class="k35-mod ' + (no ? 'no' : 'ex') + '">' + (no ? '🚫 SENZA ' : /^nota:/i.test(m) ? '📝 ' : '➕ EXTRA ') + esc(m.replace(/^senza\s+|^\+\s*|^nota:\s*/i, '').toUpperCase()) + '</div>'; }).join('');
-      return '<div class="k35-it"><b>' + esc(i.quantity) + '×</b> ' + bpNameHtml(isF ? 'Menu ' + p.baseName : p.baseName.replace(/^men[uù]\s+/i, '')) + (String(i.size).toLowerCase() === 'maxi' ? ' <em>MAXI</em>' : '') + mods + '</div>';
-    }).join('') : '<div class="k35-it" style="opacity:.6">Articoli in caricamento…</div>';
-    if(shown.length && (kdsStation === 'all' || kdsStation === 'altro')) lines += bpPatatineLine(items, true);
-    if(shown.length && kdsStation !== 'forno') lines += bpDrinkRemind(items, dl);
+    var lines = plan.all.length ? bpKitchenHtml(plan, 'kds') : '<div class="k35-it" style="opacity:.6">Articoli in caricamento…</div>';
+    if(plan.all.length) lines += bpPatatineLine(items, true) + bpDrinkRemind(items, dl);
     var next, lbl, cls;
     if(st === 'Nuovo'){ next = 'In preparazione'; lbl = '▶ INIZIA'; cls = 'a'; }
     else if(st === 'In preparazione'){ next = 'Pronto'; lbl = '✅ PRONTO'; cls = 'b'; }
@@ -14118,7 +14136,6 @@ openCartIngModal = function(key){
     kds = document.createElement('div'); kds.id = 'bp35KDS'; kds.className = 'no-print';
     kds.style.setProperty('--k35f', ls('bp35_kds_f') || '1');
     kds.innerHTML = '<div class="k35-top"><div class="k35-ti">👨‍🍳 CUCINA</div><div id="k35Cnt"></div><div class="k35-sp"></div>' +
-      '<select id="k35St" title="Postazione"><option value="all">Tutti</option><option value="forno">🍕 Forno</option><option value="panini">🥙 Panini</option><option value="altro">🍟 Altro</option></select>' +
       '<select id="k35Late" title="Soglia ritardo">' + [15, 20, 25, 30, 40].map(function(m){ return '<option value="' + m + '"' + (m === lateMin() ? ' selected' : '') + '>ritardo ' + m + '′</option>'; }).join('') + '</select>' +
       '<button type="button" data-k="m">A−</button><button type="button" data-k="p">A+</button><button type="button" data-k="s">🚨</button><span id="k35Clock"></span><button type="button" data-k="x" class="x">✕</button></div>' +
       '<div class="k35-cols"></div>';
@@ -14131,7 +14148,6 @@ openCartIngModal = function(key){
       else if(a === 'm' || a === 'p'){ var f = Math.max(.8, Math.min(1.8, (parseFloat(ls('bp35_kds_f')) || 1) + (a === 'p' ? .1 : -.1))); ls('bp35_kds_f', f.toFixed(1)); kds.style.setProperty('--k35f', f.toFixed(1)); }
       else if(a === 's'){ ring(); }
     });
-    $('#k35St', kds).addEventListener('change', function(){ kdsStation = this.value; renderKds(); });
     $('#k35Late', kds).addEventListener('change', function(){ ls('bp35_late_min', this.value); alerted = {}; renderKds(); safe(checkLate); safe(decorate); });
     kdsSeen = null; kdsSig = ''; renderKds();
     kdsTick = setInterval(function(){
