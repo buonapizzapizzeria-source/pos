@@ -8468,7 +8468,7 @@ function buildKitchenReceiptHtml(o, items){
         <div class="rc-item-top${isDrink ? ' rc-dl' : ''}">
           <div class="${isDrink ? 'rc-dl-main' : ''}">
             <span class="${qtyClass}">${i.quantity}×</span>
-            <span class="${nameClass}" ${isSmall ? 'style="font-size:0.85em"' : ''}>${bpNameHtml((window.bpIsMenu&&bpIsMenu(parsed)?'Menu ':'')+parsed.baseName)}</span>
+            <span class="${nameClass}" ${isSmall ? 'style="font-size:0.85em"' : ''}>${bpNameHtml((window.bpIsMenu&&bpIsMenu(parsed)?'Menu ':'')+parsed.baseName)}</span>${bpCompletoLabel(i) ? '<span class="kr-completo" style="font-weight:900;margin-inline-start:6px;white-space:nowrap">(' + bpCompletoLabel(i) + ')</span>' : ''}
             ${sizeTag}${volHtml}${krTag(i)}
           </div>
         </div>
@@ -8611,6 +8611,26 @@ function krTopFries(i){   /* بطاطس فوق البيتزا (من غير بط�
   }catch(e){ return 0; }
 }
 function krIsFried(i){ try{ return bpWorkCat(i).k === 'fritto'; }catch(e){ return false; } }
+/* "(Completo)": panino/piadina/falafel/kebab (anche Menu) e pizza kebab con TUTTI gli ingredienti, nessun "senza" */
+function bpCompletoLabel(i){   /* '' | 'Completo' (m.: panino, falafel) | 'Completa' (f.: pizza, piadina) */
+  try{
+    if(!i || bpIsSvc(i.product_name)) return false;
+    var pa = splitProductAndMods(i.product_name), raw = String(pa.baseName || '').trim();
+    var w = bpWorkCat(i);
+    var pr = null;
+    try{ var rl = raw.toLowerCase(); pr = allMenu.find(function(x){ return String(x.name).toLowerCase() === rl; }) || bpRcFindProd(raw); }catch(e){}
+    var low = (String((pr && pr.category) || '') + ' ' + raw).toLowerCase();
+    var okType = (w.k === 'pizza') ? !!w.kebabPizza : /panin|piadin|falafel|kebab|kebap|shawarma|durum/.test(low);
+    if(!okType) return false;
+    if(!pr || !parseIngredients(pr.description).length) return false;
+    var mods = pa.mods || [];
+    if(mods.some(function(m){ return /^\s*(senza|no)\b/i.test(m) || /^\+?\s*solo\b/i.test(m); })) return false;
+    try{ if(bpSoloOf(pa)) return false; }catch(e){}
+    var fem = (w.k === 'pizza') || /pizz|piadin/.test(raw.toLowerCase());
+    return fem ? 'Completa' : 'Completo';
+  }catch(e){ return ''; }
+}
+function bpIsCompleto(i){ return !!bpCompletoLabel(i); }
 function krIsKitchenLine(i){
   try{
     if(!i || bpIsSvc(i.product_name) || isPizzaItem(i)) return false;
@@ -12543,7 +12563,7 @@ el('kitchenTab').addEventListener('click', function(e){
       var p = (typeof splitProductAndMods === 'function') ? splitProductAndMods(it.product_name) : {baseName: it.product_name, mods: []};
       var mods = (p.mods && p.mods.length) ? '<div style="font-size:13px;font-weight:700;margin-left:18px">' + p.mods.map(E).join(', ') + '</div>' : '';
       return '<div style="font-size:16px;font-weight:900;margin:6px 0;border-bottom:1px dashed #000;padding-bottom:4px">' +
-        '<div style="display:flex;justify-content:space-between"><span>' + E(it.quantity || 1) + 'x ' + (typeof bpGustiInfo === 'function' && bpGustiInfo(p.baseName) ? '</span><span style="flex:1;margin-left:6px">' + bpGustiPrintHtml(bpGustiInfo(p.baseName)) : E(p.baseName)) + '</span><span>' + E(it.size || '') + '</span></div>' + mods + '</div>';
+        '<div style="display:flex;justify-content:space-between"><span>' + E(it.quantity || 1) + 'x ' + (typeof bpGustiInfo === 'function' && bpGustiInfo(p.baseName) ? '</span><span style="flex:1;margin-left:6px">' + bpGustiPrintHtml(bpGustiInfo(p.baseName)) : E(p.baseName) + (bpCompletoLabel(it) ? ' <b>(' + bpCompletoLabel(it) + ')</b>' : '')) + '</span><span>' + E(it.size || '') + '</span></div>' + mods + '</div>';
     }
     // v38: comanda KEBAB + CUCINA. Chiaro: panini/piadine/kebab, fritti, patatine menu. Piccolo: pizze (con avviso se kebab/patatine sopra), bevande, dolci.
     var G = {pizza: [], panino: [], dolce: [], fritto: [], bevanda: []}, kebabPz = [], friesPz = [], menuPz = [], pzFries = 0;
@@ -12567,7 +12587,7 @@ el('kitchenTab').addEventListener('click', function(e){
         return list.length ? '<div style="font-size:14px;font-weight:800;margin:2px 0 0 18px">' + list.map(E).join(' · ') + '</div>' : '';
       }catch(e){ return ''; }
     }
-    function bigTag(it, tag){ return '<div style="font-size:16px;font-weight:900;margin:6px 0;border-bottom:1px dashed #000;padding-bottom:4px">' + E(it.quantity || 1) + 'x ' + E(nmOf(it)) + ' <span style="font-size:14px">(' + tag + ')</span></div>'; }
+    function bigTag(it, tag, extra){ return '<div style="font-size:16px;font-weight:900;margin:6px 0;border-bottom:1px dashed #000;padding-bottom:4px">' + E(it.quantity || 1) + 'x ' + E(nmOf(it)) + (extra ? ' ' + extra : '') + ' <span style="font-size:14px">(' + tag + ')</span></div>'; }
     function small(it, tag){
       var pp = splitProductAndMods(it.product_name), mods = (pp.mods && pp.mods.length) ? ' (' + pp.mods.map(E).join(', ') + ')' : '';
       return '<div style="font-size:11px;font-weight:400;margin:1px 0">' + E(it.quantity || 1) + 'x ' + E(pp.baseName) + mods + (tag ? ' <b style="font-size:12px">' + tag + '</b>' : '') + '</div>';
@@ -12577,7 +12597,7 @@ el('kitchenTab').addEventListener('click', function(e){
     var secs = [];
     if(G.panino.length || kebabPz.length){
       secs.push('<div><div style="' + hCss + '">KEBAB (' + (qtyOf(G.panino) + qtyOf(kebabPz)) + ')</div>' +
-        G.panino.map(itemHtml).join('') + kebabPz.map(function(it){ return bigTag(it, 'KEBAB SU PIZZA').replace(/<\/div>$/, kebabTop(it) + '</div>'); }).join('') + '</div>');
+        G.panino.map(itemHtml).join('') + kebabPz.map(function(it){ return bigTag(it, 'KEBAB SU PIZZA', bpCompletoLabel(it) ? '(' + bpCompletoLabel(it) + ')' : '').replace(/<\/div>$/, kebabTop(it) + '</div>'); }).join('') + '</div>');
     }
     var singleN = 0, singlePr = ''; items.forEach(function(it){ if(krIsSingleFries(it)){ singleN += Number(it.quantity || 1); if(!singlePr) singlePr = krSinglePrice(it); } });
     if(G.fritto.length || friesPz.length || menuPz.length || fd0.fri || pzFries){
@@ -21164,7 +21184,16 @@ try{
 })();
 </script>
 <script>(function(){var m=document.querySelector('img.logo61');var src=m&&m.getAttribute('src');if(!src)return;document.querySelectorAll('img[data-logo-copy]').forEach(function(i){i.src=src;});})();</script>
-<style id="bpFixOrdersPad">#ordersTab{padding-bottom:calc(120px + env(safe-area-inset-bottom,0px))!important}#app.wrap{padding-bottom:calc(120px + env(safe-area-inset-bottom,0px))!important}</style>
+<style id="bpFixOrdersPad">
+#ordersTab,#allTab{padding-bottom:calc(120px + env(safe-area-inset-bottom,0px))!important}
+#app.wrap{padding-bottom:calc(120px + env(safe-area-inset-bottom,0px))!important}
+/* v-fix: l'ultimo ordine finiva sotto la barra in basso e i tasti (stampa) non si raggiungevano */
+#ordersTab::after,#allTab::after{content:"";display:block;height:calc(170px + env(safe-area-inset-bottom,0px));pointer-events:none}
+#openOrders>.order:last-child,#allOrders>.order:last-child{margin-bottom:calc(40px + env(safe-area-inset-bottom,0px))!important}
+html.pos64:has(#ordersTab:not(.hidden)),html.pos64:has(#ordersTab:not(.hidden)) body,
+html.pos64:has(#allTab:not(.hidden)),html.pos64:has(#allTab:not(.hidden)) body{height:auto!important;min-height:100%;overflow-y:auto!important}
+html{scroll-padding-bottom:calc(150px + env(safe-area-inset-bottom,0px))}
+</style>
 <script id="bpLazyOrders">(function(){var orig=renderOrderList,dirty=false;function hid(){var t=document.getElementById('ordersTab');return !!(t&&t.classList.contains('hidden'));}renderOrderList=function(id,list,isOpenTab){if((id==='allOrders'||id==='openOrders')&&hid()){dirty=true;return;}return orig.apply(this,arguments);};var t=document.getElementById('ordersTab');if(t&&window.MutationObserver){new MutationObserver(function(){if(dirty&&!hid()){dirty=false;try{renderOrders();}catch(e){console.warn('[bp] lazy orders',e);}}}).observe(t,{attributes:true,attributeFilter:['class']});}})();</script>
 <script id="bpIngPick">(function(){
   function isPizza(p){ try{ return getProductKind(p) === "pizza"; }catch(e){ return /pizz/i.test(String((p && p.category) || "")); } }
