@@ -8998,7 +8998,7 @@ function buildReceiptHtml(o, items){
         <div class="rc-item-top${isDrink ? ' rc-dl' : ''}">
           <div class="${isDrink ? 'rc-dl-main' : ''}">
             <span class="rc-qty-badge">${i.quantity}×</span>
-            <span class="rc-item-name">${bpNameHtml((window.bpIsMenu&&bpIsMenu(parsed)?'Menu ':'')+parsed.baseName)}</span>
+            <span class="rc-item-name">${bpNameHtml((window.bpIsMenu&&bpIsMenu(parsed)?'Menu ':'')+parsed.baseName)}</span>${(function(){ try{ var lb = bpCompletoLabel(i); return lb ? '<span style="font-weight:900;margin-inline-start:6px;white-space:nowrap">(' + lb + ')</span>' : ''; }catch(e){ return ''; } })()}
             ${sizeTag}${volHtml}
           </div>
           <div class="rc-item-price">${euro(i.line_total)}</div>
@@ -9027,7 +9027,9 @@ function buildReceiptHtml(o, items){
     if(G.pizza.length) out += sec('🍕', 'PIZZE', q(G.pizza), G.pizza, '');
     if(G.panino.length) out += sec('🥙', 'PANINI &amp; PIADINE', q(G.panino), G.panino, '');
     if(G.dolce.length) out += sec('🍰', 'DOLCI', q(G.dolce), G.dolce, '');
-    if(nFri) out += sec('🍟', 'FRITTI', nFri, G.fritto, subF ? 'comprese ' + subF : '');
+    let nFriOnly = Math.max(0, (fd.fri || 0) - (fd.menu || 0));
+    if(nFriOnly || G.fritto.length) out += sec('🍟', 'FRITTI', nFriOnly, G.fritto, nFriOnly ? 'a parte, fuori menu' : '');
+    if(fd.menu) out += '<div class="rc-sec"><div class="rc-sec-h"><span>🍟🥤 PATATINE MENU</span><span>' + fd.menu + '</span></div><div class="rc-sec-sub">incluse nei menu con bibita</div></div>';
     if(pzF) out += '<div class="rc-sec"><div class="rc-sec-h"><span>🍕 PATATINE SOPRA LA PIZZA</span><span>' + pzF + '</span></div><div class="rc-sec-sub">su ' + (frPzCount === 1 ? '1 pizza' : frPzCount + ' pizze') + (frPzCount !== pzF ? ' (' + pzF + ' porzioni)' : '') + (frPzNames ? ': ' + frPzNames : '') + ' · non da imballare</div></div>';
     if(nBib) out += sec('🥤', 'BEVANDE', nBib, G.bevanda, fd.menu ? 'comprese bibite dei menu: ' + fd.menu : '');
     if(G.servizio.length) out += `<div class="rc-sec">${G.servizio.map(bpRenderRcItem).join('')}</div>`;
@@ -9142,7 +9144,7 @@ function buildKitchenReceiptHtml(o, items){
   const KS = bpKitchenSplit(foodItems);   /* motore unico cucina */
   let kebabPzItems = KS.kebabPz;
   /* pizza kebab: SEMPRE in cucina (carne + salse da aggiungere sopra la pizza) */
-  let pizzaItems = KS.pzFries;
+  let pizzaItems = KS.pzFries.concat(KS.menuPz);
   const krTag = i => {
     if(krIsSingleFries(i)) return `<span class="kr-fries kr-fill">🍟 SINGOLE${krSinglePrice(i) ? ' · ' + krSinglePrice(i) : ''}</span>`;
     try{ if(bpMenuUnits(i) > 0) return '<span class="kr-fries kr-menu">🍟🥤 MENU</span>'; }catch(e){}
@@ -9291,6 +9293,7 @@ function buildKitchenReceiptHtml(o, items){
       ${kebabPzHtml}
       ${itemsHtml}
       ${pizzaHtml}
+      ${''}
       ${summaryHtml}
 
       <div class="kr-foot kr-inv"><span>LISTA CUCINA</span><span>TOTALE: <b>${totalQty}</b> pz</span></div>
@@ -9344,6 +9347,7 @@ function krGroupOf(i){
   if(krIsFried(i) || /patatine|chips|fritti/.test(base)) return 'fritto';
   if(/panin|piadin|kebab|shawarma|falafel|durum|hot\s*dog|hotdog|salsiccia/.test(base)) return 'panino';
   if(/dolc|dolce/.test(base)) return 'dolce';
+  try{ var wk = bpWorkCat(i).k; if(wk === 'dolce') return 'dolce'; if(wk === 'panino') return 'panino'; }catch(e){}
   return 'bevanda';
 }
 /* ingredienti da mettere sulla pizza kebab (senza base pomodoro/mozzarella, senza "senza", + extra) */
@@ -9368,16 +9372,17 @@ var BP_KITCHEN_SECTIONS = [
   ['dolce',   '🍰', 'DOLCI'],
   ['fritto',  '🍟', 'FRITTI'],
   ['bevanda', '🥤', 'BEVANDE'],
-  ['pzFries', '🍕', 'PIZZE CON PATATINE']
+  ['pzFries', '🍕', 'PIZZE CON PATATINE'],
+  ['menuPz',  '🍟', 'PIZZE MENU · PATATINE DA FRIGGERE']
 ];
 function bpKitchenSplit(items){
-  var out = {kebabPz: [], panino: [], dolce: [], fritto: [], bevanda: [], pzFries: [], all: []};
+  var out = {kebabPz: [], panino: [], dolce: [], fritto: [], bevanda: [], pzFries: [], menuPz: [], all: []};
   (items || []).forEach(function(i){
     try{
       if(!i || bpIsSvc(i.product_name)) return;
       if(isPizzaItem(i)){
         var w = bpWorkCat(i);
-        if(w.kebabPizza) out.kebabPz.push(i); else if(w.fries > 0) out.pzFries.push(i);
+        if(w.kebabPizza) out.kebabPz.push(i); else if(w.fries > 0) out.pzFries.push(i); else if(bpMenuUnits(i) > 0) out.menuPz.push(i);
       } else if(krIsKitchenLine(i)){
         (out[krGroupOf(i)] || out.bevanda).push(i);
       }
@@ -9393,7 +9398,7 @@ function bpKitchenEnsureCss(){
   document.head.appendChild(cs);
 }
 /* HTML delle righe cucina per schermate (mode: 'tab' = tab Cucina, 'kds' = schermo grande) */
-function bpKitchenHtml(plan, mode){
+function bpKitchenHtml(plan, mode, sections){
   bpKitchenEnsureCss();
   var kds = mode === 'kds', ci = kds ? 'k35-it' : 'kt-item', cm = kds ? 'k35-mod' : 'kt-mod';
   function line(i){
@@ -9421,15 +9426,75 @@ function bpKitchenHtml(plan, mode){
     return '<div class="' + ci + '">' + q + bpNameHtml(disp) + maxi + extra + top + mods + '</div>';
   }
   var qty = function(a){ return a.reduce(function(n, i){ return n + Number(i.quantity || 1); }, 0); };
-  return BP_KITCHEN_SECTIONS.map(function(sc){
+  return (sections || BP_KITCHEN_SECTIONS).map(function(sc){
     var a = plan[sc[0]]; if(!a || !a.length) return '';
     return '<div class="kt-sec"><span>' + sc[1] + ' ' + sc[2] + '</span><em>' + qty(a) + '</em></div>' + a.map(line).join('');
   }).join('');
 }
+
+/* ============================================================
+   CUCINA a 3 blocchi: 🥙 KEBAB · 🍟 FRITTI · 🔔 PROMEMORIA (dolci + bibite)
+   Stessa logica per consegna / tavolo / ritiro / online.
+   ============================================================ */
+function bpIsKebabPz(it){   /* pizza con kebab o carne */
+  try{
+    if(bpWorkCat(it).kebabPizza) return true;
+    var pa = splitProductAndMods(it.product_name), base = String(pa.baseName || ''), pr = bpRcFindProd(base.replace(/^men[uù]\s+/i, '')) || bpRcFindProd(base);
+    var mods = (pa.mods || []).filter(function(m){ return !/^\s*(senza|no)\b/i.test(m); }).join(' ');
+    return /kebab|kebap|d[oö]ner|shawarma|\bcarne\b/i.test(base + ' ' + String((pr && pr.description) || '') + ' ' + mods);
+  }catch(e){ return false; }
+}
+function bpCucinaPlan(items){
+  var P = {kebabPz: [], panino: [], menuFr: [], pzFr: [], single: [], otherFr: [], dolce: [], has: false};
+  (items || []).forEach(function(i){
+    try{
+      if(!i || bpIsSvc(i.product_name)) return;
+      var mu = 0; try{ mu = bpMenuUnits(i); }catch(e){}
+      if(isPizzaItem(i)){
+        if(bpIsKebabPz(i)) P.kebabPz.push(i);
+        if(krTopFries(i) > 0) P.pzFr.push(i);
+        if(mu > 0) P.menuFr.push(i);
+        return;
+      }
+      if(krIsSingleFries(i)){ P.single.push(i); return; }
+      if(krIsFried(i) && !(mu > 0)){ P.otherFr.push(i); return; }
+      if(krIsKitchenLine(i)){
+        var g = krGroupOf(i);
+        if(g === 'panino'){ P.panino.push(i); if(mu > 0) P.menuFr.push(i); }
+        else if(g === 'dolce') P.dolce.push(i);
+        else if(mu > 0) P.menuFr.push(i);
+      } else {
+        try{ if(bpWorkCat(i).k === 'dolce') P.dolce.push(i); }catch(e){}
+      }
+    }catch(e){}
+  });
+  P.has = !!(P.kebabPz.length || P.panino.length || P.menuFr.length || P.pzFr.length || P.single.length || P.otherFr.length);
+  return P;
+}
+function bpCucinaHtml(plan, mode, items, deliv){
+  var KEB = [['kebabPz', '🍕', 'PIZZA KEBAB / CARNE'], ['panino', '🥙', 'PANINI & PIADINE']];
+  var FR = [['menuFr', '🍟🥤', 'PATATINE MENU'], ['pzFr', '🍟', 'PATATINE SU PIZZA'], ['single', '🍟', 'PATATINE SINGOLE'], ['otherFr', '🍤', 'ALTRI FRITTI']];
+  function grp(t){ return '<div style="display:flex;justify-content:space-between;margin:12px 0 2px;padding:5px 10px;border-radius:8px;background:#000;color:#fff;font-weight:950;letter-spacing:1px;font-size:.95em">' + t + '</div>'; }
+  var out = '', k = bpKitchenHtml(plan, mode, KEB), f = bpKitchenHtml(plan, mode, FR);
+  if(k) out += grp('🥙 KEBAB') + k;
+  if(f) out += grp('🍟 FRITTI') + f;
+  var rem = '';
+  if(plan.dolce.length){
+    rem += '<div class="kt-note" style="background:#fde7f3;border:2px solid #d444a3;font-weight:800">🍰 ' + plan.dolce.reduce(function(n, i){ return n + Number(i.quantity || 1); }, 0) + '× DOLCI <small>(' +
+      plan.dolce.map(function(i){ return (Number(i.quantity || 1) > 1 ? i.quantity + '× ' : '') + esc(splitProductAndMods(i.product_name).baseName); }).join(' · ') + ')</small></div>';
+  }
+  try{ rem += bpDrinkRemind(items || [], deliv); }catch(e){}
+  if(rem) out += grp('🔔 PROMEMORIA · DOLCI &amp; BEVANDE') + rem;
+  return out;
+}
 function krIsKitchenLine(i){
   try{
     if(!i || bpIsSvc(i.product_name) || isPizzaItem(i)) return false;
-    return bpIsKitchenItem(i.product_name) || krIsFried(i);   /* include Crocchette, American Fries, ecc. */
+    if(bpIsKitchenItem(i.product_name) || krIsFried(i)) return true;   /* include Crocchette, American Fries, ecc. */
+    /* v95: qualsiasi altro prodotto di cucina (falafel, gyros, nomi non in elenco...) entra comunque; le bibite no */
+    var w = bpWorkCat(i);
+    if(w.k !== 'panino' && w.k !== 'dolce') return false;
+    return bpStation3(i.product_name) !== 'bevande';
   }catch(e){ return false; }
 }
 function krSinglePrice(i){ try{ var v = Number(i.unit_price); return isFinite(v) && v > 0 ? euro(v) : ''; }catch(e){ return ''; } }
@@ -9464,8 +9529,9 @@ async function showDetails(o){
   let hasKitchen = bpHasKitchenItems(items);
   
   let html = buildReceiptHtml(o, items);
+  /* ricevuta principale sempre; comanda cucina SOLO se ci sono prodotti per la cucina */
   if(hasKitchen){
-    html += '<div style="page-break-after:always"></div>' + buildKitchenReceiptHtml(o, items);
+    html += '<div class="bp-cut-sep" style="margin:10px 0;border-top:2px dashed #000;text-align:center;font-size:11px;font-weight:900;line-height:1;padding-top:2px;break-inside:avoid">✂ - - - - - - - - - - - - - - ✂</div>' + buildKitchenReceiptHtml(o, items);
   }
   
   el('receiptContainer').innerHTML = html;
@@ -10944,6 +11010,27 @@ function bpDecorate(){
 document.addEventListener('click', function(e){ var b = e.target.closest('.bp-hist-btn'); if(b) bpOpenHistory(Number(b.getAttribute('data-oid'))); });
 bpDecorate();
 
+/* === CUCINA: logica unica per TUTTI gli ordini (consegna, tavolo, ritiro/locale, online) === */
+function bpKitchenMeta(o){
+  var t = String(o.order_type || ''), tb = ''; try{ tb = bpTableNo(o); }catch(e){}
+  var onl = !!o.online_pending || /online|web|sito/i.test(t + ' ' + String(o.source || o.channel || ''));
+  var deliv = /consegna|domicilio/i.test(t) && !tb, ico, lab;
+  if(tb){ ico = '🍽️'; lab = 'TAVOLO ' + tb; }
+  else if(deliv){ ico = '🛵'; lab = 'CONSEGNA'; }
+  else if(/tavolo|sala|locale|negozio|in\s*loco/i.test(t)){ ico = '🍽️'; lab = 'IN SALA'; }
+  else { ico = '🛍️'; lab = 'RITIRO'; }
+  return {deliv: deliv, table: tb, online: onl, pending: !!o.online_pending, ico: ico, lab: (onl ? '🌐 ' : '') + lab};
+}
+function bpKitchenNext(o, st){   /* stessa catena di stati per ogni tipo di ordine */
+  if(st === 'Nuovo') return {next: 'In preparazione', lbl: '▶ INIZIA', cls: 'a'};
+  if(st === 'In preparazione') return {next: 'Pronto', lbl: '✅ PRONTO', cls: 'b'};
+  return bpKitchenMeta(o).deliv ? {next: 'In consegna', lbl: '🛵 IN CONSEGNA', cls: 'c'} : {next: 'Completato', lbl: '🏁 CONSEGNATO', cls: 'c'};
+}
+var __bpKLoaded = {};
+function bpKitchenLoadItems(o){   /* righe ordine non ancora arrivate: le scarico una volta e ridisegno */
+  if(__bpKLoaded[o.id] || !/^\d+$/.test(String(o.id))) return; __bpKLoaded[o.id] = 1;
+  try{ sb.from('order_items').select('*').eq('order_id', o.id).then(function(r){ if(r && r.data){ itemsByOrder.set(o.id, r.data); try{ renderKitchen(); }catch(e){} } }); }catch(e){}
+}
 var BP_STATION = 'all';
 function bpStationOf(name){
   var base = splitProductAndMods(name).baseName.toLowerCase();
@@ -10953,27 +11040,37 @@ function bpStationOf(name){
 }
 function renderKitchen(){
   var tab = el('kitchenTab'); if(!tab) return;
-  var act = orders.filter(function(o){ var s = normStatus(o.status); return !o.online_pending && (s === 'Nuovo' || s === 'In preparazione'); });
-  var bd = el('kitchenCountBadge'); if(bd) bd.textContent = act.filter(function(o){ return bpKitchenSplit(itemsByOrder.get(o.id) || []).all.length > 0; }).length;
+  var act = orders.filter(function(o){ var s = normStatus(o.status); return (s === 'Nuovo' || s === 'In preparazione' || s === 'Pronto'); });   /* tutti i tipi: consegna, tavolo, ritiro, online */
+  var bd = el('kitchenCountBadge'); if(bd) bd.textContent = act.filter(function(o){ return normStatus(o.status) !== 'Pronto' && bpCucinaPlan((itemsByOrder.get(o.id) || []).filter(function(i){ return !bpIsSvc(i.product_name); })).has; }).length;
   if(tab.classList.contains('hidden')) return;
   var ST = [];   /* niente filtri di postazione: la Cucina mostra solo la comanda cucina */
-  el('kitchenChips').innerHTML = ST.map(function(s){ return '<button type="button" class="kt-chip' + (BP_STATION === s[0] ? ' on' : '') + '" data-st="' + s[0] + '">' + s[1] + '</button>'; }).join('') + '<button type="button" class="kt-chip" data-fs="1">⛶</button>';
+  el('kitchenChips').innerHTML = ST.map(function(s){ return '<button type="button" class="kt-chip' + (BP_STATION === s[0] ? ' on' : '') + '" data-st="' + s[0] + '">' + s[1] + '</button>'; }).join('') + '<button type="button" class="kt-chip" data-fs="1">⛶</button><span class="kt-chip" style="pointer-events:none;opacity:.7">v95 · 3 blocchi</span>';
   act.sort(function(a, b){ return getOrderUrgencyMeta(a).sortMinutes - getOrderUrgencyMeta(b).sortMinutes; });
   
   /* === Contenuto = comanda cucina (motore unico bpKitchenSplit / bpKitchenHtml). Colonne per stato. === */
-  function kCard(o, isNew){
-    var items = (itemsByOrder.get(o.id) || []).filter(function(i){ return !bpIsSvc(i.product_name); });
-    var plan = bpKitchenSplit(items);
-    if(!plan.all.length) return '';
-    var pt = splitTimeAndNotes(o.notes), deliv = /consegna|domicilio/i.test(o.order_type || '');
-    var lines = bpKitchenHtml(plan, 'tab') + bpPatatineLine(items) + bpDrinkRemind(items, deliv);
-    return '<div class="k35-t' + (isNew ? ' new' : '') + '"><div class="k35-th"><b>#' + o.id + '</b><span class="k35-when">' + esc(pt.time === 'Prima possibile' ? 'SUBITO' : pt.time) + '</span><span style="margin-inline-start:auto">' + (deliv ? '🛵' : '🛍️') + '</span></div><div class="rd-timer ok" data-id="' + o.id + '"></div>' + lines + (pt.cleanNotes ? '<div class="k35-note">📝 ' + esc(pt.cleanNotes) + '</div>' : '') + (isNew ? '<button type="button" class="k35-go a" data-oid="' + o.id + '" data-next="In preparazione">▶ INIZIA</button>' : '<button type="button" class="k35-go b" data-oid="' + o.id + '" data-next="Pronto">✅ PRONTO</button>') + '</div>';
+  function kCard(o, isNew, stName){
+    var raw = itemsByOrder.get(o.id) || [];
+    var items = raw.filter(function(i){ return !bpIsSvc(i.product_name); });
+    var m = bpKitchenMeta(o), pt = splitTimeAndNotes(o.notes), lines;
+    if(!raw.length){ bpKitchenLoadItems(o); lines = '<div class="k35-it" style="opacity:.6">Articoli in caricamento…</div>'; }
+    else{
+      var plan = bpCucinaPlan(items);
+      if(!plan.has) return '';   /* niente kebab ne' fritti: niente da fare per la cucina (vale per ogni tipo di ordine) */
+      lines = bpCucinaHtml(plan, 'tab', items, m.deliv);
+    }
+    var nx = bpKitchenNext(o, stName);
+    var btn = m.pending
+      ? '<div class="k35-note">🌐 Ordine online da confermare (scheda Ordini)</div>'
+      : '<button type="button" class="k35-go ' + nx.cls + '" data-oid="' + o.id + '" data-next="' + nx.next + '">' + nx.lbl + '</button>';
+    return '<div class="k35-t' + (isNew ? ' new' : '') + '"><div class="k35-th"><b>#' + o.id + '</b><span class="k35-when">' + esc(pt.time === 'Prima possibile' ? 'SUBITO' : pt.time) + '</span><span style="margin-inline-start:auto">' + m.ico + ' ' + esc(m.lab) + '</span></div>' +
+      (o.customer_name && o.customer_name !== 'Cliente' ? '<div class="k35-cu">👤 ' + esc(o.customer_name) + '</div>' : '') +
+      '<div class="rd-timer ok" data-id="' + o.id + '"></div>' + lines + (pt.cleanNotes ? '<div class="k35-note">📝 ' + esc(pt.cleanNotes) + '</div>' : '') + btn + '</div>';
   }
   function kCol(title, status, isNew){
-    var cards = act.filter(function(o){ return normStatus(o.status) === status; }).map(function(o){ return kCard(o, isNew); }).filter(Boolean);
+    var cards = act.filter(function(o){ return normStatus(o.status) === status; }).map(function(o){ return kCard(o, isNew, status); }).filter(Boolean);
     return '<div class="k35-col"><h2>' + title + '<span>' + cards.length + '</span></h2><div class="k35-list">' + (cards.join('') || '<p class="k35-empty">Nessun ordine</p>') + '</div></div>';
   }
-  var html = kCol('🔵 DA INIZIARE', 'Nuovo', true) + kCol('👨‍🍳 IN PREPARAZIONE', 'In preparazione', false);
+  var html = kCol('🔵 DA INIZIARE', 'Nuovo', true) + kCol('👨‍🍳 IN PREPARAZIONE', 'In preparazione', false) + kCol('✅ PRONTI', 'Pronto', false);
   el('kitchenCols').innerHTML = html;
   if(typeof rdTickTimers === 'function') rdTickTimers();
 }
@@ -13225,6 +13322,9 @@ el('kitchenTab').addEventListener('click', function(e){
       var pa = splitProductAndMods(rawName), raw = String(pa.baseName || '').trim();
       var pr = bpRcFindProd(raw.replace(/^men[uù]\s+/i, '')) || bpRcFindProd(raw);
       var cat = String((pr && pr.category) || ''), low = (cat + ' ' + raw).toLowerCase();
+      var rawL = raw.toLowerCase();
+      if(/pizz|calzon|panzerot|focacc|margherita|diavola|marinara/.test(rawL)) return 'pizza';
+      if(/kebab|kebap|falafel|shawarma|d[oö]ner|durum|panin|piadin|burger|wrap|patatin|fries|fritt|hot\s*dog|hotdog/.test(rawL)) return 'cucina';   /* il nome batte la categoria */
       if(/pizz|calzon|panzerot|focacc|margherita|diavola|marinara/.test(low)) return 'pizza';
       var kind = ''; try{ kind = pr ? getProductKind(pr) : ''; }catch(e){}
       if(kind === 'pizza') return 'pizza';
@@ -14866,23 +14966,18 @@ openCartIngModal = function(key){
   }
   function ticket(o, st){
     var items = getItems(o.id).filter(function(i){ return !bpIsSvc(i.product_name); });
-    var plan = bpKitchenSplit(items);   /* stessa comanda cucina: motore unico */
-    if(items.length && !plan.all.length) return '';
+    var plan = bpCucinaPlan(items);   /* 3 blocchi: kebab / fritti / promemoria */
+    if(items.length && !plan.has) return '';
     var pt = {time: 'Prima possibile', cleanNotes: ''}; try{ pt = splitTimeAndNotes(o.notes); }catch(e){}
-    var r = slaFor(o), dl = isDeliv(o);
-    var lines = plan.all.length ? bpKitchenHtml(plan, 'kds') : '<div class="k35-it" style="opacity:.6">Articoli in caricamento…</div>';
-    if(plan.all.length) lines += bpPatatineLine(items, true) + bpDrinkRemind(items, dl);
-    var next, lbl, cls;
-    if(st === 'Nuovo'){ next = 'In preparazione'; lbl = '▶ INIZIA'; cls = 'a'; }
-    else if(st === 'In preparazione'){ next = 'Pronto'; lbl = '✅ PRONTO'; cls = 'b'; }
-    else if(dl){ next = 'In consegna'; lbl = '🛵 IN CONSEGNA'; cls = 'c'; }
-    else{ next = 'Completato'; lbl = '🏁 CONSEGNATO'; cls = 'c'; }
+    var r = slaFor(o), m = bpKitchenMeta(o), dl = m.deliv;
+    var lines = plan.has ? bpCucinaHtml(plan, 'kds', items, dl) : '<div class="k35-it" style="opacity:.6">Articoli in caricamento…</div>';
+    var nx = bpKitchenNext(o, st), next = nx.next, lbl = nx.lbl, cls = nx.cls;
     var fresh = kdsSeen && !kdsSeen[o.id] ? ' new' : '';
-    return '<div class="k35-t ' + (st === 'Pronto' ? '' : r.cls) + fresh + '"><div class="k35-th"><b>#' + esc(o.id) + '</b><span>' + (dl ? '🛵' : '🛍️') + '</span><span class="k35-when">' +
+    return '<div class="k35-t ' + (st === 'Pronto' ? '' : r.cls) + fresh + '"><div class="k35-th"><b>#' + esc(o.id) + '</b><span>' + m.ico + ' ' + esc(m.lab) + '</span><span class="k35-when">' +
       esc(pt.time === 'Prima possibile' ? 'SUBITO' : pt.time) + '</span><span class="k35-sla ' + r.cls + '">' + esc(r.txt) + '</span></div>' +
       (o.customer_name && o.customer_name !== 'Cliente' ? '<div class="k35-cu">👤 ' + esc(o.customer_name) + '</div>' : '') + lines +
       (pt.cleanNotes ? '<div class="k35-note">📝 ' + esc(pt.cleanNotes) + '</div>' : '') +
-      '<button type="button" class="k35-go ' + cls + '" data-id="' + esc(o.id) + '" data-next="' + next + '">' + lbl + '</button></div>';
+      (m.pending ? '<div class="k35-note">🌐 Ordine online da confermare</div>' : '<button type="button" class="k35-go ' + cls + '" data-id="' + esc(o.id) + '" data-next="' + next + '">' + lbl + '</button>') + '</div>';
   }
   function renderKds(){
     if(!kds) return;
@@ -22238,7 +22333,8 @@ html:not(.x) body #userBar button#thermalToggleBtn.ap-off,#thermalToggleBtn.ap-o
     return new Promise(function(res, rej){
       var s = document.createElement('script');
       s.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
-      s.onload = res; s.onerror = function(){ rej(new Error('html2canvas non caricato (serve internet)')); };
+      var tmo = setTimeout(function(){ rej(new Error('html2canvas: timeout (controlla internet)')); }, 10000);
+      s.onload = function(){ clearTimeout(tmo); res(); }; s.onerror = function(){ clearTimeout(tmo); rej(new Error('html2canvas non caricato (serve internet)')); };
       document.head.appendChild(s);
     });
   }
@@ -22297,18 +22393,80 @@ html:not(.x) body #userBar button#thermalToggleBtn.ap-off,#thermalToggleBtn.ap-o
     return {r: p[0], g: p[1], b: p[2], a: p.length > 3 ? p[3] : 1};
   }
   function plum(c){ return c.r * 0.299 + c.g * 0.587 + c.b * 0.114; }
+  /* ---- EMOJI nitide in termica: ogni emoji diventa un "adesivo" 1-bit (contorno nero spesso + interno soglia) su fondo bianco ---- */
+  var EMO_RX = /\p{Extended_Pictographic}(?:\uFE0F|[\u{1F3FB}-\u{1F3FF}])?(?:\u200D\p{Extended_Pictographic}(?:\uFE0F|[\u{1F3FB}-\u{1F3FF}])?)*/gu;
+  var emoCache = {};
+  function emoSticker(ch){
+    if(emoCache[ch]) return emoCache[ch];
+    var S = 96, c = document.createElement('canvas'); c.width = c.height = S;
+    var x = c.getContext('2d', {willReadFrequently: true});
+    x.textAlign = 'center'; x.textBaseline = 'middle';
+    x.font = '70px "Noto Color Emoji","Apple Color Emoji","Segoe UI Emoji",sans-serif';
+    x.fillText(ch, S / 2, S / 2 + 4);
+    var d = x.getImageData(0, 0, S, S).data, N = S * S, A = new Uint8Array(N), O = new Uint8Array(N), i, y, xx, dy, dx;
+    for(i = 0; i < N; i++) A[i] = d[i * 4 + 3] > 40 ? 1 : 0;
+    var R = 3, x0 = S, x1 = 0, y0 = S, y1 = 0;
+    for(y = 0; y < S; y++) for(xx = 0; xx < S; xx++){
+      if(!A[y * S + xx]) continue;
+      for(dy = -R; dy <= R; dy++) for(dx = -R; dx <= R; dx++){
+        var ny = y + dy, nx = xx + dx; if(ny < 0 || nx < 0 || ny >= S || nx >= S) continue;
+        O[ny * S + nx] = 1;
+      }
+    }
+    /* soglia automatica (Otsu) sulle sole zone opache: ogni emoji tiene i suoi dettagli (es. la spunta bianca del ✅) */
+    var hist = new Float64Array(256), tot = 0;
+    for(i = 0; i < N; i++){ if(A[i]){ hist[Math.round(d[i * 4] * 0.299 + d[i * 4 + 1] * 0.587 + d[i * 4 + 2] * 0.114)]++; tot++; } }
+    var thr = 140, sumAll = 0, k; for(k = 0; k < 256; k++) sumAll += k * hist[k];
+    var wB = 0, sumB = 0, best = -1;
+    for(k = 0; k < 256; k++){ wB += hist[k]; if(!wB) continue; var wF = tot - wB; if(!wF) break; sumB += k * hist[k]; var mB = sumB / wB, mF = (sumAll - sumB) / wF, bt = wB * wF * (mB - mF) * (mB - mF); if(bt > best){ best = bt; thr = k; } }
+    thr = Math.max(90, Math.min(190, thr + 1));
+    var out = x.createImageData(S, S), od = out.data;
+    for(i = 0; i < N; i++){
+      var v = 255;
+      if(A[i]){ var l = d[i * 4] * 0.299 + d[i * 4 + 1] * 0.587 + d[i * 4 + 2] * 0.114; v = l < thr ? 0 : 255; }
+      else if(O[i]) v = 0;
+      od[i * 4] = od[i * 4 + 1] = od[i * 4 + 2] = v; od[i * 4 + 3] = 255;
+      if(O[i]){ var py = (i / S) | 0, px = i % S; if(px < x0) x0 = px; if(px > x1) x1 = px; if(py < y0) y0 = py; if(py > y1) y1 = py; }
+    }
+    if(x1 <= x0 || y1 <= y0){ x0 = 0; y0 = 0; x1 = S - 1; y1 = S - 1; }
+    x.putImageData(out, 0, 0);
+    var w = x1 - x0 + 1, h = y1 - y0 + 1, c2 = document.createElement('canvas'); c2.width = w + 4; c2.height = h + 4;
+    var x2 = c2.getContext('2d'); x2.fillStyle = '#fff'; x2.fillRect(0, 0, c2.width, c2.height); x2.drawImage(c, x0, y0, w, h, 2, 2, w, h);
+    return (emoCache[ch] = {url: c2.toDataURL('image/png'), r: c2.width / c2.height});
+  }
+  function emojify(doc, root){
+    try{
+      var tw = doc.createTreeWalker(root, 4 /* SHOW_TEXT */), nodes = [], n;
+      while((n = tw.nextNode())){ if(/\p{Extended_Pictographic}/u.test(n.nodeValue) && !/^(SCRIPT|STYLE)$/.test(n.parentNode.nodeName)) nodes.push(n); }
+      nodes.forEach(function(tn){
+        var t = tn.nodeValue, frag = doc.createDocumentFragment(), last = 0, m, any = false;
+        EMO_RX.lastIndex = 0;
+        while((m = EMO_RX.exec(t))){
+          if(m[0].codePointAt(0) < 0x2000) continue;   /* © ® ™ restano testo */
+          var st; try{ st = emoSticker(m[0]); }catch(e){ continue; }
+          if(m.index > last) frag.appendChild(doc.createTextNode(t.slice(last, m.index)));
+          var im = doc.createElement('img'); im.src = st.url; im.alt = '';
+          im.style.cssText = 'display:inline-block;height:1.4em;width:' + (1.4 * st.r).toFixed(2) + 'em;vertical-align:-0.28em;margin:0 .12em;background:#fff;border-radius:3px;image-rendering:pixelated';
+          frag.appendChild(im); last = m.index + m[0].length; any = true;
+        }
+        if(any){ if(last < t.length) frag.appendChild(doc.createTextNode(t.slice(last))); tn.parentNode.replaceChild(frag, tn); }
+      });
+    }catch(e){ console.warn('[bp] emoji termica', e); }
+  }
   function prepClone(doc){
     var rc = doc.getElementById('receiptContainer'); if(!rc) return;
     var win = doc.defaultView, all = rc.querySelectorAll('*');
-    function effDark(el){
-      var p = el;
-      while(p && p !== rc.parentNode){
+    var dkMap = new Map();
+    function rootDark(){   /* fondo di rc e dei suoi antenati: una sola volta */
+      var p = rc;
+      while(p){
         var b = pc(win.getComputedStyle(p).backgroundColor);
         if(b && b.a > 0.4) return plum(b) < 150;
-        p = p.parentNode;
+        p = p.parentNode && p.parentNode.nodeType === 1 ? p.parentNode : null;
       }
       return false;
     }
+    dkMap.set(rc, rootDark());
     for(var i = 0; i < all.length; i++){
       var el = all[i], cs = win.getComputedStyle(el), st = el.style;
       if(/gradient/.test(cs.backgroundImage || '')){
@@ -22316,9 +22474,10 @@ html:not(.x) body #userBar button#thermalToggleBtn.ap-off,#thermalToggleBtn.ap-o
         st.setProperty('background-image', 'none', 'important');
         st.setProperty('background-color', (tc && plum(tc) > 200) ? '#000' : '#fff', 'important');
       }
-      var bg = pc(cs.backgroundColor);
-      if(bg && bg.a > 0.4) st.setProperty('background-color', plum(bg) < 150 ? '#000' : '#fff', 'important');
-      var dk = effDark(el);
+      var bg = pc(cs.backgroundColor), dk;
+      if(bg && bg.a > 0.4){ dk = plum(bg) < 150; st.setProperty('background-color', dk ? '#000' : '#fff', 'important'); }
+      else dk = !!dkMap.get(el.parentNode);
+      dkMap.set(el, dk);
       st.setProperty('color', dk ? '#fff' : '#000', 'important');
       st.setProperty('text-shadow', 'none', 'important');
       st.setProperty('box-shadow', 'none', 'important');
@@ -22329,6 +22488,7 @@ html:not(.x) body #userBar button#thermalToggleBtn.ap-off,#thermalToggleBtn.ap-o
         }
       });
     }
+    emojify(doc, rc);
   }
   function concat(parts){ var n = 0; parts.forEach(function(p){ n += p.length; }); var r = new Uint8Array(n), o = 0; parts.forEach(function(p){ r.set(p, o); o += p.length; }); return r; }
   function b64(u8){ var s = '', CH = 0x8000; for(var i = 0; i < u8.length; i += CH){ s += String.fromCharCode.apply(null, u8.subarray(i, i + CH)); } return btoa(s); }
@@ -22345,7 +22505,8 @@ html:not(.x) body #userBar button#thermalToggleBtn.ap-off,#thermalToggleBtn.ap-o
     var imgs = root.querySelectorAll('img[src^="http"]');
     for(var i = 0; i < imgs.length; i++){
       try{
-        var r = await fetch(imgs[i].src, {mode: 'cors'}); var bl = await r.blob();
+        var ac = (typeof AbortController !== 'undefined') ? new AbortController() : null, tm = ac ? setTimeout(function(){ ac.abort(); }, 3500) : 0;
+        var r = await fetch(imgs[i].src, {mode: 'cors', signal: ac ? ac.signal : undefined}); var bl = await r.blob(); clearTimeout(tm);
         var du = await new Promise(function(res){ var fr = new FileReader(); fr.onload = function(){ res(fr.result); }; fr.readAsDataURL(bl); });
         imgs[i].src = du;
         if(!imgs[i].complete) await new Promise(function(res){ imgs[i].onload = imgs[i].onerror = res; });
@@ -22355,7 +22516,13 @@ html:not(.x) body #userBar button#thermalToggleBtn.ap-off,#thermalToggleBtn.ap-o
   async function thermalPrint(){
     var cont = document.getElementById('receiptContainer'); if(!cont) throw new Error('ricevuta non trovata');
     cont.style.maxWidth = '76mm';
+    try{ ssToast('🖨️ Preparo la stampa termica…'); }catch(e){}
+    var wl = null; try{ if(navigator.wakeLock) wl = await navigator.wakeLock.request('screen'); }catch(e){}
+    try{ await thermalBuild(cont); } finally { try{ if(wl) wl.release(); }catch(e){} }
+  }
+  async function thermalBuild(cont){
     await loadH2C();
+    await wait(20);
     await inlineImgs(cont);
     var groups = [[]];
     Array.prototype.forEach.call(cont.children, function(ch){
@@ -22369,12 +22536,14 @@ html:not(.x) body #userBar button#thermalToggleBtn.ap-off,#thermalToggleBtn.ap-o
       var cvs = [];
       for(var k = 0; k < groups[g].length; k++){
         var node = groups[g][k], w = node.getBoundingClientRect().width || 287;
-        cvs.push(await html2canvas(node, {backgroundColor: '#ffffff', scale: DOTS / w, useCORS: true, logging: false, onclone: prepClone}));
+        await wait(30);   /* lascia respirare il telefono tra un blocco e l'altro */
+        cvs.push(await html2canvas(node, {backgroundColor: '#ffffff', scale: DOTS / w, useCORS: true, logging: false, imageTimeout: 4000, removeContainer: true, onclone: prepClone}));
       }
       tickets.push(cvs);
     }
     sendToRawBT(tickets);
   }
+  if(isOn()) setTimeout(function(){ loadH2C().catch(function(){}); }, 3000);   /* precarico: la prima stampa non aspetta la rete */
   function testPrint(){
     var c = document.createElement('canvas'); c.width = DOTS; c.height = 190;
     var x = c.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, DOTS, 190); x.fillStyle = '#000'; x.textAlign = 'center';
@@ -22946,6 +23115,7 @@ html:not(.x) body #userBar button#thermalToggleBtn.ap-off,#thermalToggleBtn.ap-o
     '00001101-0000-1000-8000-00805f9b34fb', '0000fe59-0000-1000-8000-00805f9b34fb', '6e400001-b5a0-f393-e0a9-e50e24dcca9e', '0000180a-0000-1000-8000-00805f9b34fb'];
   function isConn(){
     if(!C) return false;
+    if(C.type === 'rawbt') return true;
     if(C.type === 'usb') return !!(C.dev && C.dev.opened);
     if(C.type === 'ble') return !!(C.dev && C.dev.gatt && C.dev.gatt.connected && C.ch);
     if(C.type === 'serial') return !!(C.port && C.port.writable);
@@ -22997,6 +23167,7 @@ html:not(.x) body #userBar button#thermalToggleBtn.ap-off,#thermalToggleBtn.ap-o
   }
   /* riconnessione silenziosa (dispositivo gia' autorizzato in precedenza) */
   async function ensureConn(){
+    if(cfg.transport === 'rawbt'){ if(!C || C.type !== 'rawbt') C = {type: 'rawbt', name: 'RawBT (testo)'}; return true; }
     if(isConn()) return true;
     var t = cfg.transport;
     try{
@@ -23024,7 +23195,13 @@ html:not(.x) body #userBar button#thermalToggleBtn.ap-off,#thermalToggleBtn.ap-o
     }catch(e){}
     C = null; cfg.transport = ''; save(); paint();
   }
+  function bpB64(u8){ var s = '', CH = 0x8000; for(var i = 0; i < u8.length; i += CH){ s += String.fromCharCode.apply(null, u8.subarray(i, i + CH)); } return btoa(s); }
   async function doSend(u8){
+    if(cfg.transport === 'rawbt'){   /* RawBT in modalita' TESTO: i byte ESC/POS vanno all'app RawBT (leggerissimo, nessuna immagine) */
+      window.location.href = 'intent:base64,' + bpB64(u8) + '#Intent;scheme=rawbt;package=ru.a402d.rawbtprinter;end;';
+      await wait(1500);   /* un lavoro alla volta: evita che il secondo sovrascriva il primo */
+      return;
+    }
     if(!(await ensureConn())) throw new Error('stampante non collegata: apri il pulsante di stampa diretta e collegala');
     var off, n;
     try{
@@ -23103,6 +23280,7 @@ html:not(.x) body #userBar button#thermalToggleBtn.ap-off,#thermalToggleBtn.ap-o
     var st = document.getElementById('bpDpStatus'); if(st) st.textContent = statusText();
   }
   function statusText(){
+    if(cfg.transport === 'rawbt') return 'Attiva: RawBT (solo testo)';
     if(isConn()) return 'Collegata: ' + C.name + ' (' + (C.type === 'usb' ? 'USB' : C.type === 'ble' ? 'Bluetooth' : 'Seriale') + ')';
     return cfg.transport ? 'Non collegata (ultimo collegamento: ' + ({usb: 'USB', ble: 'Bluetooth', serial: 'Seriale'}[cfg.transport]) + ')' : 'Nessuna stampante collegata';
   }
@@ -23114,12 +23292,13 @@ html:not(.x) body #userBar button#thermalToggleBtn.ap-off,#thermalToggleBtn.ap-o
     m = document.createElement('div'); m.id = 'bpDpModal';
     var sup = {usb: !!navigator.usb, ble: !!navigator.bluetooth, serial: !!navigator.serial};
     m.innerHTML = '<div class="dp-box"><h3>Stampante termica diretta</h3>' +
-      '<div class="dp-sub">Stampa testo ESC/POS direttamente alla stampante, senza RawBT e senza finestra di stampa.</div>' +
+      '<div class="dp-sub">Stampa testo ESC/POS: direttamente (USB / Bluetooth / Seriale) oppure tramite l\u0027app RawBT in sola modalit\u00E0 testo (veloce, nitido, senza immagini).</div>' +
       '<div id="bpDpStatus" class="dp-st"></div>' +
       '<div class="dp-row">' +
         '<button type="button" id="dpUsb"' + (sup.usb ? '' : ' disabled') + '>USB</button>' +
         '<button type="button" id="dpBle"' + (sup.ble ? '' : ' disabled') + '>Bluetooth</button>' +
-        '<button type="button" id="dpSer"' + (sup.serial ? '' : ' disabled') + '>Seriale / COM</button></div>' +
+        '<button type="button" id="dpSer"' + (sup.serial ? '' : ' disabled') + '>Seriale / COM</button>' +
+        '<button type="button" id="dpRaw" style="background:#16794b">RawBT (solo testo)</button></div>' +
       (sup.usb || sup.ble || sup.serial ? '' : '<div class="dp-err">Questo browser non supporta USB/Bluetooth/Seriale: usa Chrome o Edge (Android o PC) su una pagina HTTPS.</div>') +
       '<label class="dp-c"><input type="checkbox" id="dpOn"' + (enabled() ? ' checked' : '') + '> Usa la stampa diretta</label>' +
       '<div class="dp-grid">' +
@@ -23142,6 +23321,7 @@ html:not(.x) body #userBar button#thermalToggleBtn.ap-off,#thermalToggleBtn.ap-o
     ['dpCols', 'dpCp', 'dpBaud', 'dpKit', 'dpQr', 'dpKj'].forEach(function(i){ g(i).onchange = rd; });
     g('dpOn').onchange = function(){ setEnabled(g('dpOn').checked); };
     function conn(fn){ return function(){ rd(); fn().then(function(){ setEnabled(true); g('dpOn').checked = true; toast('Stampante collegata: ' + C.name); paint(); }).catch(function(e){ if(e && e.name === 'NotFoundError') return; toast('Collegamento non riuscito: ' + (e && e.message ? e.message : e), true); }); }; }
+    g('dpRaw').onclick = function(){ rd(); cfg.transport = 'rawbt'; save(); C = {type: 'rawbt', name: 'RawBT (testo)'}; setEnabled(true); g('dpOn').checked = true; toast('RawBT (solo testo) attivo: usa "Stampa di prova" per controllare'); paint(); };
     g('dpUsb').onclick = conn(connectUSB); g('dpBle').onclick = conn(connectBLE); g('dpSer').onclick = conn(connectSerial);
     g('dpOff').onclick = function(){ disconnect(); };
     g('dpClose').onclick = function(){ m.remove(); };
