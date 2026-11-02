@@ -1631,6 +1631,651 @@ html.bp-dark .bp36-badge.due{background:#3a1512;color:#fda29b;border-color:#7a27
 .bp37-diff span{background:var(--bp-soft,#f1f3f8);border-radius:10px;padding:8px 12px}
 @media print{.bp36-ov,.bp36-toast{display:none!important}}
 
+/* ═══════════════════════════════════════════════════════
+   ⚙️ PERSONALIZZA · COLLAPSIBLE SECTIONS · MAX BODY SPACE
+   Sezioni comprimibili: strip, quick, tabs → corpo enorme
+   ═══════════════════════════════════════════════════════ */
+
+/* ── Header compatto ──────────────────────────────────── */
+.pk-head {
+  padding: 6px 14px !important;
+  min-height: 0 !important;
+}
+.pk-title { font-size: calc(var(--fs) * .88) !important; }
+#pkClose {
+  min-height: 34px !important; min-width: 34px !important;
+  padding: 0 !important; border-radius: 10px !important;
+  font-size: 14px !important;
+}
+
+/* ── Strip sempre compatta (accordion già c'è via pk-acch) */
+.pk-strip {
+  padding: 5px 14px !important;
+  gap: 4px !important;
+}
+.pk-sname {
+  font-size: calc(var(--fs) * 1.05) !important;
+  line-height: 1.1 !important;
+}
+/* Bottone accordion della strip */
+.pk-acch {
+  width: 100%;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 8px !important;
+  background: rgba(0,0,0,.04) !important;
+  color: #344054 !important;
+  border: 1px solid #e1e4e8 !important;
+  border-radius: 10px !important;
+  padding: 6px 10px !important;
+  font-size: calc(var(--fs) * .85) !important;
+  font-weight: 800 !important;
+  min-height: 0 !important;
+  cursor: pointer;
+}
+.pk-acch i { font-style: normal; opacity: .6; }
+.pk-accs { color: #667085; font-weight: 700; font-size: .9em; margin-left: auto; margin-right: 4px; }
+.pk-accb { margin-top: 5px; }
+.pk-seg { padding: 5px 10px !important; min-height: 34px !important; font-size: calc(var(--fs) * .83) !important; border-radius: 9px !important; }
+.pk-qtyc button { min-width: 36px !important; min-height: 36px !important; }
+.pk-qtyc b { font-size: calc(var(--fs) * 1.05) !important; min-width: 24px !important; }
+
+/* ── Quick (Ben cotta, Doppia mozz…) → collassabile ─────
+   Aggiungiamo un toggle via CSS: pk-quick ha ora un
+   accordion header iniettato via JS sotto               */
+.pk-quick {
+  padding: 0 !important;
+  flex-wrap: wrap !important;
+  overflow: visible !important;
+  background: #fffaeb !important;
+  border-bottom: 1px solid #fedf89 !important;
+  gap: 0 !important;
+}
+/* Header toggle quick */
+.pk-qacc {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 5px 14px;
+  font-size: calc(var(--fs) * .82);
+  font-weight: 800;
+  color: #93370d;
+  cursor: pointer;
+  user-select: none;
+  background: transparent;
+  border: none;
+  gap: 8px;
+}
+.pk-qacc i { font-style: normal; opacity: .65; }
+.pk-qacc-body {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 0 14px 7px;
+  width: 100%;
+}
+.pk-qacc-body.hidden { display: none !important; }
+.pk-qk { padding: 6px 11px !important; font-size: calc(var(--fs) * .86) !important; }
+
+/* ── Tabs → collassabili ──────────────────────────────── */
+.pk-tabs {
+  padding: 0 !important;
+  flex-wrap: wrap !important;
+  overflow: visible !important;
+  background: #f8f9fb !important;
+  border-bottom: 1px solid #e1e4e8 !important;
+  gap: 0 !important;
+}
+.pk-tacc {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 5px 14px;
+  font-size: calc(var(--fs) * .82);
+  font-weight: 800;
+  color: #344054;
+  cursor: pointer;
+  user-select: none;
+  background: transparent;
+  border: none;
+  gap: 8px;
+}
+.pk-tacc i { font-style: normal; opacity: .65; }
+.pk-tacc-body {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 0 14px 7px;
+  width: 100%;
+  overflow-x: auto;
+}
+.pk-tacc-body.hidden { display: none !important; }
+.pk-tab {
+  padding: 7px 11px !important;
+  font-size: calc(var(--fs) * .86) !important;
+  border-radius: 12px !important;
+}
+
+/* ── Body: prende TUTTO lo spazio rimanente ───────────── */
+.pk-body {
+  flex: 1 1 0 !important;
+  min-height: 0 !important;
+  padding: 8px 14px 10px !important;
+}
+
+/* ── Grid tiles adattivo ──────────────────────────────── */
+.pk-grid {
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 120px), 1fr)) !important;
+  gap: 8px !important;
+}
+.pk-tile {
+  min-height: 105px !important;
+  padding: 9px 5px !important;
+}
+.pk-ico { font-size: calc(var(--fs) * 1.8) !important; }
+.pk-name { font-size: calc(var(--fs) * 1.0) !important; }
+
+/* ── Selbar (scelti) ──────────────────────────────────── */
+.pk-selbar { padding: 4px 14px !important; max-height: 68px !important; }
+
+/* ── Footer ───────────────────────────────────────────── */
+.pk-foot { padding: 7px 14px !important; }
+.pk-foot button { min-height: 46px !important; min-width: 110px !important; }
+#pkOk { min-height: 46px !important; }
+
+/* ── Landscape ────────────────────────────────────────── */
+@media (orientation:landscape) and (max-height:560px) {
+  .pk-strip { padding: 3px 10px !important; }
+  .pk-sname { font-size: calc(var(--fs) * .92) !important; }
+  .pk-qacc, .pk-tacc { padding: 3px 10px; }
+}
+
+/* ── Inietta toggle JS per quick e tabs ───────────────── */
+
+/* ═══════════════════════════════════════════════════════
+   🍕 PIZZA A GUSTI · LUXURY DARK REDESIGN v1
+   Palette: #0d0d14 bg · #7c3aed→#f97316 gradient · frosted glass cards
+   ═══════════════════════════════════════════════════════ */
+
+/* ── BACKDROP ─────────────────────────────────────────── */
+#bp36G.bp36-ov {
+  background: rgba(2, 3, 10, .82);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+
+/* ── SHEET · Fully responsive ─────────────────────────── */
+#bp36G .bp36-sheet {
+  background: #0d0d14 !important;
+  color: #f0f0f8 !important;
+  border: 1px solid rgba(124,58,237,.25);
+  box-shadow: 0 -4px 80px rgba(124,58,237,.22), 0 0 0 1px rgba(255,255,255,.04);
+  /* Usa tutto lo spazio disponibile, mai lasciare vuoto */
+  width: 100% !important;
+  max-width: 100% !important;
+}
+/* Desktop: max 900px centrato */
+@media (min-width: 900px) {
+  #bp36G .bp36-sheet {
+    max-width: min(900px, 98vw) !important;
+    width: 98vw !important;
+  }
+}
+/* Landscape su mobile: full height */
+@media (orientation: landscape) and (max-height: 600px) {
+  #bp36G.bp36-ov {
+    align-items: stretch !important;
+    padding: 0 !important;
+  }
+  #bp36G .bp36-sheet {
+    max-height: 100dvh !important;
+    border-radius: 0 !important;
+    max-width: 600px !important;
+  }
+  #bp36G .bp36-seg {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+}
+
+/* ── HEADER ───────────────────────────────────────────── */
+#bp36G .bp36-hd {
+  background: linear-gradient(135deg, #12091e 0%, #160e28 100%);
+  border-bottom: 1px solid rgba(124,58,237,.3) !important;
+  padding: 14px 18px;
+}
+#bp36G .bp36-hd h3 {
+  font-size: 19px;
+  font-weight: 900;
+  background: linear-gradient(90deg, #a78bfa, #fb923c);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  letter-spacing: -.3px;
+}
+#bp36G .bp36-hd button {
+  background: rgba(124,58,237,.2) !important;
+  color: #c4b5fd !important;
+  border: 1px solid rgba(124,58,237,.35) !important;
+}
+
+/* ── BODY ─────────────────────────────────────────────── */
+#bp36G .bp36-body {
+  background: #0d0d14;
+  gap: 14px;
+  padding: 16px 16px calc(16px + env(safe-area-inset-bottom));
+}
+
+/* ── SECTION LABELS ───────────────────────────────────── */
+#bp36G .bp36-lb {
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 1.4px;
+  text-transform: uppercase;
+  color: rgba(167,139,250,.7);
+  margin: 4px 0 0;
+}
+
+/* ── TIPO SELECTOR (Metà metà / 2 / 3 / 4 gusti) ─────── */
+#bp36G .bp36-seg {
+  display: grid !important;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+#bp36G .bp36-seg button {
+  background: rgba(255,255,255,.04) !important;
+  border: 1.5px solid rgba(255,255,255,.08) !important;
+  color: rgba(240,240,248,.6) !important;
+  border-radius: 14px !important;
+  padding: 10px 6px !important;
+  min-height: 58px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  gap: 3px !important;
+  font-size: 12px !important;
+  font-weight: 800 !important;
+  transition: all .2s ease !important;
+  backdrop-filter: blur(8px);
+}
+#bp36G .bp36-seg button span {
+  font-size: 22px !important;
+  font-weight: 900 !important;
+  line-height: 1;
+}
+#bp36G .bp36-seg button.on {
+  background: linear-gradient(135deg, rgba(124,58,237,.35), rgba(249,115,22,.25)) !important;
+  border-color: #a78bfa !important;
+  color: #f0f0f8 !important;
+  box-shadow: 0 0 18px rgba(124,58,237,.25), inset 0 1px 0 rgba(255,255,255,.1) !important;
+}
+#bp36G .bp36-seg button:disabled {
+  opacity: .25 !important;
+}
+
+/* ── SIZE SELECTOR (Normale / Maxi) ──────────────────── */
+#bp36G .bp36-seg:has([data-gs]) {
+  grid-template-columns: 1fr 1fr;
+}
+
+/* ── GUSTI SLOTS · SEMPRE 2 colonne su mobile ─────────── */
+#bp36G .bp36-g2 {
+  display: grid !important;
+  grid-template-columns: 1fr 1fr !important;   /* 2 colonne SEMPRE */
+  gap: 10px !important;
+  width: 100% !important;
+}
+/* 3 colonne su tablet (≥600px) */
+@media (min-width: 600px) {
+  #bp36G .bp36-g2 {
+    grid-template-columns: repeat(3, 1fr) !important;
+  }
+}
+/* 4 colonne su desktop/landscape largo */
+@media (min-width: 860px) {
+  #bp36G .bp36-g2 {
+    grid-template-columns: repeat(4, 1fr) !important;
+  }
+}
+
+/* ── Slot height adattiva ─────────────────────────────── */
+#bp36G .bp36-slot {
+  min-height: 130px !important;
+  height: 100% !important;
+  box-sizing: border-box !important;
+}
+
+/* ── modrow: fuori dalla griglia, occupa tutta la larghezza ── */
+#bp36G .bp36-modrow {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  gap: 6px !important;
+  align-items: center !important;
+  width: 100% !important;
+  margin-top: 0 !important;
+}
+
+#bp36G .bp36-slot {
+  background: rgba(255,255,255,.035) !important;
+  border: 1.5px dashed rgba(255,255,255,.12) !important;
+  border-radius: 18px !important;
+  padding: 14px 12px !important;
+  min-height: 100px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: flex-start !important;
+  gap: 8px !important;
+  position: relative;
+  overflow: hidden;
+  transition: all .2s ease !important;
+  backdrop-filter: blur(10px);
+  text-align: left !important;
+}
+#bp36G .bp36-slot::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at top left, rgba(124,58,237,.08) 0%, transparent 60%);
+  pointer-events: none;
+}
+#bp36G .bp36-slot:active {
+  transform: scale(.97);
+  border-color: rgba(167,139,250,.4) !important;
+}
+#bp36G .bp36-slot.has {
+  border-color: rgba(167,139,250,.55) !important;
+  border-style: solid !important;
+  background: linear-gradient(145deg, rgba(124,58,237,.12) 0%, rgba(249,115,22,.06) 100%) !important;
+  box-shadow: 0 0 24px rgba(124,58,237,.15), inset 0 1px 0 rgba(255,255,255,.07) !important;
+}
+#bp36G .bp36-slot.has::before {
+  background: radial-gradient(ellipse at top left, rgba(124,58,237,.14) 0%, transparent 60%);
+}
+
+/* Fraction badge */
+#bp36G .bp36-slot .fr {
+  width: 32px !important;
+  height: 32px !important;
+  border-radius: 10px !important;
+  background: linear-gradient(135deg, #7c3aed, #f97316) !important;
+  font-size: 13px !important;
+  font-weight: 900 !important;
+  box-shadow: 0 4px 12px rgba(124,58,237,.4);
+}
+
+/* Name section */
+#bp36G .bp36-slot .nm {
+  flex: 1;
+  width: 100%;
+}
+#bp36G .bp36-slot .nm b {
+  font-size: 14px !important;
+  font-weight: 850 !important;
+  color: #f0f0f8 !important;
+  white-space: normal !important;
+  overflow: visible !important;
+  text-overflow: unset !important;
+  line-height: 1.3;
+}
+#bp36G .bp36-slot .nm small {
+  font-size: 11px !important;
+  color: rgba(167,139,250,.75) !important;
+  opacity: 1 !important;
+  margin-top: 3px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: block;
+}
+
+/* Price inside slot */
+#bp36G .bp36-slot > b:last-child {
+  font-size: 16px !important;
+  font-weight: 900 !important;
+  color: #fb923c !important;
+  align-self: flex-end;
+}
+
+/* Add icon when empty */
+#bp36G .bp36-slot > span[style*="font-size:20px"] {
+  color: rgba(167,139,250,.5) !important;
+  font-size: 28px !important;
+  align-self: center;
+  margin: auto;
+}
+
+/* ── PIZZA PICK LIST ──────────────────────────────────── */
+#bp36G .bp36-pl {
+  gap: 8px !important;
+}
+#bp36G .bp36-pi {
+  background: rgba(255,255,255,.04) !important;
+  border: 1.5px solid rgba(255,255,255,.07) !important;
+  border-radius: 16px !important;
+  color: #f0f0f8 !important;
+  padding: 12px 14px !important;
+  min-height: 60px !important;
+  transition: all .15s ease !important;
+  gap: 12px !important;
+}
+#bp36G .bp36-pi:active {
+  background: rgba(124,58,237,.15) !important;
+  border-color: rgba(167,139,250,.4) !important;
+  transform: scale(.98);
+}
+#bp36G .bp36-pi .nm b {
+  font-size: 15px !important;
+  font-weight: 850 !important;
+  color: #f0f0f8 !important;
+}
+#bp36G .bp36-pi .nm small {
+  color: rgba(167,139,250,.7) !important;
+  opacity: 1 !important;
+}
+#bp36G .bp36-pi > b:last-child {
+  color: #fb923c !important;
+  font-size: 15px !important;
+  font-weight: 900 !important;
+  white-space: nowrap;
+}
+#bp36G .bp36-pi > span:first-child {
+  font-size: 26px !important;
+}
+
+/* Search input in pick list */
+#bp36G [data-gq] {
+  background: rgba(255,255,255,.06) !important;
+  border: 1.5px solid rgba(255,255,255,.12) !important;
+  border-radius: 14px !important;
+  color: #f0f0f8 !important;
+  font-size: 15px !important;
+}
+#bp36G [data-gq]::placeholder { color: rgba(167,139,250,.5) !important; }
+#bp36G [data-gback] {
+  background: rgba(255,255,255,.08) !important;
+  color: #f0f0f8 !important;
+  border: 1px solid rgba(255,255,255,.1) !important;
+  border-radius: 12px !important;
+}
+
+/* ── PRICE DISPLAY ────────────────────────────────────── */
+#bp36G .bp36-price {
+  background: linear-gradient(135deg, #160a2e 0%, #1a0e1a 50%, #1c0e0a 100%) !important;
+  border: 1.5px solid rgba(249,115,22,.5) !important;
+  border-radius: 18px !important;
+  padding: 14px 18px !important;
+  box-shadow: 0 8px 32px rgba(124,58,237,.2), 0 0 0 1px rgba(249,115,22,.15), inset 0 1px 0 rgba(255,255,255,.06);
+  position: relative;
+  overflow: hidden;
+}
+#bp36G .bp36-price::before {
+  content: '';
+  position: absolute;
+  top: -40px; right: -40px;
+  width: 140px; height: 140px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(249,115,22,.2) 0%, transparent 70%);
+  pointer-events: none;
+}
+/* Label "Totale unitario" */
+#bp36G .bp36-price > div > div {
+  font-size: 12px !important;
+  font-weight: 800 !important;
+  color: rgba(240,240,248,.7) !important;
+  text-transform: uppercase;
+  letter-spacing: .8px;
+  margin-bottom: 2px;
+}
+/* Regola prezzo (avg/max) */
+#bp36G .bp36-price small {
+  color: rgba(167,139,250,.85) !important;
+  font-size: 11px !important;
+  display: block;
+  margin-bottom: 2px;
+}
+/* IL PREZZO GRANDE — sempre visibile e brillante */
+#bp36G .bp36-price > b,
+#bp36G .bp36-price b:last-of-type {
+  font-size: 36px !important;
+  font-weight: 900 !important;
+  color: #fb923c !important;
+  background: none !important;
+  -webkit-text-fill-color: #fb923c !important;
+  text-shadow: 0 0 20px rgba(249,115,22,.5);
+  display: block;
+  line-height: 1.1;
+}
+/* Prezzo "—" quando non ancora scelti tutti i gusti */
+#bp36G .bp36-price > b:empty,
+#bp36G .bp36-price b.no-price {
+  color: rgba(240,240,248,.3) !important;
+  -webkit-text-fill-color: rgba(240,240,248,.3) !important;
+}
+
+/* ── INPUT PREZZO OVERRIDE (edit mode) ── più visibile ── */
+#bp36G [data-gprice] {
+  background: rgba(249,115,22,.12) !important;
+  border: 2px solid rgba(249,115,22,.5) !important;
+  color: #fb923c !important;
+  border-radius: 12px !important;
+  font-weight: 900 !important;
+  font-size: 20px !important;
+  text-align: center !important;
+}
+
+/* ── QTY + NOTE ROW ───────────────────────────────────── */
+#bp36G .bp36-qty button {
+  background: rgba(255,255,255,.06) !important;
+  color: #f0f0f8 !important;
+  border: 1px solid rgba(255,255,255,.1) !important;
+}
+#bp36G .bp36-qty b { color: #f0f0f8 !important; }
+#bp36G [data-gnote] {
+  background: rgba(255,255,255,.05) !important;
+  border: 1.5px solid rgba(255,255,255,.1) !important;
+  border-radius: 14px !important;
+  color: #f0f0f8 !important;
+}
+#bp36G [data-gnote]::placeholder { color: rgba(167,139,250,.45) !important; }
+
+/* ── MOD ROW (Senza/Extra per gusto) ─────────────────── */
+#bp36G .bp36-modrow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  grid-column: 1 / -1;
+}
+#bp36G .bp36-modrow button {
+  background: rgba(124,58,237,.15) !important;
+  color: #c4b5fd !important;
+  border: 1px solid rgba(124,58,237,.3) !important;
+  font-size: 12px !important;
+  min-height: 34px !important;
+  border-radius: 10px !important;
+}
+#bp36G .bp36-modsum {
+  font-size: 11.5px;
+  color: rgba(167,139,250,.8);
+  font-weight: 700;
+}
+
+/* ── SETTINGS CARD (Prezzi gusti) ────────────────────── */
+#bp36G .bp36-card {
+  background: rgba(255,255,255,.04) !important;
+  border: 1px solid rgba(255,255,255,.07) !important;
+  border-radius: 16px !important;
+}
+#bp36G .bp36-card summary { color: rgba(167,139,250,.85) !important; }
+#bp36G .bp36-card input, #bp36G .bp36-card select {
+  background: rgba(255,255,255,.06) !important;
+  border: 1px solid rgba(255,255,255,.1) !important;
+  color: #f0f0f8 !important;
+  border-radius: 10px !important;
+}
+#bp36G .bp36-card .bp36-note { color: rgba(167,139,250,.7) !important; }
+
+/* ── FOOTER BUTTONS ───────────────────────────────────── */
+#bp36G .bp36-ft {
+  background: #0d0d14 !important;
+  border-top: 1px solid rgba(124,58,237,.2) !important;
+  padding: 12px 16px calc(12px + env(safe-area-inset-bottom)) !important;
+  gap: 10px !important;
+}
+#bp36G .bp36-ft button.secondary {
+  background: rgba(255,255,255,.07) !important;
+  color: rgba(240,240,248,.8) !important;
+  border: 1px solid rgba(255,255,255,.1) !important;
+}
+#bp36G .bp36-ft button.green {
+  background: linear-gradient(135deg, #7c3aed, #f97316) !important;
+  color: #fff !important;
+  border: none !important;
+  box-shadow: 0 6px 24px rgba(124,58,237,.35) !important;
+  font-weight: 900 !important;
+  letter-spacing: -.2px;
+}
+#bp36G .bp36-ft button.green:disabled {
+  background: rgba(255,255,255,.08) !important;
+  box-shadow: none !important;
+  opacity: .5 !important;
+}
+#bp36G .bp36-ft button.green:not(:disabled):active {
+  transform: scale(.97);
+  box-shadow: 0 3px 12px rgba(124,58,237,.3) !important;
+}
+
+/* ── EMPTY STATE ──────────────────────────────────────── */
+#bp36G .bp36-empty {
+  color: rgba(167,139,250,.5) !important;
+  font-size: 42px;
+}
+
+/* gprice override: vedi blocco .bp36-price sopra */
+#bp36G [data-gauto] {
+  background: rgba(255,255,255,.07) !important;
+  color: rgba(240,240,248,.8) !important;
+  border: 1px solid rgba(255,255,255,.1) !important;
+  border-radius: 10px !important;
+}
+
+/* ── SLOT GLOW ANIMATION ON SELECTION ────────────────── */
+@keyframes gustiSlotPop {
+  0%   { transform: scale(1); }
+  40%  { transform: scale(1.04); box-shadow: 0 0 30px rgba(124,58,237,.4); }
+  100% { transform: scale(1); }
+}
+#bp36G .bp36-slot.has { animation: gustiSlotPop .35s ease; }
+
+/* ── SCROLLBAR ────────────────────────────────────────── */
+#bp36G .bp36-body::-webkit-scrollbar { width: 4px; }
+#bp36G .bp36-body::-webkit-scrollbar-track { background: transparent; }
+#bp36G .bp36-body::-webkit-scrollbar-thumb { background: rgba(124,58,237,.3); border-radius: 99px; }
+
+/* ═══════════ END PIZZA A GUSTI REDESIGN ════════════════ */
+
 /* --- bpV63 --- */
 
 html:not(.x) body #userBar #promoBtn::before{content:'🏷️'!important;font-size:20px}
@@ -1864,6 +2509,43 @@ html.pos64.p64-ticket .calc-box.rd-pay button{min-height:40px!important;padding:
 }
 </style>
  <style id="bpV93boot">html.bp-boot header{height:30px!important;min-height:0!important;padding-top:0!important;padding-bottom:0!important;overflow:hidden!important;border-bottom:0!important;transition:none!important}html.bp-boot header>*{visibility:hidden}</style><script id="bpV93bootJs">document.documentElement.classList.add('bp-boot')</script>
+<style id="bp-gusti-fix">
+/* Ogni gusto = una cella: riquadro + sotto il suo Senza/Extra */
+#bp36G .bp36-body > *{flex-shrink:0!important}
+#bp36G .bp36-cell{display:flex;flex-direction:column;gap:6px;min-width:0}
+#bp36G .bp36-cell .bp36-slot{width:100%;min-width:0}
+#bp36G .bp36-cell .bp36-modrow{display:flex;flex-direction:column;align-items:stretch;gap:4px;grid-column:auto}
+#bp36G .bp36-cell .bp36-modrow button{width:100%;white-space:normal;text-align:left;line-height:1.2;padding:8px 10px!important;font-size:clamp(11px,3.2vw,13px)!important;min-height:36px!important}
+#bp36G .bp36-cell .bp36-modsum{font-size:clamp(10.5px,3vw,12px)}
+/* Riquadro prezzo: più alto, testo proporzionato */
+#bp36G .bp36-price{flex-shrink:0!important;min-height:84px;overflow:visible!important;display:flex!important;align-items:center!important;justify-content:space-between!important;gap:10px;padding:14px 16px!important;flex-wrap:nowrap}
+#bp36G .bp36-price > div{min-width:0;flex:1 1 auto}
+#bp36G .bp36-price small{font-size:clamp(10px,2.8vw,12px)!important}
+#bp36G .bp36-price > div > div{font-size:clamp(11px,3.2vw,14px)!important}
+#bp36G .bp36-price > b,#bp36G .bp36-price b:last-of-type{font-size:clamp(22px,7vw,30px)!important;white-space:nowrap;flex:0 0 auto;line-height:1.1}
+#bp36G label.bp36-note{font-size:clamp(13px,3.6vw,16px)!important;color:rgba(167,139,250,.9)!important;flex-shrink:0!important}
+#bp36G [data-gprice]{flex:1 1 110px!important;min-width:0!important;max-width:100%!important;font-size:clamp(16px,5vw,20px)!important}
+#bp36G .bp36-ft{flex-shrink:0}
+#bp36G .bp36-ft button{font-size:clamp(14px,4vw,17px)!important;line-height:1.2}
+</style>
+<style id="bp-gusti-kitchen-contrast">
+/* Cucina: il riquadro pizza a gusti è chiaro (#fffbeb) → testo sempre scuro, in modo giorno e notte */
+html body #kitchenTab .k35-t .kt-item .gx,html body #bp35KDS .k35-t .kt-item .gx,html body .k35-it .gx,html body .kt-item .gx,html body .gx{background:#fffbeb!important;color:#111!important;border-color:#111!important}
+html body #kitchenTab .k35-t .kt-item .gx *,html body #bp35KDS .k35-t .kt-item .gx *,html body .k35-it .gx *,html body .kt-item .gx *,html body .gx *{color:#111!important;opacity:1!important;text-shadow:none!important;-webkit-text-fill-color:#111!important}
+html body #kitchenTab .k35-t .kt-item .gx small,html body #bp35KDS .k35-t .kt-item .gx small,html body .k35-it .gx small,html body .kt-item .gx small,html body .gx small{color:#1f2937!important;opacity:1!important;font-weight:800!important}
+html body #kitchenTab .k35-t .kt-item .gx .gx-n em,html body #bp35KDS .k35-t .kt-item .gx .gx-n em,html body .k35-it .gx .gx-n em,html body .kt-item .gx .gx-n em,html body .gx .gx-n em{background:#111!important;color:#fff!important;-webkit-text-fill-color:#fff!important}
+html body #kitchenTab .k35-t .kt-item .gx .gx-f,html body #bp35KDS .k35-t .kt-item .gx .gx-f,html body .k35-it .gx .gx-f,html body .kt-item .gx .gx-f,html body .gx .gx-f{color:#111!important;-webkit-text-fill-color:#111!important;opacity:1!important}
+html body #kitchenTab .k35-t .kt-item .gx .gx-m.rm,html body #bp35KDS .k35-t .kt-item .gx .gx-m.rm,html body .k35-it .gx .gx-m.rm,html body .kt-item .gx .gx-m.rm,html body .gx .gx-m.rm,html body #kitchenTab .k35-t .kt-item .gx .gx-m.rm *,html body #bp35KDS .k35-t .kt-item .gx .gx-m.rm *,html body .k35-it .gx .gx-m.rm *,html body .kt-item .gx .gx-m.rm *,html body .gx .gx-m.rm *{color:#b42318!important;-webkit-text-fill-color:#b42318!important}
+html body #kitchenTab .k35-t .kt-item .gx .gx-m.ex,html body #bp35KDS .k35-t .kt-item .gx .gx-m.ex,html body .k35-it .gx .gx-m.ex,html body .kt-item .gx .gx-m.ex,html body .gx .gx-m.ex,html body #kitchenTab .k35-t .kt-item .gx .gx-m.ex *,html body #bp35KDS .k35-t .kt-item .gx .gx-m.ex *,html body .k35-it .gx .gx-m.ex *,html body .kt-item .gx .gx-m.ex *,html body .gx .gx-m.ex *{color:#0b6b3a!important;-webkit-text-fill-color:#0b6b3a!important}
+html body #kitchenTab .k35-t .kt-item .gx .gx-h,html body #bp35KDS .k35-t .kt-item .gx .gx-h,html body .k35-it .gx .gx-h,html body .kt-item .gx .gx-h,html body .gx .gx-h{color:#111!important;-webkit-text-fill-color:#111!important}
+html body #kitchenTab .k35-t .kt-item .gx .gx-pie,html body #bp35KDS .k35-t .kt-item .gx .gx-pie,html body .k35-it .gx .gx-pie,html body .kt-item .gx .gx-pie,html body .gx .gx-pie{border-color:#111!important}
+html body #kitchenTab .k35-t .kt-item .gx .gx-sep i,html body #bp35KDS .k35-t .kt-item .gx .gx-sep i,html body .k35-it .gx .gx-sep i,html body .kt-item .gx .gx-sep i,html body .gx .gx-sep i{border-top-color:#111!important}
+</style>
+<style id="bp-gusti-mic">
+#bp36G [data-gmic]{flex:0 0 auto;width:52px;min-width:52px;font-size:22px;border-radius:14px;padding:0!important;background:rgba(124,58,237,.25)!important;border:1.5px solid rgba(167,139,250,.6)!important;color:#fff!important}
+#bp36G [data-gmic].on{background:#dc2626!important;border-color:#fecaca!important;animation:bpMicPulse 1s infinite}
+@keyframes bpMicPulse{0%,100%{box-shadow:0 0 0 0 rgba(220,38,38,.6)}50%{box-shadow:0 0 0 8px rgba(220,38,38,0)}}
+</style>
 </head>
  <body>
   <header class="no-print">
@@ -3653,16 +4335,31 @@ function openIngPicker(cfg){
     var q = e.target.closest("[data-q]");
     if(q){ var qs = el("ddQtySelect"); qs.value = String(Math.min(10, Math.max(1, Number(qs.value) + Number(q.getAttribute("data-q"))))); updateDropdownBuilderPrice(); drawStrip(); drawSum(); }
   };
+  var _tabOpen = true;
+  try{ _tabOpen = localStorage.getItem('bp_pk_tabopen') !== '0'; }catch(e){}
   function drawTabs(){
     secs = ingSections(kind, ingUnique(getAllKnownIngredients()));
-    var h = '<button type="button" class="pk-tab rem' + (tab === "senza" ? " on" : "") + '" data-t="senza">🚫 Senza' + (cfg.removed.size ? '<i class="pk-bdg">' + cfg.removed.size + '</i>' : '') + '</button>';
+    var totalSel = cfg.added.size + cfg.removed.size;
+    var curLabel = tab === 'senza' ? '🚫 Senza' : tab === '__note' ? '📝 Note' : (secs.filter(function(s){ return s.key === tab; })[0] || {short: tab}).short;
+    var badge = totalSel ? ' <i class="pk-bdg" style="background:#b42318;color:#fff">' + totalSel + '</i>' : '';
+    var h = '<button type="button" class="pk-tacc" id="pkTaccBtn"><span>' + curLabel + badge + '</span><i>' + (_tabOpen ? '▴' : '▾') + '</i></button>';
+    h += '<div class="pk-tacc-body' + (_tabOpen ? '' : ' hidden') + '" id="pkTaccBody">';
+    h += '<button type="button" class="pk-tab rem' + (tab === "senza" ? " on" : "") + '" data-t="senza">🚫 Senza' + (cfg.removed.size ? '<i class="pk-bdg">' + cfg.removed.size + '</i>' : '') + '</button>';
     var nl = bpNoteList(qkind), nn = 0; nl.forEach(function(x){ if(cfg.added.has(x[0])) nn++; });
     h += '<button type="button" class="pk-tab note' + (tab === "__note" ? " on" : "") + '" data-t="__note">📝 Note · ملاحظات' + (nn ? '<i class="pk-bdg">' + nn + '</i>' : '') + '</button>';
     secs.forEach(function(s){
       var n = 0; s.items.forEach(function(i){ if(cfg.added.has(i)) n++; });
       h += '<button type="button" class="pk-tab' + (tab === s.key ? " on" : "") + '" data-t="' + esc(s.key) + '">' + s.short + (n ? '<i class="pk-bdg">' + n + '</i>' : '') + '</button>';
     });
+    h += '</div>';
     el("pkTop").innerHTML = h;
+    var taccBtn = document.getElementById('pkTaccBtn');
+    if(taccBtn) taccBtn.onclick = function(e){
+      e.stopPropagation();
+      _tabOpen = !_tabOpen;
+      try{ localStorage.setItem('bp_pk_tabopen', _tabOpen ? '1' : '0'); }catch(ex){}
+      drawTabs();
+    };
   }
   function toggleNote(n){
     if(cfg.added.has(n)) cfg.added.delete(n);
@@ -3675,12 +4372,25 @@ function openIngPicker(cfg){
   var QUICK = kind === "pizza" ? [["Ben cotta","🔥",0],["Doppia mozzarella","🧀",2],["Poco mozzarella","🧀",0]] : [];
   var isKeb = bpIsKebabName(cfg.product && cfg.product.name);
   function soloBtn(){ return isKeb ? bpSoloBtnHtml(bpSoloActive(cfg.product.name, cfg.baseIngs, cfg.removed)) : ""; }
+  var _qOpen = false;
+  try{ _qOpen = localStorage.getItem('bp_pk_qopen') === '1'; }catch(e){}
   function drawQuick(){
     window.__pkQuickRedraw = function(){ drawQuick(); drawTabs(); if(tab === "__note") drawBody(true); };
     var qb = el("pkQuick");
     if(window.bpQuickGet) QUICK = window.bpQuickGet(qkind);
     qb.classList.remove("hidden");
-    qb.innerHTML = soloBtn() + QUICK.map(function(x){ var qp = isKeb ? ingPrice(x[0]) : x[2]; return '<button type="button" class="pk-qk' + (cfg.added.has(x[0]) ? " on" : "") + '" data-q="' + esc(x[0]) + '">' + x[1] + ' ' + esc(x[0]) + (qp ? ' <span class="pk-price">+ ' + euro(qp) + '</span>' : '') + '</button>'; }).join("") + '<button type="button" class="pk-qk" data-qedit="' + qkind + '" title="Modifica extra rapidi" style="opacity:.85">✏️</button>';
+    var activeQ = QUICK.filter(function(x){ return cfg.added.has(x[0]); });
+    var badge = activeQ.length ? ' <i class="pk-bdg" style="background:#b54708;color:#fff">' + activeQ.length + '</i>' : '';
+    var bodyH = soloBtn() + QUICK.map(function(x){ var qp = isKeb ? ingPrice(x[0]) : x[2]; return '<button type="button" class="pk-qk' + (cfg.added.has(x[0]) ? " on" : "") + '" data-q="' + esc(x[0]) + '">' + x[1] + ' ' + esc(x[0]) + (qp ? ' <span class="pk-price">+ ' + euro(qp) + '</span>' : '') + '</button>'; }).join("") + '<button type="button" class="pk-qk" data-qedit="' + qkind + '" title="Modifica extra rapidi" style="opacity:.85">✏️</button>';
+    qb.innerHTML = '<button type="button" class="pk-qacc" id="pkQaccBtn">⚡ Rapidi' + badge + '<i>' + (_qOpen ? '▴' : '▾') + '</i></button>' +
+      '<div class="pk-qacc-body' + (_qOpen ? '' : ' hidden') + '" id="pkQaccBody">' + bodyH + '</div>';
+    var qaccBtn = document.getElementById('pkQaccBtn');
+    if(qaccBtn) qaccBtn.onclick = function(e){
+      e.stopPropagation();
+      _qOpen = !_qOpen;
+      try{ localStorage.setItem('bp_pk_qopen', _qOpen ? '1' : '0'); }catch(ex){}
+      drawQuick();
+    };
   }
   function tile(ing, mode){
     var set = mode === "extra" ? cfg.added : cfg.removed, nm = esc(ing), chip;
@@ -14845,10 +15555,11 @@ openCartIngModal = function(key){
     $('h3', o).textContent = G.edit ? '✏️ Modifica pizza a gusti · تعديل البيتزا' : '🍕 Pizza a gusti · بيتزا متعددة';
     $('.bp36-tabs', o).innerHTML = '';
     var b = $('.bp36-body', o), ft = $('.bp36-ft', o), h = '';
+    if(G.pick < 0 && gRec) gMicStop();
     if(G.pick >= 0){
       var q = ingNorm(G.q || '');
       var list = pizzaList().filter(function(p){ return !q || ingNorm(p.name + ' ' + (p.description || '')).indexOf(q) >= 0; });
-      h += '<div style="display:flex;gap:8px"><input class="bp36-in" data-gq placeholder="🔍 Cerca pizza · ابحث" value="' + E(G.q) + '" style="flex:1"><button type="button" class="secondary" data-gback>✕</button></div>';
+      h += '<div style="display:flex;gap:8px"><input class="bp36-in" data-gq placeholder="' + (G.mic ? '🎤 Parla… · تكلّم' : (G.micMsg || '🔍 Cerca pizza · ابحث')) + '" value="' + E(G.q) + '" style="flex:1;min-width:0"><button type="button" class="secondary' + (G.mic ? ' on' : '') + '" data-gmic title="Voce · إدخال صوتي" aria-label="Voce">🎤</button><button type="button" class="secondary" data-gback>✕</button></div>';
       h += '<div class="bp36-pl">' + list.map(function(p){
         var ing = parseIngredients(p.description).join(', ');
         return '<button type="button" class="bp36-pi" data-gp="' + E(String(p.id)) + '"><span style="font-size:24px">🍕</span><span class="nm"><b>' + E(p.name) + '</b><small>' + E(ing) + '</small></span><b>' + eur(pkSizePrice(p, G.size)) + '</b></button>';
@@ -14865,9 +15576,16 @@ openCartIngModal = function(key){
       var dis = s === 'Maxi' && !ok;
       return '<button type="button" data-gs="' + s + '" class="' + (G.size === s ? 'on' : '') + '"' + (dis ? ' disabled' : '') + '>' + (s === 'Maxi' ? '🍕 Maxi (grande)' : '🍕 Normale (piccola)') + (dis ? '<small>non disponibile</small>' : '') + '</button>';
     }).join('') + '</div>';
-    h += '<div class="bp36-lb">Gusti · الأنواع</div><div class="bp36-g2" style="grid-template-columns:1fr">' + G.slots.map(function(p, i){
-      return '<button type="button" class="bp36-slot' + (p ? ' has' : '') + '" data-slot="' + i + '"><span class="fr">' + GM[m].fr + '</span><span class="nm"><b>' + (p ? E(p.name) : 'Scegli il gusto ' + (i + 1) + '…') + '</b>' + (p ? '<small>' + E(parseIngredients(p.description).join(', ')) + '</small>' : '') + '</span>' + (p ? '<b>' + eur(pkSizePrice(p, G.size)) + '</b>' : '<span style="font-size:20px">＋</span>') + '</button>' + (p ? gModRow(i, p) : '');
-    }).join('') + '</div>';
+    /* Slots in griglia 2 col, modrow sotto ogni coppia di slot */
+    var slotHtml = '<div class="bp36-lb">Gusti · الأنواع</div><div class="bp36-g2" style="grid-template-columns:1fr 1fr">';
+    G.slots.forEach(function(p, i){
+      slotHtml += '<div class="bp36-cell">';
+      slotHtml += '<button type="button" class="bp36-slot' + (p ? ' has' : '') + '" data-slot="' + i + '"><span class="fr">' + GM[m].fr + '</span><span class="nm"><b>' + (p ? E(p.name) : 'Scegli il gusto ' + (i + 1) + '…') + '</b>' + (p ? '<small>' + E(parseIngredients(p.description).join(', ')) + '</small>' : '') + '</span>' + (p ? '<b>' + eur(pkSizePrice(p, G.size)) + '</b>' : '<span style="font-size:20px">＋</span>') + '</button>';
+      if(p) slotHtml += gModRow(i, p);
+      slotHtml += '</div>';
+    });
+    slotHtml += '</div>';
+    h += slotHtml;
     var price = gPrice(), rule = C.gusti.rule[m];
     h += '<div class="bp36-price"><div><small>' + E(RULES.filter(function(r){ return r[0] === rule; })[0][1]) + (num(C.gusti.sup[m][G.size]) ? ' + ' + eur(C.gusti.sup[m][G.size]) : '') + '</small><div>' + (price == null ? 'Scegli tutti i gusti' : 'Totale unitario') + '</div></div><b>' + (price == null ? '—' : eur(price)) + '</b></div>';
     if(G.edit){
@@ -14964,14 +15682,61 @@ openCartIngModal = function(key){
     renderCart(); closeOv('bp36G'); flash('✅ ' + name);
     G.slots = G.slots.map(function(){ return null; }); G.mods = []; G.qty = 1; G.note = '';
   }
+  /* ===== Voce: cerca/scegli il gusto parlando (vale per ogni gusto 1-4) ===== */
+  var gRec = null;
+  function gMicStop(){ var r = gRec; gRec = null; G.mic = false; if(r){ try{ r.onresult = r.onerror = r.onend = null; r.abort ? r.abort() : r.stop(); }catch(_){} } }
+  function gVoiceClean(s){
+    return String(s || '').toLowerCase().replace(/[.,;:!?'"]/g, ' ')
+      .replace(/\b(pizza|pizze|gusto|gusti|numero|uno|due|tre|quattro|per favore|grazie|con|la|il|lo)\b/g, ' ')
+      .replace(/\s+/g, ' ').trim();
+  }
+  function gMatches(q){
+    q = ingNorm(q || '');
+    return pizzaList().filter(function(p){ return !q || ingNorm(p.name + ' ' + (p.description || '')).indexOf(q) >= 0; });
+  }
+  function gMicStart(){
+    var SRc = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if(!SRc){ G.micMsg = '🎤 Voce non supportata · غير مدعوم'; drawG(); return; }
+    gMicStop();
+    var r = new SRc(), finalTxt = '';
+    r.lang = 'it-IT'; r.interimResults = true; r.continuous = false; r.maxAlternatives = 3;
+    gRec = r; G.mic = true; G.micMsg = ''; G.q = ''; drawG();
+    r.onresult = function(ev){
+      if(gRec !== r) return;
+      var txt = '', fin = false;
+      for(var i = ev.resultIndex; i < ev.results.length; i++){ txt += ev.results[i][0].transcript + ' '; if(ev.results[i].isFinal) fin = true; }
+      var q = gVoiceClean(txt);
+      if(fin){ finalTxt = q; }
+      if(q){ G.q = q; G._focus = false; drawG(); }
+    };
+    r.onerror = function(ev){
+      if(gRec !== r) return;
+      var er = ev && ev.error;
+      G.micMsg = (er === 'not-allowed' || er === 'service-not-allowed') ? '🎤 Consenti il microfono · اسمح بالميكروفون' : (er === 'no-speech' ? '🎤 Non ho sentito · ما سمعتش' : '🎤 Errore voce · خطأ');
+    };
+    r.onend = function(){
+      if(gRec !== r) return;
+      gRec = null; G.mic = false;
+      /* se resta un solo gusto compatibile, lo scelgo subito */
+      var m = finalTxt ? gMatches(finalTxt) : [];
+      if(m.length === 1 && G.pick >= 0){
+        var p = m[0];
+        if(!G.slots[G.pick] || String(G.slots[G.pick].id) !== String(p.id)) G.mods[G.pick] = null;
+        G.slots[G.pick] = p; G.priceOv = null; G.pick = -1; G.q = '';
+      }
+      drawG();
+    };
+    try{ r.start(); }catch(_){ gRec = null; G.mic = false; G.micMsg = '🎤 Errore voce · خطأ'; drawG(); }
+  }
   document.addEventListener('click', function(e){
     var o = document.getElementById('bp36G'); if(!o || o.classList.contains('hidden') || !o.contains(e.target)) return;
     var t;
+    if(e.target.closest('[data-gmic]')){ if(G.mic) gMicStop(), drawG(); else gMicStart(); return; }
     if((t = e.target.closest('[data-gm]'))){ setMode(t.getAttribute('data-gm')); G.priceOv = null; drawG(); return; }
     if((t = e.target.closest('[data-gs]'))){ if(!t.disabled){ G.size = t.getAttribute('data-gs'); G.priceOv = null; drawG(); } return; }
     if((t = e.target.closest('[data-gmod]'))){ gOpenMod(Number(t.getAttribute('data-gmod'))); return; }
     if((t = e.target.closest('[data-slot]'))){ G.pick = Number(t.getAttribute('data-slot')); G.q = ''; drawG(); return; }
-    if(e.target.closest('[data-gback]')){ G.pick = -1; drawG(); return; }
+    if(e.target.closest('[data-gback]')){ gMicStop(); G.pick = -1; drawG(); return; }
     if((t = e.target.closest('[data-gp]'))){
       var id = t.getAttribute('data-gp'), p = pizzaList().filter(function(x){ return String(x.id) === id; })[0];
       if(p){ if(!G.slots[G.pick] || String(G.slots[G.pick].id) !== String(p.id)) G.mods[G.pick] = null; G.slots[G.pick] = p; G.priceOv = null; } G.pick = -1; drawG(); return;
