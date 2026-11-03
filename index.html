@@ -9970,6 +9970,8 @@ try{
           if(ord){
             await showDetails(ord);
             setTimeout(function(){ printReceiptWindow("80mm"); }, 250);
+            /* v44: بعد ايصال الزبون اطبع ايصال المطبخ */
+            setTimeout(function(){ bpPrintKitchenSeparate(ord); }, 2000);
           }
         }
       };
@@ -13639,6 +13641,19 @@ el('kitchenTab').addEventListener('click', function(e){
      Stesso percorso della stampa manuale (showDetails + printReceiptWindow '80mm'):
      pagina 1 = ricevuta, pagina 2 (page-break) = comanda cucina, solo se ci sono prodotti per la cucina.
      Coda: un ordine alla volta, così due ordini ravvicinati non si sovrascrivono. */
+    /* v44: طباعة منفصلة - بعد ايصال الزبون اطبع ايصال المطبخ كنافذة جديدة */
+  function bpPrintKitchenSeparate(ord){
+    if(!ord) return;
+    var items = (typeof itemsByOrder !== 'undefined' && itemsByOrder.get(ord.id)) || [];
+    items = items.filter(function(i){ return !bpIsSvc(i.product_name); });
+    if(!bpHasKitchenItems(items)) return;
+    if(typeof bpDirectPrint !== 'undefined' && bpDirectPrint && typeof bpDirectPrint.cfg !== 'undefined' && cfg.kitchen){
+      var d = newDoc(); kitchenDoc(d, ord, items); d.cut();
+      send(d.bytes()).catch(function(e){ console.warn('[bp] kitchen direct print failed', e); });
+    } else {
+      window.printKitchenTicketAuto(ord);
+    }
+  }
   window.bpAutoPrintOrder = (function(){
     var queue = [], busy = false;
     function wait(ms){ return new Promise(function(r){ setTimeout(r, ms); }); }
@@ -13673,6 +13688,8 @@ el('kitchenTab').addEventListener('click', function(e){
       try{ window.__bpPrinting = false; }catch(e){}
       try{ closeDetailsModal(); }catch(e){}
       await wait(800);
+      /* v44: بعد ايصال الزبون اطبع ايصال المطبخ */
+      bpPrintKitchenSeparate(o);
     }
     async function pump(){
       if(busy) return; busy = true;
