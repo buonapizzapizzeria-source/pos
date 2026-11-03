@@ -4,7 +4,7 @@
   <meta charset="utf-8"/>
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin/>
   <link rel="preconnect" href="https://jfgizazsjjgzyhqfngnl.supabase.co" crossorigin/>
-  <script id="bpPauseHidden">(function(){var _si=window.setInterval;window.setInterval=function(fn,ms){var a=Array.prototype.slice.call(arguments,2);if(typeof fn!=='function')return _si.apply(window,arguments);return _si.apply(window,[function(){if(document.hidden)return;return fn.apply(this,arguments);},ms].concat(a));};})();</script>
+  <script id="bpPauseHidden">(function(){var _si=window.setInterval;window.setInterval=function(fn,ms){var a=Array.prototype.slice.call(arguments,2);if(typeof fn!=='function')return _si.apply(window,arguments);return _si.apply(window,[function(){if(document.hidden&&!window.__bpPrinting)return;return fn.apply(this,arguments);},ms].concat(a));};})();</script>
 <script id="bp-fast-timers">
   /* v-fast: alleggerisce i timer di interfaccia (UI ticks).
      - tick < 800ms (>=250ms) -> 800ms
@@ -2527,6 +2527,19 @@ html.pos64.p64-ticket .calc-box.rd-pay button{min-height:40px!important;padding:
 #bp36G [data-gprice]{flex:1 1 110px!important;min-width:0!important;max-width:100%!important;font-size:clamp(16px,5vw,20px)!important}
 #bp36G .bp36-ft{flex-shrink:0}
 #bp36G .bp36-ft button{font-size:clamp(14px,4vw,17px)!important;line-height:1.2}
+/* ---------- SETTINGS TAB (v42) ---------- */
+.bp-set-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr));gap:16px;margin-bottom:20px}
+.bp-set-card{background:#fff;border:1px solid var(--line);border-radius:18px;padding:18px;box-shadow:0 4px 14px #1018280a;border-top:5px solid var(--line)}
+.bp-set-head{display:flex;align-items:center;gap:12px;margin-bottom:8px}
+.bp-set-ico{width:46px;height:46px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:22px;flex:0 0 auto}
+.bp-set-head h3{margin:0;font-size:17px;font-weight:850;color:#101828}
+.bp-set-desc{color:#667085;font-size:13px;margin:0 0 12px;line-height:1.45}
+.bp-set-rows{display:grid;gap:8px}
+.bp-set-row{display:flex;align-items:center;justify-content:space-between;gap:10px;background:#f8f9fb;border:1px solid #eaecf0;border-radius:12px;padding:9px 12px;font-size:13.5px;font-weight:700;color:#344054;flex-wrap:wrap}
+.bp-set-row>span{flex:1 1 auto;min-width:0}
+.bp-set-row .btn-sm,.bp-set-row button{flex:0 0 auto;white-space:nowrap}
+.bp-set-switch{font-weight:800!important;font-size:12.5px!important;border-radius:99px!important;padding:6px 13px!important}
+@media(max-width:700px){.bp-set-grid{grid-template-columns:1fr}.bp-set-card{padding:14px}.bp-set-head h3{font-size:15.5px}}
 </style>
 <style id="bp-gusti-kitchen-contrast">
 /* Cucina: il riquadro pizza a gusti è chiaro (#fffbeb) → testo sempre scuro, in modo giorno e notte */
@@ -2546,6 +2559,7 @@ html body #kitchenTab .k35-t .kt-item .gx .gx-sep i,html body #bp35KDS .k35-t .k
 #bp36G [data-gmic].on{background:#dc2626!important;border-color:#fecaca!important;animation:bpMicPulse 1s infinite}
 @keyframes bpMicPulse{0%,100%{box-shadow:0 0 0 0 rgba(220,38,38,.6)}50%{box-shadow:0 0 0 8px rgba(220,38,38,0)}}
 </style>
+<style id="bpCutSepCss">@media screen{.bp-cut-sep{height:0!important;margin:10px 0!important;border-top:2px dashed #000!important}}@media print{.bp-cut-sep{display:block!important;visibility:hidden;height:0!important;margin:0!important;padding:0!important;border:0!important;page-break-after:always!important;break-after:page!important}}</style>
 </head>
  <body>
   <header class="no-print">
@@ -2692,6 +2706,9 @@ html body #kitchenTab .k35-t .kt-item .gx .gx-sep i,html body #bp35KDS .k35-t .k
     </button>
     <button data-tab="purchases" onclick="switchTab('purchases')" type="button">
      🧾 Acquisti
+    </button>
+    <button data-tab="settings" onclick="switchTab('settings')" type="button">
+     ⚙️ Impostazioni
     </button>
    </div>
    <!-- TAB 1: NUOVO ORDINE / MODIFICA ORDINE ESISTENTE -->
@@ -3538,6 +3555,116 @@ html body #kitchenTab .k35-t .kt-item .gx .gx-sep i,html body #bp35KDS .k35-t .k
      </button>
     </div>
     <div class="orders" id="allOrders">
+    </div>
+   </div>
+   <!-- TAB 6: IMPOSTAZIONI (⚙️) - PANNELLO UNICO DI CONFIGURAZIONE -->
+   <div class="hidden" id="settingsTab">
+    <div class="topline">
+     <h1>⚙️ Impostazioni</h1>
+     <span class="muted">Pannello unico per tutte le configurazioni del POS</span>
+    </div>
+    <div class="bp-set-grid">
+
+     <!-- RIGA 1: AUDIO & NOTIFICHE -->
+     <div class="bp-set-card" style="border-top-color:var(--green)">
+      <div class="bp-set-head">
+       <span class="bp-set-ico" style="background:#ecfdf3;color:#16794b">🔔</span>
+       <h3>Audio &amp; Notifiche</h3>
+      </div>
+      <p class="bp-set-desc">Suono del nuovo ordine, notifiche push sul telefono e lingua dell’assistente vocale.</p>
+      <div class="bp-set-rows">
+       <div class="bp-set-row">
+        <span>🔔 Suono nuovo ordine</span>
+        <button class="bp-set-switch" id="setSoundBtn" onclick="toggleSoundAlert()">🔔 Audio ON</button>
+       </div>
+       <div class="bp-set-row">
+        <span>🔊 Prova suono campanello</span>
+        <button class="secondary btn-sm" onclick="playOrderChime(true)">🔊 Test</button>
+       </div>
+       <div class="bp-set-row">
+        <span>📲 Notifiche sul telefono</span>
+        <button class="bp-set-switch" id="setPushBtn" onclick="bpTogglePush()">📲 Notifiche</button>
+       </div>
+       <div class="bp-set-row">
+        <span>🎤 Lingua assistente vocale</span>
+        <button class="secondary btn-sm bp-vl" onclick="bpVoiceToggle()">🎤 عربي</button>
+       </div>
+      </div>
+     </div>
+
+     <!-- RIGA 1: STAMPA -->
+     <div class="bp-set-card" style="border-top-color:var(--blue)">
+      <div class="bp-set-head">
+       <span class="bp-set-ico" style="background:#eff8ff;color:#175cd3">🖨️</span>
+       <h3>Stampa &amp; Stampanti</h3>
+      </div>
+      <p class="bp-set-desc">Stampa termica 80mm, stampa diretta ESC/POS e stampa automatica della cucina.</p>
+      <div class="bp-set-rows">
+       <div class="bp-set-row">
+        <span>🖨️ Stampa automatica (KDS)</span>
+        <button class="bp-set-switch" id="setAutoPrintBtn" onclick="document.getElementById('autoPrintToggleBtn') && document.getElementById('autoPrintToggleBtn').click()">🖨️ Auto</button>
+       </div>
+       <div class="bp-set-row">
+        <span>🧾 Stampa termica RawBT</span>
+        <button class="bp-set-switch" id="setThermalBtn" onclick="document.getElementById('thermalToggleBtn') && document.getElementById('thermalToggleBtn').click()">🧾 RawBT</button>
+       </div>
+       <div class="bp-set-row">
+        <span>🔌 Stampa diretta ESC/POS</span>
+        <button class="secondary btn-sm" onclick="document.getElementById('directPrintBtn') && document.getElementById('directPrintBtn').click()">🔌 Diretta</button>
+       </div>
+      </div>
+     </div>
+
+     <!-- RIGA 2: SISTEMA & ACCOUNT -->
+     <div class="bp-set-card" style="border-top-color:var(--purple)">
+      <div class="bp-set-head">
+       <span class="bp-set-ico" style="background:#f4f3ff;color:#6941c6">👤</span>
+       <h3>Account &amp; Sistema</h3>
+      </div>
+      <p class="bp-set-desc">Sincronizzazione offline, configurazione database e accesso utente.</p>
+      <div class="bp-set-rows">
+       <div class="bp-set-row">
+        <span>📡 Sincronizza ordini offline</span>
+        <button class="secondary btn-sm" onclick="window.__bpOff && window.__bpOff.syncPending(true)">📡 Sincronizza</button>
+       </div>
+       <div class="bp-set-row">
+        <span>🔄 Configurazione Supabase</span>
+        <button class="secondary btn-sm" onclick="el('loginScreen').classList.remove('hidden')">🔄 Configura</button>
+       </div>
+       <div class="bp-set-row">
+        <span>🚪 Cambia utente</span>
+        <button class="secondary btn-sm" onclick="doLogout()">🚪 Esci</button>
+       </div>
+      </div>
+     </div>
+
+     <!-- RIGA 2: GESTIONE RAPIDA -->
+     <div class="bp-set-card" style="border-top-color:var(--orange)">
+      <div class="bp-set-head">
+       <span class="bp-set-ico" style="background:#fffaeb;color:#b54708">🛠️</span>
+       <h3>Gestione Rapida</h3>
+      </div>
+      <p class="bp-set-desc">Accesso rapido alle funzioni di gestione più usate.</p>
+      <div class="bp-set-rows">
+       <div class="bp-set-row">
+        <span>🍕 Nuovo prodotto</span>
+        <button class="secondary btn-sm" onclick="switchTab('menu'); openProductModal(null)">＋ Prodotto</button>
+       </div>
+       <div class="bp-set-row">
+        <span>📁 Nuova categoria</span>
+        <button class="secondary btn-sm" onclick="switchTab('menu'); openCategoryModal()">📁 Categoria</button>
+       </div>
+       <div class="bp-set-row">
+        <span>📦 Magazzino</span>
+        <button class="secondary btn-sm" onclick="switchTab('inventory')">📦 Magazzino</button>
+       </div>
+       <div class="bp-set-row">
+        <span>🧾 Acquisti</span>
+        <button class="secondary btn-sm" onclick="switchTab('purchases')">🧾 Acquisti</button>
+       </div>
+      </div>
+     </div>
+
     </div>
    </div>
   </main>
@@ -7501,7 +7628,7 @@ function switchTab(tabName){
   document.querySelectorAll('[data-tab]').forEach(b=>{
     b.classList.toggle('active', b.getAttribute('data-tab')===tabName);
   });
-  const map={'new':'newTab','orders':'ordersTab','cassa':'cassaTab','menu':'menuTab','all':'allTab','kitchen':'kitchenTab','inventory':'inventoryTab','loyalty':'loyaltyTab','analytics':'analyticsTab','purchases':'purchasesTab'};
+  const map={'new':'newTab','orders':'ordersTab','cassa':'cassaTab','menu':'menuTab','all':'allTab','kitchen':'kitchenTab','inventory':'inventoryTab','loyalty':'loyaltyTab','analytics':'analyticsTab','purchases':'purchasesTab','settings':'settingsTab'};
   Object.keys(map).forEach(k=>{
     let box = el(map[k]);                                   // i tab Magazzino/Fedelta'/Report esistono solo dopo il caricamento delle estensioni
     if(box) box.classList.toggle('hidden', k!==tabName);
@@ -7510,13 +7637,32 @@ function switchTab(tabName){
     lockCassaView();
   }
   updateMobileCartBar();
-  if(tabName==='kitchen'){ try{ renderKitchen(); }catch(e){ bpWarn(e); } }
-  if(tabName==='inventory'){ try{ loadInventoryData(true); }catch(e){ bpWarn(e); } }
-  if(tabName==='loyalty'){ try{ loadLoyaltyData(); }catch(e){ bpWarn(e); } }
-  if(tabName==='analytics'){ try{ loadAnalyticsData(); }catch(e){ bpWarn(e); } }
-  if(tabName==='purchases'){ try{ bp36.renderPurchases(); }catch(e){ bpWarn(e); } }
-  if(tabName==='menu') loadMenu();
-  else if(tabName!=='new') loadOrders();
+  if(tabName === 'settings') bpRefreshSettingsPanel();
+}
+
+function bpRefreshSettingsPanel(){
+  try{
+    var sb = document.getElementById('setSoundBtn');
+    if(sb){ sb.textContent = soundEnabled ? '🔔 Audio ON' : '🔕 Audio OFF'; sb.style.background = soundEnabled ? '#16794b' : '#b42318'; sb.style.color = '#fff'; }
+  }catch(e){}
+  try{
+    var pb = document.getElementById('setPushBtn');
+    if(pb){ var on = localStorage.getItem('bp_push') === '1'; pb.textContent = on ? '📲 Notifiche ON' : '📲 Notifiche'; pb.style.background = on ? '#16794b' : '#b42318'; pb.style.color = '#fff'; }
+  }catch(e){}
+  try{
+    var apb = document.getElementById('setAutoPrintBtn');
+    if(apb){ var on2 = localStorage.getItem('bp_auto_print') === '1'; apb.textContent = on2 ? '🖨️ Auto ON' : '🖨️ Auto OFF'; apb.style.background = on2 ? '#16794b' : '#b42318'; apb.style.color = '#fff'; }
+  }catch(e){}
+  try{
+    var tb = document.getElementById('setThermalBtn');
+    if(tb){ var on3 = localStorage.getItem('bp_thermal') === '1'; tb.textContent = on3 ? '🧾 RawBT ON' : '🧾 RawBT OFF'; tb.style.background = on3 ? '#16794b' : '#b42318'; tb.style.color = '#fff'; }
+  }catch(e){}
+  try{
+    var vl = document.querySelector('.bp-vl');
+    if(vl){ vl.textContent = bpVoiceLang() === 'ar-EG' ? '🎤 عربي' : '🎤 Italiano'; }
+  }catch(e){}
+  // للاسف البرنامج لا يفتح الكود به مشكلة
+  console.log('[settings-panel] bpRefreshSettingsPanel rendered');
 }
 
 function toggleAddress(){
@@ -9531,7 +9677,7 @@ async function showDetails(o){
   let html = buildReceiptHtml(o, items);
   /* ricevuta principale sempre; comanda cucina SOLO se ci sono prodotti per la cucina */
   if(hasKitchen){
-    html += '<div class="bp-cut-sep" style="margin:10px 0;border-top:2px dashed #000;text-align:center;font-size:11px;font-weight:900;line-height:1;padding-top:2px;break-inside:avoid">✂ - - - - - - - - - - - - - - ✂</div>' + buildKitchenReceiptHtml(o, items);
+    html += '<div class="bp-cut-sep" style="page-break-after:always;break-after:page;height:0;margin:0;padding:0;border:0;overflow:hidden"></div>' + buildKitchenReceiptHtml(o, items);
   }
   
   el('receiptContainer').innerHTML = html;
@@ -13516,12 +13662,15 @@ el('kitchenTab').addEventListener('click', function(e){
       await showDetails(o);              /* costruisce ricevuta + (se serve) comanda cucina */
       currentPrintedOrder = null;        /* stampa auto: NON cambia lo stato dell'ordine (come prima) */
       await wait(350);
+      /* v42: con RawBT l'intent porta via la pagina, quindi l'afterprint non arriva mai.
+         Timeout corto + risoluzione anche al hidden, cosi' la coda non si blocca. */
       var done = new Promise(function(res){
-        var t = setTimeout(res, 20000);
+        var t = setTimeout(res, 6000);
         window.addEventListener('afterprint', function h(){ window.removeEventListener('afterprint', h); clearTimeout(t); res(); });
       });
       printReceiptWindow('80mm');
       await done;
+      try{ window.__bpPrinting = false; }catch(e){}
       try{ closeDetailsModal(); }catch(e){}
       await wait(800);
     }
@@ -13540,6 +13689,9 @@ el('kitchenTab').addEventListener('click', function(e){
   var knownIds = null, lastRef = null, lastLen = -1;
   setInterval(function(){
     try {
+      /* v42: non controllare nuovi ordini mentre la pagina e' nascosta (stampa RawBT in corso):
+         evita di accodare ordini che non verranno mai stampati. */
+      if(document.hidden) return;
       var list = (typeof orders !== 'undefined' && Array.isArray(orders)) ? orders : [];
       if(!list.length) return;
       if(list === lastRef && list.length === lastLen) return; // nessun cambiamento: niente lavoro
@@ -13554,7 +13706,7 @@ el('kitchenTab').addEventListener('click', function(e){
         window.bpAutoPrintOrder(o);   /* ricevuta + comanda cucina insieme */
       });
     } catch(e){ console.warn('[bp] auto-print', e); }
-  }, 2000);
+  }, 4000);
 })();
 
   // التحديث السريع والآمن لترقية السيستم
@@ -22498,7 +22650,14 @@ html:not(.x) body #userBar button#thermalToggleBtn.ap-off,#thermalToggleBtn.ap-o
       cvs.forEach(function(cv){ toRaster(cv).forEach(function(b){ parts.push(b); }); });
       parts.push(new Uint8Array([0x1B, 0x64, 0x01, 0x1D, 0x56, 0x42, 0x00]));
     });
-    window.location.href = 'intent:base64,' + b64(concat(parts)) + '#Intent;scheme=rawbt;package=ru.a402d.rawbtprinter;end;';
+    /* v42: l'intent RawBT porta via la pagina. Non aspettare: il redirect e' sincrono e
+       il promise non si risolverebbe mai (la pagina diventa hidden -> timers fermi -> lock screen). */
+    try{ window.__bpPrinting = true; }catch(e){}
+    try{ window.location.href = 'intent:base64,' + b64(concat(parts)) + '#Intent;scheme=rawbt;package=ru.a402d.rawbtprinter;end;';
+    }catch(e){ try{ window.__bpPrinting = false; }catch(x){} }
+    /* v42: l'intent e' sincrono e porta via la pagina. Segnala subito 'stampa finita' cosi'
+       la coda auto-print non rimane in attesa di un afterprint che non arrivera mai. */
+    try{ window.setTimeout(function(){ try{ window.dispatchEvent(new Event('afterprint')); }catch(e){} }, 1200); }catch(e){}
   }
   /* i QR sono immagini esterne: li converto in data-URL prima del rendering (se il server lo permette) */
   async function inlineImgs(root){
@@ -23198,8 +23357,13 @@ html:not(.x) body #userBar button#thermalToggleBtn.ap-off,#thermalToggleBtn.ap-o
   function bpB64(u8){ var s = '', CH = 0x8000; for(var i = 0; i < u8.length; i += CH){ s += String.fromCharCode.apply(null, u8.subarray(i, i + CH)); } return btoa(s); }
   async function doSend(u8){
     if(cfg.transport === 'rawbt'){   /* RawBT in modalita' TESTO: i byte ESC/POS vanno all'app RawBT (leggerissimo, nessuna immagine) */
-      window.location.href = 'intent:base64,' + bpB64(u8) + '#Intent;scheme=rawbt;package=ru.a402d.rawbtprinter;end;';
-      await wait(1500);   /* un lavoro alla volta: evita che il secondo sovrascriva il primo */
+      /* v42: l'intent porta via la pagina. Non aspettare: il redirect e' sincrono e il promise
+         non si risolverebbe mai (pagina hidden -> timers fermi -> lock screen -> ordine appeso). */
+      try{ window.__bpPrinting = true; }catch(e){}
+      try{ window.location.href = 'intent:base64,' + bpB64(u8) + '#Intent;scheme=rawbt;package=ru.a402d.rawbtprinter;end;';
+      }catch(e){ try{ window.__bpPrinting = false; }catch(x){} }
+      /* v42: segnala subito la fine della stampa (l'intent porta via la pagina). */
+      try{ window.setTimeout(function(){ try{ window.dispatchEvent(new Event('afterprint')); }catch(e){} }, 1200); }catch(e){}
       return;
     }
     if(!(await ensureConn())) throw new Error('stampante non collegata: apri il pulsante di stampa diretta e collegala');
