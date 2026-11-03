@@ -22760,7 +22760,7 @@ html:not(.x) body #userBar button#thermalToggleBtn.ap-off,#thermalToggleBtn.ap-o
   if(window.__bpDirect) return; window.__bpDirect = 1;
 
   var CK = 'bp_direct_cfg', EK = 'bp_direct';
-  var DEF = {cols: 48, cp: 'cp858', qr: 1, kitchen: 1, baud: 9600, transport: '', kanji: 0, bleChunk: 100, usbKey: '', bleName: '', wifiUrl: '', wifiPort: 9100};
+  var DEF = {cols: 48, cp: 'cp858', qr: 1, kitchen: 1, baud: 9600, transport: '', kanji: 0, bleChunk: 100, usbKey: '', bleName: ''};
   var cfg = (function(){ try{ return Object.assign({}, DEF, JSON.parse(localStorage.getItem(CK) || '{}')); }catch(e){ return Object.assign({}, DEF); } })();
   function save(){ try{ localStorage.setItem(CK, JSON.stringify(cfg)); }catch(e){} }
   function enabled(){ try{ return localStorage.getItem(EK) === '1'; }catch(e){ return false; } }
@@ -23326,30 +23326,7 @@ html:not(.x) body #userBar button#thermalToggleBtn.ap-off,#thermalToggleBtn.ap-o
   }
   /* riconnessione silenziosa (dispositivo gia' autorizzato in precedenza) */
   async function ensureConn(){
-    if(cfg.transport === 'rawbt'){ if(!C || C.type !== 'rawbt') C = {type: 'rawbt', name: 'RawBT (testo)'};
-  /* v44: WiFi/Ethernet stampa عبر HTTP gateway */
-  async function connectWiFi(url, port){
-    if(!url) throw new Error('أدخل عنوان IP أو URL الخاص بالطابعة');
-    cfg.wifiUrl = url;
-    cfg.wifiPort = Number(port) || 9100;
-    cfg.transport = 'wifi';
-    C = {type: 'wifi', name: url + ':' + (port || 9100), url: url, port: Number(port) || 9100};
-    save();
-    return true;
-  }
-  async function testWiFi(){
-    if(!C || C.type !== 'wifi') throw new Error('ليس متصلًا عبر WiFi');
-    var d = testDoc();
-    var blob = new Blob([d.bytes()], {type: 'application/octet-stream'});
-    var resp = await fetch('http://' + C.url + ':' + C.port + '/print', {
-      method: 'POST',
-      body: blob,
-      headers: {'Content-Type': 'application/octet-stream'}
-    });
-    if(!resp.ok) throw new Error('فشل الاتصال: ' + resp.status);
-    return resp;
-  }
- return true; }
+    if(cfg.transport === 'rawbt'){ if(!C || C.type !== 'rawbt') C = {type: 'rawbt', name: 'RawBT (testo)'}; return true; }
     if(isConn()) return true;
     var t = cfg.transport;
     try{
@@ -23379,13 +23356,10 @@ html:not(.x) body #userBar button#thermalToggleBtn.ap-off,#thermalToggleBtn.ap-o
   }
   function bpB64(u8){ var s = '', CH = 0x8000; for(var i = 0; i < u8.length; i += CH){ s += String.fromCharCode.apply(null, u8.subarray(i, i + CH)); } return btoa(s); }
   async function doSend(u8){
-        if(cfg.transport === 'wifi' && C && C.type === 'wifi'){
-      /* WiFi: أرسل عبر HTTP POST للـ gateway */
+        if(cfg.transport === 'rawbt-ws' && C && C.type === 'rawbt-ws'){
+      /* RawBT WebSocket: طباعة مباشرة بدون تأكيد */
       try{
-        var blob = new Blob([u8], {type: 'application/octet-stream'});
-        var url = 'http://' + C.url + ':' + C.port + '/print';
-        var resp = await fetch(url, {method: 'POST', body: blob, headers: {'Content-Type': 'application/octet-stream'}});
-        if(!resp.ok) throw new Error('HTTP ' + resp.status);
+        rawbtWsSend(u8);
         return;
       }catch(e){
         C = null; paint(); throw e;
@@ -23451,7 +23425,52 @@ if(cfg.transport === 'rawbt'){   /* RawBT in modalita' TESTO: i byte ESC/POS van
     return orderDoc(o, items, kitchenOnly);
   }
 
-  var _orig = window.printReceiptWindow, chain = Promise.resolve();
+  
+  /* v44: RawBT WebSocket - طباعة مباشرة بدون تأكيد من المستخدم */
+  var _rawbtWs = null;
+  async function connectRawBTWebSocket(port){
+    port = Number(port) || 40213;
+    return new Promise(function(resolve, reject){
+      try{
+        var ws = new WebSocket('ws://127.0.0.1:' + port + '/');
+        ws.onopen = function(){
+          C = {type: 'rawbt-ws', name: 'RawBT WebSocket', ws: ws, port: port};
+          cfg.transport = 'rawbt-ws';
+          cfg.rawbtPort = port;
+          save();
+          resolve(true);
+        };
+        ws.onerror = function(e){
+          reject(new Error('RawBT WebSocket connection failed'));
+        };
+        ws.onclose = function(){
+          if(C && C.type === 'rawbt-ws'){
+            C = null;
+            cfg.transport = '';
+            save();
+            paint();
+          }
+        };
+        setTimeout(function(){
+          if(ws.readyState !== WebSocket.OPEN){
+            ws.close();
+            reject(new Error('RawBT WebSocket connection timeout'));
+          }
+        }, 5000);
+        _rawbtWs = ws;
+      }catch(e){
+        reject(e);
+      }
+    });
+  }
+  function rawbtWsSend(data){
+    if(!C || C.type !== 'rawbt-ws' || !_rawbtWs || _rawbtWs.readyState !== WebSocket.OPEN){
+      throw new Error('RawBT WebSocket not connected');
+    }
+    _rawbtWs.send(data);
+  }
+
+var _orig = window.printReceiptWindow, chain = Promise.resolve();
   window.printReceiptWindow = function(format){
     var self = this, args = arguments;
     if(format !== '80mm' || !enabled()) return _orig.apply(self, args);
@@ -23491,33 +23510,26 @@ if(cfg.transport === 'rawbt'){   /* RawBT in modalita' TESTO: i byte ESC/POS van
     m = document.createElement('div'); m.id = 'bpDpModal';
     var sup = {usb: !!navigator.usb, ble: !!navigator.bluetooth, serial: !!navigator.serial};
     m.innerHTML = '<div class="dp-box"><h3>Stampante termica diretta</h3>' +
-      '<div class="dp-sub">Stampa testo ESC/POS: direttamente (USB / Bluetooth / Seriale / WiFi) oppure tramite l'app RawBT.</div>' +
+      '<div class="dp-sub">Stampa testo ESC/POS: direttamente (USB / Bluetooth / Seriale) oppure tramite l\u0027app RawBT in sola modalit\u00E0 testo (veloce, nitido, senza immagini).</div>' +
       '<div id="bpDpStatus" class="dp-st"></div>' +
       '<div class="dp-row">' +
         '<button type="button" id="dpUsb"' + (sup.usb ? '' : ' disabled') + '>USB</button>' +
         '<button type="button" id="dpBle"' + (sup.ble ? '' : ' disabled') + '>Bluetooth</button>' +
         '<button type="button" id="dpSer"' + (sup.serial ? '' : ' disabled') + '>Seriale / COM</button>' +
-        '<button type="button" id="dpWifi" style="background:#5925dc">WiFi / Rete</button>' +
         '<button type="button" id="dpRaw" style="background:#16794b">RawBT (solo testo)</button></div>' +
       (sup.usb || sup.ble || sup.serial ? '' : '<div class="dp-err">Questo browser non supporta USB/Bluetooth/Seriale: usa Chrome o Edge (Android o PC) su una pagina HTTPS.</div>') +
-      '<div id="dpWifiSettings" style="display:' + (cfg.transport === 'wifi' ? 'block' : 'none') + ';margin:8px 0;padding:8px;background:#f8f9fb;border-radius:8px;">' +
-        '<label class="dp-l">Indirizzo IP stampante<select id="dpWifiPresets"><option value="">— preferito —</option><option value="192.168.1.100">192.168.1.100</option><option value="192.168.1.101">192.168.1.101</option><option value="10.0.0.100">10.0.0.100</option></select></label>' +
-        '<input type="text" id="dpWifiIp" placeholder="IP es: 192.168.1.100" value="' + (cfg.wifiUrl || '') + '" style="width:100%;min-height:38px;margin-top:4px;padding:0 8px;border:1px solid #d0d5dd;border-radius:8px;">' +
-        '<div style="display:flex;gap:6px;margin-top:6px"><input type="number" id="dpWifiPort" placeholder="Porta" value="' + (cfg.wifiPort || 9100) + '" style="flex:1;min-height:38px;padding:0 8px;border:1px solid #d0d5dd;border-radius:8px;"><button type="button" id="dpWifiConn" style="flex:1;background:#5925dc">Connetti</button></div>' +
-        '<div style="font-size:11px;color:#667085;margin-top:4px">💡 Usa un gateway di stampa (es. RawBT in modalità WiFi, o un server come epsonescpos.com). La porta default è 9100 (JetDirect).</div>' +
-      '</div>' +
       '<label class="dp-c"><input type="checkbox" id="dpOn"' + (enabled() ? ' checked' : '') + '> Usa la stampa diretta</label>' +
       '<div class="dp-grid">' +
         sel('dpCols', 'Larghezza', [[48, '80 mm - 48 colonne'], [42, '80 mm - 42 colonne'], [32, '58 mm - 32 colonne']], cfg.cols) +
-        sel('dpCp', 'Caratteri / accenti', [['cp858', 'CP858 (consigliata, con €)'], ['cp437', 'CP437 (compatibile)'], ['ascii', 'ASCII (senza accenti)']], cfg.cp) +
-        sel('dpBaud', 'Velocita' seriale', [9600, 19200, 38400, 57600, 115200].map(function(x){ return [x, x]; }), cfg.baud) +
+        sel('dpCp', 'Caratteri / accenti', [['cp858', 'CP858 (consigliata, con \u20AC)'], ['cp437', 'CP437 (compatibile)'], ['ascii', 'ASCII (senza accenti)']], cfg.cp) +
+        sel('dpBaud', 'Velocita\u0027 seriale', [9600, 19200, 38400, 57600, 115200].map(function(x){ return [x, x]; }), cfg.baud) +
       '</div>' +
       '<label class="dp-c"><input type="checkbox" id="dpKit"' + (cfg.kitchen ? ' checked' : '') + '> Stampa anche la comanda cucina</label>' +
       '<label class="dp-c"><input type="checkbox" id="dpQr"' + (cfg.qr ? ' checked' : '') + '> QR recensione Google</label>' +
-      '<label class="dp-c"><input type="checkbox" id="dpKj"' + (cfg.kanji ? ' checked' : '') + '> Stampante cinese: disattiva modalità GBK (se gli accenti escono strani)</label>' +
+      '<label class="dp-c"><input type="checkbox" id="dpKj"' + (cfg.kanji ? ' checked' : '') + '> Stampante cinese: disattiva modalit\u00E0 GBK (se gli accenti escono strani)</label>' +
       '<div class="dp-row"><button type="button" id="dpTest">Stampa di prova</button><button type="button" id="dpPrev">Anteprima</button><button type="button" id="dpOff">Scollega</button><button type="button" id="dpClose" class="dp-sec">Chiudi</button></div>' +
       '<pre id="dpPre" class="dp-pre" style="display:none"></pre>' +
-      '<div class="dp-note">WiFi: la stampante deve essere raggiungibile via rete (stessa rete del dispositivo). Usa un gateway di stampa se la stampante non ha interfaccia web diretta.</div></div>';
+      '<div class="dp-note">Bluetooth: solo stampanti BLE (le Bluetooth classiche SPP non funzionano dal browser: usa USB o Seriale). Su Windows la USB richiede il driver WinUSB. Serve HTTPS e un tocco di collegamento a ogni riavvio del browser.</div></div>';
     document.body.appendChild(m);
     function g(i){ return document.getElementById(i); }
     function rd(){
@@ -23527,21 +23539,7 @@ if(cfg.transport === 'rawbt'){   /* RawBT in modalita' TESTO: i byte ESC/POS van
     ['dpCols', 'dpCp', 'dpBaud', 'dpKit', 'dpQr', 'dpKj'].forEach(function(i){ g(i).onchange = rd; });
     g('dpOn').onchange = function(){ setEnabled(g('dpOn').checked); };
     function conn(fn){ return function(){ rd(); fn().then(function(){ setEnabled(true); g('dpOn').checked = true; toast('Stampante collegata: ' + C.name); paint(); }).catch(function(e){ if(e && e.name === 'NotFoundError') return; toast('Collegamento non riuscito: ' + (e && e.message ? e.message : e), true); }); }; }
-        g('dpWifi').onclick = function(){ 
-        var ip = g('dpWifiIp').value.trim();
-        var port = Number(g('dpWifiPort').value) || 9100;
-        if(!ip){ toast('Inserisci l'IP della stampante', true); return; }
-        rd();
-        connectWiFi(ip, port).then(function(){
-          setEnabled(true);
-          g('dpOn').checked = true;
-          toast('WiFi collegato: ' + ip + ':' + port);
-          paint();
-        }).catch(function(e){
-          toast('Collegamento WiFi fallito: ' + e.message, true);
-        });
-      };
-      g('dpRaw').onclick = function(){ rd(); cfg.transport = 'rawbt'; save(); C = {type: 'rawbt', name: 'RawBT (testo)'}; setEnabled(true); g('dpOn').checked = true; toast('RawBT (solo testo) attivo: usa "Stampa di prova" per controllare'); paint(); };
+    g('dpRaw').onclick = function(){ rd(); cfg.transport = 'rawbt'; save(); C = {type: 'rawbt', name: 'RawBT (testo)'}; setEnabled(true); g('dpOn').checked = true; toast('RawBT (solo testo) attivo: usa "Stampa di prova" per controllare'); paint(); };
     g('dpUsb').onclick = conn(connectUSB); g('dpBle').onclick = conn(connectBLE); g('dpSer').onclick = conn(connectSerial);
     g('dpOff').onclick = function(){ disconnect(); };
     g('dpClose').onclick = function(){ m.remove(); };
