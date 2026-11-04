@@ -23371,20 +23371,44 @@ html:not(.x) body #userBar button#thermalToggleBtn.ap-off,#thermalToggleBtn.ap-o
     C = null; cfg.transport = ''; save(); paint();
   }
   var _wifiSock = null;
-  async function openWifi(ip, port){
+  async function openWifi(ip, port, secure){
     port = port || 9100;
-    _wifiSock = new WebSocket('ws://' + ip + ':' + port);
+    if(secure === undefined) secure = location.protocol === 'https:';
+    var failed = false;
     return new Promise(function(resolve, reject){
-      _wifiSock.onopen = function(){ C={type:'wifi',url:ip,port:port,name:'WiFi '+ip+':'+port}; resolve(); };
-      _wifiSock.onerror=function(e){ C=null; reject(new Error('اتصال الواي فاي فشل — تأكد أن الطابعة متصلة بالشبكة و IP صحيح')); };
-      _wifiSock.onclose=function(){ C=null; _wifiSock=null; };
-      setTimeout(function(){ if(_wifiSock){ _wifiSock.close(); C=null; _wifiSock=null; reject(new Error('مهلة الاتصال (10 ثواني)')); }},10000);
+      if(!secure || window._wifiTrySecure){
+        window._wifiTrySecure = true;
+        _wifiSock = new WebSocket('ws://' + ip + ':' + port);
+      } else {
+        _wifiSock = new WebSocket('wss://' + ip + ':' + port);
+      }
+      function onSuccess(){ C={type:'wifi',url:ip,port:port,name:'WiFi '+ip+':'+port}; resolve(); }
+      function onError(errMsg){
+        if(_wifiSock && !_wifiSock._triedFallback){
+          _wifiSock._triedFallback = true;
+          try{ _wifiSock.close(); }catch(e){}
+          _wifiSock = new WebSocket('ws://' + ip + ':' + port);
+          _wifiSock.onopen = onSuccess;
+          _wifiSock.onerror = function(){ C=null; _wifiSock=null; reject(new Error(errMsg)); };
+          _wifiSock.onclose = function(){ C=null; _wifiSock=null; };
+          setTimeout(function(){ if(_wifiSock){ _wifiSock.close(); C=null; _wifiSock=null; reject(new Error('مهلة الاتصال (10 ثواني)')); }},10000);
+          return;
+        }
+        C=null; _wifiSock=null; reject(new Error(errMsg));
+      }
+      _wifiSock.onopen = onSuccess;
+      _wifiSock.onerror = onError;
+      _wifiSock.onclose = function(){ if(!C){ _wifiSock=null; } };
+      setTimeout(function(){ if(_wifiSock && _wifiSock.readyState !== WebSocket.OPEN){ _wifiSock.close(); C=null; _wifiSock=null; reject(new Error('مهلة الاتصال (10 ثواني)')); }},10000);
     });
   }
   async function connectWifi(ip, port){
+    ip = ip || cfg.wifiUrl; port = port || cfg.wifiPort;
+    if(!ip) ip = prompt('IP della stampante WiFi (es. 192.168.1.200):') || '192.168.1.200';
     await openWifi(ip, port);
     cfg.wifiUrl = ip; cfg.wifiPort = port || 9100; cfg.transport = 'wifi'; save();
   }
+  window._wifiTrySecure = location.protocol === 'https:';
   function bpB64(u8){ var s = '', CH = 0x8000; for(var i = 0; i < u8.length; i += CH){ s += String.fromCharCode.apply(null, u8.subarray(i, i + CH)); } return btoa(s); }
   async function doSend(u8){
     if(cfg.transport === 'rawbt'){   /* RawBT in modalita' TESTO: i byte ESC/POS vanno all'app RawBT (leggerissimo, nessuna immagine) */
@@ -23497,6 +23521,7 @@ html:not(.x) body #userBar button#thermalToggleBtn.ap-off,#thermalToggleBtn.ap-o
         '<button type="button" id="dpUsb"' + (sup.usb ? '' : ' disabled') + '>USB</button>' +
         '<button type="button" id="dpBle"' + (sup.ble ? '' : ' disabled') + '>Bluetooth</button>' +
         '<button type="button" id="dpSer"' + (sup.serial ? '' : ' disabled') + '>Seriale / COM</button>' +
+        '<button type="button" id="dpWifi">WiFi</button>' +
         '<button type="button" id="dpRaw" style="background:#16794b">RawBT (solo testo)</button></div>' +
       (sup.usb || sup.ble || sup.serial ? '' : '<div class="dp-err">Questo browser non supporta USB/Bluetooth/Seriale: usa Chrome o Edge (Android o PC) su una pagina HTTPS.</div>') +
       '<label class="dp-c"><input type="checkbox" id="dpOn"' + (enabled() ? ' checked' : '') + '> Usa la stampa diretta</label>' +
@@ -23522,6 +23547,7 @@ html:not(.x) body #userBar button#thermalToggleBtn.ap-off,#thermalToggleBtn.ap-o
     function conn(fn){ return function(){ rd(); fn().then(function(){ setEnabled(true); g('dpOn').checked = true; toast('Stampante collegata: ' + C.name); paint(); }).catch(function(e){ if(e && e.name === 'NotFoundError') return; toast('Collegamento non riuscito: ' + (e && e.message ? e.message : e), true); }); }; }
     g('dpRaw').onclick = function(){ rd(); cfg.transport = 'rawbt'; save(); C = {type: 'rawbt', name: 'RawBT (testo)'}; setEnabled(true); g('dpOn').checked = true; toast('RawBT (solo testo) attivo: usa "Stampa di prova" per controllare'); paint(); };
     g('dpUsb').onclick = conn(connectUSB); g('dpBle').onclick = conn(connectBLE); g('dpSer').onclick = conn(connectSerial);
+    g('dpWifi').onclick = conn(connectWifi);
     g('dpOff').onclick = function(){ disconnect(); };
     g('dpClose').onclick = function(){ m.remove(); };
     m.onclick = function(e){ if(e.target === m) m.remove(); };
@@ -23564,7 +23590,6 @@ html:not(.x) body #userBar button#thermalToggleBtn.ap-off,#thermalToggleBtn.ap-o
 
   window.bpDirectPrint = {Doc: Doc, receiptDoc: receiptDoc, kitchenDoc: kitchenDoc, orderDoc: orderDoc, zDoc: zDoc, testDoc: testDoc, cfg: cfg, wrapText: wrapText, cleanTxt: cleanTxt, itemInfo: itemInfo};
   window.connectWiFiv46 = async function(ip){ try{ await connectWifi(ip, 9100); paint(); }catch(e){ alert(e.message); } };
-  (function(){ var done=false; setInterval(function(){ if(done||!document.getElementById('bpDpModal'))return; done=true; var m=document.getElementById('bpDpModal'),row=m.querySelector('.dp-row'); if(!m||!row)return; var b=document.createElement('button'); b.id='dpW46'; b.textContent='WiFi'; b.style.cssText='background:#5925dc;color:#fff;margin-left:5px;'; b.onclick=function(){var ip=prompt('Printer IP:');if(ip)connectWiFiv46(ip);}; row.appendChild(b); },2000); })();
 })();
 </script>
 </body>
