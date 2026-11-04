@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="it">
  <head>
   <meta charset="utf-8"/>
@@ -257,139 +257,75 @@ h1{font-size:24px;margin:4px 0 14px}h2{font-size:18px;margin:0 0 12px}.grid{disp
 .notice{padding:10px 12px;border-radius:10px;background:#fff4e5;color:#8a4b08;font-size:13px;margin-bottom:12px}.success{background:#e8f7ee;color:#17663d}.error{background:#fee4e2;color:#912018}.topline{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:12px}
 
 /* ================= DESIGN SCONTRINO / COMANDA PROFESSIONALE v11 ================= */
-.receipt-card{border:2px solid #101828;border-radius:14px;overflow:hidden;background:#fff;color:#000;box-shadow:0 6px 20px #10182815;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
-.rc-header{background:#101828;color:#fff;padding:14px 16px;text-align:center;border-bottom:2px solid #000}
-.rc-header .rc-brand{font-size:23px;font-weight:900;letter-spacing:.8px;text-transform:uppercase}
-.rc-header .rc-sub{font-size:12px;opacity:.9;margin-top:2px;font-weight:650}
-.rc-meta-strip{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:#f8f9fb;border-bottom:2px dashed #101828}
+.receipt-card{border:1px solid #000;border-radius:8px;overflow:hidden;background:#fff;color:#000;box-shadow:none;font-family:Arial, sans-serif}
+.rc-header{background:#000;color:#fff;padding:12px;text-align:center;border-bottom:1px solid #000}
+.rc-header .rc-brand{font-size:20px;font-weight:900;letter-spacing:1px;text-transform:uppercase}
+.rc-header .rc-sub{font-size:11px;opacity:0.95;margin-top:2px;font-weight:700}
+.rc-meta-strip{display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:#fff;border-bottom:1px dashed #000}
 .rc-order-num{font-size:24px;font-weight:950;color:#000;line-height:1}
 .rc-type-box{text-align:right}
-.rc-type-pill{display:inline-block;padding:4px 10px;border-radius:6px;font-size:13.5px;font-weight:900;text-transform:uppercase;border:2px solid #000;background:#fff;color:#000}
-.rc-time-hero{background:#fff8eb;border-bottom:2px solid #101828;padding:10px 14px;display:flex;align-items:center;justify-content:space-between;gap:8px}
-.rc-time-hero .t-lbl{font-size:12.5px;font-weight:850;text-transform:uppercase;color:#7a2e0e}
-.rc-time-hero .t-val{font-size:20px;font-weight:950;color:#000;background:#fff;padding:2px 10px;border-radius:6px;border:2px solid #000}
-.rc-customer-box{padding:11px 14px;background:#fff;border-bottom:2px solid #101828;display:grid;gap:5px;font-size:14px}
-.rc-customer-row{display:flex;align-items:flex-start;gap:6px;color:#000;line-height:1.3}
-.rc-customer-row strong.lbl{min-width:78px;font-weight:800;color:#344054}
-.rc-items-section{padding:10px 14px}
-.rc-table-head{display:flex;justify-content:space-between;font-size:11.5px;font-weight:900;text-transform:uppercase;color:#344054;border-bottom:1.5px solid #000;padding-bottom:5px;margin-bottom:6px}
-.rc-item{padding:8px 0;border-bottom:1px dashed #98a2b3}
+.rc-type-pill{display:inline-block;padding:3px 8px;border-radius:4px;font-size:13px;font-weight:900;text-transform:uppercase;border:1px solid #000;background:#fff;color:#000}
+.rc-time-hero{background:#fff;border-bottom:1px solid #000;padding:8px 12px;display:flex;align-items:center;justify-content:space-between;gap:8px}
+.rc-time-hero .t-lbl{font-size:12px;font-weight:900;text-transform:uppercase;color:#000}
+.rc-time-hero .t-val{font-size:22px;font-weight:950;color:#000;background:#fff;padding:1px 8px;border-radius:4px;border:1px solid #000}
+.rc-customer-box{padding:10px 12px;background:#fff;border-bottom:1px solid #000;display:grid;gap:4px;font-size:14px}
+.rc-customer-row{display:flex;align-items:flex-start;gap:6px;color:#000;line-height:1.2}
+.rc-customer-row strong.lbl{min-width:70px;font-weight:850;color:#000}
+.rc-items-section{padding:10px 12px}
+.rc-table-head{display:flex;justify-content:space-between;font-size:11px;font-weight:900;text-transform:uppercase;color:#000;border-bottom:1px solid #000;padding-bottom:4px;margin-bottom:6px}
+.rc-item{padding:6px 0;border-bottom:1px dashed #000}
 .rc-item:last-child{border-bottom:0}
-.rc-item.rc-item-small{padding:3px 0;border-bottom:1px dotted #ccc}
+.rc-item.rc-item-small{padding:3px 0;border-bottom:1px dotted #000}
 .rc-item-top{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
-.rc-item.rc-item-small .rc-item-top{gap:4px}
-.rc-qty-badge{background:#000;color:#fff;font-weight:900;padding:1px 7px;border-radius:5px;font-size:14.5px;display:inline-block;margin-right:5px}
-.rc-item.rc-item-small .rc-qty-badge{font-size:11px;padding:0px 4px}
-.rc-item-name{font-size:15.5px;font-weight:900;color:#000}
-.rc-item.rc-item-small .rc-item-name{font-size:11.5px}
-.rc-size-tag{display:inline-block;padding:1px 6px;border-radius:5px;font-size:11px;font-weight:850;margin-left:5px;border:1.5px solid #000;text-transform:uppercase}
+.rc-qty-badge{background:#000;color:#fff;font-weight:950;padding:1px 6px;border-radius:4px;font-size:15px;display:inline-block;margin-right:4px}
+.rc-item-name{font-size:16px;font-weight:900;color:#000}
+.rc-size-tag{display:inline-block;padding:1px 5px;border-radius:4px;font-size:10.5px;font-weight:900;margin-left:4px;border:1px solid #000;text-transform:uppercase}
 .rc-size-tag.maxi{background:#000;color:#fff}
-.rc-size-tag.normale{background:#fff;color:#000}
 .rc-item-price{font-size:15px;font-weight:900;color:#000;white-space:nowrap}
-.rc-mods-list{display:flex;flex-direction:column;gap:3px;margin-top:5px;padding-left:10px}
+.rc-mods-list{display:flex;flex-direction:column;gap:3px;margin-top:4px;padding-left:8px}
 .rc-mod-line{font-size:13px;font-weight:850;color:#000;display:flex;align-items:center;gap:4px}
-.rc-mod-line.senza{color:#b42318}
-.rc-mod-line.extra{color:#16794b}
-/* v72: scontrino professionale — ingredienti / senza / extra / note */
-.rc-ing-box{margin-top:6px;padding:4px 0 4px 8px;border-left:3px solid #000}
-.rc-ing-row{display:flex;gap:7px;align-items:center;font-size:17px;font-weight:850;line-height:1.5;color:#000;padding:3px 0;border-top:1px dotted #98a2b3}
+.rc-ing-box{margin-top:4px;padding:3px 0 3px 8px;border-left:2.5px solid #000}
+.rc-ing-row{display:flex;gap:6px;align-items:center;font-size:16px;font-weight:850;line-height:1.4;color:#000;padding:2px 0;border-top:1px dotted #000}
 .rc-ing-row:first-child{border-top:0}
-.rc-ing-lbl{flex:0 0 88px;font-size:11.5px;font-weight:950;letter-spacing:.4px;padding:2px 4px;border-radius:4px;background:#000;color:#fff;text-align:center;text-transform:uppercase;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-.rc-ing-row.base .rc-ing-lbl{background:#fff;color:#000;border:1.5px solid #000}
-.rc-ing-row.base{flex-direction:column;align-items:flex-start;gap:4px}
-.rc-ing-row.base .rc-ing-lbl{flex:0 0 auto;padding:2px 9px}
-.rc-ing-row.base .rc-ing-txt{width:100%}
-.rc-ing-row.senza .rc-ing-lbl{background:#b42318}
-.rc-ing-row.extra .rc-ing-lbl{background:#16794b}
-.rc-ing-row.note .rc-ing-lbl{background:#b54708}
-.rc-ing-txt{flex:1;min-width:0;word-break:normal;overflow-wrap:break-word}
-.rc-ing-txt i{font-style:normal;margin:0 4px;opacity:.55}
-.rc-ing-row.base .rc-ing-txt>span,.rc-ing-row.base .rc-ing-txt>s{display:inline-block;white-space:nowrap}
-.rc-ing-row.base .rc-ing-txt{font-weight:850;color:#000}
-.rc-ing-ico{display:inline-block;position:relative;font-size:26px;line-height:1;vertical-align:middle;margin:0 2px}
-.rc-ing-ico.x{opacity:.55}
-.rc-ing-ico.x::after{content:"";position:absolute;left:-3px;right:-3px;top:50%;border-top:3px solid #b42318;transform:rotate(-25deg)}
-.rc-ing-x{text-decoration:line-through;text-decoration-thickness:2px;color:#b42318;font-weight:950}
-.rc-ing-row.senza .rc-ing-txt{color:#b42318;font-weight:950;text-transform:uppercase}
-.rc-ing-row.extra .rc-ing-txt{color:#16794b;font-weight:950;text-transform:uppercase}
+.rc-ing-lbl{flex:0 0 84px;font-size:11px;font-weight:950;padding:2px 4px;border-radius:4px;background:#000;color:#fff;text-align:center;text-transform:uppercase}
+.rc-ing-row.base .rc-ing-lbl{background:#fff;color:#000;border:1px solid #000}
+.rc-ing-row.senza .rc-ing-lbl{background:#000;color:#fff;text-decoration:underline}
+.rc-ing-row.extra .rc-ing-lbl{background:#000;color:#fff}
+.rc-ing-row.note .rc-ing-lbl{background:#000;color:#fff;font-style:italic}
+.rc-ing-row.senza .rc-ing-txt{color:#000;font-weight:950;text-transform:uppercase}
+.rc-ing-row.extra .rc-ing-txt{color:#000;font-weight:950;text-transform:uppercase}
 .rc-ing-row.note .rc-ing-txt{color:#000;font-weight:950;text-transform:uppercase}
-.rc-ing-row.other{font-weight:850}
-.rc-ing-row.menu .rc-ing-lbl{background:#175cd3}
-.rc-ing-row.menu .rc-ing-txt{font-weight:950;text-transform:uppercase}
-.rc-ing-row.menu i{font-style:normal;margin:0 3px}
-.rc-menu-box{margin:8px 14px 12px;border:3px double #000;border-radius:10px;padding:0 0 6px;background:#fffbe6;overflow:hidden;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-.rc-sec{margin:8px 0 2px}
-.rc-sec-h{display:flex;justify-content:space-between;align-items:baseline;background:#000;color:#fff;font-weight:900;font-size:15px;letter-spacing:1px;padding:3px 10px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-.rc-sec-ref{font-size:10.5px;font-weight:600;padding:3px 10px;border-top:1px dotted #000;line-height:1.25}
-.rc-nd{margin:4px 8px;border:3px double #000;padding:4px 8px;background:#fffbe6;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-.rc-nd-title{text-align:center;font-weight:900;font-size:15px;letter-spacing:1px}
-.rc-nd-row{display:flex;justify-content:space-between;font-size:22px;font-weight:900;line-height:1.25}
-.rc-nd-sub{font-size:10.5px;font-weight:600;text-align:right}
-.rc-sec-sub{font-size:10.5px;font-weight:600;padding:2px 10px;border-bottom:1px dotted #000}
-.rc-check{display:flex;justify-content:space-around;margin:8px 8px 2px;padding:5px 4px;border:2px solid #000;border-radius:8px;font-size:17px;font-weight:700}
-.rc-check b{font-size:20px;font-weight:900}
-.rc-menu-title{background:#000;color:#fff;text-align:center;font-size:12.5px;font-weight:950;letter-spacing:.8px;padding:5px 8px;margin-bottom:4px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-.rc-menu-line{display:flex;flex-wrap:wrap;align-items:center;gap:2px 8px;padding:5px 10px;font-weight:950;color:#000;border-top:1px dotted #98a2b3}
-.rc-menu-line:first-of-type{border-top:0}
-.rc-menu-ico{font-size:28px;line-height:1}
-.rc-menu-name{font-size:17px;letter-spacing:.3px;flex:1;white-space:nowrap}
-.rc-menu-n{font-size:22px;background:#000;color:#fff;border-radius:7px;padding:0 9px;line-height:1.35;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-.rc-menu-chk{flex:0 0 100%;font-size:24px;letter-spacing:3px;line-height:1.1;word-break:break-all;padding-left:40px}
-.rc-menu-foot{text-align:center;font-size:11.5px;font-weight:800;color:#344054;padding:3px 8px 0}
-@media print{body.bp23-kitchen-print .rc-ing-row{font-size:19px!important}body.bp23-kitchen-print .rc-ing-ico{font-size:30px!important}body.bp23-kitchen-print .rc-ing-lbl{font-size:12px!important;flex-basis:96px!important}}
-.pk-tab.note{border-color:#f79009!important;color:#93370d}
-.pk-tab.note.on{background:#b54708!important;color:#fff!important;border-color:#b54708!important}
-.pk-tile.note{border-style:dashed!important;border-color:#f79009!important;background:#fffaeb}
-.pk-tile.note.sel{border-style:solid!important;background:#fef0c7}
-.rc-note-alert{margin:4px 14px 12px;padding:9px 12px;background:#fff8eb;border:2px dashed #000;border-radius:8px;color:#000;font-size:13.5px;font-weight:800}
-.rc-summary-box{border-top:2px solid #101828;background:#f8f9fb;padding:10px 14px;display:grid;gap:5px;font-size:13.5px;font-weight:800}
-.rc-summary-row{display:flex;justify-content:space-between}
-.rc-resto-highlight{background:#ecfdf3;border:2px solid #000;border-radius:7px;padding:6px 10px;margin-top:3px;display:flex;justify-content:space-between;font-size:14.5px;font-weight:950;color:#000}
-.rc-total-bar{background:#101828;color:#fff;padding:13px 16px;display:flex;justify-content:space-between;align-items:center;border-top:2px solid #000}
-.rc-total-bar .rc-tot-label{font-size:15px;font-weight:850;text-transform:uppercase;letter-spacing:.5px}
-.rc-total-bar .rc-tot-val{font-size:24px;font-weight:950;color:#fff}
-.rc-footer{background:#fff;padding:10px 14px;text-align:center;font-size:12px;color:#344054;font-weight:700;border-top:1px solid #d0d5dd}
+.rc-menu-box{margin:8px 12px;border:2px solid #000;border-radius:8px;padding:0 0 5px;background:#fff;overflow:hidden}
+.rc-menu-title{background:#000;color:#fff;text-align:center;font-size:12px;font-weight:950;letter-spacing:0.5px;padding:4px 8px;margin-bottom:4px}
+.rc-menu-line{display:flex;flex-wrap:nowrap;align-items:center;gap:8px;padding:4px 10px;font-weight:950;color:#000;border-top:1px dotted #000}
+.rc-menu-n{font-size:20px;background:#000;color:#fff;border-radius:6px;padding:0 8px;line-height:1.3}
+.rc-summary-box{border-top:1.5px solid #000;background:#fff;padding:10px 12px;display:grid;gap:4px;font-size:14px;font-weight:800}
+.rc-total-bar{background:#000;color:#fff;padding:12px 14px;display:flex;justify-content:space-between;align-items:center;border-top:1.5px solid #000}
+.rc-total-bar .rc-tot-label{font-size:15px;font-weight:900;text-transform:uppercase}
+.rc-total-bar .rc-tot-val{font-size:26px;font-weight:950;color:#fff}
+.rc-footer{background:#fff;padding:10px 12px;text-align:center;font-size:12px;color:#000;font-weight:700;border-top:1px solid #000}
 
 /* ===== Comanda cucina professionale (kr-*) ===== */
-.kr{border:2px solid #000;border-radius:12px}
-.kr-inv{background:#101828;color:#fff}
-.kr-head{padding:10px 14px;text-align:center}
-.kr-brand{font-size:12px;font-weight:850;letter-spacing:2.5px;opacity:.85}
-.kr-dest{font-size:22px;font-weight:950;letter-spacing:1px;margin-top:2px}
-.kr-hero{display:grid;grid-template-columns:1fr 1fr;border-bottom:2px solid #000}
-.kr-hero>div{padding:8px 10px;text-align:center}
-.kr-hero>div+div{border-left:2px solid #000}
-.kr-hero small{display:block;font-size:10.5px;font-weight:850;letter-spacing:1.4px;color:#475467}
-.kr-hero b{display:block;font-size:30px;font-weight:950;line-height:1.1}
-.kr-info{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;justify-content:space-between;padding:8px 14px;border-bottom:1px dashed #000;font-size:13px;font-weight:800}
-.kr-type{border:2px solid #000;border-radius:6px;padding:2px 9px;font-weight:950;text-transform:uppercase}
-.kr-note{margin:8px 14px 0;padding:8px 10px;border:2px dashed #000;border-radius:6px;font-weight:900;font-size:14px}
-.kr-sec{margin-top:10px}
-.kr-sec-h{display:flex;justify-content:space-between;align-items:center;padding:4px 14px;font-weight:950;font-size:14px;letter-spacing:1px}
-.kr-sec-h em{font-style:normal;border:2px solid currentColor;border-radius:6px;padding:0 8px;font-size:15px}
-.kr-sec-b{padding:2px 14px 0}
-.kr-sec.kr-small .kr-sec-h{font-size:12px;padding:3px 14px}
-.kr-pz{padding:6px 0;border-bottom:1px dotted #98a2b3;display:flex;flex-wrap:wrap;align-items:center;gap:4px 6px}
-.kr-pz:last-child{border-bottom:0}
-.kr-pz .rc-item-name{font-size:14px}
-.kr-fries{display:inline-block;border:2px solid #000;border-radius:6px;padding:0 7px;font-size:12.5px;font-weight:950;letter-spacing:.4px;margin-left:5px}
-.kr-fries.kr-fill{background:#000;color:#fff}
-.kr-fries.kr-menu{border-style:dashed}
-.kr-sum{margin:12px 14px 0;border:2px solid #000;border-radius:8px;overflow:hidden}
-.kr-sum-t{text-align:center;font-weight:950;font-size:12px;letter-spacing:2px;padding:4px;border-bottom:2px solid #000}
-.kr-sum-row{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;padding:5px 10px;font-size:15px;font-weight:900;border-top:1px dotted #98a2b3}
-.kr-sum-row:first-of-type{border-top:0}
-.kr-sum-row small{display:block;font-size:11px;font-weight:700;color:#475467;line-height:1.25}
-.kr-sum-row b{font-size:18px;font-weight:950}
-.kr-foot{display:flex;justify-content:space-between;align-items:center;margin-top:12px;padding:9px 14px;font-weight:950;font-size:14px;letter-spacing:.6px}
-.kr-foot b{font-size:20px}
+.kr{border:1px solid #000;border-radius:8px}
+.kr-inv{background:#000;color:#fff}
+.kr-head{padding:10px;text-align:center}
+.kr-dest{font-size:24px;font-weight:950;letter-spacing:1px;margin-top:2px}
+.kr-hero{display:grid;grid-template-columns:1fr 1fr;border-bottom:1px solid #000}
+.kr-hero>div{padding:8px;text-align:center}
+.kr-hero>div+div{border-left:1px solid #000}
+.kr-hero b{display:block;font-size:52px;font-weight:950;line-height:1}
+.kr-pz{padding:8px 0;border-bottom:1px dotted #000;display:flex;flex-wrap:wrap;align-items:center;gap:4px 8px}
+.kr-pz .rc-item-name{font-size:20px;font-weight:950}
+.kr-sum{margin:12px;border:1px solid #000;border-radius:8px;overflow:hidden}
+.kr-sum-t{text-align:center;font-weight:950;font-size:13px;padding:5px;border-bottom:1px solid #000;background:#000;color:#fff}
+.kr-sum-row{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;padding:6px 12px;font-size:16px;font-weight:950;border-top:1px dotted #000}
+.kr-foot{display:flex;justify-content:space-between;align-items:center;margin-top:12px;padding:10px 12px;font-weight:950;font-size:14px;background:#000;color:#fff}
+.kr-foot b{font-size:22px}
 @media print{
-  #kitchenReceiptCard .kr-fill{background:#000!important;color:#fff!important}
-  #kitchenReceiptCard .kr-inv{background:#000!important;color:#fff!important}
-  #kitchenReceiptCard .kr-inv *{background:transparent!important;color:#fff!important}
-  #kitchenReceiptCard{border:2px solid #000!important}
-  #kitchenReceiptCard .kr-hero b{font-size:34px}
-  body.bp23-kitchen-print .kr-pz .rc-item-name{font-size:16px!important}
+  .receipt-card, .kr{border-width:1px!important;border-radius:0!important;box-shadow:none!important}
+  .kr-hero b{font-size:42px!important}
+  .rc-qty-badge, .rc-ing-lbl, .rc-menu-n, .rc-total-bar, .kr-inv, .kr-sec-h, .kr-sum-t, .kr-foot, .kr-type, .rc-header{background:#000!important;color:#fff!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .rc-ing-row.base .rc-ing-lbl{background:#fff!important;color:#000!important;border:1px solid #000!important}
 }
 
 @media(max-width:850px){.grid{grid-template-columns:1fr}.wrap{padding:12px}.fields{grid-template-columns:1fr 1fr}header{padding:12px}.brand{font-size:17px}.menu-admin-row{grid-template-columns:1fr}}
@@ -2566,6 +2502,8 @@ html body #kitchenTab .k35-t .kt-item .gx .gx-sep i,html body #bp35KDS .k35-t .k
 @keyframes bpMicPulse{0%,100%{box-shadow:0 0 0 0 rgba(220,38,38,.6)}50%{box-shadow:0 0 0 8px rgba(220,38,38,0)}}
 </style>
 <style id="bpCutSepCss">@media screen{.bp-cut-sep{height:0!important;margin:10px 0!important;border-top:2px dashed #000!important}}@media print{.bp-cut-sep{display:block!important;visibility:hidden;height:0!important;margin:0!important;padding:0!important;border:0!important;page-break-after:always!important;break-after:page!important}}</style>
+
+
 </head>
  <body>
   <header class="no-print">
@@ -3570,6 +3508,37 @@ html body #kitchenTab .k35-t .kt-item .gx .gx-sep i,html body #bp35KDS .k35-t .k
      <span class="muted">Pannello unico per tutte le configurazioni del POS</span>
     </div>
     <div class="bp-set-grid">
+     <!-- RIGA 0: DATI ATTIVITA' (ricevute) -->
+     <div class="bp-set-card" style="border-top-color:var(--red)">
+      <div class="bp-set-head">
+       <span class="bp-set-ico" style="background:#fef3f2;color:#b42318">🏪</span>
+       <h3>Dati attività &amp; Ricevute</h3>
+      </div>
+      <p class="bp-set-desc">Nome, indirizzo, P.IVA, logo e testo finale usati nelle ricevute. Le modifiche valgono dalla prossima stampa.</p>
+      <div class="bp-set-rows" style="display:flex;flex-direction:column;gap:8px">
+       <label style="font-weight:800;font-size:12px">Nome<input id="bpShop_name" type="text" style="width:100%;margin-top:3px"></label>
+       <label style="font-weight:800;font-size:12px">Indirizzo<input id="bpShop_address" type="text" style="width:100%;margin-top:3px"></label>
+       <label style="font-weight:800;font-size:12px">Telefono<input id="bpShop_phone" type="tel" style="width:100%;margin-top:3px"></label>
+       <label style="font-weight:800;font-size:12px">WhatsApp (facoltativo)<input id="bpShop_wa" type="tel" style="width:100%;margin-top:3px"></label>
+       <label style="font-weight:800;font-size:12px">P.IVA<input id="bpShop_piva" type="text" style="width:100%;margin-top:3px"></label>
+       <label style="font-weight:800;font-size:12px">Orari<input id="bpShop_hours" type="text" style="width:100%;margin-top:3px"></label>
+       <label style="font-weight:800;font-size:12px">Testo finale<input id="bpShop_footer" type="text" style="width:100%;margin-top:3px"></label>
+<div style="font-weight:800;font-size:12px;margin-top:4px">🔤 Carattere ricevute (Nome articolo / Ingredienti)</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><label style="font-weight:800;font-size:12px">Nome articolo · Font<select id="bpShop_nameFont" style="width:100%;margin-top:3px"><option value="">Automatico (come termica)</option><option value="sans">Sans-serif (Arial)</option><option value="cond">Condensato</option><option value="serif">Serif (Georgia)</option><option value="courier">Courier</option></select></label><label style="font-weight:800;font-size:12px">Nome articolo · Dimensione<select id="bpShop_nameSize" style="width:100%;margin-top:3px"><option value="">Automatico</option><option value="11">11px</option><option value="12">12px</option><option value="13">13px</option><option value="14">14px</option><option value="15">15px</option><option value="16">16px</option><option value="18">18px</option><option value="20">20px</option><option value="22">22px</option><option value="24">24px</option><option value="26">26px</option></select></label><label style="font-weight:800;font-size:12px">Ingredienti · Font<select id="bpShop_ingFont" style="width:100%;margin-top:3px"><option value="">Automatico (come termica)</option><option value="sans">Sans-serif (Arial)</option><option value="cond">Condensato</option><option value="serif">Serif (Georgia)</option><option value="courier">Courier</option></select></label><label style="font-weight:800;font-size:12px">Ingredienti · Dimensione<select id="bpShop_ingSize" style="width:100%;margin-top:3px"><option value="">Automatico</option><option value="11">11px</option><option value="12">12px</option><option value="13">13px</option><option value="14">14px</option><option value="15">15px</option><option value="16">16px</option><option value="18">18px</option><option value="20">20px</option><option value="22">22px</option><option value="24">24px</option><option value="26">26px</option></select></label></div><div class="muted" style="font-size:11.5px">Font e dimensione valgono per la stampa normale/RawBT. Con ESC/POS la stampante usa il suo font: la dimensione cambia (piccolo = font B, grande = grassetto, molto grande = doppia altezza).</div>
+       <div style="font-weight:800;font-size:12px">Logo (stampato in bianco e nero)</div>
+       <div style="background:#fff;border:1px solid #d0d5dd;border-radius:8px;padding:6px;text-align:center"><img id="bpShopLogoPrev" alt="Logo" style="max-width:100%;max-height:120px;image-rendering:pixelated;display:none"></div>
+       <div style="display:flex;flex-wrap:wrap;gap:6px">
+        <label class="secondary btn-sm" style="cursor:pointer;padding:7px 10px;border-radius:8px;border:1px solid #d0d5dd;font-weight:800">📷 Carica logo<input id="bpShopLogoFile" type="file" accept="image/*" style="display:none"></label>
+        <button type="button" class="secondary btn-sm" id="bpShopLogoInv">◐ Inverti</button>
+        <button type="button" class="secondary btn-sm" id="bpShopLogoDel">🗑️ Rimuovi</button>
+        <button type="button" class="secondary btn-sm" id="bpShopLogoDef">↩️ Originale</button>
+       </div>
+       <div class="muted" id="bpShopSeqInfo" style="font-size:12px"></div>
+       <div id="bpShopSync" style="font-size:12px;font-weight:800"></div>
+       <button type="button" class="secondary btn-sm" id="bpShopSql" style="display:none">📋 Copia SQL di attivazione</button>
+       <div style="display:flex;align-items:center;gap:10px"><button type="button" class="green" id="bpShopSave">💾 Salva</button><span id="bpShopMsg" style="font-weight:800;font-size:13px"></span></div>
+      </div>
+     </div>
+
 
      <!-- RIGA 1: AUDIO & NOTIFICHE -->
      <div class="bp-set-card" style="border-top-color:var(--green)">
@@ -4415,7 +4384,7 @@ function syncExtraPrice(set, selId){
 function pkEnsure(){
   var d = el("pkRoot"); if(d) return d;
   d = document.createElement("div"); d.id = "pkRoot"; d.className = "pk hidden no-print";
-  d.innerHTML = '<div class="pk-sheet"><div class="pk-left"><div class="pk-head"><div class="pk-title" id="pkTitle"></div><button type="button" class="secondary" id="pkClose">✖</button></div><div class="pk-strip hidden" id="pkStrip"></div><div class="pk-quick hidden" id="pkQuick"></div><div class="pk-selbar hidden" id="pkSel"></div><div class="pk-foot"><span class="pk-sum" id="pkSum"></span><button type="button" class="green" id="pkOk">✅ Fatto</button></div></div><div class="pk-right"><div class="pk-top" id="pkTop"></div><div class="pk-msg hidden" id="pkMsg"></div><div class="pk-body" id="pkBody"></div></div></div>';
+  d.innerHTML = '<div class="pk-sheet"><div class="pk-left"><div class="pk-head"><div class="pk-title" id="pkTitle"></div><button type="button" class="secondary" id="pkClose">✖</button></div><div class="pk-strip hidden" id="pkStrip"></div><div class="pk-quick hidden" id="pkQuick"></div><div class="pk-selbar hidden" id="pkSel"></div><div class="pk-foot"><span class="pk-sum" id="pkSum"></span><button type="button" class="green" id="pkOk">✅ Fatto</button><button id="printPlugBtn" style="background:#fde68a;color:#7c2d12;border:1px solid #f59e0b;border-radius:8px;padding:6px 10px;margin-right:8px;font-size:20px">🔌</button></div></div><div class="pk-right"><div class="pk-top" id="pkTop"></div><div class="pk-msg hidden" id="pkMsg"></div><div class="pk-body" id="pkBody"></div></div></div>';
   document.body.appendChild(d);
   el("pkClose").onclick = pkClose;
   d.onclick = function(e){ if(e.target === d) pkClose(); };
@@ -4987,7 +4956,7 @@ function rdToast(t, s){
 function rdExitApp(){
   if(!confirm("Vuoi uscire dal programma?")) return;
   rdAllowExit = true;
-  try{ window.close(); }catch(e){ bpWarn(e); }
+  try{ ; }catch(e){ bpWarn(e); }
   setTimeout(function(){ location.replace("about:blank"); }, 350);
 }
 function enhanceNav(){
@@ -9037,12 +9006,12 @@ function bpRcModsHtml(parsed, isService, noBase){
       var off = rn.indexOf(ingNorm(base[x[0]])) >= 0;
       cells.push('<span class="rc-ing-ico' + (off ? ' x' : '') + '" title="' + esc(base[x[0]]) + '">' + x[1] + '</span>');
     });
-    base.forEach(function(b, i){ if(i !== LS.t && i !== LS.m) cells.push(bpMkCell(b)); });
+    base.forEach(function(b, i){ if(i !== LS.t && i !== LS.m){ if(solo && !bpIsMeat(b)) return; cells.push(bpMkCell(b)); } });
   } else {
-    base.forEach(function(b){ cells.push(bpMkCell(b)); });
+    base.forEach(function(b){ if(solo && !bpIsMeat(b)) return; cells.push(bpMkCell(b)); });
   }
   /* ingredienti tolti che non sono nella lista del prodotto: restano comunque barrati (niente riga SENZA) */
-  rem.filter(function(r){ return baseN.indexOf(ingNorm(r)) < 0; }).forEach(function(r){ cells.push('<s class="rc-ing-x">' + esc(r) + '</s>'); });
+  if(!solo) rem.filter(function(r){ return baseN.indexOf(ingNorm(r)) < 0; }).forEach(function(r){ cells.push('<s class="rc-ing-x">' + esc(r) + '</s>'); });
   if(solo) h += '<div class="rc-solo">SOLO CARNE</div>';
   if(cells.length) h += row(isPizza ? "base pz" : "base", "", cells.join('<i>·</i>'));
   if(add.length) h += row("extra", "➕ Extra", up(add));
@@ -9094,6 +9063,40 @@ window.bpFryDrink = function(items){
   });
   return t;
 };
+/* v95: FRITTI unificati. 1 patatine per pizza normale; pizza MAXI intera = 2; MAXI a gusti con patatine su una meta' = 1 (regola in bpPizzaFries) */
+window.bpFriedPlan = function(items){
+  var P = {single: {n: 0, rows: []}, menu: {n: 0, rows: []}, pizza: {n: 0, rows: []}, other: {n: 0, rows: []}, total: 0};
+  (items || []).forEach(function(i){
+    try{
+      if(!i || bpIsSvc(i.product_name)) return;
+      var q = Number(i.quantity || 1), nm = String(splitProductAndMods(i.product_name).baseName || "").replace(/^men[uù]\s+/i, "").trim();
+      var w = bpWorkCat(i), fd = bpItemFD(i), maxi = String(i.size || "").toLowerCase() === "maxi";
+      var lab = (q > 1 ? q + "x " : "") + nm + (maxi ? " MAXI" : "");
+      if(w.k === "pizza" && w.fries > 0){ P.pizza.n += w.fries; P.pizza.rows.push({label: lab, n: w.fries, total: 0}); }
+      if(fd.menu > 0){ P.menu.n += fd.menu; P.menu.rows.push({label: (q > 1 ? q + "x " : "") + "Menu " + nm, n: fd.menu, total: 0}); }
+      else if(w.k === "fritto"){
+        var single = false; try{ single = krIsSingleFries(i); }catch(e){}
+        var T = single ? P.single : P.other, n = fd.f > 0 ? fd.f : q;
+        T.n += n; T.rows.push({label: lab, n: n, total: Number(i.line_total || 0)});
+      }
+    }catch(e){}
+  });
+  P.total = P.single.n + P.menu.n + P.pizza.n + P.other.n;
+  return P;
+};
+function bpFriedHtml(items, noPrice){
+  var P = bpFriedPlan(items); if(!P.total) return "";
+  function grp(ico, title, sub, G, price){
+    if(!G.n) return "";
+    return '<div class="rc-fry-g"><div class="rc-fry-t"><span>' + ico + ' ' + title + (sub ? ' <small>' + sub + '</small>' : '') + '</span><b>× ' + G.n + '</b></div>' +
+      G.rows.map(function(r){ return '<div class="rc-fry-r"><span>' + esc(r.label) + '</span><span>' + (price && !noPrice && r.total ? euro(r.total) : (r.n > 1 || G === P.pizza ? '× ' + r.n : '')) + '</span></div>'; }).join('') + '</div>';
+  }
+  return '<div class="rc-sec rc-fry"><div class="rc-sec-h"><span>🍟 FRITTI · DA FRIGGERE</span><span>' + P.total + '</span></div>' +
+    grp("🍟", "PATATINE SINGOLE", "a parte, fuori menu", P.single, true) +
+    grp("🍟🥤", "PATATINE MENU", "incluse nei menu con bibita", P.menu, false) +
+    grp("🍕", "PATATINE SU PIZZA", "1 per pizza · MAXI intera 2 · mezza MAXI 1", P.pizza, false) +
+    grp("🍤", "ALTRI FRITTI", "", P.other, true) + '</div>';
+}
 function bpRcMenuBox(items){
   var t = bpFryDrink(items);
   if(!(t.fri > 0 || t.bib > 0)) return "";
@@ -9110,14 +9113,78 @@ function bpRcMenuBox(items){
     line("🥤", "BIBITE", t.bib, [mTxt, det(t.bibN)]) + '</div>';
 }
 
+/* ===== FASE 3: helper ricevuta cliente ===== */
+function bpSvcSplit(items){
+  var r = {food: [], deliv: 0, extra: [], disc: [], sub: 0};
+  (items || []).forEach(function(i){
+    var n = String(i.product_name || ''), v = Number(i.line_total || 0);
+    if(n === 'Supplemento Consegna') r.deliv += v;
+    else if(/^Aggiunta manuale/.test(n)) r.extra.push({why: n.replace(/^Aggiunta manuale:?\s*/, ''), v: v});
+    else if(/^Sconto manuale/.test(n)) r.disc.push({why: n.replace(/^Sconto manuale:?\s*/, ''), v: Math.abs(v)});
+    else { r.food.push(i); r.sub += v; }
+  });
+  return r;
+}
+function bpUnitPrice(i){ var u = Number(i.unit_price); if(isFinite(u) && u > 0) return u; return Number(i.line_total || 0) / Math.max(1, Number(i.quantity || 1)); }
+/* pane da preparare per panini / piadine (lo fa il pizzaiolo) */
+function bpBreadCount(items){
+  var r = {pan: 0, pia: 0};
+  (items || []).forEach(function(i){
+    try{
+      if(bpIsSvc(i.product_name)) return;
+      var w = bpWorkCat(i); if(w.k !== 'panino') return;
+      var b = splitProductAndMods(i.product_name).baseName.toLowerCase().replace(/^men[uù]\s+/, ''), q = Number(i.quantity || 1);
+      if(/piadin|durum/.test(b)) r.pia += q;
+      else if(/panin|kebab|kebap|burger|hot\s*dog|hotdog|shawarma|falafel|wrap|gyros/.test(b)) r.pan += q;
+    }catch(e){}
+  });
+  return r;
+}
+/* allergie / senza glutine: righe + note */
+var BP_ALG_RE = /senza\s+glutin\w*|gluten[\s-]*free|celiac\w*|allerg\w*|intolleran\w*|senza\s+lattosio|lactose[\s-]*free|arachid\w*|frutta\s+a\s+guscio/i;
+function bpAllergyScan(items, noteText){
+  var rows = [], note = '';
+  (items || []).forEach(function(i){
+    try{
+      if(bpIsSvc(i.product_name)) return;
+      var raw = String(i.product_name || ''), m = raw.match(new RegExp(BP_ALG_RE.source, 'ig'));
+      if(m){
+        var seen = {}, tags = []; m.forEach(function(t){ t = t.toUpperCase().replace(/\s+/g, ' '); if(!seen[t]){ seen[t] = 1; tags.push(t); } });
+        rows.push({q: Number(i.quantity || 1), name: splitProductAndMods(raw).baseName, tags: tags});
+      }
+    }catch(e){}
+  });
+  if(noteText && BP_ALG_RE.test(String(noteText))) note = String(noteText).trim();
+  return {rows: rows, note: note, any: rows.length > 0 || !!note};
+}
+function bpShopFooterParts(){
+  var c = (window.bpShop && window.bpShop.cfg) ? window.bpShop.cfg() : {};
+  return {thanks: c.footer || 'Grazie e buon appetito!', hours: c.hours || '', wa: c.wa || ''};
+}
 function buildReceiptHtml(o, items){
   let when = new Date(o.created_at).toLocaleString('it-IT',{dateStyle:'short',timeStyle:'short'});
+  let minsAgo = Math.max(0, Math.round((Date.now()-new Date(o.created_at).getTime())/60000));
+  let urg = getOrderUrgencyMeta(o);
   let isConsegna = String(o.order_type||'').toLowerCase().includes('consegna');
-  let typeLabel = isConsegna ? '🛵 CONSEGNA DOMICILIO' : '🛍️ RITIRO ASPORTO';
+  let tblNo = ''; try{ tblNo = bpTableNo(o); }catch(e){}
+  let typeLabel = isConsegna ? '🛵 CONSEGNA DOMICILIO' : (tblNo ? '🍽️ TAVOLO ' + esc(tblNo) : '🛍️ RITIRO ASPORTO');
   let payMethod = o.payment_method || 'Contanti';
   let parsedNotes = splitTimeAndNotes(o.notes);
+  /* il tavolo compare una sola volta (pill in alto + riga cliente): lo tolgo dalle note */
+  const TBL_RE = /(?:🍽️?\s*)?\btavolo\s*(?:n[°o.]?\s*)?\d{1,3}\b[\s·,;\-–]*/gi;
+  if(tblNo && parsedNotes && parsedNotes.cleanNotes){
+    parsedNotes = Object.assign({}, parsedNotes, {cleanNotes: String(parsedNotes.cleanNotes).replace(TBL_RE, '').trim()});
+  }
+  const custRaw = String(o.customer_name || '').trim();
+  const custIsTable = !!tblNo && /^(?:🍽️?\s*)?tavolo\s*(?:n[°o.]?\s*)?\d{1,3}$/i.test(custRaw);
+  const shortOp = (em)=>{ let l = String(em || '').split('@')[0].replace(/[._-]+/g, ' ').trim(); if(!l) return ''; l = l.split(' ')[0]; return l.charAt(0).toUpperCase() + l.slice(1, 10); };
   let foodItems = items.filter(i=>!bpIsSvc(i.product_name));
   let totalQty = foodItems.reduce((s,i)=>s+Number(i.quantity||1), 0);
+  let grandQty = totalQty;
+  try{
+    let _fd = bpFryDrink(items), _fp = bpFriedPlan(items);
+    grandQty = totalQty + ((_fp.menu && _fp.menu.n) || 0) + ((_fp.pizza && _fp.pizza.n) || 0) + (_fd.menu || 0);
+  }catch(e){ grandQty = totalQty; }
   let menuBoxHtml = '';   /* v37: NON DIMENTICARE ora e' la terza sezione dentro l'elenco */
 
   const bpRenderRcItem = (i)=>{
@@ -9142,6 +9209,7 @@ function buildReceiptHtml(o, items){
       ? `<span class="rc-size-tag maxi">MAXI</span>`
       : (bigDrink ? `<span class="rc-size-tag maxi">XL</span>` : (isDrink ? '' : `<span class="rc-size-tag normale">Normale</span>`)));
     let volHtml = volTxt ? `<span class="rc-vol">${esc(volTxt)}</span>` : '';
+    let isMenuRow = false; try{ isMenuRow = !isService && ((window.bpIsMenu && bpIsMenu(parsed)) || (typeof bpMenuUnits === 'function' && bpMenuUnits(i) > 0)); }catch(e){}
 
     let modsLines = bpRcModsHtml(parsed, isService, isDrink);
 
@@ -9150,11 +9218,12 @@ function buildReceiptHtml(o, items){
         <div class="rc-item-top${isDrink ? ' rc-dl' : ''}">
           <div class="${isDrink ? 'rc-dl-main' : ''}">
             <span class="rc-qty-badge">${i.quantity}×</span>
-            <span class="rc-item-name">${bpNameHtml((window.bpIsMenu&&bpIsMenu(parsed)?'Menu ':'')+parsed.baseName)}</span>${(function(){ try{ var lb = bpCompletoLabel(i); return lb ? '<span style="font-weight:900;margin-inline-start:6px;white-space:nowrap">(' + lb + ')</span>' : ''; }catch(e){ return ''; } })()}
+            <span class="rc-item-name">${bpNameHtml((isMenuRow && !/^men[uù]\b/i.test(parsed.baseName) ? 'Menu ' : '')+parsed.baseName)}</span>${isMenuRow ? '<span class="rc-size-tag menu">🍟🥤 MENU</span>' : ''}${(function(){ try{ var lb = bpCompletoLabel(i); return lb ? '<span style="font-weight:900;margin-inline-start:6px;white-space:nowrap">(' + lb + ')</span>' : ''; }catch(e){ return ''; } })()}
             ${sizeTag}${volHtml}
           </div>
           <div class="rc-item-price">${euro(i.line_total)}</div>
         </div>
+        ${(!isService && Number(i.quantity||1) > 1) ? `<div class="rc-unit" style="padding-left:4ch;font-size:11px;font-weight:700">${i.quantity} × ${euro(bpUnitPrice(i))}</div>` : ''}
         ${modsLines}
       </div>
     `;
@@ -9169,24 +9238,24 @@ function buildReceiptHtml(o, items){
     let fd = {fri: 0, bib: 0, menu: 0};
     try{ fd = bpFryDrink(items); }catch(e){}
     let pzF = 0; G.pizza.forEach(function(i){ try{ pzF += bpWorkCat(i).fries || 0; }catch(e){} });
+    let FP = {total: 0}; try{ FP = bpFriedPlan(items); }catch(e){}
     let nFri = (fd.fri || 0), nBib = Math.max(fd.bib || 0, q(G.bevanda) + (fd.menu || 0));
     let subF = fd.menu ? 'patatine dei menu: ' + fd.menu : '';
     let frPz = G.pizza.filter(function(i){ try{ return (bpWorkCat(i).fries || 0) > 0; }catch(e){ return false; } });
     let frPzNames = frPz.map(function(i){ var nm = ''; try{ nm = splitProductAndMods(i.product_name).baseName; }catch(e){ nm = i.product_name; } return (Number(i.quantity||1) > 1 ? i.quantity + '× ' : '') + nm + (String(i.size||'').toLowerCase() === 'maxi' ? ' MAXI' : ''); }).join(' · ');
     let frPzCount = q(frPz);
-    const sec = (ico, title, n, arr, sub)=>`<div class="rc-sec"><div class="rc-sec-h"><span>${ico} ${title}</span><span>${n}</span></div>${sub ? `<div class="rc-sec-sub">${sub}</div>` : ''}${arr.map(bpRenderRcItem).join('')}</div>`;
+    const sec = (ico, title, n, arr, sub, raw)=>`<div class="rc-sec"><div class="rc-sec-h"><span>${ico} ${title}</span><span>${n}</span></div>${sub ? `<div class="rc-sec-sub">${sub}</div>` : ''}${raw || ''}${arr.map(bpRenderRcItem).join('')}</div>`;
+    const pzNoteHtml = parsedNotes.cleanNotes ? '<div class="rc-pz-note">📝 <b>NOTE PIZZA:</b> ' + esc(parsedNotes.cleanNotes) + '</div>' : '';
     let out = '';
-    if(G.pizza.length) out += sec('🍕', 'PIZZE', q(G.pizza), G.pizza, '');
+    var BR = bpBreadCount(items);
+    var breadHtml = (BR.pan || BR.pia) ? '<div class="rc-pz-bread" style="margin:3px 0;padding:2px 4px;border:1.5px dashed #000;font-weight:900;font-size:13px">🥖 PANE DA PREPARARE: ' + [BR.pan ? 'Panini ×' + BR.pan : '', BR.pia ? 'Piadine ×' + BR.pia : ''].filter(Boolean).join(' · ') + '</div>' : '';
+    if(G.pizza.length || breadHtml) out += sec('🍕', 'PIZZE', q(G.pizza), G.pizza, '', pzNoteHtml).replace(/<\/div>$/, breadHtml + '</div>');
     if(G.panino.length) out += sec('🥙', 'PANINI &amp; PIADINE', q(G.panino), G.panino, '');
     if(G.dolce.length) out += sec('🍰', 'DOLCI', q(G.dolce), G.dolce, '');
-    let nFriOnly = Math.max(0, (fd.fri || 0) - (fd.menu || 0));
-    if(nFriOnly || G.fritto.length) out += sec('🍟', 'FRITTI', nFriOnly, G.fritto, nFriOnly ? 'a parte, fuori menu' : '');
-    if(fd.menu) out += '<div class="rc-sec"><div class="rc-sec-h"><span>🍟🥤 PATATINE MENU</span><span>' + fd.menu + '</span></div><div class="rc-sec-sub">incluse nei menu con bibita</div></div>';
-    if(pzF) out += '<div class="rc-sec"><div class="rc-sec-h"><span>🍕 PATATINE SOPRA LA PIZZA</span><span>' + pzF + '</span></div><div class="rc-sec-sub">su ' + (frPzCount === 1 ? '1 pizza' : frPzCount + ' pizze') + (frPzCount !== pzF ? ' (' + pzF + ' porzioni)' : '') + (frPzNames ? ': ' + frPzNames : '') + ' · non da imballare</div></div>';
+    out += bpFriedHtml(items);   /* v95: FRITTI unificati (singole + menu + sopra pizza + altri) */
     if(nBib) out += sec('🥤', 'BEVANDE', nBib, G.bevanda, fd.menu ? 'comprese bibite dei menu: ' + fd.menu : '');
-    if(G.servizio.length) out += `<div class="rc-sec">${G.servizio.map(bpRenderRcItem).join('')}</div>`;
     itemsHtml = out || itemsHtml;
-    let cells = [['🍕', q(G.pizza)], ['🥙', q(G.panino)], ['🍰', q(G.dolce)], ['🍟', nFri], ['🥤', nBib]].filter(c=>c[1]);
+    let cells = [['🍕', q(G.pizza)], ['🥙', q(G.panino)], ['🍰', q(G.dolce)], ['🍟', FP.total || nFri], ['🥤', nBib]].filter(c=>c[1]);
     if(cells.length) checkHtml = `<div class="rc-check">${cells.map(c=>`<span>${c[0]} <b>${c[1]}</b></span>`).join('')}</div>`;
   }
 
@@ -9194,19 +9263,19 @@ function buildReceiptHtml(o, items){
   let who = o.created_by_email || '';
   if(!who && String(o.id).indexOf('OFF-') === 0){ let u = el('userEmail'); who = u ? (u.textContent || '') : ''; }
   let operatorHtml = who
-    ? `<div class="rc-customer-box" style="border-top:0;padding-top:4px"><div class="rc-customer-row"><strong class="lbl">👤 Operatore:</strong> <span style="font-weight:800">${esc(who)}</span></div></div>`
+    ? `<div class="rc-customer-box" style="border-top:0;padding-top:4px"><div class="rc-customer-row"><strong class="lbl">👤 Operatore:</strong> <span style="font-weight:800">${esc(shortOp(who))}</span></div></div>`
     : '';
   let editorHtml = '';
   if(o.updated_by_email){
     let t = '';
     try{ if(o.updated_at) t = ' · ' + new Date(o.updated_at).toLocaleTimeString('it-IT', {hour: '2-digit', minute: '2-digit'}); }catch(e){ bpWarn(e); }
-    editorHtml = `<div class="rc-customer-box" style="border-top:0;padding-top:4px"><div class="rc-customer-row"><strong class="lbl">✏️ Modifica:</strong> <span style="font-weight:800">${esc(o.updated_by_email) + t}</span></div></div>`;
+    editorHtml = `<div class="rc-customer-box" style="border-top:0;padding-top:4px"><div class="rc-customer-row"><strong class="lbl">✏️ Modifica:</strong> <span style="font-weight:800">${esc(shortOp(o.updated_by_email)) + t}</span></div></div>`;
   }
   var idParts = [];
-  if(who) idParts.push('Operatore: <b>' + esc(who) + '</b>');
+  if(who) idParts.push('Operatore: <b>' + esc(shortOp(who)) + '</b>');
   if(o.updated_by_email){
     var tt = ''; try{ if(o.updated_at) tt = ' · ' + new Date(o.updated_at).toLocaleTimeString('it-IT', {hour: '2-digit', minute: '2-digit'}); }catch(e){ bpWarn(e); }
-    idParts.push('✏️ Modifica: <b>' + esc(o.updated_by_email) + tt + '</b>');
+    idParts.push('✏️ Modifica: <b>' + esc(shortOp(o.updated_by_email)) + tt + '</b>');
   }
   var idN = Math.max(12, idParts.join(' · ').replace(/<[^>]+>/g, '').length + 3);
   let idLineHtml = idParts.length ? '<div class="rc-idline" style="--n:' + idN + '"><span class="rc-idtxt">' + idParts.join(' <i>·</i> ') + '</span></div>' : '';
@@ -9218,12 +9287,43 @@ function buildReceiptHtml(o, items){
         </div>
       `;
 
+  /* --- FASE 3: blocchi dedicati --- */
+  const timeTxt = String((parsedNotes && parsedNotes.time) || 'Subito');
+  const SVC = bpSvcSplit(items);
+  const ALG = bpAllergyScan(items, parsedNotes && parsedNotes.cleanNotes);
+  let allergyHtml = '';
+  if(ALG.any){
+    allergyHtml = '<div class="rc-alg" style="margin:5px 6px;border:3px double #000;padding:4px 6px;text-align:center;color:#000">' +
+      '<div style="font-size:15px;font-weight:950;letter-spacing:0">*** ALLERGIE / SENZA GLUTINE ***</div>' +
+      ALG.rows.map(function(r){ return '<div style="font-size:19px;font-weight:950;line-height:1.2">' + r.q + '× ' + esc(r.name) + ' <span style="border:2px solid #000;padding:0 4px">' + esc(r.tags.join(' · ')) + '</span></div>'; }).join('') +
+      (ALG.note ? '<div style="font-size:17px;font-weight:950;line-height:1.2;margin-top:2px">NOTE: ' + esc(ALG.note) + '</div>' : '') +
+      '<div style="font-size:15px;font-weight:950">*** ATTENZIONE ***</div></div>';
+  }
+  const timeHeroHtml = `<div class="rc-time-hero"><span class="t-lbl">⏰ ORARIO RICHIESTO:</span><span class="t-val">${esc(timeTxt)}</span></div>`;
+  const custBoxHtml = `<div class="rc-customer-box">
+        ${custIsTable ? '' : `<div class="rc-customer-row"><strong class="lbl">👤 Cliente:</strong> <span style="font-weight:900;font-size:15px">${esc(o.customer_name||'Cliente al banco')}</span></div>`}
+        ${tblNo ? `<div class="rc-customer-row"><strong class="lbl">🍽️ Tavolo:</strong> <span style="font-weight:900;font-size:20px">${esc(tblNo)}</span></div>` : ''}
+        ${o.phone ? `<div class="rc-customer-row"><strong class="lbl">📞 Telefono:</strong> <span style="font-weight:800">${esc(o.phone)}</span></div>` : ''}
+        ${o.address ? `<div class="rc-customer-row"><strong class="lbl">📍 Indirizzo:</strong> <span style="font-weight:900;text-decoration:underline">${esc(o.address)}</span></div>` : ''}
+      </div>`;
+  const delivHtml = `<div class="rc-deliv" style="margin:5px 6px;border:3px solid #000;padding:5px 8px;color:#000">
+        <div style="font-size:14px;font-weight:950;border-bottom:2px solid #000;padding-bottom:2px;margin-bottom:3px">🛵 CONSEGNA · PER IL FATTORINO</div>
+        <div style="font-size:17px;font-weight:950;line-height:1.2">👤 ${esc(o.customer_name||'Cliente')}</div>
+        ${o.address ? `<div style="font-size:19px;font-weight:950;line-height:1.2;margin-top:2px">📍 ${esc(o.address)}</div>` : ''}
+        ${o.phone ? `<div style="font-size:18px;font-weight:950;line-height:1.2;margin-top:2px">📞 ${esc(o.phone)}</div>` : ''}
+        <div style="font-size:18px;font-weight:950;margin-top:3px;border-top:2px dashed #000;padding-top:2px">⏰ ORARIO: ${esc(timeTxt)}</div>
+      </div>`;
+  const sumRow = (l, v, cls)=>`<div class="rc-summary-row ${cls||''}"><span>${l}</span><strong>${v}</strong></div>`;
+  let sumHtml = sumRow('Subtotale:', euro(SVC.sub));
+  if(SVC.deliv) sumHtml += sumRow('Consegna:', '+ ' + euro(SVC.deliv));
+  SVC.extra.forEach(function(x){ sumHtml += sumRow('Extra' + (x.why ? ' (' + esc(x.why) + ')' : '') + ':', '+ ' + euro(x.v)); });
+  SVC.disc.forEach(function(x){ sumHtml += sumRow('Sconto' + (x.why ? ' (' + esc(x.why) + ')' : '') + ':', '- ' + euro(x.v)); });
+  const FT = bpShopFooterParts();
+
   return `
     <div class="receipt-card" id="printableReceiptCard">
-      <div class="rc-header">
-        <div class="rc-brand">🍕 BUONA PIZZA</div>
-        <div class="rc-sub">Lodi Vecchio · Pizzeria & Kebap · Comanda</div>
-      </div>
+      ${window.bpShop ? window.bpShop.custHeadHtml() : ''}
+      ${window.bpShop ? window.bpShop.bannerHtml(o) : ''}
 
       <div class="rc-meta-strip">
         <div>
@@ -9235,19 +9335,9 @@ function buildReceiptHtml(o, items){
         </div>
       </div>
 
-      <div class="rc-time-hero">
-        <span class="t-lbl">⏰ ORARIO RICHIESTO:</span>
-        <span class="t-val">${esc(parsedNotes.time)}</span>
-      </div>
+      ${allergyHtml}
+      ${isConsegna ? delivHtml : timeHeroHtml + custBoxHtml}
 
-      <div class="rc-customer-box">
-        <div class="rc-customer-row"><strong class="lbl">👤 Cliente:</strong> <span style="font-weight:900;font-size:15px">${esc(o.customer_name||'Cliente al banco')}</span></div>
-        ${bpTableNo(o) ? `<div class="rc-customer-row"><strong class="lbl">🍽️ Tavolo:</strong> <span style="font-weight:900;font-size:20px">${esc(bpTableNo(o))}</span></div>` : ''}
-        ${o.phone ? `<div class="rc-customer-row"><strong class="lbl">📞 Telefono:</strong> <span style="font-weight:800">${esc(o.phone)}</span></div>` : ''}
-        ${o.address ? `<div class="rc-customer-row"><strong class="lbl">📍 Indirizzo:</strong> <span style="font-weight:900;text-decoration:underline">${esc(o.address)}</span></div>` : ''}
-      </div>
-
-      
       ${idLineHtml}
       <div class="rc-items-section">
         <div class="rc-table-head">
@@ -9262,10 +9352,12 @@ function buildReceiptHtml(o, items){
       ${parsedNotes.cleanNotes ? `<div class="rc-note-alert">📝 <strong>NOTE ORDINE:</strong> ${esc(parsedNotes.cleanNotes)}</div>` : ''}
 
       <div class="rc-summary-box">
+        ${sumHtml}
         <div class="rc-summary-row">
           <span>Totale Articoli:</span>
           <strong>${totalQty} pz</strong>
         </div>
+        ${grandQty !== totalQty ? `<div class="rc-summary-row rc-tot-all"><span>Totale con fritti e bibite dei menu:</span><strong>${grandQty} pz</strong></div>` : ''}
         <div class="rc-summary-row">
           <span>Metodo di Pagamento:</span>
           <strong>💳 ${esc(payMethod.toUpperCase())}</strong>
@@ -9279,14 +9371,48 @@ function buildReceiptHtml(o, items){
       </div>
 
       ${reviewHtml}
-      <div class="rc-footer"><b>DOCUMENTO NON FISCALE</b> · Grazie · Buon Appetito!</div>
+      <div class="rc-footer"><b>${esc(FT.thanks)}</b>${FT.hours ? '<br>' + esc(FT.hours) : ''}${FT.wa ? '<br>WhatsApp ' + esc(FT.wa) : ''}</div>
     </div>
   `;
 }
 
 /* === إيصال المطبخ: شغل المطبخ + البيتزا اللي عليها بطاطس فقط === */
+/* v96: helper comanda · parte di pizza a gusti con patatine + tipo di menu */
+function bpGustiPartHasFries(nm, mods){
+  try{
+    var FR = /patatin|\bpatat[ea]\b|fritt|chips/i, NO = /^\s*(senza|no)\b/i;
+    if((mods || []).some(function(m){ return NO.test(m) && FR.test(m); })) return false;
+    var pr = bpRcFindProd(String(nm || ''));
+    var blob = String(nm || '') + ' ' + String((pr && pr.description) || '') + ' ' + (mods || []).filter(function(m){ return !NO.test(m); }).join(' ');
+    return FR.test(blob);
+  }catch(e){ return false; }
+}
+function bpMenuKindInfo(i){
+  var r = {kind: 'ALTRO', ico: '🍽️', name: ''};
+  try{
+    var pa = splitProductAndMods(i.product_name), nm = String(pa.baseName || '').replace(/^men[uù]\s+/i, '').trim();
+    r.name = nm;
+    var g = null; try{ g = bpGustiInfo(nm); }catch(e){}
+    if(g){ r.name = 'Pizza ' + g.label + ': ' + g.parts.join(' / '); }
+    var pr = bpRcFindProd(nm), k = '';
+    try{ k = g ? 'pizza' : (pr ? getProductKind(pr) : ''); }catch(e){}
+    if(!k || k === 'altro'){
+      var low = nm.toLowerCase();
+      if(/piadin/.test(low)) k = 'piadina';
+      else if(/pizz|calzon|focacc/.test(low)) k = 'pizza';
+      else if(/panin|kebab|kebap|burger|hot\s*dog|hotdog|durum|falafel|shawarma|wrap|toast/.test(low)) k = 'panino';
+    }
+    if((!k || k === 'altro')){ try{ if(bpWorkCat(i).k === 'pizza') k = 'pizza'; }catch(e){} }
+    if(k === 'pizza'){ r.kind = 'PIZZA'; r.ico = '🍕'; }
+    else if(k === 'panino'){ r.kind = 'PANINO'; r.ico = '🥙'; }
+    else if(k === 'piadina'){ r.kind = 'PIADINA'; r.ico = '🫓'; }
+  }catch(e){}
+  return r;
+}
 function buildKitchenReceiptHtml(o, items){
   let when = new Date(o.created_at).toLocaleString('it-IT',{dateStyle:'short',timeStyle:'short'});
+  let minsAgo = Math.max(0, Math.round((Date.now()-new Date(o.created_at).getTime())/60000));
+  let urg = getOrderUrgencyMeta(o);
   let isConsegna = String(o.order_type||'').toLowerCase().includes('consegna');
   let typeLabel = isConsegna ? '🛵 CONSEGNA' : '🛍️ RITIRO';
   let parsedNotes = splitTimeAndNotes(o.notes);
@@ -9298,8 +9424,8 @@ function buildKitchenReceiptHtml(o, items){
   /* pizza kebab: SEMPRE in cucina (carne + salse da aggiungere sopra la pizza) */
   let pizzaItems = KS.pzFries.concat(KS.menuPz);
   const krTag = i => {
-    if(krIsSingleFries(i)) return `<span class="kr-fries kr-fill">🍟 SINGOLE${krSinglePrice(i) ? ' · ' + krSinglePrice(i) : ''}</span>`;
-    try{ if(bpMenuUnits(i) > 0) return '<span class="kr-fries kr-menu">🍟🥤 MENU</span>'; }catch(e){}
+    if(krIsSingleFries(i)) return `<span class="kr-fries kr-fill">🍟 SINGOLE</span>`;
+    try{ if(bpMenuUnits(i) > 0) return '<span class="kr-fries kr-menu">🍟🥤 MENU ' + bpMenuKindInfo(i).kind + '</span>'; }catch(e){}
     if(krIsFried(i)) return '<span class="kr-fries">🍤 DA FRIGGERE</span>';
     return '';
   };
@@ -9349,15 +9475,7 @@ function buildKitchenReceiptHtml(o, items){
   const qtyOf = arr => arr.reduce((n, i)=>n + Number(i.quantity||1), 0);
   const sec = (ico, title, arr, small)=>`<div class="kr-sec${small?' kr-small':''}"><div class="kr-sec-h kr-inv"><span>${ico} ${title}</span><em>${qtyOf(arr)}</em></div><div class="kr-sec-b">${arr.map(i => bpRenderRcItem(i, false)).join('')}</div></div>`;
 
-  let itemsHtml = '';
-  if(kitchenItems.length){
-    let G = {panino: KS.panino, dolce: KS.dolce, fritto: KS.fritto, bevanda: KS.bevanda};
-    if(G.panino.length) itemsHtml += sec('🥙', 'PANINI & PIADINE', G.panino);
-    if(G.dolce.length) itemsHtml += sec('🍰', 'DOLCI', G.dolce);
-    if(G.fritto.length) itemsHtml += sec('🍟', 'FRITTI', G.fritto);
-    if(G.bevanda.length) itemsHtml += sec('🥤', 'BEVANDE', G.bevanda);
-  }
-
+  let itemsHtml = '';   /* FASE 4: stazioni = panini/piadine, pizza kebab, fritti (con patatine), dolci. Sezione vuota = non stampata */
   /* بيتزا بالبطاطس: سطر مختصر (الكمية + الاسم + عدد البطاطس) */
   let pizzaHtml = '';
   if(pizzaItems.length){
@@ -9365,7 +9483,7 @@ function buildKitchenReceiptHtml(o, items){
       let parsed = splitProductAndMods(i.product_name);
       let top = krTopFries(i), mu = 0; try{ mu = bpMenuUnits(i); }catch(e){}
       let maxi = String(i.size||'').toLowerCase()==='maxi' ? '<span class="rc-size-tag maxi">MAXI</span>' : '';
-      return `<div class="kr-pz"><span class="rc-qty-badge">${i.quantity}×</span><span class="rc-item-name">${bpNameHtml(parsed.baseName)}</span>${maxi}${top ? `<span class="kr-fries">🍟 SU PIZZA ×${top}</span>` : ''}${mu ? '<span class="kr-fries kr-menu">🍟🥤 MENU</span>' : ''}</div>`;
+      return `<div class="kr-pz"><span class="rc-qty-badge">${i.quantity}×</span><span class="rc-item-name">${bpNameHtml(parsed.baseName)}</span>${maxi}${top ? `<span class="kr-fries">🍟 SU PIZZA ×${top}</span>` : ''}${mu ? '<span class="kr-fries kr-menu">🍟🥤 MENU ' + bpMenuKindInfo(i).kind + '</span>' : ''}</div>`;
     };
     pizzaHtml = `<div class="kr-sec kr-small"><div class="kr-sec-h kr-inv"><span>🍕 PIZZE CON PATATINE</span><em>${qtyOf(pizzaItems)}</em></div><div class="kr-sec-b">${pizzaItems.map(line).join('')}</div></div>`;
   }
@@ -9381,72 +9499,37 @@ function buildKitchenReceiptHtml(o, items){
     kebabPzHtml = `<div class="kr-sec"><div class="kr-sec-h kr-inv"><span>🍕 PIZZA KEBAB · DA COMPLETARE</span><em>${qtyOf(kebabPzItems)}</em></div><div class="kr-sec-b">${kebabPzItems.map(kpzLine).join('')}</div></div>`;
   }
 
-  let totalQty = qtyOf(kitchenItems) + qtyOf(pizzaItems) + qtyOf(kebabPzItems);
-
-  /* RIEPILOGO */
-  let summaryHtml = (() => {
-    const qty = i => Number(i.quantity||1);
-    const lowN = i => splitProductAndMods(i.product_name).baseName.toLowerCase();
-    const bn = i => splitProductAndMods(i.product_name).baseName.replace(/^men[uù]\s+/i,'').trim();
-    const isMenu = i => { try{ return bpMenuUnits(i) > 0; }catch(e){ return false; } };
-    const namesOf = arr => arr.map(i => (qty(i)>1 ? qty(i)+'× ' : '') + esc(bn(i))).join(', ');
-
-    const panini = kitchenItems.filter(i => /panin|kebab|shawarma|hot\s*dog|hotdog/.test(lowN(i)) && !/piadin/.test(lowN(i)));
-    const piadine = kitchenItems.filter(i => /piadin/.test(lowN(i)));
-    const dolci = kitchenItems.filter(i => /dolc|dolce/.test(lowN(i)));
-
-    let singleQ = 0, singlePr = '', menuQ = 0, topQ = 0;
-    foodItems.forEach(i => { if(krIsSingleFries(i)){ singleQ += qty(i); if(!singlePr) singlePr = krSinglePrice(i); } });
-    try{ menuQ = bpFryDrink(items).menu || 0; }catch(e){}
-    pizzaItems.concat(kebabPzItems).forEach(i => { topQ += krTopFries(i); });
-    let patQ = singleQ + menuQ + topQ;
-
-    const otherFr = foodItems.filter(i => { try{
-      if(isPizzaItem(i) || isMenu(i) || krIsSingleFries(i)) return false;
-      if(/hot\s*dog|hotdog|salsiccia/.test(lowN(i))) return false;
-      return (bpItemFD(i).f || 0) > 0;
-    }catch(e){ return false; } });
-    const frQ = otherFr.reduce((n, i) => n + (bpItemFD(i).f || 0), 0);
-
-    const rows = [];
-    if(qtyOf(kebabPzItems)) rows.push(['🍕 Pizza Kebab', qtyOf(kebabPzItems), namesOf(kebabPzItems)]);
-    if(qtyOf(panini)) rows.push(['🥙 Panini', qtyOf(panini), namesOf(panini)]);
-    if(qtyOf(piadine)) rows.push(['🫓 Piadina', qtyOf(piadine), namesOf(piadine)]);
-    if(singleQ) rows.push(['🍟 Patatine SINGOLE' + (singlePr ? ' (' + singlePr + ')' : ''), singleQ, 'a parte, fuori menu']);
-    if(menuQ) rows.push(['🍟 Patatine MENU', menuQ, 'incluse nel menu con bibita']);
-    if(topQ) rows.push(['🍟 Patatine SU PIZZA', topQ, 'sopra la pizza']);
-    if(patQ && ((singleQ?1:0)+(menuQ?1:0)+(topQ?1:0)) > 1) rows.push(['🍟 TOTALE DA FRIGGERE', patQ, '']);
-    if(qtyOf(dolci)) rows.push(['🍰 Dolci', qtyOf(dolci), '']);
-    if(frQ) rows.push(['🍤 Altri fritti', frQ, namesOf(otherFr)]);
-
-    return rows.length ? '<div class="kr-sum"><div class="kr-sum-t">RIEPILOGO</div>' + rows.map(r => '<div class="kr-sum-row"><span>' + r[0] + (r[2] ? '<small>' + r[2] + '</small>' : '') + '</span><b>' + r[1] + '</b></div>').join('') + '</div>' : '';
-  })();
+  let FPk = {total: 0}; try{ FPk = bpFriedPlan(items); }catch(e){}
+  let totalQty = qtyOf(KS.panino) + qtyOf(KS.kebabPz) + qtyOf(KS.dolce) + (FPk.total || 0);
+  itemsHtml = (KS.panino.length ? sec('🥙', 'PANINI & PIADINE', KS.panino) : '') + kebabPzHtml + (FPk.total ? bpFriedHtml(items, true) : '') + (KS.dolce.length ? sec('🍰', 'DOLCI', KS.dolce) : '');
+  const tblK = (function(){ try{ return bpTableNo(o); }catch(e){ return ''; } })();
+  const typeBig = isConsegna ? '🛵 CONSEGNA' : (tblK ? '🍽️ TAVOLO ' + esc(tblK) : '🛍️ RITIRO');
+  const ALGk = bpAllergyScan(items, parsedNotes && parsedNotes.cleanNotes);
 
   return `
     <div class="receipt-card kr" id="kitchenReceiptCard">
+      ${window.bpShop ? window.bpShop.bannerHtml(o) : ''}
       <div class="kr-head kr-inv">
-        <div class="kr-brand">BUONA PIZZA</div>
+        <div class="kr-brand">${esc(window.bpShop ? (window.bpShop.cfg().name || 'Buona Pizza').toUpperCase() : 'BUONA PIZZA')}</div>
         <div class="kr-dest">👨‍🍳 COMANDA CUCINA</div>
       </div>
 
-      <div class="kr-hero">
-        <div><small>ORDINE</small><b>#${o.id}</b></div>
-        <div><small>⏰ ORARIO</small><b>${esc(parsedNotes.time)}</b></div>
+      <div class="kr-hero ${urg.isOverdue ? 'urg' : ''}">
+        <div><small>TIPO</small><b>${typeBig}</b></div>
+        <div><small>⏰ CONSEGNA / RITIRO ORE</small><b>${esc(/^\d/.test(urg.timeLabel) ? urg.timeLabel : 'SUBITO')}</b>${urg.isOverdue ? '<small style="font-size:10px;display:block;margin-top:2px">IN RITARDO</small>' : ''}</div>
       </div>
 
+      ${bpAllergyBoxHtml(ALGk)}
+
       <div class="kr-info">
-        <span class="kr-type">${typeLabel}</span>
+        <span>#${o.id}</span>
         <span>👤 ${esc(o.customer_name||'Cliente')}</span>
         <span>${when}</span>
       </div>
 
       ${parsedNotes.cleanNotes ? `<div class="kr-note">📝 ${esc(parsedNotes.cleanNotes)}</div>` : ''}
 
-      ${kebabPzHtml}
       ${itemsHtml}
-      ${pizzaHtml}
-      ${''}
-      ${summaryHtml}
 
       <div class="kr-foot kr-inv"><span>LISTA CUCINA</span><span>TOTALE: <b>${totalQty}</b> pz</span></div>
     </div>
@@ -9519,13 +9602,11 @@ function bpKebabTopList(it){
    Per cambiare una regola (anche in futuro) basta modificare QUI.
    ============================================================ */
 var BP_KITCHEN_SECTIONS = [
-  ['kebabPz', '🍕', 'PIZZA KEBAB · DA COMPLETARE'],
+  ['pizza',   '🍕', 'PIZZA'],
   ['panino',  '🥙', 'PANINI & PIADINE'],
-  ['dolce',   '🍰', 'DOLCI'],
   ['fritto',  '🍟', 'FRITTI'],
-  ['bevanda', '🥤', 'BEVANDE'],
-  ['pzFries', '🍕', 'PIZZE CON PATATINE'],
-  ['menuPz',  '🍟', 'PIZZE MENU · PATATINE DA FRIGGERE']
+  ['dolce',   '🍰', 'DOLCI'],
+  ['bevanda', '🥤', 'BEVANDE']
 ];
 function bpKitchenSplit(items){
   var out = {kebabPz: [], panino: [], dolce: [], fritto: [], bevanda: [], pzFries: [], menuPz: [], all: []};
@@ -9540,7 +9621,7 @@ function bpKitchenSplit(items){
       }
     }catch(e){}
   });
-  BP_KITCHEN_SECTIONS.forEach(function(sc){ out.all = out.all.concat(out[sc[0]]); });
+  BP_KITCHEN_SECTIONS.forEach(function(sc){ out.all = out.all.concat(out[sc[0]] || []); });
   return out;
 }
 function bpKitchenEnsureCss(){
@@ -9663,8 +9744,21 @@ function isPizzaItem(i){
   try{ return bpWorkCat(i).k === 'pizza'; }catch(e){ return false; }
 }
 
+/* FASE 4: la comanda cucina si stampa solo se c'e' davvero qualcosa per la cucina (panini, piadine, pizza kebab, fritti/patatine, dolci). Solo pizze senza patatine o solo bevande = niente comanda. */
 function bpHasKitchenItems(items){
-  return bpKitchenSplit(items).all.length > 0;
+  try{
+    var K = bpKitchenSplit((items || []).filter(function(i){ return !bpIsSvc(i.product_name); }));
+    if(K.kebabPz.length || K.panino.length || K.dolce.length || K.fritto.length || K.pzFries.length || K.menuPz.length) return true;
+    var P = bpFriedPlan(items); return !!(P && P.total > 0);
+  }catch(e){ return false; }
+}
+function bpAllergyBoxHtml(ALG){
+  if(!ALG || !ALG.any) return '';
+  return '<div class="rc-alg" style="margin:5px 6px;border:3px double #000;padding:4px 6px;text-align:center;color:#000">' +
+    '<div style="font-size:15px;font-weight:950">*** ALLERGIE / SENZA GLUTINE ***</div>' +
+    ALG.rows.map(function(r){ return '<div style="font-size:19px;font-weight:950;line-height:1.2">' + r.q + '× ' + esc(r.name) + ' <span style="border:2px solid #000;padding:0 4px">' + esc(r.tags.join(' · ')) + '</span></div>'; }).join('') +
+    (ALG.note ? '<div style="font-size:17px;font-weight:950;line-height:1.2;margin-top:2px">NOTE: ' + esc(ALG.note) + '</div>' : '') +
+    '<div style="font-size:15px;font-weight:950">*** ATTENZIONE ***</div></div>';
 }
 
 async function showDetails(o){
@@ -9683,7 +9777,7 @@ async function showDetails(o){
   let html = buildReceiptHtml(o, items);
   /* ricevuta principale sempre; comanda cucina SOLO se ci sono prodotti per la cucina */
   if(hasKitchen){
-    html += '<div class="bp-cut-sep" style="page-break-after:always;break-after:page;height:0;margin:0;padding:0;border:0;overflow:hidden"></div>' + buildKitchenReceiptHtml(o, items);
+    html += (window.bpShop ? window.bpShop.cutLineHtml() : '') + '<div class="bp-cut-sep" style="page-break-after:always;break-after:page;height:0;margin:0;padding:0;border:0;overflow:hidden"></div>' + buildKitchenReceiptHtml(o, items);
   }
   
   el('receiptContainer').innerHTML = html;
@@ -11109,7 +11203,7 @@ try{
 /* ---------- SEZIONE 24: ruoli, storia ordine, schermata cucina (v31) ---------- */
 try{
 var BP_ROLE = 'cashier';
-var BP_TABS = {manager:['new','orders','kitchen','menu','all','cassa','purchases'], cashier:['new','orders','kitchen','all'], kitchen:['kitchen','orders'], driver:['orders']};
+var BP_TABS = {manager:['new','orders','kitchen','menu','all','cassa','purchases','settings'], cashier:['new','orders','kitchen','all'], kitchen:['kitchen','orders'], driver:['orders']};
 var BP_HOME = {manager:'new', cashier:'new', kitchen:'kitchen', driver:'orders'};
 function bpApplyRole(role){
   if(!BP_TABS[role]) role = 'cashier';
@@ -13476,6 +13570,7 @@ el('kitchenTab').addEventListener('click', function(e){
       var cat = String((pr && pr.category) || ''), low = (cat + ' ' + raw).toLowerCase();
       var rawL = raw.toLowerCase();
       if(/pizz|calzon|panzerot|focacc|margherita|diavola|marinara/.test(rawL)) return 'pizza';
+      if(pr && /pizz|calzon|focacc/i.test(cat)) return 'pizza';   /* v95: es. "Wurstel e Patatine" (categoria Pizze) e' una PIZZA, non un panino */
       if(/kebab|kebap|falafel|shawarma|d[oö]ner|durum|panin|piadin|burger|wrap|patatin|fries|fritt|hot\s*dog|hotdog/.test(rawL)) return 'cucina';   /* il nome batte la categoria */
       if(/pizz|calzon|panzerot|focacc|margherita|diavola|marinara/.test(low)) return 'pizza';
       var kind = ''; try{ kind = pr ? getProductKind(pr) : ''; }catch(e){}
@@ -13493,7 +13588,7 @@ el('kitchenTab').addEventListener('click', function(e){
          (es. Menu Wurstel e Patatine) vanno contate ANCHE come patatine sopra la pizza. Si guarda solo la pizza base (senza "Menu" e senza flag +Bibita/+Patatine). */
       var isMenuItem = false; try{ isMenuItem = (typeof bpMenuUnits === 'function' && bpMenuUnits(it) > 0); }catch(e){}
       var q = Number(it.quantity || 1), maxi = String(it.size || '').toLowerCase() === 'maxi';
-      var pa = splitProductAndMods(it.product_name), FR = /patatin|fritt|chips/i, NO = /^\s*(senza|no)\b/i;
+      var pa = splitProductAndMods(it.product_name), FR = /patatin|\bpatat[ea]\b|fritt|chips/i, NO = /^\s*(senza|no)\b/i;
       if(isMenuItem){
         pa = {baseName: String(pa.baseName || '').replace(/^men[uù]\s+/i, '').trim(), mods: (pa.mods || []).filter(function(m){ return !/^\+\s*(bibita|patatine)$/i.test(String(m).trim()); })};
       }
@@ -13637,7 +13732,7 @@ el('kitchenTab').addEventListener('click', function(e){
       'body{font-family:Arial,Helvetica,sans-serif;padding:6px;color:#000;width:80mm;margin:0 auto}' +
       '*{-webkit-print-color-adjust:exact;print-color-adjust:exact}' +
       '@page{size:80mm auto;margin:0}</style></head>' +
-      '<body onload="window.print();window.close();">' + ticketsHtml + '</body></html>');
+      '<body onload="window.print();">' + ticketsHtml + '</body></html>');
     printWin.document.close();
   };
 
@@ -13665,6 +13760,15 @@ el('kitchenTab').addEventListener('click', function(e){
     async function run(o){
       var items = await loadItems(o);
       if(!items.length) return;
+      /* v47: stampa diretta ESC/POS: nessun rendering a video, solo byte alla stampante (leggero) */
+      if(window.bpDirectPrint && window.bpDirectPrint.active && window.bpDirectPrint.active()){
+        try{
+          await window.bpDirectPrint.printOrder(o, items);
+          await wait(1200);
+          try{ window.__bpPrinting = false; }catch(e){}
+          return;
+        }catch(e){ console.warn('[bp] auto-print diretta, uso il metodo normale', e); }
+      }
       await showDetails(o);              /* costruisce ricevuta + (se serve) comanda cucina */
       currentPrintedOrder = null;        /* stampa auto: NON cambia lo stato dell'ordine (come prima) */
       await wait(350);
@@ -14106,12 +14210,19 @@ var BP_MEAT_RE = /kebab|kebap|carne|d[oö]ner|pollo|vitello|manzo|agnello/i;
 function bpIsKebabName(n){ return /kebab|kebap|d[oö]ner/i.test(String(n || "")); }
 function bpQkind(name, kind){ return bpIsKebabName(name) ? "kebab:" + kind : kind; }
 function bpIsMeat(x){ return BP_MEAT_RE.test(x) && !/salsa|sugo|maionese|insalat|spezie|condiment|ketchup|yogurt/i.test(x); }
-function bpSoloPlan(name, base){   /* ingredienti da barrare con SOLO (stessa grafia delle tessere, cosi' risultano selezionate) */
+function bpSoloPlanLegacy(name, base){   /* vecchia regola (ordini gia' salvati): pomodoro/mozzarella restano tutti */
   var prod = [];
   try{ var pr = bpRcFindProd(String(name || "")); if(pr) prod = parseIngredients(pr.description); }catch(e){ bpWarn(e); }
-  var arr = ingUnique(prod.concat(base || []));   /* ordine: prima quelli del prodotto base, poi quelli dell'articolo */
+  var arr = ingUnique(prod.concat(base || []));
   var pizza = /pizz/i.test(String(name || "")), ess = pizza ? ingUnique(prod.length ? prod : (base || [])).slice(0, 2).map(ingNorm) : [];
   return arr.filter(function(x){ var k = ingNorm(x); return !bpIsMeat(x) && ess.indexOf(k) < 0 && !(pizza && /^(pomodor|mozzarell)/.test(k)); });
+}
+function bpSoloPlan(name, base){   /* v95: ingredienti da barrare con SOLO. Sulle pizze restano solo salsa base + mozzarella: il Pomodoro fresco del kebab si toglie */
+  var prod = [];
+  try{ var pr = bpRcFindProd(String(name || "")); if(pr) prod = parseIngredients(pr.description); }catch(e){ bpWarn(e); }
+  var arr = ingUnique(prod.concat(base || []));
+  var pizza = /pizz/i.test(String(name || "")), LS = pizza ? bpLogoSplit(arr) : {t: -1, m: -1};
+  return arr.filter(function(x, idx){ return !bpIsMeat(x) && !(pizza && (idx === LS.t || idx === LS.m)); });
 }
 function bpSoloActive(name, base, removed){
   var plan = bpSoloPlan(name, base); if(!plan.length) return false;
@@ -14127,14 +14238,15 @@ function bpSoloToggle(name, base, removed){
   var rn = []; removed.forEach(function(r){ rn.push(ingNorm(r)); });
   plan.forEach(function(x){ if(rn.indexOf(ingNorm(x)) < 0) removed.add(x); });
 }
-function bpSoloOf(parsed){   /* vero se l'articolo kebab ha TUTTO barrato tranne la carne */
+function bpSoloOf(parsed){   /* vero se l'articolo kebab ha TUTTO barrato tranne la carne (regola nuova o vecchia) */
   try{
     if(!parsed || !bpIsKebabName(parsed.baseName)) return false;
     var mods = parsed.mods || [];
     if(mods.some(function(m){ return /^\+?\s*solo\b/i.test(m); })) return true;
-    var plan = bpSoloPlan(parsed.baseName, []); if(!plan.length) return false;
     var rem = mods.filter(function(m){ return /^senza\b/i.test(m); }).map(function(m){ return ingNorm(m.replace(/^senza\s+/i, "")); });
-    return plan.every(function(x){ return rem.indexOf(ingNorm(x)) >= 0; });
+    return [bpSoloPlan(parsed.baseName, []), bpSoloPlanLegacy(parsed.baseName, [])].some(function(plan){
+      return plan.length > 0 && plan.every(function(x){ return rem.indexOf(ingNorm(x)) >= 0; });
+    });
   }catch(e){ return false; }
 }
 function bpSoloBtnHtml(on){
@@ -14648,7 +14760,7 @@ openCartIngModal = function(key){
   function vib(){ try{ if(navigator.vibrate) navigator.vibrate(12); }catch(e){} }
 
   /* ---------- 1) NAVIGAZIONE A ICONE ---------- */
-  var NAV = [['new','🛒','Nuovo'],['orders','📋','Ordini'],['kitchen','👨‍🍳','Cucina'],['cassa','💰','Cassa'],['menu','🍕','Menu'],['all','🕒','Storico'],['purchases','🧾','Acquisti'],['inventory','📦','Scorte'],['loyalty','👑','Clienti'],['analytics','📊','Report']];
+  var NAV = [['new','🛒','Nuovo'],['orders','📋','Ordini'],['kitchen','👨‍🍳','Cucina'],['cassa','💰','Cassa'],['menu','🍕','Menu'],['all','🕒','Storico'],['purchases','🧾','Acquisti'],['inventory','📦','Scorte'],['loyalty','👑','Clienti'],['analytics','📊','Report'],['settings','⚙️','Impostazioni']];
   var PRIMARY = {'new':1,'orders':1,'kitchen':1,'cassa':1};
   var nav = document.createElement('nav'); nav.id = 'bpNav'; nav.className = 'no-print hidden';
   var more = document.createElement('div'); more.id = 'bpMore'; more.className = 'hidden no-print';
@@ -22284,6 +22396,55 @@ try{
   };
 }catch(e){ console.warn('[bp] logo gusti', e); }
 </script>
+<style id="bp-gusti-fries">
+.gx .gx-nfr{font-style:italic;text-decoration:underline;text-decoration-thickness:3px;text-underline-offset:3px}
+.gx .gx-frt{display:inline-block;margin-inline-start:6px;padding:0 6px;border-radius:5px;background:#000;color:#fff;font-size:.62em;font-style:normal;font-weight:950;letter-spacing:.04em;line-height:1.5;text-decoration:none;vertical-align:middle;white-space:nowrap;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.gx .gx-frw{font-weight:950;text-decoration:underline;text-decoration-thickness:2px;text-underline-offset:2px}
+.gx .gx-fp .gx-f{background:#000;color:#fff;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+html body .gx .gx-fp .gx-f{background:#000!important;color:#fff!important;-webkit-text-fill-color:#fff!important}
+html body .gx .gx-frt{background:#000!important;color:#fff!important;-webkit-text-fill-color:#fff!important;text-decoration:none!important}
+html body .gx .gx-nfr{text-decoration:underline!important;text-decoration-thickness:3px!important}
+</style>
+<script>
+try{
+  (function(){
+    var _H = bpGustiHtml, _P = bpGustiPrintHtml;
+    function flags(g){ return (g.parts || []).map(function(nm, i){ return bpGustiPartHasFries(nm, (g.mods && g.mods[i]) || []); }); }
+    function hiWord(t){ return String(t).replace(/patatin\w*|\bpatat[ea]\b/ig, function(w){ return '<span class="gx-frw">' + w + '</span>'; }); }
+    bpGustiHtml = function(g){
+      var h = _H(g), fl = flags(g);
+      if(!fl.some(Boolean)) return h;
+      var segs = h.split('<div class="gx-p">'), out = segs[0];
+      for(var i = 1; i < segs.length; i++){
+        var s = segs[i], on = !!fl[i - 1];
+        if(on){
+          s = s.replace('<div class="gx-n">', '<div class="gx-n gx-nfr">');
+          s = s.replace('</div>', '<span class="gx-frt">🍟 PATATINE</span></div>');
+          s = s.replace(/<small>([\s\S]*?)<\/small>/, function(m, inner){ return '<small>' + hiWord(inner) + '</small>'; });
+        }
+        out += (on ? '<div class="gx-p gx-fp">' : '<div class="gx-p">') + s;
+      }
+      return out;
+    };
+    bpGustiPrintHtml = function(g){
+      var h = _P(g), fl = flags(g);
+      if(!fl.some(Boolean)) return h;
+      var key = '<div style="display:flex;align-items:flex-start;gap:6px;border-left:3px solid #000;padding-left:6px">';
+      var segs = h.split(key), out = segs[0];
+      for(var i = 1; i < segs.length; i++){
+        var s = segs[i], on = !!fl[i - 1];
+        if(on){
+          s = s.replace('font-size:15px;font-weight:900;line-height:1.15">', 'font-size:15px;font-weight:900;line-height:1.15;font-style:italic;text-decoration:underline;text-decoration-thickness:3px;text-underline-offset:2px">');
+          s = s.replace('</div>', ' <span style="display:inline-block;background:#000;color:#fff;font-size:10px;font-style:normal;padding:0 5px;border-radius:4px;-webkit-print-color-adjust:exact;print-color-adjust:exact">🍟 PATATINE</span></div>');
+          s = s.replace(/(font-size:10\.5px;font-weight:700;line-height:1\.15">)([\s\S]*?)(<\/div>)/, function(m, a, inner, c){ return a + String(inner).replace(/patatin\w*|\bpatat[ea]\b/ig, function(w){ return '<b style="text-decoration:underline">' + w + '</b>'; }) + c; });
+          out += key.replace('border-left:3px solid #000', 'border-left:6px solid #000') + s;
+        } else out += key + s;
+      }
+      return out;
+    };
+  })();
+}catch(e){ console.warn('[bp] gusti patatine', e); }
+</script>
 <script>
 /* promemoria: testo a capo, altezza = logo, tutti i nomi visibili (font adattato) */
 (function(){
@@ -22474,6 +22635,17 @@ html{scroll-padding-bottom:calc(150px + env(safe-area-inset-bottom,0px))}
     }
   };
 })();</script>
+<style id="bpV95Css">
+.rc-sec-h,.receipt-card .rc-sec-h{font-size:20px!important;padding:6px 22px!important;letter-spacing:1.2px!important}
+.receipt-card .rc-sec-sub{padding:3px 22px!important;font-size:12.5px!important}
+.rc-pz-note{margin:5px 14px;padding:6px 10px;border:2.5px solid #000;border-radius:8px;font-size:17px;font-weight:900;line-height:1.25;background:#fff8eb}
+.receipt-card .rc-pz-note{margin:4px 14px!important;padding:5px 9px!important;font-size:16px!important}
+.rc-fry-g{padding:5px 22px 4px;border-bottom:1px dotted #000}
+.rc-fry-t{display:flex;justify-content:space-between;align-items:baseline;font-weight:950;font-size:16px}
+.rc-fry-t small{font-size:11.5px;font-weight:700}
+.rc-fry-t b{font-size:19px}
+.rc-fry-r{display:flex;justify-content:space-between;font-size:14px;font-weight:800;padding:1px 0 0 14px}
+</style>
 <style id="bpThermalCss">
 #thermalToggleBtn::before{content:'🧾'}
 html:not(.x) body #userBar button#thermalToggleBtn.ap-on,#thermalToggleBtn.ap-on{background:#16794b!important}
@@ -22718,6 +22890,7 @@ html:not(.x) body #userBar button#thermalToggleBtn.ap-off,#thermalToggleBtn.ap-o
     sendToRawBT([[c]]);
   }
   var _orig = window.printReceiptWindow, busy = false;
+  window.__bpBrowserPrint = _orig;   /* v47: fallback leggero (window.print) senza html2canvas */
   window.printReceiptWindow = function(format){
     if(format !== '80mm' || !isOn() || busy) return _orig.apply(this, arguments);
     busy = true;
@@ -22766,11 +22939,21 @@ html:not(.x) body #userBar button#thermalToggleBtn.ap-off,#thermalToggleBtn.ap-o
   if(window.__bpDirect) return; window.__bpDirect = 1;
 
   var CK = 'bp_direct_cfg', EK = 'bp_direct';
-  var DEF = {cols: 48, cp: 'cp858', qr: 1, kitchen: 1, baud: 9600, transport: '', kanji: 0, bleChunk: 100, usbKey: '', bleName: ''};
+  var DEF = {cols: 48, cp: 'cp858', qr: 1, kitchen: 1, baud: 9600, transport: '', kanji: 1, bleChunk: 100, usbKey: '', bleName: '', fs: 1};
   var cfg = (function(){ try{ return Object.assign({}, DEF, JSON.parse(localStorage.getItem(CK) || '{}')); }catch(e){ return Object.assign({}, DEF); } })();
   function save(){ try{ localStorage.setItem(CK, JSON.stringify(cfg)); }catch(e){} }
   function enabled(){ try{ return localStorage.getItem(EK) === '1'; }catch(e){ return false; } }
-  function setEnabled(v){ try{ localStorage.setItem(EK, v ? '1' : '0'); }catch(e){} paint(); }
+  function setEnabled(v){
+    try{ localStorage.setItem(EK, v ? '1' : '0'); }catch(e){}
+    if(v){   /* v47: la modalita' immagine (html2canvas) e' la causa del telefono lento: si spegne */
+      try{
+        localStorage.setItem('bp_thermal', '0');
+        var tb = document.getElementById('thermalToggleBtn');
+        if(tb){ tb.classList.remove('ap-on'); tb.classList.add('ap-off'); tb.style.setProperty('background', '#b42318', 'important'); }
+      }catch(e){}
+    }
+    paint();
+  }
   function wait(ms){ return new Promise(function(r){ setTimeout(r, ms); }); }
   function toast(m, err){ try{ if(typeof ssToast === 'function'){ ssToast(m, !!err); return; } }catch(e){} try{ console.warn('[bp-direct]', m); }catch(e){} }
   function rep(ch, n){ var s = ''; n = Math.max(0, n | 0); while(s.length < n) s += ch; return s.slice(0, n); }
@@ -22795,6 +22978,7 @@ html:not(.x) body #userBar button#thermalToggleBtn.ap-off,#thermalToggleBtn.ap-o
   function encByte(ch, cp){
     var c = ch.charCodeAt(0);
     if(c < 0x80) return c >= 0x20 ? c : 0x20;
+    if(cp === 'cp1252'){ if(c >= 0xA0 && c <= 0xFF) return c; if(c === 0x20AC) return 0x80; }
     var t = cp === 'cp858' ? T858 : (cp === 'cp437' ? T437 : null);
     if(t && t[ch] != null) return t[ch];
     var b = ch.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
@@ -22815,7 +22999,7 @@ html:not(.x) body #userBar button#thermalToggleBtn.ap-off,#thermalToggleBtn.ap-o
     if(words !== false) EMO.forEach(function(e){ s = s.replace(e[0], ' ' + e[1] + ' '); });
     s = s.replace(STRIP, '');
     PUN.forEach(function(e){ s = s.replace(e[0], e[1]); });
-    if(cp !== 'cp858') s = s.replace(/\u20AC/g, 'EUR ');
+    if(cp !== 'cp858' && cp !== 'cp1252') s = s.replace(/\u20AC/g, 'EUR ');
     return s.replace(/[\r\n\t]+/g, ' ').replace(/ {2,}/g, ' ').trim();
   }
 
@@ -22845,7 +23029,7 @@ html:not(.x) body #userBar button#thermalToggleBtn.ap-off,#thermalToggleBtn.ap-o
     this.raw([0x1B, 0x40]);                          /* reset */
     if(c.kanji) this.raw([0x1C, 0x2E]);              /* esce dalla modalita' cinese (solo se richiesto) */
     this.raw([0x1B, 0x52, 0x00]);                    /* set caratteri internazionale: USA (niente sostituzioni) */
-    this.raw([0x1B, 0x74, this.cp === 'cp858' ? 19 : 0]);   /* code page */
+    this.raw([0x1B, 0x74, this.cp === 'cp858' ? 19 : (this.cp === 'cp1252' ? 16 : 0)]);   /* code page */
   }
   Doc.prototype.raw = function(a){ for(var i = 0; i < a.length; i++) this.buf.push(a[i] & 255); return this; };
   Doc.prototype.W = function(){ return Math.max(8, Math.floor((this.fb ? Math.floor(this.cols * 4 / 3) : this.cols) / this.mw)); };
@@ -22896,6 +23080,8 @@ html:not(.x) body #userBar button#thermalToggleBtn.ap-off,#thermalToggleBtn.ap-o
       lines.forEach(function(t){ var lp = Math.floor((w - t.length) / 2); self.put(rep(' ', lp) + t + rep(' ', w - lp - t.length)); });
       return this;
     }
+    var pd = Math.max(0, style.pad | 0);   /* v95: rientro dai bordi */
+    if(pd){ l = rep(' ', pd) + l; if(r) r = r + rep(' ', pd); }
     if(l.length + r.length + 1 > w) l = l.slice(0, Math.max(1, w - r.length - 1));
     return this.put(l + rep(' ', w - l.length - r.length) + r);
   };
@@ -22931,6 +23117,12 @@ html:not(.x) body #userBar button#thermalToggleBtn.ap-off,#thermalToggleBtn.ap-o
     this.raw([0x1D, 0x28, 0x6B, 3, 0, 49, 81, 48]);
     this.pv.push('   [ QR CODE ]');
     return this;
+  };
+  Doc.prototype.logo = function(){
+    var L = null; try{ L = window.bpShop.logoRaster(Math.min(300, this.cols * 12)); }catch(e){}
+    if(!L) return false;
+    this.st({a: 'c'}); for(var i = 0; i < L.bands.length; i++) this.raw(Array.from(L.bands[i]));
+    this.pv.push('   [ LOGO ]'); return true;
   };
   Doc.prototype.cut = function(){ this.st({}); this.raw([0x1B, 0x64, 4, 0x1D, 0x56, 0x42, 0x00]); this.pv.push(''); this.pv.push('- - - - - - - - taglio - - - - - - - -'); this.pv.push(''); return this; };
   Doc.prototype.bytes = function(){ this.st({}); return new Uint8Array(this.buf); };
@@ -22970,7 +23162,7 @@ html:not(.x) body #userBar button#thermalToggleBtn.ap-off,#thermalToggleBtn.ap-o
     var g = null; try{ g = bpGustiInfo(parsed.baseName); }catch(e){}
     if(g){
       var fr = {2: '1/2', 3: '1/3', 4: '1/4'}[g.parts.length] || '';
-      R.gusti = {fr: fr, unit: g.unit, parts: g.parts.map(function(nm){ var ing = ''; try{ ing = bpGustiIng(nm); }catch(e){} return {name: nm, ing: ing}; })};
+      R.gusti = {fr: fr, unit: g.unit, parts: g.parts.map(function(nm, ix){ var ing = ''; try{ ing = bpGustiIng(nm); }catch(e){} return {name: nm, ing: ing, mods: (g.mods && g.mods[ix]) || []}; })};
       R.title = 'Pizza ' + g.label;
     } else {
       R.title = (isMenuFlag ? 'Menu ' : '') + parsed.baseName;
@@ -22989,32 +23181,64 @@ html:not(.x) body #userBar button#thermalToggleBtn.ap-off,#thermalToggleBtn.ap-o
     if(!isDrink && !g){
       try{
         var prod = bpRcFindProd(parsed.baseName);
-        if(prod){ var rn = R.rem.map(ingNorm); R.base = ingUnique(parseIngredients(prod.description)).filter(function(b){ return rn.indexOf(ingNorm(b)) < 0; }); }
+        if(prod){
+          var rn = R.rem.map(ingNorm); R.base = ingUnique(parseIngredients(prod.description)).filter(function(b){ return rn.indexOf(ingNorm(b)) < 0; });
+          if(R.solo){   /* v95: SOLO CARNE = (pizza: salsa base + mozzarella) + carne, nient'altro */
+            var LS2 = bpLogoSplit(R.base), pz = /pizz/i.test(parsed.baseName) || getProductKind(prod) === 'pizza';
+            R.base = R.base.filter(function(b, idx){ return bpIsMeat(b) || (pz && (idx === LS2.t || idx === LS2.m)); });
+          }
+        }
       }catch(e){}
     }
     R.head = [R.title, R.tag, R.vol].filter(Boolean).join(' ');
+    try{ R.menuRow = !g && (isMenuFlag || (typeof bpMenuUnits === 'function' && bpMenuUnits(i) > 0)); }catch(e){ R.menuRow = false; }
     return R;
   }
 
   /* dettagli sotto l'articolo: ingredienti / senza / extra / note. kit = comanda cucina (testo piu' grande) */
+  /* v48: dimensione testo ricevuta/comanda: 0 = normale, 1 = grande, 2 = molto grande (doppia altezza) */
+  function nameSt(def){ try{ return window.bpShop.escStyle('name') || def; }catch(e){ return def; } }
+  function fsLevel(){ var v = Number(cfg.fs); return isNaN(v) ? 1 : Math.max(0, Math.min(2, v)); }
   function detailLines(d, inf, kit){
-    var ind = '   ', sm = kit ? {} : {f: 'B'}, hang = ind.length + 7;
+    var fs = fsLevel(), ind = '   ', hang = ind.length + 7;
+    var sm = fs >= 2 ? {b: 1, h: 2} : (fs === 1 ? (kit ? {b: 1, h: 2} : {b: 1}) : (kit ? {} : {f: 'B'}));   /* ingredienti */
+    var st = fs >= 2 ? {b: 1, h: 2} : {b: 1};                                                              /* SENZA / EXTRA / NOTE */
+    try{ var oi = window.bpShop.escStyle('ing'); if(oi) sm = oi; }catch(e){}
     if(inf.gusti){
       inf.gusti.parts.forEach(function(pt, k){
         if(k) d.p(ind + rep('-', 10) + ' / ' + rep('-', 10), kit ? {b: 1} : {});
-        d.p(ind + (inf.gusti.fr ? inf.gusti.fr + ' ' : '') + inf.gusti.unit + ' ' + (k + 1) + ': ' + String(pt.name).toUpperCase(), {b: 1}, ind.length + 4);
+        var hasFr = false; try{ hasFr = bpGustiPartHasFries(pt.name, pt.mods); }catch(e){}
+        d.p(ind + (inf.gusti.fr ? inf.gusti.fr + ' ' : '') + inf.gusti.unit + ' ' + (k + 1) + ': ' + String(pt.name).toUpperCase() + (hasFr ? '  >> PATATINE' : ''), st, ind.length + 4);
         if(pt.ing) d.p(ind + '    ' + pt.ing, sm, ind.length + 4);
       });
     }
-    if(inf.solo) d.p(ind + '*** SOLO CARNE ***', {b: 1});
+    var mk = kit ? '>> ' : '', hg = hang + (kit ? 3 : 0);
+    if(inf.solo) d.p(ind + mk + '*** SOLO CARNE ***', st);
     if(inf.base.length) d.p(ind + 'Ingr.: ' + inf.base.join(', '), sm, hang);
-    if(inf.rem.length && !inf.solo) d.p(ind + 'SENZA: ' + up(inf.rem), {b: 1}, hang);
-    if(inf.add.length) d.p(ind + 'EXTRA: ' + up(inf.add), {b: 1}, hang);
-    if(inf.notes.length) d.p(ind + 'NOTE: ' + up(inf.notes), {b: 1}, hang);
-    inf.other.forEach(function(m){ d.p(ind + 'NOTE: ' + String(m).toUpperCase(), {b: 1}, hang); });
+    if(inf.rem.length && !inf.solo) d.p(ind + mk + 'SENZA: ' + up(inf.rem), st, hg);
+    if(inf.add.length) d.p(ind + mk + 'EXTRA: ' + up(inf.add), st, hg);
+    if(inf.notes.length) d.p(ind + mk + 'NOTE: ' + up(inf.notes), st, hg);
+    inf.other.forEach(function(m){ d.p(ind + mk + 'NOTE: ' + String(m).toUpperCase(), st, hg); });
   }
 
   function fitW(d, txt, max){ var n = Math.max(1, d.c(txt).length); return Math.max(1, Math.min(max, Math.floor(d.cols / n))); }
+
+  /* v95: sezione FRITTI unica e ordinata (singole / menu / sopra pizza / altri) */
+  function friedDoc(d, P, noPrice){
+    if(!P || !P.total) return;
+    d.bar('FRITTI - DA FRIGGERE', String(P.total), {b: 1, h: 2, pad: 2});
+    function grp(title, sub, G, price, showN){
+      if(!G.n) return;
+      d.lr(title, 'x' + G.n, {b: 1, h: 2}, 0);
+      if(sub) d.p(sub, {f: 'B'});
+      G.rows.forEach(function(r){ d.lr('- ' + r.label, (price && !noPrice && r.total) ? money(r.total) : ((showN || r.n > 1) ? 'x' + r.n : ''), {b: 1}, 2); });
+      d.rule('-');
+    }
+    grp('PATATINE SINGOLE', 'a parte, fuori menu', P.single, true, false);
+    grp('PATATINE MENU', 'incluse nei menu con bibita', P.menu, false, false);
+    grp('PATATINE SU PIZZA', '1 per pizza - MAXI intera 2 - mezza MAXI 1', P.pizza, false, true);
+    grp('ALTRI FRITTI', '', P.other, true, false);
+  }
 
   /* ================= RICEVUTA CLIENTE ================= */
   function receiptDoc(d, o, items){
@@ -23022,43 +23246,78 @@ html:not(.x) body #userBar button#thermalToggleBtn.ap-off,#thermalToggleBtn.ap-o
     var isCons = String(o.order_type || '').toLowerCase().indexOf('consegna') >= 0;
     var foodItems = items.filter(function(i){ return !bpIsSvc(i.product_name); });
     var totalQty = qtyOf(foodItems);
+    var tblNo = ''; try{ tblNo = bpTableNo(o); }catch(e){}
+    if(tblNo && parsedNotes && parsedNotes.cleanNotes){
+      parsedNotes = Object.assign({}, parsedNotes, {cleanNotes: String(parsedNotes.cleanNotes).replace(/(?:\ud83c\udf7d\ufe0f?\s*)?\btavolo\s*(?:n[\u00b0o.]?\s*)?\d{1,3}\b[\s\u00b7,;\-\u2013]*/gi, '').trim()});
+    }
+    var custRaw = String(o.customer_name || '').trim();
+    var custIsTable = !!tblNo && /^(?:\ud83c\udf7d\ufe0f?\s*)?tavolo\s*(?:n[\u00b0o.]?\s*)?\d{1,3}$/i.test(custRaw);
+    var shortOp = function(em){ var l = String(em || '').split('@')[0].replace(/[._-]+/g, ' ').trim(); if(!l) return ''; l = l.split(' ')[0]; return l.charAt(0).toUpperCase() + l.slice(1, 10); };
+    var grandQty = totalQty;
+    try{ var _fd = bpFryDrink(items), _fp = bpFriedPlan(items); grandQty = totalQty + ((_fp.menu && _fp.menu.n) || 0) + ((_fp.pizza && _fp.pizza.n) || 0) + (_fd.menu || 0); }catch(e){ grandQty = totalQty; }
 
-    d.rule('=');
-    d.p('BUONA PIZZA', {a: 'c', b: 1, w: 2, h: 2});
-    d.p('Lodi Vecchio - Pizzeria & Kebap - Comanda', {a: 'c'});
-    d.rule('=');
+    try{ window.bpShop.docCustHead(d); }catch(e){ d.rule('='); d.p('BUONA PIZZA', {a: 'c', b: 1, w: 2, h: 2}); d.rule('='); }
+    try{ window.bpShop.doc(d, o); }catch(e){}
     var fo = fitW(d, 'ORDINE #' + o.id, 2); d.p('ORDINE #' + o.id, {a: 'c', b: 1, w: fo, h: fo});
-    d.bar(isCons ? 'CONSEGNA A DOMICILIO' : 'RITIRO / ASPORTO', '', {c: 1, b: 1});
+    d.bar(isCons ? 'CONSEGNA A DOMICILIO' : (tblNo ? 'TAVOLO ' + tblNo : 'RITIRO / ASPORTO'), '', {c: 1, b: 1});
     d.p('Reg: ' + fmtWhen(o.created_at), {a: 'c'});
     d.rule('-');
-    d.p('ORARIO RICHIESTO', {a: 'c', f: 'B'});
+    /* FASE 3: allergie / senza glutine in cornice *** */
+    try{
+      var ALG = bpAllergyScan(items, parsedNotes && parsedNotes.cleanNotes);
+      if(ALG.any){
+        d.rule('*');
+        d.p('ALLERGIE / SENZA GLUTINE', {a: 'c', b: 1, h: 2});
+        ALG.rows.forEach(function(r){ d.p(r.q + 'x ' + r.name + ' [' + r.tags.join(' / ') + ']', {b: 1, h: 2}, 3); });
+        if(ALG.note) d.p('NOTE: ' + ALG.note, {b: 1, h: 2}, 6);
+        d.p('*** ATTENZIONE ***', {a: 'c', b: 1});
+        d.rule('*');
+      }
+    }catch(e){}
     var tm = d.c(parsedNotes.time);
-    d.p(tm, {a: 'c', b: 1, w: tm.length <= Math.floor(d.cols / 2) ? 2 : 1, h: 2});
-    d.rule('-');
-    d.kv('Cliente:', o.customer_name || 'Cliente al banco', {b: 1, h: 2});
-    var tb = ''; try{ tb = bpTableNo(o); }catch(e){}
-    if(tb) d.bar('TAVOLO ' + tb, '', {c: 1, b: 1, w: 2, h: 2});
-    if(o.phone) d.kv('Telefono:', o.phone);
-    if(o.address) d.kv('Indirizzo:', o.address, {b: 1, u: 1});
+    if(isCons){
+      /* blocco consegna per il fattorino (citofono = quello scritto in nome/indirizzo/telefono) */
+      d.bar('CONSEGNA - FATTORINO', '', {c: 1, b: 1, h: 2});
+      d.kv('Cliente:', o.customer_name || 'Cliente', {b: 1, h: 2});
+      if(o.address) d.kv('Indirizzo:', o.address, {b: 1, h: 2, u: 1});
+      if(o.phone) d.kv('Telefono:', o.phone, {b: 1, h: 2});
+      d.kv('Orario:', tm, {b: 1, h: 2});
+      d.rule('-');
+    } else {
+      d.p('ORARIO RICHIESTO', {a: 'c', f: 'B'});
+      d.p(tm, {a: 'c', b: 1, w: tm.length <= Math.floor(d.cols / 2) ? 2 : 1, h: 2});
+      d.rule('-');
+      if(!custIsTable) d.kv('Cliente:', o.customer_name || 'Cliente al banco', {b: 1, h: 2});
+      var tb = tblNo;
+      if(tb) d.bar('TAVOLO ' + tb, '', {c: 1, b: 1, w: 2, h: 2});
+      if(o.phone) d.kv('Telefono:', o.phone);
+      if(o.address) d.kv('Indirizzo:', o.address, {b: 1, u: 1});
+    }
     var who = o.created_by_email || '';
     if(!who && String(o.id).indexOf('OFF-') === 0){ var ue = document.getElementById('userEmail'); who = ue ? (ue.textContent || '') : ''; }
     if(who || o.updated_by_email){
       d.rule('-');
-      if(who) d.p('Operatore: ' + who, {f: 'B'}, 11);
-      if(o.updated_by_email){ var tt = ''; try{ if(o.updated_at) tt = ' ' + fmtHM(o.updated_at); }catch(e){} d.p('Modifica: ' + o.updated_by_email + tt, {f: 'B'}, 10); }
+      if(who) d.p('Operatore: ' + shortOp(who), {f: 'B'}, 11);
+      if(o.updated_by_email){ var tt = ''; try{ if(o.updated_at) tt = ' ' + fmtHM(o.updated_at); }catch(e){} d.p('Modifica: ' + shortOp(o.updated_by_email) + tt, {f: 'B'}, 10); }
     }
     d.rule('=');
 
     /* articoli, raggruppati come nella ricevuta a video */
-    var sec = function(title, n, arr, sub){
-      d.bar(title, String(n), {b: 1});
+    var sec = function(title, n, arr, sub, pre, post){
+      d.bar(title, String(n), {b: 1, h: 2, pad: 2});
       if(sub) d.p(sub, {f: 'B'});
+      if(pre) pre();
       arr.forEach(function(i){
         var inf = itemInfo(i);
         if(inf.service){ d.lr(inf.title, money(i.line_total), {}, 3); return; }
-        d.lr(inf.qty + 'x ' + inf.head, money(i.line_total), {b: 1}, 3);
+        var hd = inf.head;
+        if(inf.menuRow && !/^men[u\u00f9]\b/i.test(hd)) hd = 'Menu ' + hd;
+        d.lr(inf.qty + 'x ' + hd, money(i.line_total), nameSt(fsLevel() >= 1 ? {b: 1, h: 2} : {b: 1}), 3);
+        if(Number(i.quantity || 1) > 1) d.p('   ' + i.quantity + ' x ' + money(bpUnitPrice(i)), {f: 'B'});
+        if(inf.menuRow) d.p('   [MENU: patatine + bibita]', {b: 1});
         detailLines(d, inf, false);
       });
+      if(post) post();
     };
     if(!items.length){ d.p('Nessun prodotto registrato.', {a: 'c'}); }
     else {
@@ -23066,35 +23325,43 @@ html:not(.x) body #userBar button#thermalToggleBtn.ap-off,#thermalToggleBtn.ap-o
       items.forEach(function(i){ var w = {k: 'panino'}; try{ w = bpWorkCat(i); }catch(e){} (G[w.k] || G.panino).push(i); });
       var fd = {fri: 0, bib: 0, menu: 0}; try{ fd = bpFryDrink(items); }catch(e){}
       var pzF = 0; G.pizza.forEach(function(i){ try{ pzF += bpWorkCat(i).fries || 0; }catch(e){} });
+      var FP = {total: 0, single: {n: 0, rows: []}, menu: {n: 0, rows: []}, pizza: {n: 0, rows: []}, other: {n: 0, rows: []}}; try{ FP = bpFriedPlan(items); }catch(e){}
       var nFri = fd.fri || 0, nBib = Math.max(fd.bib || 0, qtyOf(G.bevanda) + (fd.menu || 0));
       var frPz = G.pizza.filter(function(i){ try{ return (bpWorkCat(i).fries || 0) > 0; }catch(e){ return false; } });
       var frPzNames = frPz.map(function(i){ var nm = ''; try{ nm = splitProductAndMods(i.product_name).baseName; }catch(e){ nm = i.product_name; } return (Number(i.quantity || 1) > 1 ? i.quantity + 'x ' : '') + nm + (String(i.size || '').toLowerCase() === 'maxi' ? ' MAXI' : ''); }).join(', ');
       var frPzCount = qtyOf(frPz);
-      if(G.pizza.length) sec('PIZZE', qtyOf(G.pizza), G.pizza);
+      var BR = bpBreadCount(items);
+      if(G.pizza.length || BR.pan || BR.pia) {
+        var pzTm = parsedNotes.time ? d.c(parsedNotes.time) : '';
+        var pzTt = pzTm ? (/^\d/.test(pzTm) ? 'ORE ' + pzTm : pzTm.toUpperCase()) : '';
+        if(pzTt){ var pzW = pzTt.length * 3 <= d.cols ? 3 : (pzTt.length * 2 <= d.cols ? 2 : 1); d.p(pzTt, {a: 'c', b: 1, w: pzW, h: 3}); }
+        sec('PIZZE', qtyOf(G.pizza), G.pizza, '', parsedNotes.cleanNotes ? function(){ d.rule('-'); d.p('NOTE PIZZA: ' + parsedNotes.cleanNotes, {b: 1, h: 2}, 11); d.rule('-'); } : null, (BR.pan || BR.pia) ? function(){ d.p('PANE DA PREPARARE: ' + [BR.pan ? 'Panini x' + BR.pan : '', BR.pia ? 'Piadine x' + BR.pia : ''].filter(Boolean).join(' - '), {b: 1}, 4); } : null);
+      }
       if(G.panino.length) sec('PANINI & PIADINE', qtyOf(G.panino), G.panino);
       if(G.dolce.length) sec('DOLCI', qtyOf(G.dolce), G.dolce);
-      if(nFri) sec('FRITTI', nFri, G.fritto, fd.menu ? 'comprese patatine dei menu: ' + fd.menu : '');
-      if(pzF){
-        d.bar('PATATINE SOPRA LA PIZZA', String(pzF), {b: 1});
-        d.p('su ' + (frPzCount === 1 ? '1 pizza' : frPzCount + ' pizze') + (frPzCount !== pzF ? ' (' + pzF + ' porzioni)' : '') + (frPzNames ? ': ' + frPzNames : '') + ' - non da imballare', {f: 'B'});
-      }
+      friedDoc(d, FP);   /* v95: FRITTI unificati */
       if(nBib) sec('BEVANDE', nBib, G.bevanda, fd.menu ? 'comprese bibite dei menu: ' + fd.menu : '');
-      if(G.servizio.length){ d.rule('-'); G.servizio.forEach(function(i){ d.lr(itemInfo(i).title, money(i.line_total), {}, 3); }); }
-      var cells = [['Pizze', qtyOf(G.pizza)], ['Panini', qtyOf(G.panino)], ['Dolci', qtyOf(G.dolce)], ['Fritti', nFri], ['Bevande', nBib]].filter(function(c){ return c[1]; });
+      var cells = [['Pizze', qtyOf(G.pizza)], ['Panini', qtyOf(G.panino)], ['Dolci', qtyOf(G.dolce)], ['Fritti', FP.total || nFri], ['Bevande', nBib]].filter(function(c){ return c[1]; });
       if(cells.length){ d.rule('-'); d.cells(cells.map(function(c){ return c[0] + ' ' + c[1]; }), ' | ', {a: 'c', b: 1}); }
     }
     d.rule('=');
     if(parsedNotes.cleanNotes){
       d.p('NOTE ORDINE', {a: 'c', b: 1}); d.p(parsedNotes.cleanNotes, {b: 1, h: 2}); d.rule('-');
     }
+    var SV = bpSvcSplit(items);
+    d.lr('Subtotale:', eur(SV.sub), {b: 1});
+    if(SV.deliv) d.lr('Consegna:', '+ ' + eur(SV.deliv), {b: 1});
+    SV.extra.forEach(function(x){ d.lr('Extra' + (x.why ? ' (' + x.why + ')' : '') + ':', '+ ' + eur(x.v), {b: 1}, 2); });
+    SV.disc.forEach(function(x){ d.lr('Sconto' + (x.why ? ' (' + x.why + ')' : '') + ':', '- ' + eur(x.v), {b: 1}, 2); });
     d.lr('Totale articoli:', totalQty + ' pz', {});
+    if(grandQty !== totalQty) d.lr('Tot. con fritti/bibite menu:', grandQty + ' pz', {f: 'B'});
     d.lr('Pagamento:', String(o.payment_method || 'Contanti').toUpperCase(), {b: 1});
-    if(parsedNotes.cashInfo) d.lr('Calcolo resto:', parsedNotes.cashInfo, {b: 1});
+    if(parsedNotes.cashInfo) d.lr('Cassa:', parsedNotes.cashInfo, {b: 1});
     d.rule('=');
     var tl = 'TOTALE CLIENTE', tv = eur(o.total);
     if(tl.length + tv.length + 1 > Math.floor(d.cols / 2)) tl = 'TOTALE';
     var big = (tl.length + d.c(tv).length + 1 <= Math.floor(d.cols / 2)) ? 2 : 1;
-    d.bar(tl, tv, {b: 1, w: big, h: big});
+    d.bar(tl, tv, {b: 1, w: big, h: Math.max(big, 2)});
     d.rule('=');
     if(cfg.qr && typeof GOOGLE_REVIEW_URL !== 'undefined'){
       d.blank(1);
@@ -23103,8 +23370,7 @@ html:not(.x) body #userBar button#thermalToggleBtn.ap-off,#thermalToggleBtn.ap-o
       d.p('Inquadra il QR - Buona Pizza', {a: 'c', f: 'B'});
       d.blank(1);
     }
-    d.p('DOCUMENTO NON FISCALE', {a: 'c', b: 1});
-    d.p('Grazie - Buon Appetito!', {a: 'c'});
+    try{ var FT = bpShopFooterParts(); d.p(FT.thanks, {a: 'c', b: 1}); if(FT.hours) d.p(FT.hours, {a: 'c'}); if(FT.wa) d.p('WhatsApp ' + FT.wa, {a: 'c'}); }catch(e){ d.p('Grazie - Buon Appetito!', {a: 'c'}); }
     return d;
   }
 
@@ -23112,96 +23378,52 @@ html:not(.x) body #userBar button#thermalToggleBtn.ap-off,#thermalToggleBtn.ap-o
   function kitchenDoc(d, o, items){
     var parsedNotes = splitTimeAndNotes(o.notes);
     var isCons = String(o.order_type || '').toLowerCase().indexOf('consegna') >= 0;
+    var tblNo = ''; try{ tblNo = bpTableNo(o); }catch(e){}
     var foodItems = items.filter(function(i){ return !bpIsSvc(i.product_name); });
     var KS = bpKitchenSplit(foodItems);
-    var kebabPzItems = KS.kebabPz, pizzaItems = KS.pzFries;
-    var kitchenItems = KS.panino.concat(KS.dolce, KS.fritto, KS.bevanda);
-    function kTag(i){
-      try{ if(krIsSingleFries(i)) return 'PATATINE SINGOLE' + (krSinglePrice(i) ? ' (' + krSinglePrice(i) + ')' : ''); }catch(e){}
-      try{ if(bpMenuUnits(i) > 0) return 'MENU: PATATINE + BIBITA'; }catch(e){}
-      try{ if(krIsFried(i)) return 'DA FRIGGERE'; }catch(e){}
-      return '';
-    }
+    var FP = {total: 0}; try{ FP = bpFriedPlan(items); }catch(e){}
     function kItem(i, extraTag){
       var inf = itemInfo(i), lab = ''; try{ lab = bpCompletoLabel(i) || ''; }catch(e){}
       var head = inf.qty + 'x ' + [inf.title, lab ? '(' + lab + ')' : '', inf.tag, inf.vol].filter(Boolean).join(' ');
-      d.p(head, {b: 1, h: 2}, 3);
+      d.p(head, nameSt({b: 1, h: 2}), 3);
       detailLines(d, inf, true);
-      var t = kTag(i); if(t) d.p('   >> ' + t, {b: 1});
       if(extraTag) d.p('   >> ' + extraTag, {b: 1});
     }
-    var sec = function(title, arr, fn){ d.bar(title, String(qtyOf(arr)), {b: 1, h: 2}); arr.forEach(fn || function(i){ kItem(i); }); d.blank(1); };
+    var sec = function(title, n, fn){ d.bar(title, String(n), {b: 1, h: 2, pad: 2}); fn(); d.blank(1); };
 
-    d.rule('=');
-    d.bar('BUONA PIZZA', '', {c: 1, b: 1});
-    d.bar('COMANDA CUCINA', '', {c: 1, b: 1, w: 2, h: 2});
-    d.rule('=');
-    d.p('ORDINE', {a: 'c', f: 'B'});
-    var fk = fitW(d, '#' + o.id, 4); d.p('#' + o.id, {a: 'c', b: 1, w: fk, h: fk});
-    d.p('ORARIO', {a: 'c', f: 'B'});
-    var tm = d.c(parsedNotes.time);
-    d.p(tm, {a: 'c', b: 1, w: tm.length <= Math.floor(d.cols / 2) ? 2 : 1, h: 2});
+    /* ---- intestazione: nome, numero giornaliero, tipo e orario in grande ---- */
+    try{ window.bpShop.docKitHead(d); }catch(e){ d.rule('='); d.bar('COMANDA CUCINA', '', {c: 1, b: 1, w: 2, h: 2}); d.rule('='); }
+    try{ window.bpShop.doc(d, o); }catch(e){}
     d.rule('-');
-    d.bar(isCons ? 'CONSEGNA' : 'RITIRO', '', {c: 1, b: 1});
-    d.p('Cliente: ' + (o.customer_name || 'Cliente'), {b: 1}, 9);
-    d.p(fmtWhen(o.created_at), {f: 'B'});
+    d.bar(isCons ? 'CONSEGNA' : (tblNo ? 'TAVOLO ' + tblNo : 'RITIRO'), '', {c: 1, b: 1, w: 2, h: 2});
+    var tm = d.c(parsedNotes.time), tt = /^\d/.test(tm) ? 'ORE ' + tm : tm.toUpperCase(), tw = tt.length * 3 <= d.cols ? 3 : (tt.length * 2 <= d.cols ? 2 : 1);
+    d.p(tt, {a: 'c', b: 1, w: tw, h: 3});
+    d.p('Ordine #' + o.id + ' - ' + (o.customer_name || 'Cliente'), {a: 'c', b: 1});
+    d.p(fmtWhen(o.created_at), {a: 'c', f: 'B'});
+    /* ---- allergie (stesso riquadro della ricevuta cliente) ---- */
+    try{
+      var ALG = bpAllergyScan(items, parsedNotes && parsedNotes.cleanNotes);
+      if(ALG.any){
+        d.rule('*');
+        d.p('ALLERGIE / SENZA GLUTINE', {a: 'c', b: 1, h: 2});
+        ALG.rows.forEach(function(r){ d.p(r.q + 'x ' + r.name + ' [' + r.tags.join(' / ') + ']', {b: 1, h: 2}, 3); });
+        if(ALG.note) d.p('NOTE: ' + ALG.note, {b: 1, h: 2}, 6);
+        d.p('*** ATTENZIONE ***', {a: 'c', b: 1});
+        d.rule('*');
+      }
+    }catch(e){}
     if(parsedNotes.cleanNotes){ d.rule('*'); d.p('NOTE: ' + parsedNotes.cleanNotes, {b: 1, h: 2}, 6); d.rule('*'); }
     d.rule('=');
 
-    if(kebabPzItems.length) sec('PIZZA KEBAB - DA COMPLETARE', kebabPzItems, function(i){
-      var tf = 0; try{ tf = krTopFries(i); }catch(e){}
-      kItem(i, tf > 0 ? 'PATATINE SU PIZZA x' + tf : '');
+    /* ---- stazioni (la sezione vuota non si stampa; nessun prezzo) ---- */
+    if(KS.panino.length) sec('PANINI & PIADINE', qtyOf(KS.panino), function(){ KS.panino.forEach(function(i){ kItem(i); }); });
+    if(KS.kebabPz.length) sec('PIZZA KEBAB - DA COMPLETARE', qtyOf(KS.kebabPz), function(){
+      KS.kebabPz.forEach(function(i){ var tf = 0; try{ tf = krTopFries(i); }catch(e){} kItem(i, tf > 0 ? 'PATATINE SU PIZZA x' + tf : ''); });
     });
-    if(KS.panino.length) sec('PANINI & PIADINE', KS.panino);
-    if(KS.dolce.length) sec('DOLCI', KS.dolce);
-    if(KS.fritto.length) sec('FRITTI', KS.fritto);
-    if(KS.bevanda.length) sec('BEVANDE', KS.bevanda);
-    if(pizzaItems.length) sec('PIZZE CON PATATINE', pizzaItems, function(i){
-      var parsed = splitProductAndMods(i.product_name), top = 0, mu = 0;
-      try{ top = krTopFries(i); }catch(e){} try{ mu = bpMenuUnits(i); }catch(e){}
-      var maxi = String(i.size || '').toLowerCase() === 'maxi' ? ' MAXI' : '';
-      var nm = parsed.baseName, g = null; try{ g = bpGustiInfo(nm); }catch(e){}
-      d.p(i.quantity + 'x ' + (g ? 'Pizza ' + g.label + ': ' + g.parts.join(' / ') : nm) + maxi, {b: 1, h: 2}, 3);
-      if(top) d.p('   >> PATATINE SU PIZZA x' + top, {b: 1});
-      if(mu) d.p('   >> MENU: PATATINE + BIBITA', {b: 1});
-    });
+    if(FP.total){ friedDoc(d, FP, true); d.blank(1); }
+    if(KS.dolce.length) sec('DOLCI', qtyOf(KS.dolce), function(){ KS.dolce.forEach(function(i){ kItem(i); }); });
 
-    /* riepilogo (stessi conteggi della comanda a video) */
-    var qty = function(i){ return Number(i.quantity || 1); };
-    var lowN = function(i){ return splitProductAndMods(i.product_name).baseName.toLowerCase(); };
-    var bn = function(i){ return splitProductAndMods(i.product_name).baseName.replace(/^men[u\u00F9]\s+/i, '').trim(); };
-    var isMenu = function(i){ try{ return bpMenuUnits(i) > 0; }catch(e){ return false; } };
-    var namesOf = function(arr){ return arr.map(function(i){ return (qty(i) > 1 ? qty(i) + 'x ' : '') + bn(i); }).join(', '); };
-    var panini = kitchenItems.filter(function(i){ return /panin|kebab|shawarma|hot\s*dog|hotdog/.test(lowN(i)) && !/piadin/.test(lowN(i)); });
-    var piadine = kitchenItems.filter(function(i){ return /piadin/.test(lowN(i)); });
-    var dolci = kitchenItems.filter(function(i){ return /dolc|dolce/.test(lowN(i)); });
-    var singleQ = 0, singlePr = '', menuQ = 0, topQ = 0;
-    foodItems.forEach(function(i){ try{ if(krIsSingleFries(i)){ singleQ += qty(i); if(!singlePr) singlePr = krSinglePrice(i); } }catch(e){} });
-    try{ menuQ = bpFryDrink(items).menu || 0; }catch(e){}
-    pizzaItems.concat(kebabPzItems).forEach(function(i){ try{ topQ += krTopFries(i); }catch(e){} });
-    var patQ = singleQ + menuQ + topQ;
-    var otherFr = foodItems.filter(function(i){ try{
-      if(isPizzaItem(i) || isMenu(i) || krIsSingleFries(i)) return false;
-      if(/hot\s*dog|hotdog|salsiccia/.test(lowN(i))) return false;
-      return (bpItemFD(i).f || 0) > 0;
-    }catch(e){ return false; } });
-    var frQ = otherFr.reduce(function(n, i){ return n + (bpItemFD(i).f || 0); }, 0);
-    var rows = [];
-    if(qtyOf(kebabPzItems)) rows.push(['Pizza Kebab', qtyOf(kebabPzItems), namesOf(kebabPzItems)]);
-    if(qtyOf(panini)) rows.push(['Panini', qtyOf(panini), namesOf(panini)]);
-    if(qtyOf(piadine)) rows.push(['Piadina', qtyOf(piadine), namesOf(piadine)]);
-    if(singleQ) rows.push(['Patatine SINGOLE' + (singlePr ? ' (' + singlePr + ')' : ''), singleQ, 'a parte, fuori menu']);
-    if(menuQ) rows.push(['Patatine MENU', menuQ, 'incluse nel menu con bibita']);
-    if(topQ) rows.push(['Patatine SU PIZZA', topQ, 'sopra la pizza']);
-    if(patQ && ((singleQ ? 1 : 0) + (menuQ ? 1 : 0) + (topQ ? 1 : 0)) > 1) rows.push(['TOTALE DA FRIGGERE', patQ, '']);
-    if(qtyOf(dolci)) rows.push(['Dolci', qtyOf(dolci), '']);
-    if(frQ) rows.push(['Altri fritti', frQ, namesOf(otherFr)]);
-    if(rows.length){
-      d.bar('RIEPILOGO', '', {c: 1, b: 1});
-      rows.forEach(function(r){ d.lr(r[0], String(r[1]), {b: 1}); if(r[2]) d.p('  ' + r[2], {f: 'B'}, 2); });
-      d.rule('-');
-    }
-    d.bar('LISTA CUCINA', 'TOTALE: ' + (qtyOf(kitchenItems) + qtyOf(pizzaItems) + qtyOf(kebabPzItems)) + ' pz', {b: 1});
+    d.bar('LISTA CUCINA', 'TOTALE: ' + (qtyOf(KS.panino) + qtyOf(KS.kebabPz) + qtyOf(KS.dolce) + (FP.total || 0)) + ' pz', {b: 1});
     return d;
   }
 
@@ -23250,15 +23472,23 @@ html:not(.x) body #userBar button#thermalToggleBtn.ap-off,#thermalToggleBtn.ap-o
   function hasKitchen(items){ try{ return bpHasKitchenItems(items); }catch(e){ return false; } }
   /* v46: separate print jobs */
   function orderDoc(o, items, kitchenOnly){
-    var kit = (typeof hasKitchen === 'function') ? hasKitchen(items) : false;
+    var kit = hasKitchen(items) && (!!kitchenOnly || cfg.kitchen !== 0);
     var rc = null, kt = null;
-    if(!kitchenOnly){
-      var d = newDoc(); receiptDoc(d, o, items); d.cut(); rc = d;
-    }
-    if(kit){
-      var d2 = newDoc(); kitchenDoc(d2, o, items); d2.cut(); kt = d2;
-    }
-    return {rc: rc, kt: kt};
+    if(!kitchenOnly){ var d = newDoc(); receiptDoc(d, o, items); if(kit){ try{ window.bpShop.docCutLine(d); }catch(e){} } d.cut(); rc = d; }
+    if(kit){ var d2 = newDoc(); kitchenDoc(d2, o, items); d2.cut(); kt = d2; }
+    var docs = [rc, kt].filter(Boolean);
+    return {
+      rc: rc, kt: kt,
+      /* v47: ricevuta + comanda in UN SOLO flusso di byte (un solo invio: niente intent RawBT che si sovrascrivono) */
+      bytes: function(){
+        var parts = docs.map(function(x){ return x.bytes(); }), n = 0, out, off = 0, i;
+        parts.forEach(function(b){ n += b.length; });
+        out = new Uint8Array(n);
+        for(i = 0; i < parts.length; i++){ out.set(parts[i], off); off += parts[i].length; }
+        return out;
+      },
+      preview: function(){ return docs.map(function(x){ return x.preview(); }).join('\n'); }
+    };
   }
   function testDoc(){
     var d = newDoc();
@@ -23290,7 +23520,7 @@ html:not(.x) body #userBar button#thermalToggleBtn.ap-off,#thermalToggleBtn.ap-o
     if(C.type === 'usb') return !!(C.dev && C.dev.opened);
     if(C.type === 'ble') return !!(C.dev && C.dev.gatt && C.dev.gatt.connected && C.ch);
     if(C.type === 'serial') return !!(C.port && C.port.writable);
-    if(C.type === 'wifi') return !(!_wifiSock || _wifiSock.readyState === WebSocket.OPEN);
+    if(C.type === 'wifi') return !!(_wifiSock && _wifiSock.readyState === WebSocket.OPEN);
     return false;
   }
   async function openUSB(dev){
@@ -23354,7 +23584,7 @@ html:not(.x) body #userBar button#thermalToggleBtn.ap-off,#thermalToggleBtn.ap-o
         var ps = await navigator.serial.getPorts();
         if(ps[0]){ await openSerial(ps[0]); return true; }
       } else if(t === 'wifi'){
-        try{ await connectWifi(cfg.wifiUrl || ip || '192.168.1.200', cfg.wifiPort || 9100); return true; }catch(e){}
+        if(cfg.wifiUrl){ try{ await openWifi(cfg.wifiUrl, cfg.wifiPort || 9100); return true; }catch(e){} }
       }
     }catch(e){ console.warn('[bp-direct] riconnessione', e); }
     return false;
@@ -23483,14 +23713,14 @@ html:not(.x) body #userBar button#thermalToggleBtn.ap-off,#thermalToggleBtn.ap-o
     var kOnly = document.body.classList.contains('bp23-kitchen-print'), z = zMode, snap = lastShown;
     chain = chain.then(function(){
       zMode = z; if(!po && !z) lastShown = snap;
-      return buildJob(po, kOnly).then(function(doc){ return send(doc.bytes()); }).then(function(){
+      return buildJob(po, kOnly).then(function(doc){ var b = doc.bytes(); if(!b.length) throw new Error('niente da stampare'); return send(b); }).then(function(){
         try{ if(po && /^\d+$/.test(String(po.id)) && normStatus(po.status) === 'Nuovo'){ updateOrderStatus(po.id, 'In preparazione'); } }catch(e){}
         return wait(300);
       });
     }).catch(function(e){
       console.warn('[bp-direct]', e);
       toast('Stampa diretta non riuscita: ' + (e && e.message ? e.message : e) + ' - uso il metodo precedente', true);
-      try{ _orig.apply(self, args); }catch(x){}
+      try{ (window.__bpBrowserPrint || _orig).apply(self, args); }catch(x){}
     }).then(function(){ try{ window.dispatchEvent(new Event('afterprint')); }catch(e){} });
   };
 
@@ -23521,13 +23751,14 @@ html:not(.x) body #userBar button#thermalToggleBtn.ap-off,#thermalToggleBtn.ap-o
         '<button type="button" id="dpUsb"' + (sup.usb ? '' : ' disabled') + '>USB</button>' +
         '<button type="button" id="dpBle"' + (sup.ble ? '' : ' disabled') + '>Bluetooth</button>' +
         '<button type="button" id="dpSer"' + (sup.serial ? '' : ' disabled') + '>Seriale / COM</button>' +
-        '<button type="button" id="dpWifi">WiFi</button>' +
+        '<button type="button" id="dpWifi">WiFi (bridge WS)</button>' +
         '<button type="button" id="dpRaw" style="background:#16794b">RawBT (solo testo)</button></div>' +
       (sup.usb || sup.ble || sup.serial ? '' : '<div class="dp-err">Questo browser non supporta USB/Bluetooth/Seriale: usa Chrome o Edge (Android o PC) su una pagina HTTPS.</div>') +
       '<label class="dp-c"><input type="checkbox" id="dpOn"' + (enabled() ? ' checked' : '') + '> Usa la stampa diretta</label>' +
       '<div class="dp-grid">' +
         sel('dpCols', 'Larghezza', [[48, '80 mm - 48 colonne'], [42, '80 mm - 42 colonne'], [32, '58 mm - 32 colonne']], cfg.cols) +
-        sel('dpCp', 'Caratteri / accenti', [['cp858', 'CP858 (consigliata, con \u20AC)'], ['cp437', 'CP437 (compatibile)'], ['ascii', 'ASCII (senza accenti)']], cfg.cp) +
+        sel('dpFs', 'Dimensione testo (ingredienti)', [[0, 'Normale (piccolo)'], [1, 'Grande'], [2, 'Molto grande (doppia altezza)']], fsLevel()) +
+        sel('dpCp', 'Caratteri / accenti', [['cp858', 'CP858 (consigliata, con \u20AC)'], ['cp1252', 'WPC1252 (Windows, con \u20AC) - prova questa se \u00E0 e \u20AC escono sbagliati'], ['cp437', 'CP437 (compatibile)'], ['ascii', 'ASCII (senza accenti)']], cfg.cp) +
         sel('dpBaud', 'Velocita\u0027 seriale', [9600, 19200, 38400, 57600, 115200].map(function(x){ return [x, x]; }), cfg.baud) +
       '</div>' +
       '<label class="dp-c"><input type="checkbox" id="dpKit"' + (cfg.kitchen ? ' checked' : '') + '> Stampa anche la comanda cucina</label>' +
@@ -23539,10 +23770,10 @@ html:not(.x) body #userBar button#thermalToggleBtn.ap-off,#thermalToggleBtn.ap-o
     document.body.appendChild(m);
     function g(i){ return document.getElementById(i); }
     function rd(){
-      cfg.cols = Number(g('dpCols').value); cfg.cp = g('dpCp').value; cfg.baud = Number(g('dpBaud').value);
+      cfg.cols = Number(g('dpCols').value); cfg.fs = Number(g('dpFs').value); cfg.cp = g('dpCp').value; cfg.baud = Number(g('dpBaud').value);
       cfg.kitchen = g('dpKit').checked ? 1 : 0; cfg.qr = g('dpQr').checked ? 1 : 0; cfg.kanji = g('dpKj').checked ? 1 : 0; save();
     }
-    ['dpCols', 'dpCp', 'dpBaud', 'dpKit', 'dpQr', 'dpKj'].forEach(function(i){ g(i).onchange = rd; });
+    ['dpCols', 'dpFs', 'dpCp', 'dpBaud', 'dpKit', 'dpQr', 'dpKj'].forEach(function(i){ g(i).onchange = rd; });
     g('dpOn').onchange = function(){ setEnabled(g('dpOn').checked); };
     function conn(fn){ return function(){ rd(); fn().then(function(){ setEnabled(true); g('dpOn').checked = true; toast('Stampante collegata: ' + C.name); paint(); }).catch(function(e){ if(e && e.name === 'NotFoundError') return; toast('Collegamento non riuscito: ' + (e && e.message ? e.message : e), true); }); }; }
     g('dpRaw').onclick = function(){ rd(); cfg.transport = 'rawbt'; save(); C = {type: 'rawbt', name: 'RawBT (testo)'}; setEnabled(true); g('dpOn').checked = true; toast('RawBT (solo testo) attivo: usa "Stampa di prova" per controllare'); paint(); };
@@ -23589,8 +23820,501 @@ html:not(.x) body #userBar button#thermalToggleBtn.ap-off,#thermalToggleBtn.ap-o
   try{ if(navigator.usb) navigator.usb.addEventListener('disconnect', function(){ C = null; paint(); }); }catch(e){}
 
   window.bpDirectPrint = {Doc: Doc, receiptDoc: receiptDoc, kitchenDoc: kitchenDoc, orderDoc: orderDoc, zDoc: zDoc, testDoc: testDoc, cfg: cfg, wrapText: wrapText, cleanTxt: cleanTxt, itemInfo: itemInfo};
+  window.bpDirectPrint.active = function(){ return enabled(); };
+  window.bpDirectPrint.printOrder = function(o, items, kitchenOnly){
+    var p = chain.then(function(){
+      var b = orderDoc(o, items, !!kitchenOnly).bytes();
+      if(!b.length) throw new Error('niente da stampare');
+      return send(b);
+    });
+    chain = p.catch(function(){});
+    return p;
+  };
   window.connectWiFiv46 = async function(ip){ try{ await connectWifi(ip, 9100); paint(); }catch(e){ alert(e.message); } };
 })();
 </script>
+<script>
+document.addEventListener('DOMContentLoaded',function(){
+  var btn=document.getElementById('printPlugBtn');
+  var panel=document.getElementById('printSettings');
+  if(btn && panel){
+    btn.addEventListener('click',function(){panel.style.display=panel.style.display==='none'?'block':'none';});
+  }
+});
+</script>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cousine:wght@400;700&display=swap">
+<style id="bpPh2Css">
+/* FASE 2: ricevute 80mm in monospace, colonne qta | nome | prezzo allineate (HTML / RawBT immagine) */
+#receiptContainer .receipt-card,#receiptContainer .receipt-card *{font-family:"Cousine","Liberation Mono","DejaVu Sans Mono","Roboto Mono","Droid Sans Mono",ui-monospace,Menlo,Consolas,monospace!important;letter-spacing:0!important;font-variant-ligatures:none}
+#receiptContainer .receipt-card .bp-ph2-name{text-transform:none!important;font-weight:700!important;font-size:24px!important}
+#receiptContainer .receipt-card .bp-seq-banner *{letter-spacing:0!important}
+#receiptContainer .receipt-card .rc-item-top{display:grid!important;grid-template-columns:minmax(0,1fr) 8ch!important;gap:4px!important;align-items:start!important}
+#receiptContainer .receipt-card .rc-item-top>div:first-child{padding-left:4ch;text-indent:-4ch;min-width:0;display:block!important;overflow:visible!important}
+#receiptContainer .receipt-card .rc-item-top>div:first-child>*{text-indent:0}
+#receiptContainer .receipt-card .rc-qty-badge{display:inline-block!important;width:4ch!important;box-sizing:border-box;text-indent:0;margin:0!important;padding:0 2px 0 0!important;text-align:left!important;background:none!important;color:#000!important;border:0!important;font-weight:950!important}
+#receiptContainer .receipt-card .rc-item-name{white-space:normal!important;overflow:visible!important;text-overflow:clip!important}
+#receiptContainer .receipt-card .rc-item-price{text-align:right!important;min-width:8ch}
+#receiptContainer .receipt-card .rc-dl-main{display:block!important}
+#receiptContainer .receipt-card .rc-total-bar{font-family:inherit!important}
+#receiptContainer .receipt-card .bp-ph2-head{border-bottom:2px solid #000}
+#receiptContainer .receipt-card .rc-summary-box .rc-summary-row{flex:1 1 100%;width:100%;justify-content:space-between}
+#receiptContainer .receipt-card .rc-total-bar .rc-tot-label{font-size:16px!important}
+#receiptContainer .receipt-card .rc-total-bar .rc-tot-val{font-size:30px!important}
+#receiptContainer .receipt-card .rc-footer{font-size:11px!important;line-height:1.3}
+#kitchenReceiptCard .kr-hero b{font-size:30px!important;line-height:1.1}
+#kitchenReceiptCard .rc-ing-row.senza::before,#kitchenReceiptCard .rc-ing-row.extra::before,#kitchenReceiptCard .rc-ing-row.note::before{content:'>> ';font-weight:950}
+#kitchenReceiptCard .rc-qty-badge{font-size:20px!important;font-weight:950!important}
+@media print{.bp-ph2-cut{display:block!important}}
+</style>
+<script id="bpShop">
+(function(){
+  'use strict';
+  var CK = 'bp_shop_cfg_v1', SK = 'bp_seq_v1', PK = 'bp_printed_v1', RK = 'bp_rank_v2';
+  var DEF = {
+    name: 'Buona Pizza', address: 'Via Libert\u00E0 29, 26855 Lodi Vecchio (LO)', phone: '0371 464035',
+    wa: '+39 375 590 9081', piva: '13032300967', hours: '10:30 - 22:00 \u00B7 7 giorni su 7',
+    footer: 'Grazie e buon appetito!', nameFont: '', nameSize: '', ingFont: '', ingSize: '', logo: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAYAAAADvAQAAAADTaT4pAAABMmlDQ1BJQ0MgUHJvZmlsZQAAeJx9kD9Lw0AYxn+Wgv8H0dEhYxelKuigLlUsOkmNYHVK0zQVmhiSlCK4+QX8EIKzowi6CjoIgpvgRxAH1/qkQdIlvsd797vnHu7ufaEwhqJYBs+Pw1q1YhzVj43RT0Y0BmHZUUB+yPXznnrfFv7x5cV404lsrV/KZqjHdaUpnnNTbifcSPki4V4cxOKrhEOztiW+FpfcIW4MsR2Eif9FvOF1unb2b6Yc//BA645ynm1OiQjoYHGOwT4rmqvaeXSJxT05YtqiiJpOKiKTUA5fSgtHTNK/9InLD9h86Pf795m29wi3azBxl2mldZiZhKfnTMt6GlihNZCKykKrBd83MF2H2Vfdc/LXyJzajEFtVc40XNXmSNnVf20WRcuUWWL1Fx+iTfmvd1mpAAAFvElEQVR42u2aO67kRBSGv6pujTsY0Q4JkNpLmAUgrslYBksgJGsLEbAEwllKXUCIcHaAh4QJC2kCz+Drn8Cv6m4/yrwkRDuw+lr++7z/c07dNmLbZbkD/qOA1+Zw99IdcAfcAXfAHXAH/LOAn7YCPtsIeEp5KrYA6oy3myRUOa8KQCWJYq5SMpLiJbxGzzbGodnmpe+oD2yxIVF52mQDkG1RSVDmm2w44IotNtRHGelXbUzvlxsknBqj5hgvoQZLk26JdAN1tik19lT5FkANvogHVBnwelO2Vptp5sB3mwAevh4Bj2szvs8viOwp512xJiLVCPgB+GYDVSoH3sWY3QHeA5AvvVsWJc0g4Q0AryIqtAO8BODtqkppB1DroKeldx/bbGoB77uHi0bgRi9VvWELr38VutWPwY+Lw8vujwWrtYe86gFFyLbzMYMMLCkK2G2hoItBpffD4/n8q9OrtpvIDZ6bq9AiBHzJx4t+9bm6mpAH2Ekq4DhLfE4NKs9Df/gI+GKM4O31PZjOMx7gLKluBc31n9rISeoAktSAmXu/eegBrUo7AFPMB8I4sLjBS/uIZK07K+SBkyTJt7bMXFUSTAJZny5ukSntoFIeKDafftoPKnWu6HWbHk5OddKr1IXELAoo2xS3YUIVizWX1ekmund5NYwO+4E15pOJoiNw+TFJl1p2gx7VG52G4ZyrUcOPNy0rXcqMZ3w7ALKQGeYCfWjr0U6MddM1+iIggXxo9QtxyzcO6489Bcn3qSTV40c1bV6ViSTPWb3rLwANSGWiGsmzk9ypQJLjqPMawIHkTnCWCAJq57LUQQFP8JKnkE0vjDYBuxbgusjXIU3b+TGVEirwVCFN24XB3IOHCh/StJ0nlenWZ2dAFQ/UwCfUsKtHkL0qksBNDjCPDtx+t77HeUPWgCW7ymI7315TYE8KpBR+DVDuOQgONxkfla1ZwNN2vi/v+yo8uwgJbq4L/8X1uAgZxM4Cmi0S9lFbZcZxiw3KFoyecsz7WaO1tAcEgLX/u7z6++LQzBCIkbsErCwCxbOtKn14DXBD5dtJxsliJPiZjLEhj8z10Hxewr5vjPliPUzN3tVFR71y60hxh5lWWiwZ3VBDVlMNUXS6UqkeBKfDStSECjZXgOZCsIoSUlEO0stwT7gcsB6kCkAVz0nkjqqMIJiZbfDVzYXH3y5lqwsmkz3YNiCHqdDZoGVUMByC2WBWKW4l+O5uhnibYGbJoaguAW+DfdG0uhSjHhm77MpL7ZDeTfeOT5BKjDoveZIyufSSinaz3MNj9oJPgQ8Z6uz5RQW168CpHb2Pkjs17RZRjHN4Ecx+HSCR5OAkFaflQ50u/O/arT2Lp5mMX1Y3iKHEbAOvTQTf9BJMMM2sqnVBZDaWKj8fHB7TLTy7vrZOEWdlNvzmzyMEGP2W7n63q/v0pQ2mGNe/KBvUFtBRsTZ02fiCWBtqDGCiGrwd58APtvS4bgGPNloqe5MbSdL5Z0lnVbfbbA8Y5/VzATwUwIPcbfDtArPn5N1RVWwXfZrY0yyTW1Pec2cTK6HouFObVPILbh33Jg15K0d549cbCQa1a5E3kHwUOYYawFvcwcYBvG2n76kWbCc2E8o94A6QmTgJ7rCefMP5iJHEqb9p3Uv9gKQZCrQTDxry7jbFI9cq7aQKdTc1qypV0E4lldk4rPu5tfZKJb+Typ0kl7RjhyK8NMTtTeRK4w5AkY6npIsqJUHciFNpiJtiAueDuDWc6lWVymSMW825Zo3IykTeSPJGqlBtImzwdiluC9sulZ04b7K3S+sQt7j0DuIWBSjbd9vy2U8sCHZpIal5ZdcBQb1NHnZexcEdK3KSCki8aW4PhW8kpBWOutV9Kkp2A29PAtzl+X4aIcGHlZ5tOkTYT02Ndrnpf7MFcDCTA5Gq+QP4cmIgMnp32NV/+iDkDrgD/kWAuf+o938C+AOYC7kZwDq9TwAAAABJRU5ErkJggg=='
+  };
+  var FIELDS = ['name', 'address', 'phone', 'wa', 'piva', 'hours', 'footer', 'nameFont', 'nameSize', 'ingFont', 'ingSize'];
+  var SQL = "create table if not exists bp36_data (key text primary key, data jsonb not null default '{}', updated_at timestamptz default now());\n" +
+    "alter table bp36_data enable row level security;\n" +
+    "drop policy if exists \"bp_print_sync\" on bp36_data;\n" +
+    "create policy \"bp_print_sync\" on bp36_data for all to authenticated using (key like 'prt\\_%' or key = 'shop_cfg') with check (key like 'prt\\_%' or key = 'shop_cfg');\n" +
+    "do $$ begin alter publication supabase_realtime add table bp36_data; exception when others then null; end $$;";
+  var JOB = {};                         /* stampe in corso: { id: {copy, t, auto} } */
+  var PR = {};                          /* ordini gia' stampati (da qualsiasi dispositivo): { id: timestamp } */
+  var RANK = {};                        /* numerazione giornaliera dal database: { 'YYYY-MM-DD': {ids:{id:n}, n:totale} } */
+  var sync = 'unknown';                 /* unknown | on | off */
+  var COPIA_STYLE = 'background:#000;color:#fff;font-weight:950;font-size:20px;letter-spacing:4px;padding:2px 0;margin-top:4px;-webkit-print-color-adjust:exact;print-color-adjust:exact';
+
+  function $(id){ return document.getElementById(id); }
+  function jget(k, d){ try{ var v = localStorage.getItem(k); return v ? JSON.parse(v) : d; }catch(e){ return d; } }
+  function jset(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); return true; }catch(e){ return false; } }
+  function p2(n){ return (n < 10 ? '0' : '') + n; }
+  function esc(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){ return {'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]; }); }
+  function fmt(n){ n = String(n); while(n.length < 3) n = '0' + n; return n; }
+  function dayKey(v){ var d = v ? new Date(v) : new Date(); if(isNaN(d.getTime())) d = new Date(); return d.getFullYear() + '-' + p2(d.getMonth() + 1) + '-' + p2(d.getDate()); }
+  function db(){ try{ return (typeof sb !== 'undefined' && sb && sb.from) ? sb : null; }catch(e){ return null; } }
+  function ordersList(){ try{ return (typeof orders !== 'undefined' && Array.isArray(orders)) ? orders : []; }catch(e){ return []; } }
+  function setSync(v){ if(sync !== v){ sync = v; paintSync(); } }
+  function okRes(r){ return r && !r.error; }
+
+  /* ================= 1) dati attivita' (sincronizzati) ================= */
+  function cfg(){
+    var c = jget(CK, {}) || {}, o = {}, k;
+    for(k in DEF) o[k] = Object.prototype.hasOwnProperty.call(c, k) ? c[k] : DEF[k];
+    return o;
+  }
+  function pushCfg(){
+    var d = db(); if(!d) return;
+    var c = jget(CK, {}) || {};
+    d.from('bp36_data').upsert({key: 'shop_cfg', data: c, updated_at: new Date().toISOString()}).then(function(r){ setSync(okRes(r) ? 'on' : 'off'); }, function(){ setSync('off'); });
+  }
+  function applyRemoteCfg(rc){
+    var lc = jget(CK, {}) || {};
+    if(rc && typeof rc === 'object' && (rc._u || 0) > (lc._u || 0)){ jset(CK, rc); fill(); }
+  }
+  function pullCfg(){
+    var d = db(); if(!d) return;
+    d.from('bp36_data').select('data').eq('key', 'shop_cfg').maybeSingle().then(function(r){
+      if(!okRes(r)){ setSync('off'); return; }
+      setSync('on');
+      var lc = jget(CK, {}) || {};
+      if(r.data && r.data.data) applyRemoteCfg(r.data.data);
+      else if(lc._u) pushCfg();
+    }, function(){ setSync('off'); });
+  }
+
+  /* ================= 3) numero progressivo giornaliero ================= */
+  /* Numero = posizione dell'ordine tra quelli del giorno (per data di creazione) nel DATABASE:
+     identico su tutti i dispositivi, senza contatori da sincronizzare. */
+  function loadRankCache(){ var c = jget(RK, {}); if(c && typeof c === 'object') RANK = c; }
+  function saveRankCache(){
+    var cut = dayKey(Date.now() - 4 * 86400000);
+    Object.keys(RANK).forEach(function(k){ if(k < cut) delete RANK[k]; });
+    jset(RK, RANK);
+  }
+  var rankBusy = {};
+  function refreshRank(day){
+    var d = db(); if(!d) return Promise.resolve(false);
+    if(rankBusy[day]) return rankBusy[day];
+    var a = day.split('-'), s = new Date(+a[0], +a[1] - 1, +a[2], 0, 0, 0, 0), e = new Date(+a[0], +a[1] - 1, +a[2] + 1, 0, 0, 0, 0);
+    rankBusy[day] = Promise.resolve(d.from('orders').select('id,created_at').gte('created_at', s.toISOString()).lt('created_at', e.toISOString())
+      .order('created_at', {ascending: true}).order('id', {ascending: true}).limit(2000)).then(function(r){
+        if(!okRes(r) || !Array.isArray(r.data)) return false;
+        var ids = {}; r.data.forEach(function(x, i){ ids[String(x.id)] = i + 1; });
+        RANK[day] = {ids: ids, n: r.data.length}; saveRankCache(); paintInfo(); return true;
+      }).catch(function(){ return false; }).then(function(v){ delete rankBusy[day]; return v; });
+    return rankBusy[day];
+  }
+  /* fallback locale (offline / DB non raggiungibile) */
+  function loadSeq(){ var s = jget(SK, {}); return (s && typeof s === 'object') ? s : {}; }
+  function saveSeq(S){ var cut = dayKey(Date.now() - 10 * 86400000); Object.keys(S).forEach(function(k){ if(k < cut) delete S[k]; }); jset(SK, S); }
+  function assignDay(S, day){
+    var D = S[day] || (S[day] = {n: 0, ids: {}}), changed = false;
+    ordersList().filter(function(o){ return o && o.id != null && dayKey(o.created_at) === day && !(String(o.id) in D.ids); })
+      .sort(function(a, b){ return new Date(a.created_at) - new Date(b.created_at); })
+      .forEach(function(o){ D.n++; D.ids[String(o.id)] = D.n; changed = true; });
+    return changed;
+  }
+  function seqOf(o){
+    var id = String(o.id), day = dayKey(o.created_at), R = RANK[day];
+    if(R && R.ids[id]) return R.ids[id];
+    var S = loadSeq(), D = S[day];
+    if(!D || !(id in D.ids)){
+      assignDay(S, day); D = S[day];
+      if(!(id in D.ids)){ D.n++; D.ids[id] = D.n; }
+      saveSeq(S);
+    }
+    return D.ids[id];
+  }
+  function ensureRank(o){
+    var day = dayKey(o.created_at), R = RANK[day];
+    if(R && R.ids[String(o.id)]) return Promise.resolve(true);
+    return refreshRank(day);
+  }
+
+  /* ================= 4) registro stampe / COPIA (sincronizzato) ================= */
+  function loadPrinted(){ var s = jget(PK, {}); return (s && typeof s === 'object') ? s : {}; }
+  function isPrinted(id){ id = String(id); return !!(PR[id] || loadPrinted()[id]); }
+  function pkey(day, id){ return 'prt_' + day + '_' + id; }
+  function markLocal(id){
+    id = String(id);
+    var P = loadPrinted(), cut = Date.now() - 3 * 86400000;
+    P[id] = Date.now(); PR[id] = P[id];
+    Object.keys(P).forEach(function(k){ if(P[k] < cut) delete P[k]; });
+    jset(PK, P);
+  }
+  function markRemote(id, day){
+    var d = db(); if(!d) return;
+    d.from('bp36_data').upsert({key: pkey(day, id), data: {t: Date.now()}, updated_at: new Date().toISOString()})
+      .then(function(r){ setSync(okRes(r) ? 'on' : 'off'); }, function(){ setSync('off'); });
+  }
+  function markPrinted(id, day){ markLocal(id); markRemote(id, day || dayKey()); }
+  /* "prenota" la stampa automatica in modo atomico: il primo dispositivo vince */
+  function claim(id, day){
+    var d = db(); if(!d) return Promise.resolve('local');
+    return Promise.resolve(d.from('bp36_data').insert({key: pkey(day, id), data: {t: Date.now(), auto: 1}})).then(function(r){
+      if(!r || !r.error){ setSync('on'); return 'ok'; }
+      var m = String(r.error.code || '') + ' ' + String(r.error.message || '');
+      if(/23505|duplicate/i.test(m)) return 'dup';
+      setSync('off'); return 'local';
+    }, function(){ setSync('off'); return 'local'; });
+  }
+  function refreshPrinted(day){
+    var d = db(); if(!d) return Promise.resolve(false);
+    return Promise.resolve(d.from('bp36_data').select('key').like('key', 'prt_' + day + '_%')).then(function(r){
+      if(!okRes(r) || !Array.isArray(r.data)){ setSync('off'); return false; }
+      setSync('on');
+      var pre = 'prt_' + day + '_';
+      r.data.forEach(function(x){ if(x.key && x.key.indexOf(pre) === 0){ var id = x.key.slice(pre.length); if(!PR[id]) PR[id] = Date.now(); } });
+      return true;
+    }).catch(function(){ setSync('off'); return false; });
+  }
+  function fresh(j){ return j && (Date.now() - j.t) < (j.ttl || 60000); }
+  function isCopy(o){ var j = JOB[String(o.id)]; return fresh(j) ? !!j.copy : isPrinted(o.id); }
+  function ensure(o){
+    var day = dayKey(o.created_at), tasks = [ensureRank(o)];
+    if(db() && !(PR[String(o.id)])) tasks.push(refreshPrinted(day));
+    return Promise.all(tasks);
+  }
+
+  /* intestazione comune alle due ricevute (HTML) */
+  function bannerHtml(o){
+    var n = fmt(seqOf(o)), cp = isCopy(o);
+    return '<div class="bp-seq-banner" data-oid="' + esc(o.id) + '" data-day="' + dayKey(o.created_at) + '" data-seq="' + n + '" data-copy="' + (cp ? 1 : 0) + '" style="text-align:center;padding:6px 4px 5px;border-bottom:2px solid #000;color:#000;background:#fff">' +
+      '<div style="font-size:11px;font-weight:800;letter-spacing:2px">N\u00B0 GIORNALIERO</div>' +
+      '<div style="font-size:46px;font-weight:950;line-height:1.05;letter-spacing:2px">' + n + '</div>' +
+      (cp ? '<div class="bp-copia" style="' + COPIA_STYLE + '">*** COPIA ***</div>' : '') + '</div>';
+  }
+  /* intestazione comune (ESC/POS) */
+  function doc(d, o){
+    var n = fmt(seqOf(o));
+    d.p('N\u00B0 GIORNALIERO', {a: 'c', f: 'B'});
+    d.p(n, {a: 'c', b: 1, w: 3, h: 3});
+    if(isCopy(o)) d.bar('*** COPIA ***', '', {c: 1, b: 1, w: 2, h: 2});
+  }
+  /* ================= FASE 2: intestazioni, linea di taglio, logo raster ================= */
+  var LOGO = {src: '', img: null, cache: {}};
+  function prepLogo(){
+    var src = cfg().logo || '';
+    if(src === LOGO.src && (LOGO.img || !src)) return;
+    LOGO.src = src; LOGO.img = null; LOGO.cache = {};
+    if(!src) return;
+    var im = new Image(); im.onload = function(){ if(LOGO.src === src) LOGO.img = im; }; im.src = src;
+  }
+  /* logo gia' in bianco/nero -> bande ESC/POS GS v 0 (null se non ancora pronto) */
+  function logoRaster(maxW){
+    var im = LOGO.img; if(!im || !im.width) return null;
+    var key = String(maxW); if(LOGO.cache[key]) return LOGO.cache[key];
+    var w = Math.min(maxW, im.width, 300), h = Math.round(im.height * w / im.width);
+    if(h > 150){ h = 150; w = Math.round(im.width * h / im.height); }
+    w = Math.max(8, w); var wb = Math.ceil(w / 8), W = wb * 8;
+    var cv = document.createElement('canvas'); cv.width = W; cv.height = h; var x = cv.getContext('2d');
+    x.fillStyle = '#fff'; x.fillRect(0, 0, W, h); x.drawImage(im, Math.floor((W - w) / 2), 0, w, h);
+    var px = x.getImageData(0, 0, W, h).data, bands = [], y0, y, b, k, bh, buf, o, v;
+    for(y0 = 0; y0 < h; y0 += 128){
+      bh = Math.min(128, h - y0); buf = new Uint8Array(8 + wb * bh);
+      buf.set([0x1D, 0x76, 0x30, 0x00, wb & 255, wb >> 8, bh & 255, bh >> 8]); o = 8;
+      for(y = y0; y < y0 + bh; y++) for(b = 0; b < wb; b++){
+        v = 0; for(k = 0; k < 8; k++){ var i = (y * W + b * 8 + k) * 4; if((px[i] * 0.299 + px[i + 1] * 0.587 + px[i + 2] * 0.114) < 150 && px[i + 3] > 128) v |= (0x80 >> k); }
+        buf[o++] = v;
+      }
+      bands.push(buf);
+    }
+    return (LOGO.cache[key] = {bands: bands, w: W, h: h});
+  }
+  /* font/dimensione personalizzati: nome articolo e ingredienti */
+  var FSTACK = {sans: 'Arial,"Helvetica Neue",Roboto,sans-serif', cond: '"Arial Narrow","Roboto Condensed","Liberation Sans Narrow",sans-serif-condensed,Arial,sans-serif', serif: 'Georgia,"Times New Roman",serif', courier: '"Courier New",Courier,monospace'};
+  function applyFonts(){
+    var c = cfg(), css = '', R = '#receiptContainer .receipt-card ';
+    function blk(sels, font, size){
+      var d = '';
+      if(FSTACK[font]) d += 'font-family:' + FSTACK[font] + '!important;';
+      if(Number(size) > 0) d += 'font-size:' + Number(size) + 'px!important;line-height:1.25!important;';
+      return d ? sels.map(function(x){ return R + x; }).join(',') + '{' + d + '}' : '';
+    }
+    css += blk(['.rc-item-name', '.kr-pz .rc-item-name'], c.nameFont, c.nameSize);
+    css += blk(['.rc-ing-row', '.rc-ing-row.base', '.rc-ing-row.base.pz', '.rc-ing-txt', '.rc-ing-txt *'], c.ingFont, c.ingSize);
+    var st = document.getElementById('bpFontCss');
+    if(!st){ st = document.createElement('style'); st.id = 'bpFontCss'; document.head.appendChild(st); }
+    st.textContent = css;
+  }
+  /* ESC/POS: dimensione -> stile (la stampante ha solo font A/B e moltiplicatori) */
+  function escStyle(kind){
+    var c = cfg(), v = Number(kind === 'name' ? c.nameSize : c.ingSize);
+    if(!(v > 0)) return null;
+    if(v <= 13) return {f: 'B'};
+    if(v <= 16) return {};
+    if(v <= 20) return {b: 1};
+    if(v <= 24) return {b: 1, h: 2};
+    return {b: 1, w: 2, h: 2};
+  }
+  /* HTML: intestazione ricevuta cliente = logo + dati attivita' + dicitura non fiscale */
+  function custHeadHtml(){
+    var c = cfg(), L = [];
+    var h = '<div class="bp-ph2-head" style="text-align:center;padding:6px 6px 4px;color:#000;background:#fff">';
+    if(c.logo) h += '<img class="bp-ph2-logo" src="' + esc(c.logo) + '" alt="" style="display:block;margin:0 auto 3px;max-width:62%;max-height:84px;object-fit:contain">';
+    h += '<div class="bp-ph2-name" style="font-size:22px;font-weight:950;letter-spacing:1px;text-transform:uppercase;line-height:1.1">' + esc(c.name || 'Buona Pizza') + '</div>';
+    if(c.address) L.push(esc(c.address));
+    if(c.phone) L.push('Tel. ' + esc(c.phone));
+    if(c.piva) L.push('P.IVA ' + esc(c.piva));
+    L.forEach(function(t){ h += '<div style="font-size:11.5px;font-weight:700;line-height:1.25">' + t + '</div>'; });
+    h += '<div class="bp-ph2-nf" style="margin-top:4px;border-top:1.5px solid #000;border-bottom:1.5px solid #000;padding:2px 0;font-size:11.5px;font-weight:900;letter-spacing:.5px">DOCUMENTO NON FISCALE - uso interno</div></div>';
+    return h;
+  }
+  function cutLineHtml(){
+    return '<div class="bp-ph2-cut" style="text-align:center;font-weight:900;font-size:12px;letter-spacing:1px;padding:6px 0 2px;color:#000;background:#fff;white-space:nowrap;overflow:hidden">\u2702 - - - - - TAGLIA QUI - - - - - \u2702</div>';
+  }
+  /* ESC/POS */
+  function docCustHead(d){
+    var c = cfg();
+    d.rule('=');
+    d.logo();
+    d.p(c.name || 'Buona Pizza', {a: 'c', b: 1, w: 2, h: 2});
+    if(c.address) d.p(c.address, {a: 'c'});
+    if(c.phone) d.p('Tel. ' + c.phone, {a: 'c'});
+    if(c.piva) d.p('P.IVA ' + c.piva, {a: 'c'});
+    d.rule('-');
+    d.p('DOCUMENTO NON FISCALE', {a: 'c', b: 1});
+    d.p('uso interno', {a: 'c'});
+    d.rule('=');
+  }
+  function docKitHead(d){
+    var c = cfg();
+    d.rule('=');
+    d.bar(String(c.name || 'Buona Pizza').toUpperCase(), '', {c: 1, b: 1});
+    d.bar('COMANDA CUCINA', '', {c: 1, b: 1, w: 2, h: 2});
+    d.rule('=');
+  }
+  function docCutLine(d){
+    d.blank(1);
+    d.p('- - - - - TAGLIA QUI - - - - -', {a: 'c', b: 1});
+    d.p('>> COMANDA CUCINA qui sotto', {a: 'c', f: 'B'});
+  }
+  function patchCopy(){
+    var bs = document.querySelectorAll('#receiptContainer .bp-seq-banner'), i, b, c;
+    for(i = 0; i < bs.length; i++){
+      b = bs[i]; b.setAttribute('data-copy', '1');
+      if(!b.querySelector('.bp-copia')){ c = document.createElement('div'); c.className = 'bp-copia'; c.setAttribute('style', COPIA_STYLE); c.textContent = '*** COPIA ***'; b.appendChild(c); }
+    }
+  }
+
+  /* ---------- aggancio: apertura dettaglio (numero e stato stampa aggiornati prima di costruire la ricevuta) ---------- */
+  var prevShow = window.showDetails;
+  if(typeof prevShow === 'function'){
+    window.showDetails = async function(o){
+      try{ if(o && o.id != null){ var R = RANK[dayKey(o.created_at)]; if(!(R && R.ids[String(o.id)]) || (db() && !PR[String(o.id)])) await Promise.race([ensure(o), new Promise(function(r){ setTimeout(r, 2500); })]); } }catch(e){}
+      return prevShow.apply(this, arguments);
+    };
+  }
+  /* ---------- aggancio: stampa manuale (ultimo wrapper = piu' esterno) ---------- */
+  var prevPrint = window.printReceiptWindow;
+  if(typeof prevPrint === 'function'){
+    window.printReceiptWindow = function(format){
+      try{
+        var b = document.querySelector('#receiptContainer .bp-seq-banner');
+        if(b){
+          var id = b.getAttribute('data-oid'), day = b.getAttribute('data-day'), j = JOB[id];
+          if(fresh(j) && j.auto){ j.auto = false; }              /* stampa automatica: gia' autorizzata */
+          else if(isPrinted(id)){
+            if(!window.confirm('\u26A0\uFE0F Ordine N\u00B0 ' + b.getAttribute('data-seq') + ' gi\u00E0 stampato.\n\nVuoi stamparne una COPIA?')) return;
+            JOB[id] = {copy: true, t: Date.now()}; patchCopy();
+          } else { JOB[id] = {copy: false, t: Date.now()}; }
+          markPrinted(id, day);
+        }
+      }catch(e){ console.warn('[bpShop]', e); }
+      return prevPrint.apply(this, arguments);
+    };
+  }
+  /* ---------- aggancio: stampa automatica: una sola volta in tutto il locale ---------- */
+  var prevAuto = window.bpAutoPrintOrder;
+  if(typeof prevAuto === 'function'){
+    window.bpAutoPrintOrder = function(o){
+      if(!o) return;
+      var self = this, args = arguments, id = String(o.id), day = dayKey(o.created_at);
+      (async function(){
+        if(isPrinted(id)) return;
+        var c = await claim(id, day);
+        if(c === 'dup'){ PR[id] = Date.now(); return; }       /* un altro dispositivo l'ha gia' presa */
+        markLocal(id);
+        JOB[id] = {copy: false, t: Date.now(), ttl: 600000, auto: true};
+        try{ await Promise.race([ensureRank(o), new Promise(function(r){ setTimeout(r, 2500); })]); }catch(e){}
+        prevAuto.apply(self, args);
+      })();
+    };
+  }
+
+  /* ================= 1) pannello impostazioni ================= */
+  function paintInfo(){
+    var inf = $('bpShopSeqInfo'); if(!inf) return;
+    var day = dayKey(), R = RANK[day], S = loadSeq(), n = R ? R.n : (S[day] ? S[day].n : 0);
+    inf.textContent = 'Oggi: ' + n + ' ordini numerati \u00B7 prossimo N\u00B0 ' + fmt(n + 1);
+  }
+  function paintSync(){
+    var s = $('bpShopSync'), b = $('bpShopSql'); if(!s) return;
+    if(sync === 'on'){ s.textContent = '\u2705 Sincronizzazione tra dispositivi attiva'; s.style.color = '#16794b'; if(b) b.style.display = 'none'; }
+    else if(sync === 'off'){ s.textContent = '\u26A0\uFE0F Sincronizzazione NON attiva: numeri e stampe validi solo su questo dispositivo'; s.style.color = '#b54708'; if(b) b.style.display = ''; }
+    else { s.textContent = '\u23F3 Controllo sincronizzazione...'; s.style.color = '#475467'; if(b) b.style.display = 'none'; }
+  }
+  function fill(){
+    var c = cfg(), im = $('bpShopLogoPrev');
+    FIELDS.forEach(function(k){ var e = $('bpShop_' + k); if(e) e.value = c[k] || ''; });
+    if(im){ im.src = c.logo || ''; im.style.display = c.logo ? '' : 'none'; }
+    paintInfo(); paintSync(); try{ prepLogo(); applyFonts(); }catch(e){}
+  }
+  function msg(t){ var m = $('bpShopMsg'); if(m){ m.textContent = t; setTimeout(function(){ if(m.textContent === t) m.textContent = ''; }, 3500); } }
+  function commit(c){ c._u = Date.now(); var ok = jset(CK, c); pushCfg(); return ok; }
+  function setLogo(url){ var c = jget(CK, {}) || {}; c.logo = url; if(!commit(c)) msg('\u26A0\uFE0F Memoria piena: logo non salvato'); fill(); }
+  function convert(img, forceInvert){
+    var W = 384, h = Math.round(img.height * W / img.width), cv, x, d, p, L = [], sum = 0, i, inv, v;
+    if(h > 280){ h = 280; W = Math.round(img.width * h / img.height); }
+    cv = document.createElement('canvas'); cv.width = W; cv.height = h; x = cv.getContext('2d');
+    x.fillStyle = '#fff'; x.fillRect(0, 0, W, h); x.drawImage(img, 0, 0, W, h);
+    d = x.getImageData(0, 0, W, h); p = d.data;
+    for(i = 0; i < p.length; i += 4){ v = 0.299 * p[i] + 0.587 * p[i + 1] + 0.114 * p[i + 2]; L.push(v); sum += v; }
+    inv = forceInvert == null ? (sum / L.length) < 140 : forceInvert;     /* sfondo scuro: lettere nere su bianco */
+    for(i = 0; i < L.length; i++){ v = (inv ? L[i] > 150 : L[i] < 150) ? 0 : 255; p[i * 4] = p[i * 4 + 1] = p[i * 4 + 2] = v; p[i * 4 + 3] = 255; }
+    x.putImageData(d, 0, 0); return cv.toDataURL('image/png');
+  }
+  function loadImg(src, cb){ var im = new Image(); im.onload = function(){ cb(im); }; im.onerror = function(){ msg('\u26A0\uFE0F Immagine non valida'); }; im.src = src; }
+  function wire(){
+    var f = $('bpShopLogoFile'), s = $('bpShopSave');
+    if(!s || s.__bp) return; s.__bp = 1;
+    s.onclick = function(){
+      var c = jget(CK, {}) || {}; FIELDS.forEach(function(k){ var e = $('bpShop_' + k); if(e) c[k] = e.value.trim(); });
+      msg(commit(c) ? '\u2705 Salvato' : '\u26A0\uFE0F Salvataggio non riuscito'); try{ applyFonts(); }catch(e){}
+    };
+    f.onchange = function(){
+      var file = f.files && f.files[0]; if(!file) return;
+      var fr = new FileReader(); fr.onload = function(){ loadImg(fr.result, function(im){ setLogo(convert(im, null)); msg('\u2705 Logo convertito in bianco e nero'); }); };
+      fr.readAsDataURL(file); f.value = '';
+    };
+    $('bpShopLogoInv').onclick = function(){
+      var c = cfg(); if(!c.logo) return;
+      loadImg(c.logo, function(im){ var cv = document.createElement('canvas'); cv.width = im.width; cv.height = im.height; var x = cv.getContext('2d'); x.drawImage(im, 0, 0);
+        var d = x.getImageData(0, 0, cv.width, cv.height), p = d.data, i; for(i = 0; i < p.length; i += 4){ p[i] = p[i + 1] = p[i + 2] = 255 - p[i]; } x.putImageData(d, 0, 0); setLogo(cv.toDataURL('image/png')); });
+    };
+    $('bpShopLogoDel').onclick = function(){ setLogo(''); };
+    $('bpShopLogoDef').onclick = function(){ var c = jget(CK, {}) || {}; delete c.logo; commit(c); fill(); msg('\u2705 Logo originale ripristinato'); };
+    $('bpShopSql').onclick = function(){
+      try{ navigator.clipboard.writeText(SQL).then(function(){ msg('\uD83D\uDCCB SQL copiato: incollalo in Supabase \u2192 SQL Editor \u2192 Run'); }, function(){ window.prompt('Copia questo SQL e eseguilo in Supabase \u2192 SQL Editor:', SQL); }); }
+      catch(e){ window.prompt('Copia questo SQL e eseguilo in Supabase \u2192 SQL Editor:', SQL); }
+    };
+  }
+  var st = $('settingsTab');
+  if(st && window.MutationObserver) new MutationObserver(function(){ if(!st.classList.contains('hidden')){ wire(); fill(); } }).observe(st, {attributes: true, attributeFilter: ['class']});
+  loadRankCache(); wire(); fill();
+
+  /* ================= avvio sincronizzazione (appena il database e' pronto) ================= */
+  var started = false, tmr = null;
+  function debounce(fn, ms){ return function(){ clearTimeout(tmr); tmr = setTimeout(fn, ms); }; }
+  function tick(){ var day = dayKey(); refreshRank(day); refreshPrinted(day); }
+  function start(){
+    if(started || !db()) return; started = true;
+    tick(); pullCfg();
+    try{
+      db().channel('bp-shop-sync')
+        .on('postgres_changes', {event: '*', schema: 'public', table: 'bp36_data'}, function(p){
+          var n = p && p.new, k = n && n.key;
+          if(!k) return;
+          if(k === 'shop_cfg') applyRemoteCfg(n.data);
+          else if(k.indexOf('prt_') === 0){ var m = /^prt_\d{4}-\d{2}-\d{2}_(.+)$/.exec(k); if(m) PR[m[1]] = Date.now(); }
+        })
+        .on('postgres_changes', {event: 'INSERT', schema: 'public', table: 'orders'}, debounce(function(){ refreshRank(dayKey()); }, 400))
+        .subscribe();
+    }catch(e){}
+  }
+  setInterval(function(){
+    try{
+      if(document.hidden) return;
+      start();
+      if(started) tick();                                           /* rete di sicurezza ogni 60s */
+      else { var S = loadSeq(); if(assignDay(S, dayKey())) saveSeq(S); }   /* offline: numerazione locale */
+    }catch(e){}
+  }, 60000);
+  var boot = setInterval(function(){ if(db()){ clearInterval(boot); start(); } }, 1000);
+  document.addEventListener('visibilitychange', function(){ if(!document.hidden && started) tick(); });
+
+  window.bpShop = {cfg: cfg, seq: function(o){ return fmt(seqOf(o)); }, isPrinted: isPrinted, isCopy: isCopy, markPrinted: markPrinted, bannerHtml: bannerHtml, doc: doc, custHeadHtml: custHeadHtml, cutLineHtml: cutLineHtml, docCustHead: docCustHead, docKitHead: docKitHead, docCutLine: docCutLine, logoRaster: logoRaster, escStyle: escStyle, applyFonts: applyFonts, JOB: JOB, SQL: SQL, _refreshRank: refreshRank, _refreshPrinted: refreshPrinted, _start: start, _sync: function(){ return sync; }};
+})();
+</script>
+<script>
+// Force uppercase & highlight SENZA / COMPLETO / COMPLETA on thermal print
+(function(){
+  function walk(root){
+    if(!root) return;
+    var nodes = root.querySelectorAll('.rc-ing-row.senza .rc-ing-txt, .rc-mod-line.senza');
+    nodes.forEach(function(n){
+      if(n.dataset.hi) return;
+      n.dataset.hi='1';
+      n.style.textTransform='uppercase';
+      n.style.fontWeight='950';
+      n.style.background='#fff';
+      n.style.color='#000';
+      n.style.border='1px solid #000';
+      n.style.padding='1px 4px';
+      n.style.borderRadius='3px';
+    });
+    var comps = root.querySelectorAll('.kr-completo, .rc-completo');
+    comps.forEach(function(el){
+      var t = (el.textContent||'').toUpperCase();
+      if(/COMPLETO|COMPLETA/.test(t) && !el.dataset.cmp){
+        el.dataset.cmp='1';
+        el.style.textTransform='uppercase';
+        el.style.background='#fff';
+        el.style.color='#000';
+        el.style.border='2px solid #000';
+        el.style.padding='1px 4px';
+        el.style.borderRadius='3px';
+        el.style.fontWeight='950';
+      }
+    });
+  }
+  document.addEventListener('DOMContentLoaded', function(){ walk(document); });
+  document.addEventListener('afterprint', function(){ walk(document); });
+})();
+</script>
+
 </body>
 </html>
