@@ -2507,6 +2507,12 @@ html.pos64.p64-ticket .calc-box.rd-pay button{min-height:40px!important;padding:
     grid-template-columns: 1fr !important;
   }
 }
+
+    .v46-pro .receipt-card { border:2px solid #000!important; font-family:"Courier New",Courier,monospace!important; }
+    .v46-pro .rc-ing-ico { display:none!important; }
+    .v46-pro .rc-ing-row { font-size:15px!important; font-weight:800!important; }
+    .v46-pro .rc-total-bar { background:#000!important; color:#fff!important; }
+    .v46-pro .rc-review, .v46-pro .rc-table-head { display:none!important; }
 </style>
  <style id="bpV93boot">html.bp-boot header{height:30px!important;min-height:0!important;padding-top:0!important;padding-bottom:0!important;overflow:hidden!important;border-bottom:0!important;transition:none!important}html.bp-boot header>*{visibility:hidden}</style><script id="bpV93bootJs">document.documentElement.classList.add('bp-boot')</script>
 <style id="bp-gusti-fix">
@@ -23242,11 +23248,17 @@ html:not(.x) body #userBar button#thermalToggleBtn.ap-off,#thermalToggleBtn.ap-o
   /* ================= composizione del lavoro di stampa ================= */
   function newDoc(){ return new Doc({cols: Number(cfg.cols) || 48, cp: cfg.cp, kanji: cfg.kanji, qr: cfg.qr}); }
   function hasKitchen(items){ try{ return bpHasKitchenItems(items); }catch(e){ return false; } }
+  /* v46: separate print jobs */
   function orderDoc(o, items, kitchenOnly){
-    var d = newDoc(), kit = hasKitchen(items) && (cfg.kitchen || kitchenOnly);
-    if(!(kitchenOnly && kit)){ receiptDoc(d, o, items); d.cut(); }
-    if(kit){ kitchenDoc(d, o, items); d.cut(); }
-    return d;
+    var kit = (typeof hasKitchen === 'function') ? hasKitchen(items) : false;
+    var rc = null, kt = null;
+    if(!kitchenOnly){
+      var d = newDoc(); receiptDoc(d, o, items); d.cut(); rc = d;
+    }
+    if(kit){
+      var d2 = newDoc(); kitchenDoc(d2, o, items); d2.cut(); kt = d2;
+    }
+    return {rc: rc, kt: kt};
   }
   function testDoc(){
     var d = newDoc();
@@ -23278,6 +23290,7 @@ html:not(.x) body #userBar button#thermalToggleBtn.ap-off,#thermalToggleBtn.ap-o
     if(C.type === 'usb') return !!(C.dev && C.dev.opened);
     if(C.type === 'ble') return !!(C.dev && C.dev.gatt && C.dev.gatt.connected && C.ch);
     if(C.type === 'serial') return !!(C.port && C.port.writable);
+    if(C.type === 'wifi') return !(!_wifiSock || _wifiSock.readyState === WebSocket.OPEN);
     return false;
   }
   async function openUSB(dev){
@@ -23340,6 +23353,8 @@ html:not(.x) body #userBar button#thermalToggleBtn.ap-off,#thermalToggleBtn.ap-o
       } else if(t === 'serial' && navigator.serial){
         var ps = await navigator.serial.getPorts();
         if(ps[0]){ await openSerial(ps[0]); return true; }
+      } else if(t === 'wifi'){
+        try{ await connectWifi(cfg.wifiUrl || ip || '192.168.1.200', cfg.wifiPort || 9100); return true; }catch(e){}
       }
     }catch(e){ console.warn('[bp-direct] riconnessione', e); }
     return false;
@@ -23350,22 +23365,29 @@ html:not(.x) body #userBar button#thermalToggleBtn.ap-off,#thermalToggleBtn.ap-o
         if(C.type === 'usb' && C.dev.opened){ try{ await C.dev.close(); }catch(e){} }
         if(C.type === 'ble' && C.dev.gatt.connected){ try{ C.dev.gatt.disconnect(); }catch(e){} }
         if(C.type === 'serial'){ try{ await C.port.close(); }catch(e){} }
+        if(C.type === 'wifi'){ try{ _wifiSock && _wifiSock.close(); }catch(e){} _wifiSock = null; }
       }
     }catch(e){}
     C = null; cfg.transport = ''; save(); paint();
   }
+  var _wifiSock = null;
+  async function openWifi(ip, port){
+    port = port || 9100;
+    _wifiSock = new WebSocket('ws://' + ip + ':' + port);
+    return new Promise(function(resolve, reject){
+      _wifiSock.onopen = function(){ C={type:'wifi',url:ip,port:port,name:'WiFi '+ip+':'+port}; resolve(); };
+      _wifiSock.onerror=function(e){ C=null; reject(new Error('اتصال الواي فاي فشل — تأكد أن الطابعة متصلة بالشبكة و IP صحيح')); };
+      _wifiSock.onclose=function(){ C=null; _wifiSock=null; };
+      setTimeout(function(){ if(_wifiSock){ _wifiSock.close(); C=null; _wifiSock=null; reject(new Error('مهلة الاتصال (10 ثواني)')); }},10000);
+    });
+  }
+  async function connectWifi(ip, port){
+    await openWifi(ip, port);
+    cfg.wifiUrl = ip; cfg.wifiPort = port || 9100; cfg.transport = 'wifi'; save();
+  }
   function bpB64(u8){ var s = '', CH = 0x8000; for(var i = 0; i < u8.length; i += CH){ s += String.fromCharCode.apply(null, u8.subarray(i, i + CH)); } return btoa(s); }
   async function doSend(u8){
-        if(cfg.transport === 'rawbt-ws' && C && C.type === 'rawbt-ws'){
-      /* RawBT WebSocket: طباعة مباشرة بدون تأكيد */
-      try{
-        rawbtWsSend(u8);
-        return;
-      }catch(e){
-        C = null; paint(); throw e;
-      }
-    }
-if(cfg.transport === 'rawbt'){   /* RawBT in modalita' TESTO: i byte ESC/POS vanno all'app RawBT (leggerissimo, nessuna immagine) */
+    if(cfg.transport === 'rawbt'){   /* RawBT in modalita' TESTO: i byte ESC/POS vanno all'app RawBT (leggerissimo, nessuna immagine) */
       /* v42: l'intent porta via la pagina. Non aspettare: il redirect e' sincrono e il promise
          non si risolverebbe mai (pagina hidden -> timers fermi -> lock screen -> ordine appeso). */
       try{ window.__bpPrinting = true; }catch(e){}
@@ -23395,6 +23417,10 @@ if(cfg.transport === 'rawbt'){   /* RawBT in modalita' TESTO: i byte ESC/POS van
           catch(e){ if(size > 20){ size = 20; cfg.bleChunk = 20; save(); continue; } throw e; }
           off += n.length; await wait(size > 40 ? 25 : 12);
         }
+      } else if(C.type === 'wifi'){
+        if(_wifiSock && _wifiSock.readyState === WebSocket.OPEN){
+          _wifiSock.send(u8);
+        } else { throw new Error('WiFi disconnected'); }
       }
     }catch(e){ if(C && C.type !== 'ble') C = null; paint(); throw e; }
     paint();
@@ -23425,52 +23451,7 @@ if(cfg.transport === 'rawbt'){   /* RawBT in modalita' TESTO: i byte ESC/POS van
     return orderDoc(o, items, kitchenOnly);
   }
 
-  
-  /* v44: RawBT WebSocket - طباعة مباشرة بدون تأكيد من المستخدم */
-  var _rawbtWs = null;
-  async function connectRawBTWebSocket(port){
-    port = Number(port) || 40213;
-    return new Promise(function(resolve, reject){
-      try{
-        var ws = new WebSocket('ws://127.0.0.1:' + port + '/');
-        ws.onopen = function(){
-          C = {type: 'rawbt-ws', name: 'RawBT WebSocket', ws: ws, port: port};
-          cfg.transport = 'rawbt-ws';
-          cfg.rawbtPort = port;
-          save();
-          resolve(true);
-        };
-        ws.onerror = function(e){
-          reject(new Error('RawBT WebSocket connection failed'));
-        };
-        ws.onclose = function(){
-          if(C && C.type === 'rawbt-ws'){
-            C = null;
-            cfg.transport = '';
-            save();
-            paint();
-          }
-        };
-        setTimeout(function(){
-          if(ws.readyState !== WebSocket.OPEN){
-            ws.close();
-            reject(new Error('RawBT WebSocket connection timeout'));
-          }
-        }, 5000);
-        _rawbtWs = ws;
-      }catch(e){
-        reject(e);
-      }
-    });
-  }
-  function rawbtWsSend(data){
-    if(!C || C.type !== 'rawbt-ws' || !_rawbtWs || _rawbtWs.readyState !== WebSocket.OPEN){
-      throw new Error('RawBT WebSocket not connected');
-    }
-    _rawbtWs.send(data);
-  }
-
-var _orig = window.printReceiptWindow, chain = Promise.resolve();
+  var _orig = window.printReceiptWindow, chain = Promise.resolve();
   window.printReceiptWindow = function(format){
     var self = this, args = arguments;
     if(format !== '80mm' || !enabled()) return _orig.apply(self, args);
@@ -23499,8 +23480,8 @@ var _orig = window.printReceiptWindow, chain = Promise.resolve();
   }
   function statusText(){
     if(cfg.transport === 'rawbt') return 'Attiva: RawBT (solo testo)';
-    if(isConn()) return 'Collegata: ' + C.name + ' (' + (C.type === 'usb' ? 'USB' : C.type === 'ble' ? 'Bluetooth' : 'Seriale') + ')';
-    return cfg.transport ? 'Non collegata (ultimo collegamento: ' + ({usb: 'USB', ble: 'Bluetooth', serial: 'Seriale'}[cfg.transport]) + ')' : 'Nessuna stampante collegata';
+    if(isConn()) return 'Collegata: ' + C.name + ' (' + (C.type === 'usb' ? 'USB' : C.type === 'ble' ? 'Bluetooth' : C.type === 'serial' ? 'Seriale' : 'WiFi') + ')';
+    return cfg.transport ? 'Non collegata (ultimo collegamento: ' + ({usb: 'USB', ble: 'Bluetooth', serial: 'Seriale', wifi: 'WiFi'}[cfg.transport]) + ')' : 'Nessuna stampante collegata';
   }
   function sel(id, label, opts, val){
     return '<label class="dp-l">' + label + '<select id="' + id + '">' + opts.map(function(o){ return '<option value="' + o[0] + '"' + (String(o[0]) === String(val) ? ' selected' : '') + '>' + o[1] + '</option>'; }).join('') + '</select></label>';
@@ -23582,8 +23563,9 @@ var _orig = window.printReceiptWindow, chain = Promise.resolve();
   try{ if(navigator.usb) navigator.usb.addEventListener('disconnect', function(){ C = null; paint(); }); }catch(e){}
 
   window.bpDirectPrint = {Doc: Doc, receiptDoc: receiptDoc, kitchenDoc: kitchenDoc, orderDoc: orderDoc, zDoc: zDoc, testDoc: testDoc, cfg: cfg, wrapText: wrapText, cleanTxt: cleanTxt, itemInfo: itemInfo};
+  window.connectWiFiv46 = async function(ip){ try{ await connectWifi(ip, 9100); paint(); }catch(e){ alert(e.message); } };
+  (function(){ var done=false; setInterval(function(){ if(done||!document.getElementById('bpDpModal'))return; done=true; var m=document.getElementById('bpDpModal'),row=m.querySelector('.dp-row'); if(!m||!row)return; var b=document.createElement('button'); b.id='dpW46'; b.textContent='WiFi'; b.style.cssText='background:#5925dc;color:#fff;margin-left:5px;'; b.onclick=function(){var ip=prompt('Printer IP:');if(ip)connectWiFiv46(ip);}; row.appendChild(b); },2000); })();
 })();
 </script>
-
 </body>
 </html>
