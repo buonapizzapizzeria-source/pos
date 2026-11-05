@@ -3537,6 +3537,16 @@ html body #kitchenTab .k35-t .kt-item .gx .gx-sep i,html body #bp35KDS .k35-t .k
  </div>
  </div>
 
+<!-- OPZIONI SCONTRINO -->
+ <div class="bp-set-card" style="border-top-color:#f79009">
+ <div class="bp-set-head">
+ <span class="bp-set-ico" style="background:#fffaeb;color:#b54708">🧾</span>
+ <h3>Opzioni scontrino · خيارات الفيشة</h3>
+ </div>
+ <p class="bp-set-desc">Scegli cosa stampare per risparmiare carta nei momenti di punta · اختار إيه اللي يتطبع على الفيشة.</p>
+ <div id="bpPoptMount"></div>
+ </div>
+
  <!-- RIGA 1: AUDIO & NOTIFICHE -->
  <div class="bp-set-card" style="border-top-color:var(--green)">
  <div class="bp-set-head">
@@ -9167,6 +9177,7 @@ function bpAllergyScan(items, noteText){
  if(noteText && BP_ALG_RE.test(String(noteText))) note = String(noteText).trim();
  return {rows: rows, note: note, any: rows.length > 0 || !!note};
 }
+function bpPOpt(k){ try{ var o = JSON.parse(localStorage.getItem('bp_print_opts_v1') || '{}') || {}; return o[k] === undefined ? true : !!o[k]; }catch(e){ return true; } }
 function bpShopFooterParts(){
  var c = (window.bpShop && window.bpShop.cfg) ? window.bpShop.cfg() : {};
  return {thanks: c.footer || 'Grazie e buon appetito!', hours: c.hours || '', wa: c.wa || ''};
@@ -9272,18 +9283,18 @@ function buildReceiptHtml(o, items){
  // chi ha registrato / modificato l'ordine (ex patch v27 + v29)
  let who = o.created_by_email || '';
  if(!who && String(o.id).indexOf('OFF-') === 0){ let u = el('userEmail'); who = u ? (u.textContent || '') : ''; }
- let operatorHtml = who
+ let operatorHtml = (who && bpPOpt('op'))
  ? `<div class="rc-customer-box" style="border-top:0;padding-top:4px"><div class="rc-customer-row"><strong class="lbl">👤 Operatore:</strong> <span style="font-weight:800">${esc(shortOp(who))}</span></div></div>`
  : '';
  let editorHtml = '';
- if(o.updated_by_email){
+ if(o.updated_by_email && bpPOpt('op')){
  let t = '';
  try{ if(o.updated_at) t = ' · ' + new Date(o.updated_at).toLocaleTimeString('it-IT', {hour: '2-digit', minute: '2-digit'}); }catch(e){ bpWarn(e); }
  editorHtml = `<div class="rc-customer-box" style="border-top:0;padding-top:4px"><div class="rc-customer-row"><strong class="lbl">✏️ Modifica:</strong> <span style="font-weight:800">${esc(shortOp(o.updated_by_email)) + t}</span></div></div>`;
  }
  var idParts = [];
- if(who) idParts.push('Operatore: <b>' + esc(shortOp(who)) + '</b>');
- if(o.updated_by_email){
+ if(who && bpPOpt('op')) idParts.push('Operatore: <b>' + esc(shortOp(who)) + '</b>');
+ if(o.updated_by_email && bpPOpt('op')){
  var tt = ''; try{ if(o.updated_at) tt = ' · ' + new Date(o.updated_at).toLocaleTimeString('it-IT', {hour: '2-digit', minute: '2-digit'}); }catch(e){ bpWarn(e); }
  idParts.push('✏️ Modifica: <b>' + esc(shortOp(o.updated_by_email)) + tt + '</b>');
  }
@@ -9337,7 +9348,7 @@ function buildReceiptHtml(o, items){
 
  <div class="rc-meta-strip">
  <div>
- <div class="rc-order-num">ORDINE #${o.id}</div>
+ ${bpPOpt('ordine') ? `<div class="rc-order-num">ORDINE #${o.id}</div>` : ''}
  <div style="font-size:11.5px;font-weight:750;color:#475467;margin-top:2px">Reg: ${when}</div>
  </div>
  <div class="rc-type-box">
@@ -9381,7 +9392,7 @@ function buildReceiptHtml(o, items){
  </div>
 
  ${reviewHtml}
- <div class="rc-footer"><b>${esc(FT.thanks)}</b>${FT.hours ? '<br>' + esc(FT.hours) : ''}${FT.wa ? '<br>WhatsApp ' + esc(FT.wa) : ''}</div>
+ ${bpPOpt('footer') ? `<div class="rc-footer"><b>${esc(FT.thanks)}</b>${FT.hours ? '<br>' + esc(FT.hours) : ''}${FT.wa ? '<br>WhatsApp ' + esc(FT.wa) : ''}</div>` : ''}
  </div>
  `;
 }
@@ -23267,7 +23278,7 @@ html:not(.x) body #userBar button#thermalToggleBtn.ap-off,#thermalToggleBtn.ap-o
 
  try{ window.bpShop.docCustHead(d); }catch(e){ d.rule('='); d.p('BUONA PIZZA', {a: 'c', b: 1, w: 2, h: 2}); d.rule('='); }
  try{ window.bpShop.doc(d, o); }catch(e){}
- var fo = fitW(d, 'ORDINE #' + o.id, 2); d.p('ORDINE #' + o.id, {a: 'c', b: 1, w: fo, h: fo});
+ if(bpPOpt('ordine')){ var fo = fitW(d, 'ORDINE #' + o.id, 2); d.p('ORDINE #' + o.id, {a: 'c', b: 1, w: fo, h: fo}); }
  d.bar(isCons ? 'CONSEGNA A DOMICILIO' : (tblNo ? 'TAVOLO ' + tblNo : 'RITIRO / ASPORTO'), '', {c: 1, b: 1});
  d.p('Reg: ' + fmtWhen(o.created_at), {a: 'c'});
  d.rule('-');
@@ -23304,7 +23315,7 @@ html:not(.x) body #userBar button#thermalToggleBtn.ap-off,#thermalToggleBtn.ap-o
  }
  var who = o.created_by_email || '';
  if(!who && String(o.id).indexOf('OFF-') === 0){ var ue = document.getElementById('userEmail'); who = ue ? (ue.textContent || '') : ''; }
- if(who || o.updated_by_email){
+ if(bpPOpt('op') && (who || o.updated_by_email)){
  d.rule('-');
  if(who) d.p('Operatore: ' + shortOp(who), {f: 'B'}, 11);
  if(o.updated_by_email){ var tt = ''; try{ if(o.updated_at) tt = ' ' + fmtHM(o.updated_at); }catch(e){} d.p('Modifica: ' + shortOp(o.updated_by_email) + tt, {f: 'B'}, 10); }
@@ -23379,7 +23390,7 @@ html:not(.x) body #userBar button#thermalToggleBtn.ap-off,#thermalToggleBtn.ap-o
  d.p('Inquadra il QR - Buona Pizza', {a: 'c', f: 'B'});
  d.blank(1);
  }
- try{ var FT = bpShopFooterParts(); d.p(FT.thanks, {a: 'c', b: 1}); if(FT.hours) d.p(FT.hours, {a: 'c'}); if(FT.wa) d.p('WhatsApp ' + FT.wa, {a: 'c'}); }catch(e){ d.p('Grazie - Buon Appetito!', {a: 'c'}); }
+ if(bpPOpt('footer')) try{ var FT = bpShopFooterParts(); d.p(FT.thanks, {a: 'c', b: 1}); if(FT.hours) d.p(FT.hours, {a: 'c'}); if(FT.wa) d.p('WhatsApp ' + FT.wa, {a: 'c'}); }catch(e){ d.p('Grazie - Buon Appetito!', {a: 'c'}); }
  return d;
  }
 
@@ -23773,11 +23784,13 @@ html:not(.x) body #userBar button#thermalToggleBtn.ap-off,#thermalToggleBtn.ap-o
  '<label class="dp-c"><input type="checkbox" id="dpKit"' + (cfg.kitchen ? ' checked' : '') + '> Stampa anche la comanda cucina</label>' +
  '<label class="dp-c"><input type="checkbox" id="dpQr"' + (cfg.qr ? ' checked' : '') + '> QR recensione Google</label>' +
  '<label class="dp-c"><input type="checkbox" id="dpKj"' + (cfg.kanji ? ' checked' : '') + '> Stampante cinese: disattiva modalit\u00E0 GBK (se gli accenti escono strani)</label>' +
+ '<div class="dp-c" style="margin-bottom:2px">🧾 Opzioni scontrino · خيارات الفيشة</div><div id="bpDpOpts"></div>' +
  '<div class="dp-row"><button type="button" id="dpTest">Stampa di prova</button><button type="button" id="dpPrev">Anteprima</button><button type="button" id="dpOff">Scollega</button><button type="button" id="dpClose" class="dp-sec">Chiudi</button></div>' +
  '<pre id="dpPre" class="dp-pre" style="display:none"></pre>' +
  '<div class="dp-note">Bluetooth: solo stampanti BLE (le Bluetooth classiche SPP non funzionano dal browser: usa USB o Seriale). Su Windows la USB richiede il driver WinUSB. Serve HTTPS e un tocco di collegamento a ogni riavvio del browser.</div></div>';
  document.body.appendChild(m);
  function g(i){ return document.getElementById(i); }
+  try{ window.bpShop.mountOpts(g('bpDpOpts'), function(){ var pr = g('dpPre'); if(pr && pr.style.display === 'block') g('dpPrev').click(); }); }catch(e){}
  function rd(){
  cfg.cols = Number(g('dpCols').value); cfg.fs = Number(g('dpFs').value); cfg.cp = g('dpCp').value; cfg.baud = Number(g('dpBaud').value);
  cfg.kitchen = g('dpKit').checked ? 1 : 0; cfg.qr = g('dpQr').checked ? 1 : 0; cfg.kanji = g('dpKj').checked ? 1 : 0; save();
@@ -23884,7 +23897,13 @@ document.addEventListener('DOMContentLoaded',function(){
  wa: '+39 375 590 9081', piva: '13032300967', hours: '10:30 - 22:00 \u00B7 7 giorni su 7',
  footer: 'Grazie e buon appetito!', nameFont: '', nameSize: '', ingFont: '', ingSize: '', logo: 'data:image/png;base64,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'
  };
- var FIELDS = ['name', 'address', 'phone', 'wa', 'piva', 'hours', 'footer', 'nameFont', 'nameSize', 'ingFont', 'ingSize'];
+ var PRINT_OPT_KEYS = ['logo','shop','op','ordine','footer'];
+var PRESET_DEFS = {
+  completo: {logo:1,shop:1,op:1,ordine:1,footer:1},
+  compatto: {logo:0,shop:0,op:1,ordine:1,footer:0},
+  minimo:   {logo:0,shop:0,op:0,ordine:1,footer:0}
+};
+var FIELDS = ['name', 'address', 'phone', 'wa', 'piva', 'hours', 'footer', 'nameFont', 'nameSize', 'ingFont', 'ingSize'];
  var SQL = "create table if not exists bp36_data (key text primary key, data jsonb not null default '{}', updated_at timestamptz default now());\n" +
  "alter table bp36_data enable row level security;\n" +
  "drop policy if exists \"bp_print_sync\" on bp36_data;\n" +
@@ -24103,12 +24122,12 @@ document.addEventListener('DOMContentLoaded',function(){
  function custHeadHtml(){
  var c = cfg(), L = [];
  var h = '<div class="bp-ph2-head" style="text-align:center;padding:6px 6px 4px;color:#000;background:#fff">';
- if(c.logo) h += '<img class="bp-ph2-logo" src="' + esc(c.logo) + '" alt="" style="display:block;margin:0 auto 3px;max-width:62%;max-height:84px;object-fit:contain">';
- h += '<div class="bp-ph2-name" style="font-size:22px;font-weight:950;letter-spacing:1px;text-transform:uppercase;line-height:1.1">' + esc(c.name || 'Buona Pizza') + '</div>';
+ if(popt('logo') && c.logo) h += '<img class="bp-ph2-logo" src="' + esc(c.logo) + '" alt="" style="display:block;margin:0 auto 3px;max-width:62%;max-height:84px;object-fit:contain">';
+ if(popt('shop')) h += '<div class="bp-ph2-name" style="font-size:22px;font-weight:950;letter-spacing:1px;text-transform:uppercase;line-height:1.1">' + esc(c.name || 'Buona Pizza') + '</div>';
  if(c.address) L.push(esc(c.address));
  if(c.phone) L.push('Tel. ' + esc(c.phone));
  if(c.piva) L.push('P.IVA ' + esc(c.piva));
- L.forEach(function(t){ h += '<div style="font-size:11.5px;font-weight:700;line-height:1.25">' + t + '</div>'; });
+ if(!popt('shop')) L = []; L.forEach(function(t){ h += '<div style="font-size:11.5px;font-weight:700;line-height:1.25">' + t + '</div>'; });
  h += '<div class="bp-ph2-nf" style="margin-top:4px;border-top:1.5px solid #000;border-bottom:1.5px solid #000;padding:2px 0;font-size:11.5px;font-weight:900;letter-spacing:.5px">DOCUMENTO NON FISCALE - uso interno</div></div>';
  return h;
  }
@@ -24119,12 +24138,14 @@ document.addEventListener('DOMContentLoaded',function(){
  function docCustHead(d){
  var c = cfg();
  d.rule('=');
- d.logo();
+ if(popt('logo')) d.logo();
+ if(popt('shop')){
  d.p(c.name || 'Buona Pizza', {a: 'c', b: 1, w: 2, h: 2});
  if(c.address) d.p(c.address, {a: 'c'});
  if(c.phone) d.p('Tel. ' + c.phone, {a: 'c'});
  if(c.piva) d.p('P.IVA ' + c.piva, {a: 'c'});
  d.rule('-');
+ }
  d.p('DOCUMENTO NON FISCALE', {a: 'c', b: 1});
  d.p('uso interno', {a: 'c'});
  d.rule('=');
@@ -24194,6 +24215,64 @@ document.addEventListener('DOMContentLoaded',function(){
  };
  }
 
+ /* ================= OPZIONI SCONTRINO (mostra/nascondi parti in stampa) ================= */
+ var OK = 'bp_print_opts_v1';
+ function poptAll(){ var st = jget(OK, {}) || {}, o = {}; PRINT_OPT_KEYS.forEach(function(k){ o[k] = st[k] === undefined ? 1 : (st[k] ? 1 : 0); }); return o; }
+ function popt(k){ return !!poptAll()[k]; }
+ function setPopt(patch){ var o = poptAll(); Object.keys(patch).forEach(function(k){ if(PRINT_OPT_KEYS.indexOf(k) >= 0) o[k] = patch[k] ? 1 : 0; }); jset(OK, o); return o; }
+ var POPT_INFO = {
+  logo:   {ico: '\uD83D\uDDBC\uFE0F', t: 'Logo', ar: '\u0627\u0644\u0634\u0639\u0627\u0631', d: 'Immagine in cima allo scontrino'},
+  shop:   {ico: '\uD83C\uDFEA', t: 'Dati negozio', ar: '\u0628\u064A\u0627\u0646\u0627\u062A \u0627\u0644\u0645\u062D\u0644', d: 'Nome, indirizzo, telefono, P.IVA'},
+  op:     {ico: '\uD83D\uDC64', t: 'Operatore', ar: '\u0627\u0644\u0645\u0634\u063A\u0651\u0644', d: 'Righe Operatore e Modifica'},
+  ordine: {ico: '#\uFE0F\u20E3', t: 'Ordine #', ar: '\u0631\u0642\u0645 \u0627\u0644\u0623\u0648\u0631\u062F\u0631 \u0627\u0644\u0639\u0627\u0645', d: 'ORDINE # (non il N\u00B0 giornaliero)'},
+  footer: {ico: '\uD83D\uDE4F', t: 'Piè di pagina', ar: '\u0627\u0644\u0641\u0648\u062A\u0631', d: 'Grazie, orari di apertura, WhatsApp'}
+ };
+ var PRESET_INFO = [['completo', '\u2728 Completo', '\u0643\u0627\u0645\u0644'], ['compatto', '\uD83D\uDCCF Compatto', '\u0645\u0636\u063A\u0648\u0637'], ['minimo', '\u26A1 Minimo', '\u0623\u0642\u0644 \u062D\u0627\u062C\u0629']];
+ function poptCss(){
+  if(document.getElementById('bpPoptCss')) return;
+  var st = document.createElement('style'); st.id = 'bpPoptCss';
+  st.textContent = '.po-wrap{display:flex;flex-direction:column;gap:10px}.po-pre{display:flex;gap:6px;flex-wrap:wrap}'
+  + '.po-chip{flex:1 1 90px;min-height:42px;border-radius:12px;border:1.5px solid rgba(128,128,128,.35);background:rgba(128,128,128,.08);color:inherit;font-weight:850;font-size:13px;cursor:pointer;line-height:1.15;padding:4px 8px}'
+  + '.po-chip small{display:block;font-weight:700;opacity:.7;font-size:11px}.po-chip.on{background:#d92d20;border-color:#d92d20;color:#fff}.po-chip.on small{opacity:.9}'
+  + '.po-body{display:flex;gap:12px;align-items:flex-start}.po-list{flex:1 1 auto;display:flex;flex-direction:column;gap:6px;min-width:0}'
+  + '.po-row{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:12px;border:1px solid rgba(128,128,128,.3);background:rgba(128,128,128,.07);cursor:pointer;text-align:start;color:inherit;width:100%;font:inherit}'
+  + '.po-row .po-i{font-size:21px;width:28px;text-align:center;flex:0 0 auto}.po-row .po-t{flex:1 1 auto;min-width:0;display:flex;flex-direction:column}'
+  + '.po-row .po-t b{font-size:13.5px;font-weight:850}.po-row .po-t small{font-size:11.5px;opacity:.7;font-weight:600}'
+  + '.po-sw{flex:0 0 auto;width:44px;height:26px;border-radius:99px;background:rgba(128,128,128,.45);position:relative;transition:background .15s}'
+  + '.po-sw::after{content:"";position:absolute;top:3px;inset-inline-start:3px;width:20px;height:20px;border-radius:50%;background:#fff;box-shadow:0 1px 3px #0004;transition:transform .15s}'
+  + '.po-row.on .po-sw{background:#16794b}.po-row.on .po-sw::after{transform:translateX(18px)}[dir=rtl] .po-row.on .po-sw::after{transform:translateX(-18px)}'
+  + '.po-row:not(.on) .po-t b{text-decoration:line-through;opacity:.6}'
+  + '.po-paper{flex:0 0 96px;background:#fff;color:#000;border-radius:4px 4px 0 0;padding:6px 6px 10px;box-shadow:0 3px 10px #0003;border:1px solid #d0d5dd;font-family:ui-monospace,Menlo,Consolas,monospace;position:sticky;top:6px;'
+  + '-webkit-mask:conic-gradient(from -45deg at bottom,#0000,#000 1deg 89deg,#0000 90deg) 50%/8px 100%;mask:conic-gradient(from -45deg at bottom,#0000,#000 1deg 89deg,#0000 90deg) 50%/8px 100%}'
+  + '.po-paper i{display:block;height:7px;border-radius:2px;background:#101828;margin:3px 0}.po-paper i.f{background:#98a2b3}.po-paper i.big{height:14px}.po-paper i.lg{height:20px;width:60%;margin:3px auto}'
+  + '.po-paper i.c{width:70%;margin-inline:auto}.po-paper i.s{width:50%;margin-inline:auto}.po-paper hr{border:0;border-top:1px dashed #98a2b3;margin:4px 0}'
+  + '.po-paper .off{display:none}.po-cap{font-size:10px;text-align:center;font-weight:800;color:#667085;margin-top:4px;font-family:system-ui,sans-serif}'
+  + '@media(max-width:420px){.po-body{flex-direction:column-reverse}.po-paper{flex:0 0 auto;width:120px;align-self:center;position:static}}';
+  document.head.appendChild(st);
+ }
+ function mountOpts(root, onChange){
+  if(!root) return; poptCss();
+  if(onChange) root.__poCb = onChange;
+  var o = poptAll(), same = function(p){ return PRINT_OPT_KEYS.every(function(k){ return !!PRESET_DEFS[p][k] === !!o[k]; }); };
+  var h = '<div class="po-wrap"><div class="po-pre">' + PRESET_INFO.map(function(x){ return '<button type="button" class="po-chip' + (same(x[0]) ? ' on' : '') + '" data-p="' + x[0] + '">' + x[1] + '<small>' + x[2] + '</small></button>'; }).join('') + '</div>'
+   + '<div class="po-body"><div class="po-list">' + PRINT_OPT_KEYS.map(function(k){ var i = POPT_INFO[k]; return '<button type="button" class="po-row' + (o[k] ? ' on' : '') + '" data-k="' + k + '" role="switch" aria-checked="' + (o[k] ? 'true' : 'false') + '"><span class="po-i">' + i.ico + '</span><span class="po-t"><b>' + i.t + ' \u00B7 ' + i.ar + '</b><small>' + i.d + '</small></span><span class="po-sw"></span></button>'; }).join('') + '</div>'
+   + '<div><div class="po-paper"><i class="big lg' + (o.logo ? '' : ' off') + '"></i>'
+   + '<div class="' + (o.shop ? '' : 'off') + '"><i class="c"></i><i class="s f"></i><i class="s f"></i></div><hr>'
+   + '<i class="c f"></i><i class="lg"></i><div class="' + (o.ordine ? '' : 'off') + '"><i class="c big"></i></div><i class="c f"></i><hr>'
+   + '<div class="' + (o.op ? '' : 'off') + '"><i class="s f"></i><hr></div>'
+   + '<i></i><i class="f"></i><i></i><i class="f"></i><hr><i class="big"></i>'
+   + '<div class="' + (o.footer ? '' : 'off') + '"><hr><i class="c f"></i><i class="s f"></i><i class="s f"></i></div></div>'
+   + '<div class="po-cap">Anteprima \u00B7 \u0645\u0639\u0627\u064A\u0646\u0629</div></div></div>'
+   + '<div style="font-size:11.5px;opacity:.7;font-weight:600">N\u00B0 giornaliero, cliente, articoli e totale restano sempre stampati \u00B7 \u0627\u0644\u0631\u0642\u0645 \u0627\u0644\u064A\u0648\u0645\u064A \u0648\u0627\u0644\u0639\u0645\u064A\u0644 \u0648\u0627\u0644\u0623\u0635\u0646\u0627\u0641 \u0648\u0627\u0644\u0625\u062C\u0645\u0627\u0644\u064A \u0645\u0634 \u0628\u064A\u062A\u0645\u0633\u062D\u0648\u0627</div></div>';
+  root.innerHTML = h;
+  root.onclick = function(e){
+   var b = e.target.closest ? e.target.closest('[data-k],[data-p]') : null; if(!b || !root.contains(b)) return;
+   if(b.getAttribute('data-p')) setPopt(PRESET_DEFS[b.getAttribute('data-p')]);
+   else { var k = b.getAttribute('data-k'), u = {}; u[k] = poptAll()[k] ? 0 : 1; setPopt(u); }
+   mountOpts(root); try{ if(root.__poCb) root.__poCb(poptAll()); }catch(x){}
+  };
+ }
+
  /* ================= 1) pannello impostazioni ================= */
  function paintInfo(){
  var inf = $('bpShopSeqInfo'); if(!inf) return;
@@ -24211,6 +24290,7 @@ document.addEventListener('DOMContentLoaded',function(){
  FIELDS.forEach(function(k){ var e = $('bpShop_' + k); if(e) e.value = c[k] || ''; });
  if(im){ im.src = c.logo || ''; im.style.display = c.logo ? '' : 'none'; }
  paintInfo(); paintSync(); try{ prepLogo(); applyFonts(); }catch(e){}
+ try{ var pm = $('bpPoptMount'); if(pm) mountOpts(pm); }catch(e){}
  }
  function msg(t){ var m = $('bpShopMsg'); if(m){ m.textContent = t; setTimeout(function(){ if(m.textContent === t) m.textContent = ''; }, 3500); } }
  function commit(c){ c._u = Date.now(); var ok = jset(CK, c); pushCfg(); return ok; }
@@ -24285,7 +24365,7 @@ document.addEventListener('DOMContentLoaded',function(){
  var boot = setInterval(function(){ if(db()){ clearInterval(boot); start(); } }, 1000);
  document.addEventListener('visibilitychange', function(){ if(!document.hidden && started) tick(); });
 
- window.bpShop = {cfg: cfg, seq: function(o){ return fmt(seqOf(o)); }, isPrinted: isPrinted, isCopy: isCopy, markPrinted: markPrinted, bannerHtml: bannerHtml, doc: doc, custHeadHtml: custHeadHtml, cutLineHtml: cutLineHtml, docCustHead: docCustHead, docKitHead: docKitHead, docCutLine: docCutLine, logoRaster: logoRaster, escStyle: escStyle, applyFonts: applyFonts, JOB: JOB, SQL: SQL, _refreshRank: refreshRank, _refreshPrinted: refreshPrinted, _start: start, _sync: function(){ return sync; }};
+ window.bpShop = {popt: popt, setPopt: setPopt, mountOpts: mountOpts, cfg: cfg, seq: function(o){ return fmt(seqOf(o)); }, isPrinted: isPrinted, isCopy: isCopy, markPrinted: markPrinted, bannerHtml: bannerHtml, doc: doc, custHeadHtml: custHeadHtml, cutLineHtml: cutLineHtml, docCustHead: docCustHead, docKitHead: docKitHead, docCutLine: docCutLine, logoRaster: logoRaster, escStyle: escStyle, applyFonts: applyFonts, JOB: JOB, SQL: SQL, _refreshRank: refreshRank, _refreshPrinted: refreshPrinted, _start: start, _sync: function(){ return sync; }};
 })();
 </script>
 <script>
