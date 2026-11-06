@@ -3021,7 +3021,11 @@ html body #kitchenTab .k35-t .kt-item .gx .gx-sep i,html body #bp35KDS .k35-t .k
  <div class="auto-suggest-box hidden" id="suggestPhone">
  </div>
  </div>
- <div class="field full" id="addressField">
+ <div class="field full" id="tableSelector" style="display:none">
+ <label>Numero Tavolo</label>
+ <input id="tableNo" type="number" min="1" max="30" placeholder="Es: 12" style="width:100%;padding:8px;border-radius:8px;border:1px solid #d0d5dd;font-size:16px;font-weight:700">
+ </div>
+ 
  <label>
  📍 Indirizzo / Via di consegna
  <span class="muted">
@@ -3042,6 +3046,9 @@ html body #kitchenTab .k35-t .kt-item .gx .gx-sep i,html body #bp35KDS .k35-t .k
  </option>
  <option value="Asporto">
  🛍️ Asporto (Ritiro in pizzeria)
+ </option>
+ <option value="Tavolo">
+ 🍽️ Tavolo
  </option>
  </select>
  </div>
@@ -7829,8 +7836,10 @@ function bpRefreshSettingsPanel(){
 
 function toggleAddress(){
  let isConsegna = el('type').value === 'Consegna';
+ let isTavolo = el('type').value === 'Tavolo';
  el('addressField').classList.toggle('hidden', !isConsegna);
  el('deliveryFeeRow').classList.toggle('hidden', !isConsegna);
+ el('tableSelector').style.display = isTavolo ? 'block' : 'none';
  renderCart();
 }
 
@@ -8205,8 +8214,9 @@ async function _doSaveOrderCore(){
  if(delivFee > 0) __rows.push({product_name: 'Supplemento Consegna', size: 'Servizio', quantity: 1, unit_price: delivFee, line_total: delivFee});
  { const __x = extraRowFor(extraAmt, extraWhy); if(__x) __rows.push(__x); }
  { const __d = discountRowFor(getDiscountAmount(), getDiscountReason()); if(__d) __rows.push(__d); }
+ const tblNoUpdate = el('type').value==='Tavolo' ? (el('tableNo')?el('tableNo').value:'') : '';
  const __r = await sb.rpc('update_order_with_items', {p_order_id: targetId,
- p_order: {customer_name: custNameVal, phone: phoneVal, order_type: el('type').value, address: addrVal, payment_method: el('payment').value, notes: combinedNotes, total: total},
+ p_order: {customer_name: custNameVal, phone: phoneVal, order_type: el('type').value, address: addrVal, table_no: tblNoUpdate || null, payment_method: el('payment').value, notes: combinedNotes, total: total},
  p_items: __rows});
  if(!__r.error){
  await bpSaveScheduleOnEdit(targetId, __sch);
@@ -8217,11 +8227,13 @@ async function _doSaveOrderCore(){
  if(/Could not find the function|PGRST202|42883/.test(JSON.stringify(__r.error))) window.__bpRpc = false;
  }catch(__e){ bpWarn(__e); }
  }
+ let tblNoVal2 = el('type').value==='Tavolo' ? (el('tableNo')?el('tableNo').value:'') : '';
  let {error: updErr} = await sb.from('orders').update({
  customer_name: custNameVal,
  phone: phoneVal,
  order_type: el('type').value,
  address: addrVal,
+ table_no: tblNoVal2 || null,
  payment_method: el('payment').value,
  notes: combinedNotes,
  total
@@ -8261,11 +8273,13 @@ async function _doSaveOrderCore(){
  return;
  }
 
+ let tblNoVal = el('type').value==='Tavolo' ? (el('tableNo')?el('tableNo').value:'') : '';
  let {data:ord,error}=await sb.from('orders').insert({
  customer_name: custNameVal,
  phone: phoneVal,
  order_type:el('type').value,
  address: addrVal,
+ table_no: tblNoVal || null,
  payment_method:el('payment').value,
  status:'Nuovo',
  notes:combinedNotes,
@@ -9202,7 +9216,10 @@ async function _updateOrderStatusCore(orderId,newStatus){
  let target=orders.find(x=>x.id===orderId);
  let oldStatus=target?target.status:'Nuovo';
  if(target){target.status=newStatus;renderOrders();}
- let {data,error}=await sb.from('orders').update({status:newStatus}).eq('id',orderId).select();
+ let tblClean = (newStatus==='Completato'||newStatus==='Annullato') ? null : undefined;
+ let updateObj = {status:newStatus};
+ if(tblClean!==undefined) updateObj.table_no = tblClean;
+ let {data:errorData,error}=await sb.from('orders').update(updateObj).eq('id',orderId).select();
  if(error){
  if(target)target.status=oldStatus;
  renderOrders();
@@ -9675,12 +9692,18 @@ window.bpVsRowsCust = function(items){
  var add = function(ico, lab, n, parts, inv){ if(n > 0){ rows.push({ico: ico, lab: lab, n: n, parts: parts || [], sub: (parts || []).join(' | '), inv: !!inv}); tot += n; } };
  var pz = q(G.pizza), maxi = q(G.pizza.filter(function(i){ return String(i.size || '').toLowerCase() === 'maxi'; }));
  var pzP = []; if(maxi) pzP.push('di cui MAXI ' + maxi); if(FP.pizza && FP.pizza.n) pzP.push('con patatine x' + FP.pizza.n);
+ var pzNames = G.pizza.map(function(i){ var nm = splitProductAndMods(i.product_name).baseName; return (Number(i.quantity||1) > 1 ? i.quantity + 'x ' : '') + nm; }).join(' · ');
+ if(pzNames) pzP.push(pzNames);
  add('🍕', 'PIZZE', pz, pzP);
  var pn = q(G.panino), bP = []; if(BR.pan) bP.push('Panini ' + BR.pan); if(BR.pia) bP.push('Piadine ' + BR.pia);
+ var pnNames = G.panino.map(function(i){ var nm = splitProductAndMods(i.product_name).baseName; return (Number(i.quantity||1) > 1 ? i.quantity + 'x ' : '') + nm; }).join(' · ');
+ if(pnNames) bP.push(pnNames);
  add('🥙', 'PANINI/PIADINE', pn, bP);
  add('🍰', 'DOLCI', q(G.dolce));
  var frSep = ((FP.total || 0) - ((FP.pizza && FP.pizza.n) || 0)) || fd.fri || 0, fP = [];
  if(FP.single && FP.single.n) fP.push('singole ' + FP.single.n); if(FP.menu && FP.menu.n) fP.push('menu ' + FP.menu.n); if(FP.other && FP.other.n) fP.push('altri ' + FP.other.n);
+ var frNames = G.fritto ? G.fritto.map(function(i){ var nm = splitProductAndMods(i.product_name).baseName; return (Number(i.quantity||1) > 1 ? i.quantity + 'x ' : '') + nm; }).join(' · ') : '';
+ if(frNames) fP.push(frNames);
  add('🍟', 'FRITTI', frSep, fP);
  var nBib = Math.max(fd.bib || 0, q(G.bevanda) + (fd.menu || 0));
  add('🥤', 'BEVANDE', nBib, fd.menu ? ['nei menu ' + fd.menu] : []);
@@ -9705,7 +9728,14 @@ window.bpVsRowsKit = function(items){
 };
 window.bpVsHtml = function(rows, total, title){
  if(!rows || !rows.length) return '';
- var tiles = rows.map(function(r){ return '<div class="bp-vs-t' + (r.inv ? ' bp-vs-inv' : '') + '"><i>' + r.ico + '</i><b>' + r.n + '</b><span>' + r.lab + '</span>' + (r.sub ? '<small>' + r.sub + '</small>' : '') + '</div>'; }).join('');
+ var tiles = rows.map(function(r){
+ var names = '';
+ if(r.parts && r.parts.length){
+ var lines = r.parts.slice(0, 3).map(function(p){ return '   ' + p; });
+ names = '<div class="bp-vs-names">' + lines.join('<br>') + '</div>';
+ }
+ return '<div class="bp-vs-t' + (r.inv ? ' bp-vs-inv' : '') + '"><i>' + r.ico + '</i><b>' + r.n + '</b><span>' + r.lab + '</span>' + names + (r.sub ? '<small>' + r.sub + '</small>' : '') + '</div>';
+ }).join('');
  var line = rows.map(function(r){ return r.n + ' ' + r.lab; }).join(' · ');
  return '<div class="bp-vs"><div class="bp-vs-h bp-vs-inv"><span>📋 ' + title + '</span><span>TOTALE <b>' + total + '</b> pz</span></div><div class="bp-vs-g">' + tiles + '</div><div class="bp-vs-line">' + line + '</div></div>';
 };
@@ -11179,13 +11209,15 @@ try{
  cashTag = '[💶 Paga con ' + euro(cashGiven) + ' · Resto: ' + euro(Math.round((cashGiven - total) * 100) / 100) + ']';
  }
  var userNotes = el('notes').value.trim();
+ var tblNo = el('type').value === 'Tavolo' ? (el('tableNo') ? el('tableNo').value.trim() : '') : '';
  return {
  local_id: 'OFF-' + Date.now().toString(36).toUpperCase().slice(-5),
  created_at: window.__bpOrderTs || new Date().toISOString(),
  customer_name: el('customer').value.trim(), phone: el('phone').value.trim(),
  order_type: el('type').value, address: el('type').value === 'Consegna' ? el('address').value.trim() : '',
+ table_no: tblNo,
  payment_method: el('payment').value,
- notes: '[⏰ ' + selectedTime + ']' + (cashTag ? ' ' + cashTag : '') + (userNotes ? ' ' + userNotes : ''),
+ notes: '[⏰ ' + selectedTime + ']' + (cashTag ? ' ' + cashTag : '') + (tblNo ? ' [TAVOLO ' + tblNo + ']' : '') + (userNotes ? ' ' + userNotes : ''),
  total: total, items: items, delivFee: delivFee, extra: getExtraAmount(), extraWhy: getExtraReason(), disc: getDiscountAmount(), discWhy: getDiscountReason()
  };
  }
@@ -23560,17 +23592,21 @@ html:not(.x) body #userBar button#thermalToggleBtn.ap-off,#thermalToggleBtn.ap-o
  var sm = fs >= 2 ? {b: 1, h: 2} : (fs === 1 ? (kit ? {b: 1, h: 2} : {b: 1}) : (kit ? {} : {f: 'B'})); /* ingredienti */
  var st = fs >= 2 ? {b: 1, h: 2} : {b: 1}; /* SENZA / EXTRA / NOTE */
  try{ var oi = window.bpShop.escStyle('ing'); if(oi) sm = oi; }catch(e){}
+ var settings = loadSettings();
+ var ingMode = settings && settings.ui && settings.ui.ingredientsMode ? settings.ui.ingredientsMode : 'clean';
+ var showIng = ingMode === 'full';
  if(inf.gusti){
  inf.gusti.parts.forEach(function(pt, k){
  if(k) d.p(ind + rep('-', 10) + ' / ' + rep('-', 10), kit ? {b: 1} : {});
  var hasFr = false; try{ hasFr = bpGustiPartHasFries(pt.name, pt.mods); }catch(e){}
  d.p(ind + (inf.gusti.fr ? inf.gusti.fr + ' ' : '') + inf.gusti.unit + ' ' + (k + 1) + ': ' + String(pt.name).toUpperCase() + (hasFr ? ' >> PATATINE' : ''), st, ind.length + 4);
- if(pt.ing) d.p(ind + ' ' + pt.ing, sm, ind.length + 4);
+ if(pt.ing && showIng) d.p(ind + ' ' + pt.ing, sm, ind.length + 4);
  });
  }
  var mk = kit ? '>> ' : '', hg = hang + (kit ? 3 : 0);
  if(inf.solo) d.p(ind + mk + '*** SOLO CARNE ***', st);
- if(inf.base.length) d.p(ind + 'Ingr.: ' + inf.base.join(', '), sm, hang);
+ if(showIng && inf.base.length) d.p(ind + 'Ingr.: ' + inf.base.join(', '), sm, hang);
+ if(!showIng && ingMode === 'compact' && inf.base.length) d.p(ind + '🍅🧀', sm, hang);
  if(inf.rem.length && !inf.solo) d.p(ind + mk + 'SENZA: ' + up(inf.rem), st, hg);
  if(inf.add.length) d.p(ind + mk + 'EXTRA: ' + up(inf.add), st, hg);
  if(inf.notes.length) d.p(ind + mk + 'NOTE: ' + up(inf.notes), st, hg);
@@ -23731,15 +23767,7 @@ function vsDoc(d, VS, title){
  if(tl.length + tv.length + 1 > Math.floor(d.cols / 2)) tl = 'TOTALE';
  var big = (tl.length + d.c(tv).length + 1 <= Math.floor(d.cols / 2)) ? 2 : 1;
  d.bar(tl, tv, {b: 1, w: big, h: Math.max(big, 2)});
- d.rule('=');
- if(cfg.qr && typeof GOOGLE_REVIEW_URL !== 'undefined'){
- d.blank(1);
- d.qrCode(GOOGLE_REVIEW_URL, d.cols <= 32 ? 5 : 6);
- d.p('Lasciaci una recensione su Google!', {a: 'c', b: 1});
- d.p('Inquadra il QR - Buona Pizza', {a: 'c', f: 'B'});
- d.blank(1);
- }
- if(bpPOpt('footer')) try{ var FT = bpShopFooterParts(); d.p(FT.thanks, {a: 'c', b: 1}); if(FT.hours) d.p(FT.hours, {a: 'c'}); if(FT.wa) d.p('WhatsApp ' + FT.wa, {a: 'c'}); }catch(e){ d.p('Grazie - Buon Appetito!', {a: 'c'}); }
+ /* cliente/driver: nessuna riga vuota aggiuntiva dopo il totale per risparmiare carta */
  return d;
  }
 
