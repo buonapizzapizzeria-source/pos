@@ -3021,11 +3021,7 @@ html body #kitchenTab .k35-t .kt-item .gx .gx-sep i,html body #bp35KDS .k35-t .k
  <div class="auto-suggest-box hidden" id="suggestPhone">
  </div>
  </div>
- <div class="field full" id="tableSelector" style="display:none">
- <label>Numero Tavolo</label>
- <input id="tableNo" type="number" min="1" max="30" placeholder="Es: 12" style="width:100%;padding:8px;border-radius:8px;border:1px solid #d0d5dd;font-size:16px;font-weight:700">
- </div>
- 
+ <div class="field full" id="addressField">
  <label>
  📍 Indirizzo / Via di consegna
  <span class="muted">
@@ -3046,9 +3042,6 @@ html body #kitchenTab .k35-t .kt-item .gx .gx-sep i,html body #bp35KDS .k35-t .k
  </option>
  <option value="Asporto">
  🛍️ Asporto (Ritiro in pizzeria)
- </option>
- <option value="Tavolo">
- 🍽️ Tavolo
  </option>
  </select>
  </div>
@@ -7836,10 +7829,8 @@ function bpRefreshSettingsPanel(){
 
 function toggleAddress(){
  let isConsegna = el('type').value === 'Consegna';
- let isTavolo = el('type').value === 'Tavolo';
  el('addressField').classList.toggle('hidden', !isConsegna);
  el('deliveryFeeRow').classList.toggle('hidden', !isConsegna);
- el('tableSelector').style.display = isTavolo ? 'block' : 'none';
  renderCart();
 }
 
@@ -8214,9 +8205,8 @@ async function _doSaveOrderCore(){
  if(delivFee > 0) __rows.push({product_name: 'Supplemento Consegna', size: 'Servizio', quantity: 1, unit_price: delivFee, line_total: delivFee});
  { const __x = extraRowFor(extraAmt, extraWhy); if(__x) __rows.push(__x); }
  { const __d = discountRowFor(getDiscountAmount(), getDiscountReason()); if(__d) __rows.push(__d); }
- const tblNoUpdate = el('type').value==='Tavolo' ? (el('tableNo')?el('tableNo').value:'') : '';
  const __r = await sb.rpc('update_order_with_items', {p_order_id: targetId,
- p_order: {customer_name: custNameVal, phone: phoneVal, order_type: el('type').value, address: addrVal, table_no: tblNoUpdate || null, payment_method: el('payment').value, notes: combinedNotes, total: total},
+ p_order: {customer_name: custNameVal, phone: phoneVal, order_type: el('type').value, address: addrVal, payment_method: el('payment').value, notes: combinedNotes, total: total},
  p_items: __rows});
  if(!__r.error){
  await bpSaveScheduleOnEdit(targetId, __sch);
@@ -8227,13 +8217,11 @@ async function _doSaveOrderCore(){
  if(/Could not find the function|PGRST202|42883/.test(JSON.stringify(__r.error))) window.__bpRpc = false;
  }catch(__e){ bpWarn(__e); }
  }
- let tblNoVal2 = el('type').value==='Tavolo' ? (el('tableNo')?el('tableNo').value:'') : '';
  let {error: updErr} = await sb.from('orders').update({
  customer_name: custNameVal,
  phone: phoneVal,
  order_type: el('type').value,
  address: addrVal,
- table_no: tblNoVal2 || null,
  payment_method: el('payment').value,
  notes: combinedNotes,
  total
@@ -8273,13 +8261,11 @@ async function _doSaveOrderCore(){
  return;
  }
 
- let tblNoVal = el('type').value==='Tavolo' ? (el('tableNo')?el('tableNo').value:'') : '';
  let {data:ord,error}=await sb.from('orders').insert({
  customer_name: custNameVal,
  phone: phoneVal,
  order_type:el('type').value,
  address: addrVal,
- table_no: tblNoVal || null,
  payment_method:el('payment').value,
  status:'Nuovo',
  notes:combinedNotes,
@@ -9216,10 +9202,7 @@ async function _updateOrderStatusCore(orderId,newStatus){
  let target=orders.find(x=>x.id===orderId);
  let oldStatus=target?target.status:'Nuovo';
  if(target){target.status=newStatus;renderOrders();}
- let tblClean = (newStatus==='Completato'||newStatus==='Annullato') ? null : undefined;
- let updateObj = {status:newStatus};
- if(tblClean!==undefined) updateObj.table_no = tblClean;
- let {data:errorData,error}=await sb.from('orders').update(updateObj).eq('id',orderId).select();
+ let {data,error}=await sb.from('orders').update({status:newStatus}).eq('id',orderId).select();
  if(error){
  if(target)target.status=oldStatus;
  renderOrders();
@@ -11209,15 +11192,13 @@ try{
  cashTag = '[💶 Paga con ' + euro(cashGiven) + ' · Resto: ' + euro(Math.round((cashGiven - total) * 100) / 100) + ']';
  }
  var userNotes = el('notes').value.trim();
- var tblNo = el('type').value === 'Tavolo' ? (el('tableNo') ? el('tableNo').value.trim() : '') : '';
  return {
  local_id: 'OFF-' + Date.now().toString(36).toUpperCase().slice(-5),
  created_at: window.__bpOrderTs || new Date().toISOString(),
  customer_name: el('customer').value.trim(), phone: el('phone').value.trim(),
  order_type: el('type').value, address: el('type').value === 'Consegna' ? el('address').value.trim() : '',
- table_no: tblNo,
  payment_method: el('payment').value,
- notes: '[⏰ ' + selectedTime + ']' + (cashTag ? ' ' + cashTag : '') + (tblNo ? ' [TAVOLO ' + tblNo + ']' : '') + (userNotes ? ' ' + userNotes : ''),
+ notes: '[⏰ ' + selectedTime + ']' + (cashTag ? ' ' + cashTag : '') + (userNotes ? ' ' + userNotes : ''),
  total: total, items: items, delivFee: delivFee, extra: getExtraAmount(), extraWhy: getExtraReason(), disc: getDiscountAmount(), discWhy: getDiscountReason()
  };
  }
