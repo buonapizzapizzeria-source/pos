@@ -1,7 +1,22 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="it">
  <head>
  <meta charset="utf-8"/>
+<script id="bpSyncPkSchedule">
+function syncPkSchedule(){
+  var g=function(id){return document.getElementById(id);};
+  var dIn=g("pkScheduledDate"), cIn=g("pkIsPreOrder");
+  var dMain=g("orderScheduledDate"), cMain=g("orderIsScheduled");
+  if(dMain && dIn) dMain.value = dIn.value;
+  var src = window.event && window.event.target;
+  if(src && src.id === "pkScheduledDate" && cIn && dIn){
+    var n=new Date(), p2=function(x){return String(x).padStart(2,"0");};
+    var today=n.getFullYear()+"-"+p2(n.getMonth()+1)+"-"+p2(n.getDate());
+    cIn.checked = !!dIn.value && dIn.value > today;
+  }
+  if(cMain && cIn) cMain.checked = cIn.checked;
+}
+</script>
  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin/>
  <link rel="preconnect" href="https://jfgizazsjjgzyhqfngnl.supabase.co" crossorigin/>
  <script id="bpPauseHidden">(function(){var _si=window.setInterval;window.setInterval=function(fn,ms){var a=Array.prototype.slice.call(arguments,2);if(typeof fn!=='function')return _si.apply(window,arguments);return _si.apply(window,[function(){if(document.hidden&&!window.__bpPrinting)return;return fn.apply(this,arguments);},ms].concat(a));};})();</script>
@@ -256,54 +271,63 @@ h1{font-size:24px;margin:4px 0 14px}h2{font-size:18px;margin:0 0 12px}.grid{disp
 .modal h3{margin:0 0 12px;font-size:20px}
 .notice{padding:10px 12px;border-radius:10px;background:#fff4e5;color:#8a4b08;font-size:13px;margin-bottom:12px}.success{background:#e8f7ee;color:#17663d}.error{background:#fee4e2;color:#912018}.topline{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:12px}
 
-/* ================= DESIGN SCONTRINO / COMANDA PROFESSIONALE v11 ================= */
-.receipt-card{border:1px solid #000;border-radius:8px;overflow:hidden;background:#fff;color:#000;box-shadow:none;font-family:Arial, sans-serif}
+/* ================= DESIGN SCONTRINO / COMANDA PROFESSIONALE v11-r2 ================= */
+.receipt-card{border:1.5px solid #000;border-radius:10px;overflow:hidden;background:#fff;color:#000;box-shadow:0 2px 8px #0001;font-family:'Roboto Mono',monospace,Arial,sans-serif}
 .rc-header{background:#000;color:#fff;padding:12px;text-align:center;border-bottom:1px solid #000}
 .rc-header .rc-brand{font-size:20px;font-weight:900;letter-spacing:1px;text-transform:uppercase}
 .rc-header .rc-sub{font-size:11px;opacity:0.95;margin-top:2px;font-weight:700}
-.rc-meta-strip{display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:#fff;border-bottom:1px dashed #000}
-.rc-order-num{font-size:24px;font-weight:950;color:#000;line-height:1}
+.rc-meta-strip{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:#fff;border-bottom:1.5px solid #000;gap:8px}
+.rc-order-num{font-size:26px;font-weight:950;color:#000;line-height:1;letter-spacing:-0.5px}
 .rc-type-box{text-align:right}
-.rc-type-pill{display:inline-block;padding:3px 8px;border-radius:4px;font-size:13px;font-weight:900;text-transform:uppercase;border:1px solid #000;background:#fff;color:#000}
-.rc-time-hero{background:#fff;border-bottom:1px solid #000;padding:8px 12px;display:flex;align-items:center;justify-content:space-between;gap:8px}
-.rc-time-hero .t-lbl{font-size:12px;font-weight:900;text-transform:uppercase;color:#000}
-.rc-time-hero .t-val{font-size:22px;font-weight:950;color:#000;background:#fff;padding:1px 8px;border-radius:4px;border:1px solid #000}
-.rc-customer-box{padding:10px 12px;background:#fff;border-bottom:1px solid #000;display:grid;gap:4px;font-size:14px}
-.rc-customer-row{display:flex;align-items:flex-start;gap:6px;color:#000;line-height:1.2}
-.rc-customer-row strong.lbl{min-width:70px;font-weight:850;color:#000}
-.rc-items-section{padding:10px 12px}
-.rc-table-head{display:flex;justify-content:space-between;font-size:11px;font-weight:900;text-transform:uppercase;color:#000;border-bottom:1px solid #000;padding-bottom:4px;margin-bottom:6px}
-.rc-item{padding:6px 0;border-bottom:1px dashed #000}
+.rc-type-pill{display:inline-block;padding:4px 10px;border-radius:6px;font-size:12px;font-weight:900;text-transform:uppercase;border:1.5px solid #000;background:#000;color:#fff;letter-spacing:.5px}
+.rc-time-hero{background:#f9fafb;border-bottom:1.5px solid #000;padding:8px 14px;display:flex;align-items:center;justify-content:space-between;gap:8px}
+.rc-time-hero .t-lbl{font-size:11px;font-weight:900;text-transform:uppercase;color:#475467}
+.rc-time-hero .t-val{font-size:22px;font-weight:950;color:#000;background:#fff;padding:2px 10px;border-radius:6px;border:1.5px solid #000}
+.rc-customer-box{padding:10px 14px;background:#fff;border-bottom:1px solid #e0e0e0;display:grid;gap:5px;font-size:14px}
+.rc-customer-row{display:flex;align-items:flex-start;gap:6px;color:#000;line-height:1.3}
+.rc-customer-row strong.lbl{min-width:76px;font-weight:850;color:#475467;font-size:12px}
+.rc-items-section{padding:8px 14px 12px}
+.rc-table-head{display:flex;justify-content:space-between;font-size:10.5px;font-weight:900;text-transform:uppercase;color:#667085;border-bottom:1.5px solid #000;padding-bottom:5px;margin-bottom:4px;letter-spacing:.5px}
+/* Section headers with count badge */
+.rc-sec{margin:6px 0 2px}
+.rc-sec-h{display:flex;align-items:center;justify-content:space-between;background:#1a1a1a;color:#fff;padding:5px 10px;border-radius:6px;font-size:13px;font-weight:950;letter-spacing:.8px;text-transform:uppercase;margin-bottom:2px}
+.rc-sec-h>span:last-child{background:#fff;color:#000;font-size:12px;font-weight:950;border-radius:20px;padding:0 8px;min-width:22px;text-align:center;line-height:1.6}
+.rc-sec-sub{font-size:11px;font-weight:800;color:#475467;padding:2px 6px;border-left:3px solid #000;margin:2px 0 4px;background:#f9fafb}
+.rc-item{padding:7px 0;border-bottom:1px dashed #d0d5dd}
 .rc-item:last-child{border-bottom:0}
-.rc-item.rc-item-small{padding:3px 0;border-bottom:1px dotted #000}
+.rc-item.rc-item-small{padding:3px 0;border-bottom:1px dotted #d0d5dd}
 .rc-item-top{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
-.rc-qty-badge{background:#000;color:#fff;font-weight:950;padding:1px 6px;border-radius:4px;font-size:15px;display:inline-block;margin-right:4px}
-.rc-item-name{font-size:16px;font-weight:900;color:#000}
-.rc-size-tag{display:inline-block;padding:1px 5px;border-radius:4px;font-size:10.5px;font-weight:900;margin-left:4px;border:1px solid #000;text-transform:uppercase}
+.rc-qty-badge{background:#000;color:#fff;font-weight:950;padding:2px 7px;border-radius:5px;font-size:14px;display:inline-block;margin-right:5px;letter-spacing:-.3px}
+.rc-item-name{font-size:16px;font-weight:900;color:#000;line-height:1.2}
+.rc-size-tag{display:inline-block;padding:1px 6px;border-radius:4px;font-size:10px;font-weight:900;margin-left:4px;border:1.5px solid #000;text-transform:uppercase}
 .rc-size-tag.maxi{background:#000;color:#fff}
+.rc-size-tag.normale{background:#f9fafb;color:#344054;border-color:#d0d5dd}
 .rc-item-price{font-size:15px;font-weight:900;color:#000;white-space:nowrap}
 .rc-mods-list{display:flex;flex-direction:column;gap:3px;margin-top:4px;padding-left:8px}
 .rc-mod-line{font-size:13px;font-weight:850;color:#000;display:flex;align-items:center;gap:4px}
-.rc-ing-box{margin-top:4px;padding:3px 0 3px 8px;border-left:2.5px solid #000}
-.rc-ing-row{display:flex;gap:6px;align-items:center;font-size:16px;font-weight:850;line-height:1.4;color:#000;padding:2px 0;border-top:1px dotted #000}
+.rc-ing-box{margin-top:5px;padding:4px 0 4px 10px;border-left:3px solid #000}
+.rc-ing-row{display:flex;gap:7px;align-items:center;font-size:15px;font-weight:850;line-height:1.4;color:#000;padding:3px 0;border-top:1px dotted #e0e0e0}
 .rc-ing-row:first-child{border-top:0}
-.rc-ing-lbl{flex:0 0 84px;font-size:11px;font-weight:950;padding:2px 4px;border-radius:4px;background:#000;color:#fff;text-align:center;text-transform:uppercase}
+.rc-ing-lbl{flex:0 0 76px;font-size:10.5px;font-weight:950;padding:2px 5px;border-radius:4px;background:#000;color:#fff;text-align:center;text-transform:uppercase;letter-spacing:.3px}
 .rc-ing-row.base .rc-ing-lbl{background:#fff;color:#000;border:1px solid #000}
-.rc-ing-row.senza .rc-ing-lbl{background:#000;color:#fff;text-decoration:underline}
-.rc-ing-row.extra .rc-ing-lbl{background:#000;color:#fff}
-.rc-ing-row.note .rc-ing-lbl{background:#000;color:#fff;font-style:italic}
-.rc-ing-row.senza .rc-ing-txt{color:#000;font-weight:950;text-transform:uppercase}
-.rc-ing-row.extra .rc-ing-txt{color:#000;font-weight:950;text-transform:uppercase}
-.rc-ing-row.note .rc-ing-txt{color:#000;font-weight:950;text-transform:uppercase}
+.rc-ing-row.senza .rc-ing-lbl{background:#b42318;color:#fff;border:none}
+.rc-ing-row.senza .rc-ing-txt{color:#b42318;font-weight:950;text-transform:uppercase}
+.rc-ing-row.extra .rc-ing-lbl{background:#027a48;color:#fff;border:none}
+.rc-ing-row.extra .rc-ing-txt{color:#027a48;font-weight:950;text-transform:uppercase}
+.rc-ing-row.note .rc-ing-lbl{background:#1570ef;color:#fff;font-style:normal}
+.rc-ing-row.note .rc-ing-txt{color:#1570ef;font-weight:950;text-transform:uppercase}
 .rc-menu-box{margin:8px 12px;border:2px solid #000;border-radius:8px;padding:0 0 5px;background:#fff;overflow:hidden}
 .rc-menu-title{background:#000;color:#fff;text-align:center;font-size:12px;font-weight:950;letter-spacing:0.5px;padding:4px 8px;margin-bottom:4px}
 .rc-menu-line{display:flex;flex-wrap:nowrap;align-items:center;gap:8px;padding:4px 10px;font-weight:950;color:#000;border-top:1px dotted #000}
 .rc-menu-n{font-size:20px;background:#000;color:#fff;border-radius:6px;padding:0 8px;line-height:1.3}
-.rc-summary-box{border-top:1.5px solid #000;background:#fff;padding:10px 12px;display:grid;gap:4px;font-size:14px;font-weight:800}
-.rc-total-bar{background:#000;color:#fff;padding:12px 14px;display:flex;justify-content:space-between;align-items:center;border-top:1.5px solid #000}
-.rc-total-bar .rc-tot-label{font-size:15px;font-weight:900;text-transform:uppercase}
-.rc-total-bar .rc-tot-val{font-size:26px;font-weight:950;color:#fff}
-.rc-footer{background:#fff;padding:10px 12px;text-align:center;font-size:12px;color:#000;font-weight:700;border-top:1px solid #000}
+.rc-summary-box{border-top:2px solid #000;background:#f9fafb;padding:10px 14px;display:grid;gap:5px;font-size:13.5px;font-weight:800}
+.rc-summary-row{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.rc-total-bar{background:#000;color:#fff;padding:13px 16px;display:flex;justify-content:space-between;align-items:center;border-top:2px solid #000}
+.rc-total-bar .rc-tot-label{font-size:14px;font-weight:900;text-transform:uppercase;letter-spacing:.5px;opacity:.85}
+.rc-total-bar .rc-tot-val{font-size:28px;font-weight:950;color:#fff;letter-spacing:-1px}
+.rc-footer{background:#fff;padding:10px 14px;text-align:center;font-size:12px;color:#475467;font-weight:700;border-top:1px solid #e0e0e0}
+/* Completo badge on receipt */
+.rc-completo{display:inline-block;background:#027a48;color:#fff;font-size:10px;font-weight:950;padding:1px 7px;border-radius:10px;margin-inline-start:6px;text-transform:uppercase;letter-spacing:.3px;vertical-align:middle}
 
 /* ===== Comanda cucina professionale (kr-*) ===== */
 .kr{border:1px solid #000;border-radius:8px}
@@ -3051,6 +3075,18 @@ html body #kitchenTab .k35-t .kt-item .gx .gx-sep i,html body #bp35KDS .k35-t .k
  </select>
  </div>
  <div id="deliveryMinuteWrap">
+ <label style="display:flex;gap:6px;align-items:center">
+   <span style="font-weight:800">📅 التاريخ المجدول</span>
+   <input id="orderScheduledDate" type="date" style="padding:6px;border-radius:6px;border:1px solid #d0d5dd">
+ </label>
+ <label style="display:flex;gap:6px;align-items:center">
+   <span style="font-weight:800">🕒 الوقت المجدول</span>
+   <input id="orderScheduledTime" type="time" style="padding:6px;border-radius:6px;border:1px solid #d0d5dd">
+ </label>
+ <label style="font-weight:800;display:flex;align-items:center;gap:8px">
+   <input id="orderIsScheduled" type="checkbox" style="width:18px;height:18px">
+   حجز مستقبلي (Pre-Order)
+ </label>
  <span class="time-col-label">
  👉 2. Minuti (Esatta / Quarto / Mezza)
  </span>
@@ -3547,8 +3583,61 @@ html body #kitchenTab .k35-t .kt-item .gx .gx-sep i,html body #bp35KDS .k35-t .k
  <div id="bpPoptMount"></div>
  </div>
 
+ <!-- RIGA THERMAL & FONTS CONFIG -->
+ <div class="bp-set-card" style="border-top-color:#0f766e">
+ <div class="bp-set-head">
+ <span class="bp-set-ico" style="background:#ccfbf1;color:#0f766e">🖨️</span>
+ <h3>الخطوط الحرارية وإظهار المكونات · Thermal Fonts & Ingredients</h3>
+ </div>
+ <p class="bp-set-desc">تخصيص خط الحبر الحراري، حجم العرض، وإظهار/إخفاء المكونات الافتراضية في الإيصالات.</p>
+ <div class="bp-set-rows" style="display:flex;flex-direction:column;gap:12px">
+ <label style="font-weight:800;font-size:12px">خط الطباعة الحرارية (Thermal Font)
+   <select id="setThermalFont" onchange="setSetting('ui.receiptFont', this.value)" style="width:100%;margin-top:4px;padding:8px;border-radius:8px;border:1px solid #d0d5dd">
+     <option value="Roboto Mono">Roboto Mono (افتراضي)</option>
+     <option value="Courier New">Courier New / Courier</option>
+     <option value="Inconsolata">Inconsolata</option>
+     <option value="JetBrains Mono">JetBrains Mono</option>
+     <option value="monospace">System Monospace</option>
+   </select>
+ </label>
+ <label style="font-weight:800;font-size:12px">حجم خط الإيصال (Font Size Scale)
+   <select id="setThermalFontSize" onchange="setSetting('ui.receiptFontSize', this.value)" style="width:100%;margin-top:4px;padding:8px;border-radius:8px;border:1px solid #d0d5dd">
+     <option value="small">صغير (Small - 12px)</option>
+     <option value="medium">متوسط (Medium - 14px)</option>
+     <option value="large">كبير (Large - 16px)</option>
+   </select>
+ </label>
+ <label style="font-weight:800;font-size:12px">وضع عرض المكونات في الإيصال (Ingredients Mode)
+   <select id="setIngredientsMode" onchange="setSetting('ui.ingredientsMode', this.value)" style="width:100%;margin-top:4px;padding:8px;border-radius:8px;border:1px solid #d0d5dd">
+     <option value="clean">مضغوط (Clean - التعديلات فقط)</option>
+     <option value="compact">مختصر (Compact - أيقونات فقط)</option>
+     <option value="full">كامل (Full - كل المكونات بالنص)</option>
+   </select>
+ </label>
+ <div style="font-size:11px;color:#667085;margin-top:4px">مضغوط = يخفي المكونات الافتراضية ويطبع التعديلات فقط | مختصر = أيقونات فقط | كامل = كل شيء</div>
+ </div>
+ </div>
+
  <!-- RIGA 1: AUDIO & NOTIFICHE -->
- <div class="bp-set-card" style="border-top-color:var(--green)">
+ 
+ <!-- RIGA URGENCY BANNER CONFIG -->
+ <div class="bp-set-card" style="border-top-color:#dc2626">
+ <div class="bp-set-head">
+ <span class="bp-set-ico" style="background:#fef2f2;color:#dc2626">🚨</span>
+ <h3>تنبيهات رادار الإلحاح</h3>
+ </div>
+ <p class="bp-set-desc">التحكم في ظهور الشريط الأحمر للطلبات المتأخرة / المرتقبة.</p>
+ <div class="bp-set-rows">
+  <div style="display:flex;align-items:center;justify-content:space-between">
+    <div>
+      <strong style="font-size:12.5px;color:#101828">إظهار شريط التنبيه للطلبات المتأخرة</strong>
+      <div style="font-size:11px;color:#667085">إخفاء الشريط الأحمر عند فتح الصفحة</div>
+    </div>
+    <button type="button" id="setUrgencyBannerBtn" onclick="toggleSetting('ui.showUrgencyBanner'); updateUrgencyBannerUI();" style="padding:6px 14px;border-radius:8px;font-weight:800;font-size:12px;border:none;cursor:pointer">تحميل...</button>
+  </div>
+ </div>
+ </div>
+<div class="bp-set-card" style="border-top-color:var(--green)">
  <div class="bp-set-head">
  <span class="bp-set-ico" style="background:#ecfdf3;color:#16794b">🔔</span>
  <h3>Audio &amp; Notifiche</h3>
@@ -4113,6 +4202,7 @@ async function startEditOrder(o){
  let parsedNotes = splitTimeAndNotes(o.notes);
  setDeliveryTimeDropdown(parsedNotes.time || 'Prima possibile');
  el('notes').value = parsedNotes.cleanNotes || '';
+ bpFillSchedule(o);
 
  el('cashGivenInput').value = '';
  if(parsedNotes.cashInfo){
@@ -4215,6 +4305,7 @@ function cancelEditOrderMode(){
  el('saveOrder').textContent = '💾 Salva ordine';
  el('saveOrder').className = '';
  el('tabBtnNew').innerHTML = '＋ Nuovo ordine';
+ bpResetSchedule();
  cart.clear();
  el('cashGivenInput').value = '';
  ['customer','phone','address','notes','voiceSmartInput'].forEach(id=>{if(el(id))el(id).value='';});
@@ -4743,8 +4834,26 @@ function refreshTimeBtn(){
 }
 function openTimePicker(){
  pkOpen();
- el("pkTitle").textContent = "⏰ Orario di consegna / ritiro";
+ el("pkTitle").textContent = "⏰ Orario di consegna / ritiro (مواعيد اليوم أو الحجز المجدول)";
  el("pkTop").className = "pk-top pk-timetop"; el("pkTop").onclick = null;
+ 
+ // Setup Future Date Strip in pkStrip
+ var strip = el("pkStrip");
+ if(strip){
+  strip.classList.remove("hidden");
+  var __tn = new Date(), todayStr = __tn.getFullYear() + '-' + pad2(__tn.getMonth() + 1) + '-' + pad2(__tn.getDate());
+  var curDate = (el("orderScheduledDate") && el("orderScheduledDate").value) ? el("orderScheduledDate").value : todayStr;
+  var curSched = (el("orderIsScheduled") && el("orderIsScheduled").checked) ? true : false;
+  
+  strip.innerHTML = '<div style="display:flex;align-items:center;gap:8px;width:100%;font-size:12.5px;font-weight:800;flex-wrap:wrap">' +
+   '<span>📅 تاريخ الاستلام:</span>' +
+   '<input id="pkScheduledDate" type="date" value="' + curDate + '" style="padding:4px 8px;border-radius:6px;border:1px solid #cbd5e1;font-weight:700" onchange="syncPkSchedule()">' +
+   '<label style="display:flex;align-items:center;gap:4px;cursor:pointer;margin-inline-start:auto">' +
+   '<input id="pkIsPreOrder" type="checkbox" ' + (curSched ? 'checked' : '') + ' style="width:16px;height:16px" onchange="syncPkSchedule()">' +
+   '<span style="color:#b42318">حجز مسبق (Pre-Order)</span>' +
+   '</label>' +
+   '</div>';
+ }
  var cur = getSelectedDeliveryTime();
  var hour = /^\d{2}:/.test(cur) ? cur.slice(0, 2) : pad2(Math.min(23, Math.max(11, new Date().getHours())));
  function plus(n){
@@ -5365,6 +5474,8 @@ function getOrderUrgencyMeta(o){
  var st = normStatus(o.status), isDone = ['Completato','Annullato'].indexOf(st) >= 0;
  var now = Date.now(), created = o.created_at ? new Date(o.created_at).getTime() : now;
  var m = /^(\d{1,2}):(\d{2})$/.exec(tStr);
+ var schedTs = (o.is_scheduled && o.scheduled_at) ? new Date(o.scheduled_at).getTime() : NaN;
+ if(!isNaN(schedTs)){ var sdt = new Date(schedTs); tStr = bpPad2(sdt.getHours()) + ':' + bpPad2(sdt.getMinutes()); m = /^(\d{1,2}):(\d{2})$/.exec(tStr); }
  if(!m){
  var wait = Math.max(0, Math.round((now - created) / 60000));
  var late = !isDone && st !== 'In consegna' && wait >= 25;
@@ -5373,7 +5484,12 @@ function getOrderUrgencyMeta(o){
  badgeText: late ? '🚨 SUBITO (attesa ' + wait + ' min)' : '⚡ SUBITO (' + wait + ' min fa)'};
  }
  var d = new Date(created); d.setHours(Number(m[1]), Number(m[2]), 0, 0);
- var tgt = d.getTime(), diff = Math.round((tgt - now) / 60000), tm = tgt / 60000;
+ var tgt = isNaN(schedTs) ? d.getTime() : schedTs, diff = Math.round((tgt - now) / 60000), tm = tgt / 60000;
+ if(!isNaN(schedTs) && !isDone && diff > 0 && new Date(schedTs).toDateString() !== new Date(now).toDateString()){
+  var __d0 = new Date(now); __d0.setHours(0,0,0,0); var __d1 = new Date(schedTs); __d1.setHours(0,0,0,0);
+  var __days = Math.round((__d1.getTime() - __d0.getTime()) / 86400000);
+  return {type:'future', timeLabel:tStr, sortMinutes:tm, diffMinutes:diff, isUrgent:false, isOverdue:false, cardClass:'', badgeClass:'urg-badge-scheduled', badgeText:'⏳ tra ' + __days + (__days === 1 ? ' giorno' : ' giorni')};
+ }
  if(isDone) return {type:'done', timeLabel:tStr, sortMinutes:tm, diffMinutes:diff, isUrgent:false, isOverdue:false, cardClass:'', badgeClass:'time-badge', badgeText:'⏰ ' + tStr};
  if(diff < 0) return {type:'overdue', timeLabel:tStr, sortMinutes: tm - 1000000, diffMinutes:diff, isUrgent:true, isOverdue:true,
  cardClass:'urg-overdue', badgeClass:'urg-badge-overdue', badgeText:'🚨 ' + tStr + ' · IN RITARDO DI ' + __fmMin(diff)};
@@ -5404,7 +5520,14 @@ function setOpenOrdersSort(mode){
 }
 
 function checkUrgentOrdersAlert(openList){
- let banner = el('urgencyRadarBanner');
+ var s = loadSettings();
+ if(!s.ui.showUrgencyBanner){
+  var banner = el('urgencyRadarBanner');
+  if(banner) banner.classList.add('hidden');
+  return;
+ }
+ var banner = el('urgencyRadarBanner');
+ if(!banner) return;
  if(!banner) return;
 
  let overdueList = [];
@@ -5418,7 +5541,9 @@ function checkUrgentOrdersAlert(openList){
  else if(u.type === 'soon' && u.diffMinutes <= 20) soonList.push({order: o, meta: u});
  });
 
- if(!overdueList.length && !soonList.length){
+ var __todayStr = new Date().toDateString();
+ let bookToday = openList.filter(o => o.is_scheduled && o.scheduled_at && new Date(o.scheduled_at).toDateString() === __todayStr && normStatus(o.status) === 'Nuovo');
+ if(!overdueList.length && !soonList.length && !bookToday.length){
  banner.classList.add('hidden');
  return;
  }
@@ -5436,7 +5561,8 @@ function checkUrgentOrdersAlert(openList){
 
  el('urgencyBannerTitle').textContent = overdueList.length
  ? `🚨 ATTENZIONE: ${overdueList.length} ordini hanno superato l'orario richiesto!`
- : `🔥 Hai ${soonList.length} ordini in scadenza nei prossimi 20 minuti!`;
+ : soonList.length ? `🔥 Hai ${soonList.length} ordini in scadenza nei prossimi 20 minuti!` : `📅 Hai ${bookToday.length} prenotazioni per oggi!`;
+ if(bookToday.length) parts.push(`📅 ${bookToday.length} prenotazioni di oggi (${bookToday.map(x=>`#${x.id} ore ${bpPad2(new Date(x.scheduled_at).getHours())}:${bpPad2(new Date(x.scheduled_at).getMinutes())}`).join(', ')})`);
  el('urgencyBannerSub').textContent = parts.join(' · ');
 
  let newlyCritical = [...overdueList, ...soonList.filter(x=>x.meta.diffMinutes <= 15)]
@@ -5448,6 +5574,17 @@ function checkUrgentOrdersAlert(openList){
  let first = newlyCritical[0];
  el('toastTitle').textContent = `⏰ Ordine #${first.order.id} in scadenza (${first.meta.timeLabel})!`;
  el('toastSub').textContent = `${first.order.customer_name||'Cliente'} · ${first.meta.badgeText}`;
+ el('liveOrderToast').classList.remove('hidden');
+ setTimeout(()=>{el('liveOrderToast').classList.add('hidden');}, 8000);
+ }
+
+ window.__bpBookAlerted = window.__bpBookAlerted || {};
+ let newBook = bookToday.filter(o => { let k = o.id + '|' + __todayStr; if(window.__bpBookAlerted[k]) return false; window.__bpBookAlerted[k] = 1; return true; });
+ if(newBook.length && !newlyCritical.length){
+ playOrderChime(false);
+ let fb = newBook[0], fbt = new Date(fb.scheduled_at);
+ el('toastTitle').textContent = `📅 Prenotazione di oggi: ordine #${fb.id} (${bpPad2(fbt.getHours())}:${bpPad2(fbt.getMinutes())})`;
+ el('toastSub').textContent = `${fb.customer_name||'Cliente'} · da avviare`;
  el('liveOrderToast').classList.remove('hidden');
  setTimeout(()=>{el('liveOrderToast').classList.add('hidden');}, 8000);
  }
@@ -7635,7 +7772,37 @@ function switchTab(tabName){
  if(tabName === 'settings') bpRefreshSettingsPanel();
 }
 
+
+
+function updateThermalSettingsUI(){
+ try{
+  var s = loadSettings();
+  var fontSel = document.getElementById('setThermalFont');
+  var sizeSel = document.getElementById('setThermalFontSize');
+  var modeSel = document.getElementById('setIngredientsMode');
+  if(fontSel && s.ui && s.ui.receiptFont) fontSel.value = s.ui.receiptFont;
+  if(sizeSel && s.ui && s.ui.receiptFontSize) sizeSel.value = s.ui.receiptFontSize;
+  if(modeSel && s.ui && s.ui.ingredientsMode) modeSel.value = s.ui.ingredientsMode;
+ }catch(e){}
+}
+
+
+function updateUrgencyBannerUI(){
+ try{
+  var s = loadSettings();
+  var btn = document.getElementById('setUrgencyBannerBtn');
+  if(btn && s.ui){
+    var show = !!s.ui.showUrgencyBanner;
+    btn.textContent = show ? '🟢 مفعّل (ON)' : '🔴 مخفي (OFF)';
+    btn.style.background = show ? '#16794b' : '#b42318';
+    btn.style.color = '#fff';
+  }
+ }catch(e){}
+}
+
 function bpRefreshSettingsPanel(){
+ updateUrgencyBannerUI();
+ updateThermalSettingsUI();
  try{
  var sb = document.getElementById('setSoundBtn');
  if(sb){ sb.textContent = soundEnabled ? '🔔 Audio ON' : '🔕 Audio OFF'; sb.style.background = soundEnabled ? '#16794b' : '#b42318'; sb.style.color = '#fff'; }
@@ -7941,6 +8108,61 @@ async function insertOrderItemsForOrder(orderId, items, delivFee, extra, extraRe
  return result;
 }
 
+/* ===== Data effettiva per cassa/storico/report: giorno della prenotazione se pre-ordine, altrimenti data di creazione ===== */
+function bpEffTs(o){ return (o && o.is_scheduled && o.scheduled_at) ? o.scheduled_at : (o ? o.created_at : null); }
+async function bpOrdersInRange(cols, colsFallback, s, e, opts){
+  opts = opts || {};
+  var S = s.toISOString(), E = e.toISOString();
+  function build(withSched){
+    var q = sb.from('orders').select(withSched ? cols : colsFallback);
+    q = withSched
+      ? q.or('and(is_scheduled.eq.false,created_at.gte.' + S + ',created_at.lt.' + E + '),and(is_scheduled.eq.true,scheduled_at.gte.' + S + ',scheduled_at.lt.' + E + ')')
+      : q.gte('created_at', S).lt('created_at', E);
+    q = q.order('created_at', {ascending: !!opts.asc});
+    return opts.range ? q.range(opts.range[0], opts.range[1]) : q.limit(opts.limit || 1000);
+  }
+  var r = await build(true);
+  if(r.error){ bpWarn(r.error); r = await build(false); }
+  if(r.data){ r.data = r.data.slice().sort(function(a, b){ var d = new Date(bpEffTs(a)) - new Date(bpEffTs(b)); return opts.asc ? d : -d; }); }
+  return r;
+}
+/* ===== Pre-ordine (prenotazione per giorni futuri) ===== */
+function bpPad2(n){ return String(n).padStart(2,'0'); }
+function bpReadSchedule(){
+  var chk=el('orderIsScheduled'), dEl=el('orderScheduledDate'), tEl=el('orderScheduledTime');
+  if(!(chk && chk.checked)) return {on:false, at:null, error:null};
+  var d=dEl?dEl.value:'', t='';
+  try{ var __sel=getSelectedDeliveryTime(); if(/^\d{1,2}:\d{2}$/.test(__sel)) t=__sel; }catch(e){}
+  if(!t && tEl) t=tEl.value||'';
+  if(t.length===4) t='0'+t;
+  if(!d) return {on:true, at:null, error:'Pre-ordine: scegli la data nel selettore orario (📅 تاريخ الاستلام).'};
+  if(!t) return {on:true, at:null, error:'Pre-ordine: scegli un orario preciso, non "Prima possibile" (اختر وقتاً محدداً).'};
+  var dt=new Date(d+'T'+t);
+  if(isNaN(dt.getTime())) return {on:true, at:null, error:'Data o ora del pre-ordine non valide.'};
+  return {on:true, at:dt.toISOString(), error:null};
+}
+function bpResetSchedule(){
+  var c=el('orderIsScheduled'), d=el('orderScheduledDate'), t=el('orderScheduledTime'), pd=el('pkScheduledDate'), pc=el('pkIsPreOrder');
+  if(c) c.checked=false; if(d) d.value=''; if(t) t.value=''; if(pd) pd.value=''; if(pc) pc.checked=false;
+}
+function bpFillSchedule(o){
+  bpResetSchedule();
+  if(!(o && o.is_scheduled && o.scheduled_at)) return;
+  var dt=new Date(o.scheduled_at); if(isNaN(dt.getTime())) return;
+  var c=el('orderIsScheduled'), d=el('orderScheduledDate'), t=el('orderScheduledTime');
+  if(c) c.checked=true;
+  if(d) d.value=dt.getFullYear()+'-'+bpPad2(dt.getMonth()+1)+'-'+bpPad2(dt.getDate());
+  if(t) t.value=bpPad2(dt.getHours())+':'+bpPad2(dt.getMinutes());
+}
+async function bpSaveScheduleOnEdit(id, sch){
+  try{
+    var oldO=orders.find(function(x){ return x.id===id; });
+    var had=!!(oldO && (oldO.is_scheduled || oldO.scheduled_at));
+    if(!sch.on && !had) return;
+    var r=await sb.from('orders').update(sch.on ? {is_scheduled:true, scheduled_at:sch.at} : {is_scheduled:false, scheduled_at:null}).eq('id', id);
+    if(r.error){ bpWarn(r.error); alert('Prenotazione non salvata: '+r.error.message+' (esegui lo SQL delle colonne is_scheduled / scheduled_at in Supabase)'); }
+  }catch(e){ bpWarn(e); }
+}
 async function _doSaveOrderCore(){
  if(!cart.size){setMsg('orderMsg','Aggiungi almeno un prodotto.','error');return;}
  if(el('type').value==='Consegna'&&!el('address').value.trim()){setMsg('orderMsg','Inserisci l’indirizzo di consegna.','error');return;}
@@ -7953,6 +8175,9 @@ async function _doSaveOrderCore(){
  let {data:userData}=await sb.auth.getUser();
 
  let selectedTime = getSelectedDeliveryTime();
+ let __sch = bpReadSchedule();
+ if(__sch.error){ setMsg('orderMsg', __sch.error, 'error'); el('saveOrder').disabled=false; return; }
+ if(__sch.on && __sch.at){ let __sd = new Date(__sch.at); selectedTime = bpPad2(__sd.getHours()) + ':' + bpPad2(__sd.getMinutes()); }
  let cashGiven = Number(el('cashGivenInput')?.value || 0);
  let cashTag = '';
  if(el('payment').value === 'Contanti' && cashGiven > total){
@@ -7984,6 +8209,7 @@ async function _doSaveOrderCore(){
  p_order: {customer_name: custNameVal, phone: phoneVal, order_type: el('type').value, address: addrVal, payment_method: el('payment').value, notes: combinedNotes, total: total},
  p_items: __rows});
  if(!__r.error){
+ await bpSaveScheduleOnEdit(targetId, __sch);
  el('saveOrder').disabled = false; playOrderChime(false); cancelEditOrderMode();
  setMsg('orderMsg', `✅ Ordine #${targetId} aggiornato in un'unica transazione (⏰ ${selectedTime} · Totale ${euro(total)})!`, 'success');
  await loadOrders(); switchTab('orders'); return;
@@ -8006,6 +8232,7 @@ async function _doSaveOrderCore(){
  el('saveOrder').disabled = false;
  return;
  }
+ await bpSaveScheduleOnEdit(targetId, __sch);
 
  let {data: oldRows} = await sb.from('order_items').select('id').eq('order_id', targetId);
  let insRes = await insertOrderItemsForOrder(targetId, items, delivFee, extraAmt, extraWhy, getDiscountAmount(), getDiscountReason());
@@ -8044,7 +8271,8 @@ async function _doSaveOrderCore(){
  notes:combinedNotes,
  total,
  created_by:userData?.user?.id||null,
- ...(window.__bpOrderTs ? {created_at: window.__bpOrderTs} : {})
+ ...(window.__bpOrderTs ? {created_at: window.__bpOrderTs} : {}),
+ ...(__sch.on ? {is_scheduled: true, scheduled_at: __sch.at} : {}),
  }).select().single();
 
  if(error){setMsg('orderMsg','Errore: '+error.message,'error');el('saveOrder').disabled=false;return;}
@@ -8057,6 +8285,7 @@ async function _doSaveOrderCore(){
  }else{
  playOrderChime(false);
  setMsg('orderMsg','✅ Ordine #'+ord.id+' salvato (⏰ '+selectedTime+' · Totale '+euro(total)+')!','success');
+ bpResetSchedule();
  cart.clear();
  el('cashGivenInput').value = '';
  el('customerLastOrderBanner').classList.add('hidden');
@@ -8166,7 +8395,7 @@ function computeDayStats(dayOrders){
 var cassaDayOrders = [], cassaDayItems = new Map();
 async function fetchCassaDay(dateStr){
  var s = new Date(dateStr+'T00:00:00'), e = new Date(s); e.setDate(e.getDate()+1);
- var r = await sb.from('orders').select('*').gte('created_at', s.toISOString()).lt('created_at', e.toISOString()).order('created_at',{ascending:false}).limit(1000);
+ var r = await bpOrdersInRange('*', '*', s, e, {limit: 1000});
  cassaDayOrders = r.data || [];
  cassaDayItems = new Map();
  var ids = cassaDayOrders.map(function(o){return o.id;});
@@ -8736,6 +8965,8 @@ function statusClass(s){
 }
 
 function renderStatusFilters(openList){
+ let futureCount = openList.filter(o => getOrderUrgencyMeta(o).type === 'future').length;
+ openList = openList.filter(o => getOrderUrgencyMeta(o).type !== 'future');
  let urgentCount = openList.filter(o => {
  let u = getOrderUrgencyMeta(o);
  return u.isOverdue || u.type === 'soon' || u.type === 'asap';
@@ -8747,7 +8978,8 @@ function renderStatusFilters(openList){
  'Nuovo':openList.filter(o=>normStatus(o.status)==='Nuovo').length,
  'In preparazione':openList.filter(o=>normStatus(o.status)==='In preparazione').length,
  'Pronto':openList.filter(o=>normStatus(o.status)==='Pronto').length,
- 'In consegna':openList.filter(o=>normStatus(o.status)==='In consegna').length
+ 'In consegna':openList.filter(o=>normStatus(o.status)==='In consegna').length,
+ 'Prenotati':futureCount
  };
  let defs=[
  {id:'Tutti',label:'Tutti'},
@@ -8755,7 +8987,8 @@ function renderStatusFilters(openList){
  {id:'Nuovo',label:'🔵 Nuovi'},
  {id:'In preparazione',label:'🟠 In preparazione'},
  {id:'Pronto',label:'🟢 Pronti'},
- {id:'In consegna',label:'🟣 In consegna'}
+ {id:'In consegna',label:'🟣 In consegna'},
+ {id:'Prenotati',label:'📅 Prenotati'}
  ];
  let wrap=el('statusFilters');wrap.innerHTML='';
  defs.forEach(f=>{
@@ -8770,17 +9003,30 @@ function renderStatusFilters(openList){
 
 /* Estensioni che disegnano elementi extra dopo renderOrders (radar cucina, pulsanti stato, WhatsApp, pagamento, rider) */
 var __renderOrdersHooks = [];
+
+function formatScheduledBadge(o){
+  if((o.is_scheduled || o.isScheduled) && o.scheduled_at){
+    var d = new Date(o.scheduled_at);
+    var label = d.toLocaleDateString('it-IT') + ' ' + d.toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'});
+    return '<span class="pill st-prep" style="background:#8b5cf6;color:#fff;font-weight:900">📅 '+label+'</span>';
+  }
+  return '';
+}
+
 function renderOrders(){
  let rawOpenList = orders.filter(o=>!['Completato','Annullato'].includes(normStatus(o.status)));
  let sortedOpenList = sortOpenOrdersList(rawOpenList);
 
- el('openCountBadge').textContent = sortedOpenList.length;
+ el('openCountBadge').textContent = sortedOpenList.filter(o=>getOrderUrgencyMeta(o).type !== 'future').length;
  checkUrgentOrdersAlert(sortedOpenList);
  renderRouteBuilder();
  renderStatusFilters(sortedOpenList);
 
  let filteredOpen = sortedOpenList.filter(o=>{
  let st = normStatus(o.status);
+ let __fut = getOrderUrgencyMeta(o).type === 'future';
+ if(statusFilter === 'Prenotati') return __fut;
+ if(__fut) return false;
  if(statusFilter === 'Tutti') return true;
  if(statusFilter === 'Urgenti'){
  let u = getOrderUrgencyMeta(o);
@@ -8868,6 +9114,7 @@ function renderOrderList(id, list, isOpenTab=false){
  <span class="pill ${stCls}">${esc(st)}</span>
  ${o.source==='online' ? '<span class="pill" style="background:#6941c6;color:#fff">🌐 Online</span>' : ''}
  ${bpTableNo(o) ? '<span class="pill" style="background:#ce2b37;color:#fff;font-weight:900">🍽️ TAVOLO '+esc(bpTableNo(o))+'</span>' : ''}
+ ${formatScheduledBadge(o)}
  <span class="pill ${u.badgeClass}">${esc(u.badgeText)}</span>
  ${parsedNotes.cashInfo ? `<span class="pill resto-pill">💶 ${esc(parsedNotes.cashInfo)}</span>` : ''}
  </h3>
@@ -9001,6 +9248,10 @@ function bpRcMenuKind(parsed){
  return "";
 }
 function bpRcModsHtml(parsed, isService, noBase){
+  var settings = loadSettings();
+  var ingMode = settings && settings.ui && settings.ui.ingredientsMode ? settings.ui.ingredientsMode : 'clean';
+  var showIng = ingMode === 'full';
+
  var rem = [], add = [], notes = [], other = [], solo = false, ns = bpRcNoteSet();
  var mk = isService ? "" : bpRcMenuKind(parsed), isMenu = mk === "flag"; /* solo col flag Bibita/Patatine non sono "extra" */
  parsed.mods.forEach(function(m){
@@ -9033,7 +9284,21 @@ function bpRcModsHtml(parsed, isService, noBase){
  /* ingredienti tolti che non sono nella lista del prodotto: restano comunque barrati (niente riga SENZA) */
  if(!solo) rem.filter(function(r){ return baseN.indexOf(ingNorm(r)) < 0; }).forEach(function(r){ cells.push('<s class="rc-ing-x">' + esc(r) + '</s>'); });
  if(solo) h += '<div class="rc-solo">SOLO CARNE</div>';
- if(cells.length) h += row(isPizza ? "base pz" : "base", "", cells.join('<i>·</i>'));
+ 
+  if(cells.length){
+    if(ingMode === 'full'){
+      h += row(isPizza ? "base pz" : "base", "", cells.join('<i>·</i>'));
+    } else if(ingMode === 'compact' && isPizza){
+      // Show only icons (🍅, 🧀) without text
+      var icons = cells.filter(function(c){ return c.indexOf('rc-ing-ico') >= 0; });
+      if(icons.length) h += row("base pz icons", "", icons.join(' '));
+    }
+  }
+ /* senza e extra: SEMPRE visibili, indipendentemente da ingMode */
+ var remNotInBase = rem.filter(function(r){ return baseN.indexOf(ingNorm(r)) < 0; });
+ var remInBase = rem.filter(function(r){ return baseN.indexOf(ingNorm(r)) >= 0; });
+ var allRem = remInBase.concat(remNotInBase);
+ if(allRem.length) h += row("senza", "🚫 Senza", up(allRem));
  if(add.length) h += row("extra", "➕ Extra", up(add));
  if(notes.length) h += row("note", "📝 Note", up(notes));
  other.forEach(function(m){ h += row("other note", "📝 Note", esc(m)); });
@@ -9204,7 +9469,7 @@ function buildReceiptHtml(o, items){
  let grandQty = totalQty;
  try{
  let _fd = bpFryDrink(items), _fp = bpFriedPlan(items);
- grandQty = totalQty + ((_fp.menu && _fp.menu.n) || 0) + ((_fp.pizza && _fp.pizza.n) || 0) + (_fd.menu || 0);
+ grandQty = totalQty + ((_fp.menu && _fp.menu.n) || 0) + (_fd.menu || 0); /* patatine SU pizza = parte della pizza, non pezzi in piu' */
  }catch(e){ grandQty = totalQty; }
  let menuBoxHtml = ''; /* v37: NON DIMENTICARE ora e' la terza sezione dentro l'elenco */
 
@@ -9239,7 +9504,7 @@ function buildReceiptHtml(o, items){
  <div class="rc-item-top${isDrink ? ' rc-dl' : ''}">
  <div class="${isDrink ? 'rc-dl-main' : ''}">
  <span class="rc-qty-badge">${i.quantity}×</span>
- <span class="rc-item-name">${bpNameHtml((isMenuRow && !/^men[uù]\b/i.test(parsed.baseName) ? 'Menu ' : '')+parsed.baseName)}</span>${isMenuRow ? '<span class="rc-size-tag menu">🍟🥤 MENU</span>' : ''}${(function(){ try{ var lb = bpCompletoLabel(i); return lb ? '<span style="font-weight:900;margin-inline-start:6px;white-space:nowrap">(' + lb + ')</span>' : ''; }catch(e){ return ''; } })()}
+ <span class="rc-item-name">${bpNameHtml((isMenuRow && !/^men[uù]\b/i.test(parsed.baseName) ? 'Menu ' : '')+parsed.baseName)}</span>${isMenuRow ? '<span class="rc-size-tag menu">🍟🥤 MENU</span>' : ''}${(function(){ try{ var lb = bpCompletoLabel(i); return lb ? '<span class="rc-completo">' + lb + '</span>' : ''; }catch(e){ return ''; } })()}
  ${sizeTag}${volHtml}
  </div>
  <div class="rc-item-price">${euro(i.line_total)}</div>
@@ -9276,8 +9541,8 @@ function buildReceiptHtml(o, items){
  out += bpFriedHtml(items); /* v95: FRITTI unificati (singole + menu + sopra pizza + altri) */
  if(nBib) out += sec('🥤', 'BEVANDE', nBib, G.bevanda, fd.menu ? 'comprese bibite dei menu: ' + fd.menu : '');
  itemsHtml = out || itemsHtml;
- let cells = [['🍕', q(G.pizza)], ['🥙', q(G.panino)], ['🍰', q(G.dolce)], ['🍟', FP.total || nFri], ['🥤', nBib]].filter(c=>c[1]);
- if(cells.length) checkHtml = `<div class="rc-check">${cells.map(c=>`<span>${c[0]} <b>${c[1]}</b></span>`).join('')}</div>`;
+ let cells = [['🍕', q(G.pizza)], ['🥙', q(G.panino)], ['🍰', q(G.dolce)], ['🍟', ((FP.total || 0) - ((FP.pizza && FP.pizza.n) || 0)) || nFri], ['🥤', nBib]].filter(c=>c[1]);
+ try{ var VSc = bpVsRowsCust(items); checkHtml = bpVsHtml(VSc.rows, VSc.total, 'RIEPILOGO ORDINE'); }catch(e){ bpWarn(e); }
  }
 
  // chi ha registrato / modificato l'ordine (ex patch v27 + v29)
@@ -9360,6 +9625,7 @@ function buildReceiptHtml(o, items){
  ${isConsegna ? delivHtml : timeHeroHtml + custBoxHtml}
 
  ${idLineHtml}
+ ${checkHtml}
  <div class="rc-items-section">
  <div class="rc-table-head">
  <span>Q.tà & Articolo</span>
@@ -9368,7 +9634,7 @@ function buildReceiptHtml(o, items){
  ${itemsHtml}
  </div>
 
- ${menuBoxHtml}${checkHtml}
+ ${menuBoxHtml}
 
  ${parsedNotes.cleanNotes ? `<div class="rc-note-alert">📝 <strong>NOTE ORDINE:</strong> ${esc(parsedNotes.cleanNotes)}</div>` : ''}
 
@@ -9396,6 +9662,53 @@ function buildReceiptHtml(o, items){
  </div>
  `;
 }
+
+/* v96: RIEPILOGO VISIVO (tessere con numeri grandi) - condiviso da ricevuta cliente, comanda cucina, HTML 80mm e ESC/POS */
+window.bpVsRowsCust = function(items){
+ var rows = [], tot = 0;
+ var G = {pizza: [], panino: [], dolce: [], fritto: [], bevanda: [], servizio: []};
+ items.forEach(function(i){ var w = {k: 'panino'}; try{ w = bpWorkCat(i); }catch(e){} (G[w.k] || G.panino).push(i); });
+ var q = function(a){ return a.reduce(function(n, i){ return n + Number(i.quantity || 1); }, 0); };
+ var FP = {total: 0, single: {n: 0}, menu: {n: 0}, pizza: {n: 0}, other: {n: 0}}; try{ FP = bpFriedPlan(items) || FP; }catch(e){}
+ var fd = {fri: 0, bib: 0, menu: 0}; try{ fd = bpFryDrink(items) || fd; }catch(e){}
+ var BR = {pan: 0, pia: 0}; try{ BR = bpBreadCount(G.panino) || BR; }catch(e){}
+ var add = function(ico, lab, n, parts, inv){ if(n > 0){ rows.push({ico: ico, lab: lab, n: n, parts: parts || [], sub: (parts || []).join(' | '), inv: !!inv}); tot += n; } };
+ var pz = q(G.pizza), maxi = q(G.pizza.filter(function(i){ return String(i.size || '').toLowerCase() === 'maxi'; }));
+ var pzP = []; if(maxi) pzP.push('di cui MAXI ' + maxi); if(FP.pizza && FP.pizza.n) pzP.push('con patatine x' + FP.pizza.n);
+ add('🍕', 'PIZZE', pz, pzP);
+ var pn = q(G.panino), bP = []; if(BR.pan) bP.push('Panini ' + BR.pan); if(BR.pia) bP.push('Piadine ' + BR.pia);
+ add('🥙', 'PANINI/PIADINE', pn, bP);
+ add('🍰', 'DOLCI', q(G.dolce));
+ var frSep = ((FP.total || 0) - ((FP.pizza && FP.pizza.n) || 0)) || fd.fri || 0, fP = [];
+ if(FP.single && FP.single.n) fP.push('singole ' + FP.single.n); if(FP.menu && FP.menu.n) fP.push('menu ' + FP.menu.n); if(FP.other && FP.other.n) fP.push('altri ' + FP.other.n);
+ add('🍟', 'FRITTI', frSep, fP);
+ var nBib = Math.max(fd.bib || 0, q(G.bevanda) + (fd.menu || 0));
+ add('🥤', 'BEVANDE', nBib, fd.menu ? ['nei menu ' + fd.menu] : []);
+ return {rows: rows, total: tot};
+};
+window.bpVsRowsKit = function(items){
+ var rows = [], tot = 0;
+ var food = items.filter(function(i){ return !bpIsSvc(i.product_name); });
+ var KS = {panino: [], kebabPz: [], dolce: []}; try{ KS = bpKitchenSplit(food) || KS; }catch(e){}
+ var q = function(a){ return (a || []).reduce(function(n, i){ return n + Number(i.quantity || 1); }, 0); };
+ var FP = {total: 0, single: {n: 0}, menu: {n: 0}, pizza: {n: 0}, other: {n: 0}}; try{ FP = bpFriedPlan(items) || FP; }catch(e){}
+ var BR = {pan: 0, pia: 0}; try{ BR = bpBreadCount(KS.panino || []) || BR; }catch(e){}
+ var add = function(ico, lab, n, parts, inv){ if(n > 0){ rows.push({ico: ico, lab: lab, n: n, parts: parts || [], sub: (parts || []).join(' | '), inv: !!inv}); tot += n; } };
+ var bP = []; if(BR.pan) bP.push('Panini ' + BR.pan); if(BR.pia) bP.push('Piadine ' + BR.pia);
+ add('🥙', 'PANINI/PIADINE', q(KS.panino), bP);
+ add('🍕', 'PIZZA KEBAB', q(KS.kebabPz));
+ var fP = [];
+ if(FP.single && FP.single.n) fP.push('singole ' + FP.single.n); if(FP.menu && FP.menu.n) fP.push('menu ' + FP.menu.n); if(FP.pizza && FP.pizza.n) fP.push('su pizza ' + FP.pizza.n); if(FP.other && FP.other.n) fP.push('altri ' + FP.other.n);
+ add('🍟', 'FRITTI', FP.total || 0, fP, true);
+ add('🍰', 'DOLCI', q(KS.dolce));
+ return {rows: rows, total: tot};
+};
+window.bpVsHtml = function(rows, total, title){
+ if(!rows || !rows.length) return '';
+ var tiles = rows.map(function(r){ return '<div class="bp-vs-t' + (r.inv ? ' bp-vs-inv' : '') + '"><i>' + r.ico + '</i><b>' + r.n + '</b><span>' + r.lab + '</span>' + (r.sub ? '<small>' + r.sub + '</small>' : '') + '</div>'; }).join('');
+ var line = rows.map(function(r){ return r.n + ' ' + r.lab; }).join(' · ');
+ return '<div class="bp-vs"><div class="bp-vs-h bp-vs-inv"><span>📋 ' + title + '</span><span>TOTALE <b>' + total + '</b> pz</span></div><div class="bp-vs-g">' + tiles + '</div><div class="bp-vs-line">' + line + '</div></div>';
+};
 
 /* === إيصال المطبخ: شغل المطبخ + البيتزا اللي عليها بطاطس فقط === */
 /* v96: helper comanda · parte di pizza a gusti con patatine + tipo di menu */
@@ -9550,7 +9863,11 @@ function buildKitchenReceiptHtml(o, items){
 
  ${parsedNotes.cleanNotes ? `<div class="kr-note">📝 ${esc(parsedNotes.cleanNotes)}</div>` : ''}
 
+ ${(function(){ try{ var VK = bpVsRowsKit(items); return bpVsHtml(VK.rows, VK.total, 'RIEPILOGO CUCINA'); }catch(e){ return ''; } })()}
+
  ${itemsHtml}
+
+ 
 
  <div class="kr-foot kr-inv"><span>LISTA CUCINA</span><span>TOTALE: <b>${totalQty}</b> pz</span></div>
  </div>
@@ -9980,14 +10297,14 @@ try{
  el('stGrid').innerHTML=h;
  }
  async function loadMonth(){
- var r=await sb.from('orders').select('id,created_at').gte('created_at',new Date(y,m,1).toISOString()).lt('created_at',new Date(y,m+1,1).toISOString()).limit(3000);
- counts={}; (r.data||[]).forEach(function(o){var k=toLocalDateStr(o.created_at);counts[k]=(counts[k]||0)+1;});
+ var r=await bpOrdersInRange('id,created_at,is_scheduled,scheduled_at','id,created_at',new Date(y,m,1),new Date(y,m+1,1),{limit:3000});
+ counts={}; (r.data||[]).forEach(function(o){var k=toLocalDateStr(bpEffTs(o));counts[k]=(counts[k]||0)+1;});
  draw();
  }
  async function loadDay(k){
  sel=k; draw();
  var s=new Date(k+'T00:00:00'), e=new Date(s); e.setDate(e.getDate()+1);
- var r=await sb.from('orders').select('*').gte('created_at',s.toISOString()).lt('created_at',e.toISOString()).order('created_at',{ascending:false}).limit(1000);
+ var r=await bpOrdersInRange('*','*',s,e,{limit:1000});
  var list=r.data||[], ids=list.map(function(o){return o.id;});
  if(ids.length){
  var ri=await sb.from('order_items').select('*').in('order_id',ids);
@@ -11308,7 +11625,7 @@ function bpStationOf(name){
 }
 function renderKitchen(){
  var tab = el('kitchenTab'); if(!tab) return;
- var act = orders.filter(function(o){ var s = normStatus(o.status); return (s === 'Nuovo' || s === 'In preparazione' || s === 'Pronto'); }); /* tutti i tipi: consegna, tavolo, ritiro, online */
+ var act = orders.filter(function(o){ var s = normStatus(o.status); return (s === 'Nuovo' || s === 'In preparazione' || s === 'Pronto') && getOrderUrgencyMeta(o).type !== 'future'; }); /* tutti i tipi: consegna, tavolo, ritiro, online */
  var bd = el('kitchenCountBadge'); if(bd) bd.textContent = act.filter(function(o){ return normStatus(o.status) !== 'Pronto' && bpCucinaPlan((itemsByOrder.get(o.id) || []).filter(function(i){ return !bpIsSvc(i.product_name); })).has; }).length;
  if(tab.classList.contains('hidden')) return;
  var ST = []; /* niente filtri di postazione: la Cucina mostra solo la comanda cucina */
@@ -13052,9 +13369,7 @@ el('kitchenTab').addEventListener('click', function(e){
  async function fetchOrders(start, end){
  var all = [], from = 0, step = 1000;
  while(true){
- var r = await sb.from('orders').select('*')
- .gte('created_at', start.toISOString()).lt('created_at', end.toISOString())
- .order('created_at', { ascending: true }).range(from, from + step - 1);
+ var r = await bpOrdersInRange('*', '*', start, end, {asc: true, range: [from, from + step - 1]});
  if(r.error) throw r.error;
  var d = r.data || [];
  all = all.concat(d);
@@ -13095,7 +13410,7 @@ el('kitchenTab').addEventListener('click', function(e){
  for(d = new Date(range.start); d < range.end; d = addDays(d, 1)) S.days[toLocalDateStr(d)] = { n: 0, v: 0, cash: 0, card: 0, canc: 0 };
 
  list.forEach(function(o){
- var st = normStatus(o.status), tot = Number(o.total || 0), dt = new Date(o.created_at), key = toLocalDateStr(dt);
+ var st = normStatus(o.status), tot = Number(o.total || 0), dt = new Date(bpEffTs(o)), key = toLocalDateStr(dt);
  bump(S.status, st, tot);
  var day = S.days[key] || (S.days[key] = { n: 0, v: 0, cash: 0, card: 0, canc: 0 });
  if(st === 'Annullato'){ S.canc++; S.cancV += tot; day.canc++; return; }
@@ -13301,7 +13616,7 @@ el('kitchenTab').addEventListener('click', function(e){
 
  /* elenco ordini */
  var rows = v.orders.slice(0, 600).map(function(o){
- var st = normStatus(o.status), dt = new Date(o.created_at);
+ var st = normStatus(o.status), dt = new Date(bpEffTs(o));
  var when = mode === 'day' ? dt.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' }) : dt.toLocaleString('it-IT', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
  return '<tr class="' + (st === 'Annullato' ? 'cancelled' : '') + '"><td>' + when + '</td><td>#' + esc(o.id) + '</td><td>' + esc(o.customer_name || '—') + '</td><td>' + esc(o.order_type || '') + '</td><td>' + esc(o.payment_method || '') + '</td><td><span class="rp-pill" style="background:' + STATUS_COLOR[st] + '">' + esc(st) + '</span></td><td>' + esc(o.created_by_email || '') + '</td><td class="num"><b>' + euro(o.total) + '</b></td></tr>';
  }).join('');
@@ -13359,7 +13674,7 @@ el('kitchenTab').addEventListener('click', function(e){
  local = true;
  var src = [];
  try{ src = (typeof orders !== 'undefined' && orders.length) ? orders : JSON.parse(localStorage.getItem('bp_orders_v1') || '[]'); }catch(e){ src = []; }
- var inR = function(r){ return function(o){ var t = new Date(o.created_at); return t >= r.start && t < r.end; }; };
+ var inR = function(r){ return function(o){ var t = new Date(bpEffTs(o)); return t >= r.start && t < r.end; }; };
  list = src.filter(inR(range)); prevList = src.filter(inR(prev));
  items = (typeof itemsByOrder !== 'undefined') ? itemsByOrder : new Map();
  }
@@ -13393,7 +13708,7 @@ el('kitchenTab').addEventListener('click', function(e){
  if(!v || !v.orders.length){ alert('Nessun ordine da esportare per questo periodo.'); return; }
  var rows = [['ID', 'Data', 'Ora', 'Cliente', 'Telefono', 'Tipo', 'Indirizzo', 'Pagamento', 'Stato', 'Totale', 'Operatore']];
  v.orders.forEach(function(o){
- var d = new Date(o.created_at);
+ var d = new Date(bpEffTs(o));
  rows.push([o.id, toLocalDateStr(d), d.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' }), o.customer_name || '', o.phone || '', o.order_type || '', o.address || '', o.payment_method || '', normStatus(o.status), Number(o.total || 0).toFixed(2).replace('.', ','), o.created_by_email || '']);
  });
  var csv = '\ufeff' + rows.map(function(r){ return r.map(function(c){ return '"' + String(c).replace(/"/g, '""') + '"'; }).join(';'); }).join('\r\n');
@@ -17196,7 +17511,7 @@ if((t = e.target.closest('[data-pper]'))){ P.period = t.getAttribute('data-pper'
  var now = new Date(), end = Number(c.nightEnd); if(!(end >= 1 && end <= 12)) end = 6;
  if(now.getHours() >= end) return null;
  var y = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1), ys = toLocalDateStr(y);
- var has = ordersList().some(function(o){ return toLocalDateStr(new Date(o.created_at)) === ys && normStatus(o.status) !== 'Annullato'; });
+ var has = ordersList().some(function(o){ return toLocalDateStr(new Date(bpEffTs(o))) === ys && normStatus(o.status) !== 'Annullato'; });
  if(!has) return null; // ieri non si è lavorato
  var D = await dayData(ys); if(D && D.closed) return null; // giornata di ieri già chiusa
  var sec = Math.min(now.getHours() * 60 + now.getMinutes(), 540);
@@ -22666,6 +22981,27 @@ html{scroll-padding-bottom:calc(150px + env(safe-area-inset-bottom,0px))}
 .rc-fry-t b{font-size:19px}
 .rc-fry-r{display:flex;justify-content:space-between;font-size:14px;font-weight:800;padding:1px 0 0 14px}
 </style>
+<style id="bpV96VsCss">
+.bp-vs{margin:8px 6px;border:3px solid #000;border-radius:10px;overflow:hidden;color:#000;background:#fff;break-inside:avoid;page-break-inside:avoid}
+.bp-vs-h{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:5px 10px;font-weight:950;font-size:13px;letter-spacing:1.5px}
+.bp-vs-h b{font-size:24px;margin:0 2px}
+.bp-vs-g{display:grid;grid-template-columns:repeat(auto-fit,minmax(88px,1fr));overflow:hidden}
+.bp-vs-t{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;padding:6px 4px 5px;border-right:2px solid #000;border-bottom:2px solid #000;margin:0 -2px -2px 0;text-align:center;line-height:1.05;min-width:0}
+.bp-vs-t i{font-style:normal;font-size:22px;line-height:1}
+.bp-vs-t b{font-size:40px;font-weight:950;line-height:1}
+.bp-vs-t span{font-size:12px;font-weight:950;letter-spacing:.8px}
+.bp-vs-t small{font-size:10px;font-weight:800;line-height:1.15;margin-top:2px;overflow-wrap:anywhere}
+.bp-vs-inv{background:#000;color:#fff}
+.bp-vs-line{padding:5px 8px;font-weight:950;font-size:12.5px;text-align:center;border-top:2.5px dashed #000;line-height:1.25}
+#receiptContainer .receipt-card .bp-vs-t b{font-size:34px}
+@media print{
+ .receipt-card .bp-vs{background:#fff!important;border:3px solid #000!important}
+ .receipt-card .bp-vs .bp-vs-inv{background:#000!important;color:#fff!important;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
+ .receipt-card .bp-vs .bp-vs-inv *{background:transparent!important;color:#fff!important}
+ .receipt-card .bp-vs-t{border-right:2px solid #000!important;border-bottom:2px solid #000!important}
+ .receipt-card .bp-vs-line{border-top:2.5px dashed #000!important}
+}
+</style>
 <style id="bpThermalCss">
 #thermalToggleBtn::before{content:'🧾'}
 html:not(.x) body #userBar button#thermalToggleBtn.ap-on,#thermalToggleBtn.ap-on{background:#16794b!important}
@@ -23260,7 +23596,21 @@ html:not(.x) body #userBar button#thermalToggleBtn.ap-off,#thermalToggleBtn.ap-o
  grp('ALTRI FRITTI', '', P.other, true, false);
  }
 
- /* ================= RICEVUTA CLIENTE ================= */
+ /* v96: RIEPILOGO VISIVO ESC/POS: una riga grande per categoria, numero a destra, fritti in negativo */
+function vsDoc(d, VS, title){
+ if(!VS || !VS.rows || !VS.rows.length) return;
+ d.bar(title, 'TOT ' + VS.total + ' pz', {b: 1, h: 2, pad: 1});
+ VS.rows.forEach(function(r){
+ if(r.inv) d.bar(r.lab, String(r.n), {b: 1, h: 3, pad: 2});
+ else d.lr(r.lab, String(r.n), {b: 1, h: 3}, 0);
+ if(r.sub) d.p('   ' + r.sub, {f: 'B'});
+ d.rule('-');
+ });
+ d.p(VS.rows.map(function(r){ return r.n + ' ' + r.lab; }).join(' + '), {a: 'c', b: 1});
+ d.rule('=');
+}
+
+/* ================= RICEVUTA CLIENTE ================= */
  function receiptDoc(d, o, items){
  var parsedNotes = splitTimeAndNotes(o.notes);
  var isCons = String(o.order_type || '').toLowerCase().indexOf('consegna') >= 0;
@@ -23274,7 +23624,7 @@ html:not(.x) body #userBar button#thermalToggleBtn.ap-off,#thermalToggleBtn.ap-o
  var custIsTable = !!tblNo && /^(?:\ud83c\udf7d\ufe0f?\s*)?tavolo\s*(?:n[\u00b0o.]?\s*)?\d{1,3}$/i.test(custRaw);
  var shortOp = function(em){ var l = String(em || '').split('@')[0].replace(/[._-]+/g, ' ').trim(); if(!l) return ''; l = l.split(' ')[0]; return l.charAt(0).toUpperCase() + l.slice(1, 10); };
  var grandQty = totalQty;
- try{ var _fd = bpFryDrink(items), _fp = bpFriedPlan(items); grandQty = totalQty + ((_fp.menu && _fp.menu.n) || 0) + ((_fp.pizza && _fp.pizza.n) || 0) + (_fd.menu || 0); }catch(e){ grandQty = totalQty; }
+ try{ var _fd = bpFryDrink(items), _fp = bpFriedPlan(items); grandQty = totalQty + ((_fp.menu && _fp.menu.n) || 0) + (_fd.menu || 0); /* patatine SU pizza = parte della pizza, non pezzi in piu' */ }catch(e){ grandQty = totalQty; }
 
  try{ window.bpShop.docCustHead(d); }catch(e){ d.rule('='); d.p('BUONA PIZZA', {a: 'c', b: 1, w: 2, h: 2}); d.rule('='); }
  try{ window.bpShop.doc(d, o); }catch(e){}
@@ -23321,6 +23671,7 @@ html:not(.x) body #userBar button#thermalToggleBtn.ap-off,#thermalToggleBtn.ap-o
  if(o.updated_by_email){ var tt = ''; try{ if(o.updated_at) tt = ' ' + fmtHM(o.updated_at); }catch(e){} d.p('Modifica: ' + shortOp(o.updated_by_email) + tt, {f: 'B'}, 10); }
  }
  d.rule('=');
+ try{ vsDoc(d, bpVsRowsCust(items), 'RIEPILOGO ORDINE'); }catch(e){}
 
  /* articoli, raggruppati come nella ricevuta a video */
  var sec = function(title, n, arr, sub, pre, post){
@@ -23361,9 +23712,7 @@ html:not(.x) body #userBar button#thermalToggleBtn.ap-off,#thermalToggleBtn.ap-o
  if(G.dolce.length) sec('DOLCI', qtyOf(G.dolce), G.dolce);
  friedDoc(d, FP); /* v95: FRITTI unificati */
  if(nBib) sec('BEVANDE', nBib, G.bevanda, fd.menu ? 'comprese bibite dei menu: ' + fd.menu : '');
- var cells = [['Pizze', qtyOf(G.pizza)], ['Panini', qtyOf(G.panino)], ['Dolci', qtyOf(G.dolce)], ['Fritti', FP.total || nFri], ['Bevande', nBib]].filter(function(c){ return c[1]; });
- if(cells.length){ d.rule('-'); d.cells(cells.map(function(c){ return c[0] + ' ' + c[1]; }), ' | ', {a: 'c', b: 1}); }
- }
+  }
  d.rule('=');
  if(parsedNotes.cleanNotes){
  d.p('NOTE ORDINE', {a: 'c', b: 1}); d.p(parsedNotes.cleanNotes, {b: 1, h: 2}); d.rule('-');
@@ -23434,6 +23783,7 @@ html:not(.x) body #userBar button#thermalToggleBtn.ap-off,#thermalToggleBtn.ap-o
  }catch(e){}
  if(parsedNotes.cleanNotes){ d.rule('*'); d.p('NOTE: ' + parsedNotes.cleanNotes, {b: 1, h: 2}, 6); d.rule('*'); }
  d.rule('=');
+ try{ vsDoc(d, bpVsRowsKit(items), 'RIEPILOGO CUCINA'); }catch(e){}
 
  /* ---- stazioni (la sezione vuota non si stampa; nessun prezzo) ---- */
  if(KS.panino.length) sec('PANINI & PIADINE', qtyOf(KS.panino), function(){ KS.panino.forEach(function(i){ kItem(i); }); });
@@ -24407,7 +24757,7 @@ var FIELDS = ['name', 'address', 'phone', 'wa', 'piva', 'hours', 'footer', 'name
 /* ===== CENTRALIZED SETTINGS SYSTEM ===== */
 var BP_SETTINGS_KEY = 'bp_settings_v1';
 var DEFAULT_SETTINGS = {
- ui: { darkMode: false, fontSize: 'medium', accentColor: '#b42318', showIngredients: true, compactMode: false, language: 'ar' },
+ ui: { darkMode: false, fontSize: 'medium', accentColor: '#b42318', ingredientsMode: 'clean', compactMode: false, language: 'ar', receiptFont: 'Roboto Mono', receiptFontSize: 'medium', showUrgencyBanner: true },
  print: { printerType: 'rawbt', autoOpenDrawer: false, printKitchen: true, cutAfterOrder: true, thermalWidth: 80, echoCustomer: true },
  alerts: { orderSound: true, soundVolume: 0.8, pushNotifications: true, voiceLang: 'ar-EG', alertOnOverdue: true },
  pos: { taxRate: 0, defaultServiceCharge: 0, currencySymbol: '€', autoConfirmOrders: false, showKitchenDisplay: true },
@@ -24418,7 +24768,25 @@ function saveSettings(s){try{localStorage.setItem(BP_SETTINGS_KEY,JSON.stringify
 function setSetting(p,v){var s=loadSettings();var parts=p.split('.');if(parts.length===2){s[parts[0]][parts[1]]=v;}saveSettings(s);renderSettingsSection('settingsTabContent',s);}
 function toggleSetting(p){var s=loadSettings();var parts=p.split('.');if(parts.length===2){s[parts[0]][parts[1]]=!s[parts[0]][parts[1]];saveSettings(s);renderSettingsSection('settingsTabContent',s);}}
 function changeAppLanguage(lang){setSetting('ui.language',lang);if(window.BPAR&&typeof window.BPAR.set==='function'){window.BPAR.set(lang==='ar');}}
-function applySettings(s){document.documentElement.style.setProperty('--accent-color',s.ui.accentColor||'#b42318');var fs={'small':'14px','medium':'16px','large':'18px'};if(s.ui.fontSize)document.body.style.fontSize=fs[s.ui.fontSize]||'16px';if(s.ui.darkMode)document.body.classList.add('dark-mode');else document.body.classList.remove('dark-mode');}
+function applySettings(s){
+ document.documentElement.style.setProperty('--accent-color',s.ui.accentColor||'#b42318');
+ var fs={'small':'14px','medium':'16px','large':'18px'};
+ if(s.ui.fontSize) document.body.style.fontSize=fs[s.ui.fontSize]||'16px';
+ if(s.ui.darkMode) document.body.classList.add('dark-mode'); else document.body.classList.remove('dark-mode');
+
+ /* Thermal Receipt Font Customization CSS Variables */
+ var rFont = s.ui.receiptFont || 'Roboto Mono';
+ var rSize = s.ui.receiptFontSize || 'medium';
+ var rSizeVal = rSize === 'small' ? '12px' : (rSize === 'large' ? '16px' : '14px');
+
+ var rcStyleEl = document.getElementById('bpDynamicReceiptStyle');
+ if(!rcStyleEl){
+   rcStyleEl = document.createElement('style');
+   rcStyleEl.id = 'bpDynamicReceiptStyle';
+   document.head.appendChild(rcStyleEl);
+ }
+ rcStyleEl.textContent = '@media print { .receipt-card, #receiptContainer { font-family: "' + rFont + '", monospace !important; font-size: ' + rSizeVal + ' !important; } }';
+}
 
 /* ===== Translation Manager ===== */
 function renderTranslationSection(){
