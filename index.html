@@ -26287,7 +26287,7 @@ html:not(.pos64) .voice-input-row textarea{min-height:min(68dvh,600px)!important
 /* PRENOTAZIONE TAVOLI: collega gli ordini "Tavolo N" alla tabella Supabase table_reservations (avviso se il tavolo è già occupato) */
 (function(){
  if(window.__bpTblRes) return; window.__bpTblRes = 1;
- var DUR = 120, TB = 'table_reservations'; /* durata prenotazione in minuti */
+ var DUR = 60, TB = 'table_reservations'; /* durata prenotazione in minuti */
  function w(e){ try{ bpWarn(e); }catch(_){ try{ console.warn(e); }catch(__){} } }
  function toast(t, s){ try{ rdToast(t, s); }catch(e){} }
  function canUse(){ try{ return !!sb && navigator.onLine !== false; }catch(e){ return false; } }
@@ -26351,6 +26351,164 @@ html:not(.pos64) .voice-input-row textarea{min-height:min(68dvh,600px)!important
   if(r && String(r).indexOf('OFF-') !== 0 && canUse()){ try{ await syncRes(r, editId, typ, info); }catch(e){ w(e); } }
   return r;
  };
+})();
+</script>
+<script>
+/* PANNELLO PRENOTAZIONI TAVOLI (staff): conferma / annulla / cambia tavolo / nuova prenotazione */
+(function(){
+ if(window.__bpResPanel) return; window.__bpResPanel = 1;
+ var TB = 'table_reservations', DUR = 60, flt = 'oggi', showCanc = false, rows = [], loading = false;
+ function esc2(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+ function two(n){ return String(n).padStart(2, '0'); }
+ function hm2(d){ return two(d.getHours()) + ':' + two(d.getMinutes()); }
+ function dm(d){ return two(d.getDate()) + '/' + two(d.getMonth() + 1); }
+ function toast2(t, s){ try{ rdToast(t, s); }catch(e){} }
+ function ok(){ try{ return !!sb && navigator.onLine !== false; }catch(e){ return false; } }
+ function waNum(p){ var d = String(p || '').replace(/\D/g, ''); if(d.indexOf('00') === 0) d = d.slice(2); else if(d.length === 10 && d.charAt(0) === '3') d = '39' + d; return d; }
+ function css(){
+  if(document.getElementById('resPanelCss')) return;
+  var st = document.createElement('style'); st.id = 'resPanelCss';
+  st.textContent = '#resPanel{position:fixed;inset:0;z-index:9500;background:var(--bp-bg,#f4f5f9);color:var(--bp-ink,#111827);display:flex;flex-direction:column}#resPanel.hidden{display:none}' +
+   '#resPanel .rp-h{display:flex;align-items:center;gap:8px;padding:max(12px,env(safe-area-inset-top)) 12px 8px}#resPanel .rp-h b{flex:1;font-size:19px}' +
+   '#resPanel .rp-h button{border:0;border-radius:12px;padding:10px 14px;font-weight:800;background:var(--bp-soft,#f1f3f8);color:inherit}' +
+   '#resPanel .rp-f{display:flex;gap:6px;padding:0 12px 8px;overflow-x:auto}#resPanel .rp-f button{flex:none;border:1.5px solid var(--bp-line,#e8eaf0);background:var(--bp-card,#fff);color:inherit;border-radius:99px;padding:8px 14px;font-weight:800}#resPanel .rp-f button.on{background:var(--bp-brand,#d92d20);color:#fff;border-color:transparent}' +
+   '#resPanel .rp-l{flex:1;overflow:auto;padding:0 12px calc(90px + env(safe-area-inset-bottom))}' +
+   '#resPanel .rp-c{background:var(--bp-card,#fff);border:1px solid var(--bp-line,#e8eaf0);border-radius:16px;padding:12px;margin-bottom:10px;box-shadow:var(--bp-shadow,none)}' +
+   '#resPanel .rp-c.pend{border-color:#f59e0b;box-shadow:0 0 0 2px rgba(245,158,11,.25)}#resPanel .rp-c.canc{opacity:.55}' +
+   '#resPanel .rp-t{display:flex;justify-content:space-between;gap:8px;align-items:center;font-weight:900;font-size:17px}' +
+   '#resPanel .rp-m{color:var(--bp-mute,#6b7280);font-size:13.5px;margin-top:3px;line-height:1.4}' +
+   '#resPanel .rp-b{display:inline-block;border-radius:99px;padding:2px 10px;font-size:12px;font-weight:800;background:#e0e7ff;color:#3730a3}#resPanel .rp-b.p{background:#fef3c7;color:#92400e}#resPanel .rp-b.c{background:#dcfae6;color:#067647}#resPanel .rp-b.x{background:#fee4e2;color:#b42318}' +
+   '#resPanel .rp-a{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}#resPanel .rp-a button,#resPanel .rp-a a{border:0;border-radius:11px;padding:9px 12px;font-weight:800;font-size:14px;background:var(--bp-soft,#f1f3f8);color:inherit;text-decoration:none}' +
+   '#resPanel .rp-a .g{background:#16794b;color:#fff}#resPanel .rp-a .r{background:#fee4e2;color:#b42318}' +
+   '#resPanel .rp-nf{background:var(--bp-card,#fff);border-radius:16px;padding:12px;margin-bottom:10px;border:1px solid var(--bp-line,#e8eaf0)}#resPanel .rp-nf label{display:block;font-weight:800;font-size:13px;margin:8px 0 3px}#resPanel .rp-nf input,#resPanel .rp-nf textarea{width:100%;box-sizing:border-box;padding:10px;border:1.5px solid var(--bp-line,#e8eaf0);border-radius:11px;background:var(--bp-bg,#f4f5f9);color:inherit;font:inherit}#resPanel .rp-g{display:grid;grid-template-columns:1fr 1fr;gap:8px}' +
+   '#resFab{position:fixed;left:12px;bottom:calc(88px + env(safe-area-inset-bottom));z-index:9000;border:0;border-radius:99px;padding:11px 16px;background:#f59e0b;color:#111;font-weight:900;font-size:15px;box-shadow:0 8px 22px rgba(0,0,0,.28)}#resFab.hidden{display:none}' +
+   '#resOpenBtn .rb{display:inline-block;min-width:18px;margin-left:4px;border-radius:99px;background:#d92d20;color:#fff;font-size:12px;padding:0 6px}';
+  document.head.appendChild(st);
+ }
+ function panel(){
+  var p = document.getElementById('resPanel'); if(p) return p;
+  css(); p = document.createElement('div'); p.id = 'resPanel'; p.className = 'hidden no-print';
+  p.innerHTML = '<div class="rp-h"><b>🍽️ Prenotazioni tavoli · حجوزات الطاولات</b><button id="rpNew">➕</button><button id="rpX">✖</button></div><div class="rp-f" id="rpF"></div><div class="rp-l" id="rpL"></div>';
+  document.body.appendChild(p);
+  document.getElementById('rpX').onclick = function(){ p.classList.add('hidden'); pend(); };
+  document.getElementById('rpNew').onclick = toggleNew;
+  p.addEventListener('click', onClick);
+  return p;
+ }
+ function range(){
+  var n = new Date(), s = new Date(n.getFullYear(), n.getMonth(), n.getDate()), d = 86400000;
+  if(flt === 'oggi') return [s, new Date(s.getTime() + d)];
+  if(flt === 'domani') return [new Date(s.getTime() + d), new Date(s.getTime() + 2 * d)];
+  if(flt === 'prossimi') return [s, new Date(s.getTime() + 15 * d)];
+  return [s, new Date(s.getTime() + 365 * d)];
+ }
+ function drawF(){
+  var F = [['oggi', 'Oggi'], ['domani', 'Domani'], ['prossimi', 'Prossimi'], ['attesa', '⏳ Da confermare']];
+  document.getElementById('rpF').innerHTML = F.map(function(x){ return '<button data-f="' + x[0] + '" class="' + (flt === x[0] ? 'on' : '') + '">' + x[1] + '</button>'; }).join('') + '<button data-f="canc" class="' + (showCanc ? 'on' : '') + '">🗑 Annullate</button>';
+ }
+ function draw(){
+  drawF();
+  var L = document.getElementById('rpL'), keep = document.getElementById('rpNF') ? document.getElementById('rpNF').outerHTML : '';
+  var r = range(), list = rows.filter(function(x){
+   var d = new Date(x.reserved_at);
+   if(showCanc) return x.status === 'Annullata';
+   if(x.status === 'Annullata') return false;
+   if(flt === 'attesa') return x.status === 'In attesa';
+   return d >= r[0] && d < r[1];
+  });
+  var html = list.map(function(x){
+   var s = new Date(x.reserved_at), e = new Date(x.ends_at || (s.getTime() + DUR * 60000)), st = x.status;
+   var cls = st === 'In attesa' ? 'pend' : (st === 'Annullata' ? 'canc' : '');
+   var bcls = st === 'In attesa' ? 'p' : (st === 'Annullata' ? 'x' : 'c');
+   var act = '';
+   if(st === 'In attesa') act += '<button class="g" data-a="conf" data-id="' + x.id + '">✅ Conferma</button>';
+   if(st !== 'Annullata'){ act += '<button data-a="tbl" data-id="' + x.id + '">🔁 Tavolo</button><button class="r" data-a="canc" data-id="' + x.id + '">❌ ' + (st === 'In attesa' ? 'Rifiuta' : 'Annulla') + '</button>'; }
+   else act += '<button data-a="rest" data-id="' + x.id + '">↩️ Ripristina</button>';
+   if(x.phone){ act += '<a href="tel:' + esc2(x.phone) + '">📞</a><button data-a="wa" data-id="' + x.id + '">💬 WhatsApp</button>'; }
+   return '<div class="rp-c ' + cls + '"><div class="rp-t"><span>' + (dm(s) === dm(new Date()) ? '' : dm(s) + ' · ') + hm2(s) + '–' + hm2(e) + '</span><span>Tavolo ' + x.table_no + '</span></div>' +
+    '<div class="rp-m"><b>' + esc2(x.customer_name || '—') + '</b> · ' + (x.party_size || 2) + ' pers. · <span class="rp-b ' + bcls + '">' + esc2(st) + '</span> <span class="rp-b">' + esc2(x.source || 'app') + '</span>' +
+    (x.phone ? '<br>📞 ' + esc2(x.phone) : '') + (x.notes ? '<br>📝 ' + esc2(x.notes) : '') + (x.order_id ? '<br>🧾 Ordine #' + esc2(x.order_id) : '') + '</div><div class="rp-a">' + act + '</div></div>';
+  }).join('');
+  L.innerHTML = keep + (html || '<div class="rp-m" style="text-align:center;padding:30px">' + (loading ? 'Caricamento…' : 'Nessuna prenotazione') + '</div>');
+ }
+ async function load(){
+  if(!ok()) return;
+  loading = true; draw();
+  try{
+   var s = new Date(); s.setHours(0, 0, 0, 0);
+   var q = await sb.from(TB).select('*').gte('ends_at', new Date(s.getTime() - 86400000).toISOString()).order('reserved_at', {ascending: true}).limit(400);
+   if(q.error) throw q.error;
+   rows = q.data || [];
+  }catch(e){ toast2('⚠️ Prenotazioni', String((e && e.message) || e)); }
+  loading = false; draw(); pend();
+ }
+ async function setSt(id, st){
+  var u = await sb.from(TB).update({status: st}).eq('id', id);
+  if(u.error){ toast2('⚠️', /TABLE_BUSY/.test(u.error.message || '') ? 'Tavolo occupato in quell\'orario' : (u.error.message || 'Errore')); return false; }
+  return true;
+ }
+ async function onClick(e){
+  var f = e.target.closest('[data-f]');
+  if(f){ var v = f.getAttribute('data-f'); if(v === 'canc'){ showCanc = !showCanc; } else { showCanc = false; flt = v; } draw(); return; }
+  var b = e.target.closest('[data-a]'); if(!b) return;
+  var id = Number(b.getAttribute('data-id')), a = b.getAttribute('data-a'), x = rows.filter(function(r){ return r.id === id; })[0]; if(!x) return;
+  if(a === 'conf'){ if(await setSt(id, 'Confermata')){ toast2('✅ Confermata', 'Tavolo ' + x.table_no); if(x.phone && confirm('Inviare conferma su WhatsApp al cliente?')) wa(x, true); load(); } }
+  else if(a === 'canc'){ if(confirm('Annullare la prenotazione di ' + (x.customer_name || 'cliente') + '?')){ if(await setSt(id, 'Annullata')) load(); } }
+  else if(a === 'rest'){ if(await setSt(id, 'Confermata')) load(); }
+  else if(a === 'tbl'){
+   var n = prompt('Nuovo numero tavolo (1-99):', x.table_no); if(n === null) return; n = parseInt(n, 10);
+   if(!(n >= 1 && n <= 99)) return toast2('⚠️', 'Numero non valido');
+   var u = await sb.from(TB).update({table_no: n}).eq('id', id);
+   if(u.error) toast2('⚠️', /TABLE_BUSY/.test(u.error.message || '') ? 'Il tavolo ' + n + ' è occupato in quell\'orario' : (u.error.message || 'Errore')); else load();
+  }
+  else if(a === 'wa') wa(x, x.status === 'Confermata');
+ }
+ function wa(x, confirmed){
+  var s = new Date(x.reserved_at), n = waNum(x.phone); if(!n) return;
+  var m = 'Ciao ' + (x.customer_name || '') + ', la tua prenotazione da Buona Pizza per ' + (x.party_size || 2) + ' persone il ' + dm(s) + ' alle ' + hm2(s) + (confirmed ? ' è confermata ✅ Ti aspettiamo!' : ' è stata ricevuta. Ti confermiamo a breve.');
+  window.open('https://wa.me/' + n + '?text=' + encodeURIComponent(m), '_blank');
+ }
+ function toggleNew(){
+  var ex = document.getElementById('rpNF'); if(ex){ ex.remove(); return; }
+  var d = new Date(), ds = d.getFullYear() + '-' + two(d.getMonth() + 1) + '-' + two(d.getDate());
+  var h = document.createElement('div'); h.id = 'rpNF'; h.className = 'rp-nf';
+  h.innerHTML = '<b>➕ Nuova prenotazione (telefono / al banco)</b><div class="rp-g"><div><label>Tavolo</label><input id="nT" type="number" min="1" max="99" inputmode="numeric"></div><div><label>Persone</label><input id="nP" type="number" min="1" max="30" value="2" inputmode="numeric"></div><div><label>Data</label><input id="nD" type="date" value="' + ds + '"></div><div><label>Ora</label><input id="nH" type="time" value="20:00"></div></div><label>Nome</label><input id="nN"><label>Telefono</label><input id="nF" type="tel"><label>Note</label><input id="nO"><div class="rp-a"><button class="g" id="nS">✅ Salva</button></div>';
+  document.getElementById('rpL').insertBefore(h, document.getElementById('rpL').firstChild);
+  document.getElementById('nS').onclick = async function(){
+   var t = parseInt(document.getElementById('nT').value, 10), dd = document.getElementById('nD').value, hh = document.getElementById('nH').value, nm = document.getElementById('nN').value.trim();
+   if(!(t >= 1 && t <= 99) || !dd || !hh) return toast2('⚠️', 'Compila tavolo, data e ora');
+   var at = new Date(dd + 'T' + hh + ':00');
+   var ins = await sb.from(TB).insert({table_no: t, reserved_at: at.toISOString(), duration_min: DUR, customer_name: nm || ('Tavolo ' + t), phone: document.getElementById('nF').value.trim(), party_size: parseInt(document.getElementById('nP').value, 10) || 2, notes: document.getElementById('nO').value.trim(), status: 'Confermata', source: 'telefono'});
+   if(ins.error) return toast2('⚠️', /TABLE_BUSY/.test(ins.error.message || '') ? 'Tavolo ' + t + ' occupato in quell\'orario' : (ins.error.message || 'Errore'));
+   toast2('✅ Prenotazione salvata', 'Tavolo ' + t + ' · ' + hm2(at)); load();
+  };
+ }
+ function openPanel(){ panel().classList.remove('hidden'); var f = document.getElementById('resFab'); if(f) f.classList.add('hidden'); load(); }
+ window.openResPanel = openPanel;
+ var lastPend = -1;
+ async function pend(){
+  if(!ok() || document.hidden) return;
+  var app = document.getElementById('app'); if(!app || app.classList.contains('hidden')) return;
+  try{
+   var q = await sb.from(TB).select('id', {count: 'exact', head: true}).eq('status', 'In attesa').gte('ends_at', new Date().toISOString());
+   if(q.error) return;
+   var n = q.count || 0;
+   var b = document.querySelector('#resOpenBtn .rb'); if(b){ b.textContent = n || ''; b.style.display = n ? 'inline-block' : 'none'; }
+   var fab = document.getElementById('resFab'), open = document.getElementById('resPanel') && !document.getElementById('resPanel').classList.contains('hidden');
+   if(!fab){ css(); fab = document.createElement('button'); fab.id = 'resFab'; fab.className = 'hidden no-print'; fab.onclick = openPanel; document.body.appendChild(fab); }
+   fab.textContent = '🍽️ ' + n + (n === 1 ? ' prenotazione da confermare' : ' prenotazioni da confermare');
+   fab.classList.toggle('hidden', !n || open);
+   if(n > lastPend && lastPend >= 0){ try{ if(navigator.vibrate) navigator.vibrate([200, 100, 200]); }catch(e){} }
+   lastPend = n;
+  }catch(e){}
+ }
+ function mount(){
+  var ub = document.getElementById('userBar'); if(!ub || document.getElementById('resOpenBtn')) return;
+  var b = document.createElement('button'); b.type = 'button'; b.id = 'resOpenBtn'; b.className = 'secondary btn-sm'; b.title = 'Prenotazioni tavoli · حجوزات الطاولات'; b.style.fontSize = '20px'; b.innerHTML = '🍽️<span class="rb" style="display:none"></span>'; b.onclick = openPanel;
+  ub.appendChild(b);
+ }
+ mount(); setInterval(mount, 1500); setInterval(pend, 45000); setTimeout(pend, 4000);
+ document.addEventListener('visibilitychange', function(){ if(!document.hidden) pend(); });
 })();
 </script>
 </body>

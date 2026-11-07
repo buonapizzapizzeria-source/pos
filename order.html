@@ -139,25 +139,6 @@ async function init(){
     paintList();
   }catch(e){ $('list').innerHTML='<div class="card err">Impossibile caricare il menu.<br><small>'+esc((e&&e.message)||e)+'</small></div>'; }
 }
-/* Controllo occupazione tavolo */
-async function checkTableOccupied(tavolo){
-  if(!tavolo) return false;
-  try{
-    var r = await sb.from('orders').select('id,status').eq('table_no', Number(tavolo)).neq('status','Completato').neq('status','Annullato').limit(1).single();
-    return !!(r.data && r.data.id);
-  }catch(e){ return false; }
-}
-init().then(function(){
-  if(TV){ checkTableOccupied(TV).then(function(occupied){
-    if(occupied){
-      $('tv').classList.remove('hide');
-      $('tv').innerHTML='<small>BUONA PIZZA</small><h2>⚠️ Tavolo '+TV+'</h2><p style="color:#dc2626;font-weight:700">Tavolo attualmente occupato con un ordine in corso. Rivolgiti alla cassa per ordinare o per il conto.</p>';
-      canOrder=false;
-      paintList();
-      if($('go')) $('go').disabled=true;
-    }
-  });}
-});
 function paintList(){
   document.querySelectorAll('#chips button').forEach(function(b){b.classList.toggle('on',b.getAttribute('data-c')===cat)});
   $('list').innerHTML=M.menu.filter(function(p){return (p.category||'Altro')===cat}).map(function(p){
@@ -279,10 +260,6 @@ function modNotes(){
 }
 async function send(){
   if(busy)return; var er=$('er'); er.innerHTML='';
-  if(TV){
-    var occ = await checkTableOccupied(TV);
-    if(occ){ er.innerHTML='<div class="err">⚠️ Tavolo '+TV+' occupato. Rivolgiti alla cassa.</div>'; return; }
-  }
   var n=$('fn').value.trim(),ph=$('fp').value.trim(),ty=$('ft').value,ad=$('fd').value.trim(),n0=n,tm=$('fh').value,nt=$('fo').value.trim();
   if(TV){ty='Asporto';ad='';tm='';n='Tavolo '+TV+(n?' · '+n:'');nt='TAVOLO '+TV+(nt?' · '+nt:'')}
   else if(n.length<2) n='Cliente online';
@@ -320,6 +297,126 @@ async function refreshExtras(){
 setInterval(refreshExtras,6000);
 document.addEventListener('visibilitychange',function(){if(!document.hidden)refreshExtras()});
 setTimeout(refreshExtras,2500);
+</script>
+<script>
+/* ====== PRENOTAZIONE TAVOLO (cliente) ====== */
+(function(){
+ var RES_TABLES = 30;   /* numero di tavoli del locale: cambialo se serve */
+ var RES_MIN = 60;      /* durata prenotazione in minuti (uguale all'app) */
+ var RES_DAYS = 14;     /* quanti giorni in avanti si può prenotare */
+ var RES_ERR = {BAD_NAME:'Inserisci il tuo nome.', BAD_PHONE:'Inserisci un numero di telefono valido.', BAD_TIME:'L’orario scelto è già passato.', TABLE_BUSY:'Quell’orario non è più disponibile, scegli un altro orario.', TOO_MANY:'Hai già prenotazioni attive con questo numero. Chiamaci per modificarle o aggiungerne altre.', RES_FULL:'Le prenotazioni online sono temporaneamente sospese. Chiamaci per prenotare.'};
+ if(typeof TV !== 'undefined' && TV) return; /* se si ordina dal QR del tavolo non serve */
+ function two(n){ return String(n).padStart(2,'0'); }
+ function ymd(d){ return d.getFullYear() + '-' + two(d.getMonth()+1) + '-' + two(d.getDate()); }
+ function hours(){
+  var o = 18*60, c = 23*60;
+  try{ if(M && M.open) o = mins(M.open); if(M && M.close) c = mins(M.close); }catch(e){}
+  if(c <= o) c += 1440;
+  return [o, c];
+ }
+ function slotsFor(dateStr){
+  var h = hours(), p = dateStr.split('-'), base = new Date(+p[0], +p[1]-1, +p[2], 0, 0, 0, 0), out = [], now = Date.now() + 30*60000;
+  for(var m = h[0]; m <= h[1] - 60; m += 30){
+   var d = new Date(base.getTime() + m*60000);
+   if(d.getTime() >= now) out.push({v: d.toISOString(), t: two(d.getHours()) + ':' + two(d.getMinutes())});
+  }
+  return out;
+ }
+ function dayOpts(){
+  var out = [], t = new Date();
+  for(var i = 0; i < RES_DAYS; i++){
+   var d = new Date(t.getFullYear(), t.getMonth(), t.getDate() + i);
+   var s = ymd(d);
+   if(!slotsFor(s).length) continue;
+   var lab = d.toLocaleDateString('it-IT', {weekday:'long', day:'numeric', month:'long'});
+   out.push('<option value="' + s + '">' + (i === 0 ? 'Oggi · ' : (i === 1 ? 'Domani · ' : '')) + esc(lab) + '</option>');
+  }
+  return out;
+ }
+ function ensureOv(){
+  var ov = document.getElementById('rov');
+  if(ov) return ov;
+  ov = document.createElement('div'); ov.id = 'rov'; ov.className = 'ov hide'; ov.style.zIndex = '25';
+  ov.innerHTML = '<div class="box" id="rbox"></div>';
+  document.body.appendChild(ov);
+  ov.addEventListener('click', function(e){ if(e.target === ov) ov.classList.add('hide'); });
+  return ov;
+ }
+ function fillTimes(){
+  var d = document.getElementById('rd'), t = document.getElementById('rt');
+  if(!d || !t) return;
+  t.innerHTML = slotsFor(d.value).map(function(s){ return '<option value="' + s.v + '">' + s.t + '</option>'; }).join('');
+ }
+ function openRes(){
+  var ov = ensureOv(), box = document.getElementById('rbox'), days = dayOpts(), saved = {};
+  try{ saved = JSON.parse(localStorage.getItem('bp_cust') || '{}') || {}; }catch(e){}
+  if(!days.length){
+   box.innerHTML = '<h2>🍽️ Prenota un tavolo</h2><div class="err">Al momento non ci sono orari disponibili per prenotare online. Chiamaci per prenotare.</div><button class="btn sec" id="rx" style="margin-top:12px">Chiudi</button>';
+   document.getElementById('rx').onclick = function(){ ov.classList.add('hide'); };
+   ov.classList.remove('hide'); return;
+  }
+  var pp = ''; for(var i = 1; i <= 12; i++) pp += '<option value="' + i + '"' + (i === 2 ? ' selected' : '') + '>' + i + (i === 1 ? ' persona' : ' persone') + '</option>';
+  box.innerHTML = '<h2>🍽️ Prenota un tavolo</h2><div class="mut">حجز طاولة · Il locale confermerà la prenotazione</div>' +
+   '<label>Giorno</label><select id="rd">' + days.join('') + '</select>' +
+   '<label>Orario</label><select id="rt"></select>' +
+   '<label>Persone</label><select id="rp">' + pp + '</select>' +
+   '<label>Nome</label><input id="rn" placeholder="Il tuo nome" autocomplete="name" value="' + esc(saved.n || '') + '">' +
+   '<label>Telefono</label><input id="rph" type="tel" placeholder="Il tuo numero" autocomplete="tel" value="' + esc(saved.p || '') + '">' +
+   '<label>Note (facoltativo)</label><textarea id="ro" rows="2" placeholder="Es. seggiolone, allergie…"></textarea>' +
+   '<div id="rer"></div>' +
+   '<button class="btn g" id="rgo" style="margin-top:12px">✅ Invia prenotazione</button>' +
+   '<button class="btn sec" id="rx" style="margin-top:8px">Annulla</button>';
+  fillTimes();
+  document.getElementById('rd').onchange = fillTimes;
+  document.getElementById('rx').onclick = function(){ ov.classList.add('hide'); };
+  document.getElementById('rgo').onclick = sendRes;
+  ov.classList.remove('hide');
+ }
+ var resBusy = false;
+ async function sendRes(){
+  if(resBusy) return;
+  var er = document.getElementById('rer'), go = document.getElementById('rgo');
+  er.innerHTML = '';
+  var at = document.getElementById('rt').value, n = document.getElementById('rn').value.trim(), ph = document.getElementById('rph').value.trim(),
+      party = Number(document.getElementById('rp').value) || 2, nt = document.getElementById('ro').value.trim();
+  if(!at) return er.innerHTML = '<div class="err">Scegli un orario.</div>';
+  if(n.length < 2) return er.innerHTML = '<div class="err">' + RES_ERR.BAD_NAME + '</div>';
+  if(ph.replace(/\D/g,'').length < 8) return er.innerHTML = '<div class="err">' + RES_ERR.BAD_PHONE + '</div>';
+  resBusy = true; go.disabled = true; go.textContent = 'Invio in corso…';
+  try{
+   var b = await sb.rpc('busy_tables', {p_at: at, p_minutes: RES_MIN});
+   if(b.error) throw b.error;
+   var busyNo = {}; (b.data || []).forEach(function(x){ busyNo[x.table_no] = 1; });
+   var free = []; for(var t = 1; t <= RES_TABLES; t++) if(!busyNo[t]) free.push(t);
+   if(!free.length) throw new Error('NO_TABLE');
+   var done = false, lastErr = null;
+   for(var k = 0; k < Math.min(free.length, 4) && !done; k++){
+    var r = await sb.rpc('create_online_reservation', {p_table: free[k], p_at: at, p_name: n, p_phone: ph, p_party: party, p_notes: nt});
+    if(r.error){ lastErr = r.error; if(String(r.error.message || '').indexOf('TABLE_BUSY') < 0) throw r.error; } else done = true;
+   }
+   if(!done) throw (lastErr || new Error('NO_TABLE'));
+   try{ var cur = JSON.parse(localStorage.getItem('bp_cust') || '{}') || {}; cur.n = n; cur.p = ph; localStorage.setItem('bp_cust', JSON.stringify(cur)); }catch(e){}
+   var d = new Date(at), lab = d.toLocaleDateString('it-IT', {weekday:'long', day:'numeric', month:'long'}) + ' alle ' + two(d.getHours()) + ':' + two(d.getMinutes());
+   document.getElementById('rbox').innerHTML = '<h2>✅ Prenotazione inviata!</h2><p>Tavolo per <b>' + party + (party === 1 ? ' persona' : ' persone') + '</b>, <b>' + esc(lab) + '</b>, a nome <b>' + esc(n) + '</b>.</p><p class="mut">Il locale la confermerà a breve. Se serve ti chiameremo al numero indicato. تم إرسال الحجز 🍕</p><button class="btn" id="rx2" style="margin-top:12px">Chiudi</button>';
+   document.getElementById('rx2').onclick = function(){ document.getElementById('rov').classList.add('hide'); };
+  }catch(e){
+   var msg = String((e && e.message) || e), code = Object.keys(RES_ERR).filter(function(c){ return msg.indexOf(c) >= 0; })[0];
+   er.innerHTML = '<div class="err">' + esc(msg.indexOf('NO_TABLE') >= 0 ? 'Nessun tavolo disponibile a quell’orario: prova un altro orario.' : (code ? RES_ERR[code] : 'Errore: ' + msg)) + '</div>';
+   resBusy = false; go.disabled = false; go.textContent = '✅ Invia prenotazione';
+   return;
+  }
+  resBusy = false;
+ }
+ function mount(){
+  if(document.getElementById('resCard')) return;
+  var chips = document.getElementById('chips'); if(!chips || !chips.parentNode) return;
+  var c = document.createElement('div'); c.id = 'resCard'; c.className = 'card'; c.style.cssText = 'margin-top:28px;display:flex;align-items:center;gap:12px';
+  c.innerHTML = '<div style="font-size:30px">🍽️</div><div style="flex:1;min-width:0"><b style="display:block">Prenota un tavolo</b><span class="mut">حجز طاولة</span></div><button class="btn g" id="resBtn" style="width:auto;padding:11px 16px;font-size:15px">📅 Prenota</button>';
+  chips.parentNode.insertBefore(c, chips);
+  document.getElementById('resBtn').onclick = openRes;
+ }
+ mount();
+})();
 </script>
 </body>
 </html>
