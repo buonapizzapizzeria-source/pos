@@ -5125,7 +5125,7 @@ function rdFmt(ms){
 }
 function rdTimerInfo(o){
  var pt = splitTimeAndNotes(o.notes), t = pt.time || "Prima possibile", now = Date.now();
- var deliv = /consegna|domicilio/i.test(o.order_type || ""), lbl = deliv ? "consegna" : "ritiro", pre = deliv ? "alla consegna" : "al ritiro (banco)";
+ var deliv = /consegna|domicilio/i.test(o.order_type || ""), isTav = !deliv && (/tavolo/i.test(o.order_type || "") || !!(function(){ try{ return bpTableNo(o); }catch(e){ return ""; } })()), lbl = deliv ? "consegna" : (isTav ? "tavolo" : "ritiro"), pre = deliv ? "alla consegna" : (isTav ? "al tavolo" : "al ritiro (banco)");
  var created = o.created_at ? new Date(o.created_at).getTime() : now;
  var m = /^(\d{1,2}):(\d{2})$/.exec(t);
  if(m){
@@ -15481,6 +15481,7 @@ openCartIngModal = function(key){
  if(mm){
  var tg = new Date(created); tg.setHours(+mm[1], +mm[2], 0, 0);
  if(tg.getTime() < created.getTime() - 6 * 3600e3) tg.setDate(tg.getDate() + 1);
+ if(o.is_scheduled && o.scheduled_at){ var sd = new Date(o.scheduled_at); if(!isNaN(sd.getTime())) tg = sd; }
  var diff = Math.round((tg.getTime() - now) / 60000);
  if(diff > 10) return {cls: '', txt: '⏰ tra ' + fmtMin(diff), over: 0, key: tg.getTime()};
  if(diff >= -2) return {cls: 'warn', txt: diff > 0 ? '⏰ tra ' + fmtMin(diff) : '⏰ ora', over: 0, key: tg.getTime()};
@@ -26282,5 +26283,75 @@ html:not(.pos64) .voice-input-row textarea{min-height:min(68dvh,600px)!important
 })();
 </script>
 
+<script>
+/* PRENOTAZIONE TAVOLI: collega gli ordini "Tavolo N" alla tabella Supabase table_reservations (avviso se il tavolo è già occupato) */
+(function(){
+ if(window.__bpTblRes) return; window.__bpTblRes = 1;
+ var DUR = 120, TB = 'table_reservations'; /* durata prenotazione in minuti */
+ function w(e){ try{ bpWarn(e); }catch(_){ try{ console.warn(e); }catch(__){} } }
+ function toast(t, s){ try{ rdToast(t, s); }catch(e){} }
+ function canUse(){ try{ return !!sb && navigator.onLine !== false; }catch(e){ return false; } }
+ function two(n){ return String(n).padStart(2, '0'); }
+ function hm(d){ return two(d.getHours()) + ':' + two(d.getMinutes()); }
+ function resTime(){
+  try{ var sch = bpReadSchedule(); if(sch && sch.on && sch.at){ var sd = new Date(sch.at); if(!isNaN(sd.getTime())) return sd; } }catch(e){}
+  var d = new Date(), m = /^(\d{1,2}):(\d{2})$/.exec(getSelectedDeliveryTime());
+  if(m) d.setHours(Number(m[1]), Number(m[2]), 0, 0);
+  return d;
+ }
+ function isStale(row){
+  if(!row.order_id) return false;
+  var o = null; try{ o = orders.find(function(x){ return String(x.id) === String(row.order_id); }); }catch(e){}
+  if(!o) return false;
+  var st = ''; try{ st = normStatus(o.status); }catch(e){ st = o.status; }
+  return st === 'Annullato' || st === 'Completato';
+ }
+ async function findConflict(no, start, end, editId){
+  var q = await sb.from(TB).select('id,reserved_at,ends_at,customer_name,order_id,status').eq('table_no', no).neq('status', 'Annullata').lt('reserved_at', end.toISOString()).gt('ends_at', start.toISOString());
+  if(q.error) throw q.error;
+  var live = null, stale = [];
+  (q.data || []).forEach(function(row){
+   if(editId && String(row.order_id) === String(editId)) return;
+   if(isStale(row)) stale.push(row.id); else if(!live) live = row;
+  });
+  if(stale.length){ try{ await sb.from(TB).update({status: 'Annullata'}).in('id', stale); }catch(e){ w(e); } }
+  return live;
+ }
+ async function syncRes(orderId, editId, typ, info){
+  var oid = String(orderId);
+  if(editId){
+   var ex = await sb.from(TB).select('id').eq('order_id', String(editId)).neq('status', 'Annullata');
+   var rows = (ex && ex.data) || [];
+   if(typ !== 'Tavolo' || !info){ if(rows.length) await sb.from(TB).update({status: 'Annullata'}).in('id', rows.map(function(x){ return x.id; })); return; }
+   if(info.conflict) return;
+   if(rows.length){
+    var u = await sb.from(TB).update({table_no: info.no, reserved_at: info.start.toISOString(), duration_min: DUR, customer_name: info.name, phone: info.phone}).eq('id', rows[0].id);
+    if(u.error){ if(/TABLE_BUSY/.test(u.error.message || '')) toast('⚠️ Tavolo ' + info.no, 'Prenotazione non aggiornata: tavolo occupato'); else w(u.error); }
+    return;
+   }
+  }
+  if(!info || info.conflict) return;
+  var ins = await sb.from(TB).insert({table_no: info.no, reserved_at: info.start.toISOString(), duration_min: DUR, customer_name: info.name, phone: info.phone, status: 'Confermata', source: 'app', order_id: oid});
+  if(ins.error){ if(/TABLE_BUSY/.test(ins.error.message || '')) toast('⚠️ Tavolo ' + info.no, 'Tavolo già occupato in quell\'orario'); else w(ins.error); }
+  else toast('🍽️ Tavolo ' + info.no + ' prenotato', hm(info.start) + ' → ' + hm(new Date(info.start.getTime() + DUR * 60000)));
+ }
+ var prev = doSaveOrder;
+ doSaveOrder = async function(){
+  var typ = el('type') ? el('type').value : '', no = el('tableNo') ? el('tableNo').value.trim() : '', editId = editingOrderId, info = null;
+  if(typ === 'Tavolo' && /^\d{1,2}$/.test(no) && cart.size && canUse()){
+   var start = resTime(), end = new Date(start.getTime() + DUR * 60000), conflict = null;
+   try{ conflict = await findConflict(Number(no), start, end, editId); }catch(e){ w(e); }
+   if(conflict){
+    var cs = new Date(conflict.reserved_at), ce = new Date(conflict.ends_at);
+    if(!confirm('⚠️ Tavolo ' + no + ' già prenotato ' + hm(cs) + ' – ' + hm(ce) + (conflict.customer_name ? ' (' + conflict.customer_name + ')' : '') + '.\nتحذير: الطاولة محجوزة في الوقت ده.\n\nSalvare comunque? · تحفظ برضه؟')) return null;
+   }
+   info = {no: Number(no), start: start, conflict: !!conflict, name: (el('customer').value.trim() || ('Tavolo ' + no)), phone: el('phone').value.trim()};
+  }
+  var r = await prev.apply(this, arguments);
+  if(r && String(r).indexOf('OFF-') !== 0 && canUse()){ try{ await syncRes(r, editId, typ, info); }catch(e){ w(e); } }
+  return r;
+ };
+})();
+</script>
 </body>
 </html>
