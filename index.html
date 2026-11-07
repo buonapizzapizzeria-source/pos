@@ -10208,7 +10208,7 @@ function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&l
  var LIST = [
  ["pkProdBox", "bpAccProd", "<span>🍕 Menu prodotti</span>", function(){ var p = getSelectedDropdownProduct(); return p ? p.name + " · " + euro(p.price_normal) : "Scegli prodotto"; }],
  ["cart", "bpAccCart", "<span>🛒 Articoli nel carrello</span>", function(){ return pcs() ? pcs() + " pz · " + euro(getGrandTotal()) : "Vuoto"; }],
- ["allOrders", "bpAccAll", "<span>🕒 Elenco ordini</span>", function(){ return orders.length + " ordini"; }],
+ ["allOrders", "bpAccAll", "<span>🕒 Elenco ordini</span>", function(){ return (window.__storDayCount != null ? window.__storDayCount : orders.length) + " ordini"; }],
  ["menuStats", "bpAccStats", "<span>📊 Statistiche menu</span>", function(){ return allMenu.length + " prodotti"; }],
  ["adminMenuList", "bpAccList", "<span>🍕 Lista prodotti</span>", function(){ return allMenu.length + " prodotti"; }],
  ["cassaTopProducts", "bpAccTop", "<span>🏆 Più venduti</span>", function(){ return ""; }],
@@ -10348,8 +10348,14 @@ try{
  });
  }
  var valid=list.filter(function(o){return normStatus(o.status)!=='Annullato';});
- var inc=valid.reduce(function(s,o){return s+Number(o.total||0);},0);
- tot.innerHTML='📅 '+new Date(k+'T12:00:00').toLocaleDateString('it-IT',{weekday:'long',day:'2-digit',month:'long'})+'<br>🧾 Totale ordini: <span style="font-size:1.4em">'+list.length+'</span> · ❌ annullati: '+(list.length-valid.length)+' · 💰 '+euro(inc);
+ var pay={cash:[0,0],card:[0,0],other:[0,0]};
+ valid.forEach(function(o){
+ var pm=String(o.payment_method||'').toLowerCase(), b=pm.indexOf('contanti')>=0?'cash':(pm.indexOf('carta')>=0?'card':'other');
+ pay[b][0]+=Number(o.total||0); pay[b][1]+=1;
+ });
+ function pl(ic,nm,a){ return ic+' '+nm+': <b>'+euro(a[0])+'</b> <small>('+a[1]+')</small>'; }
+ tot.innerHTML='📅 '+new Date(k+'T12:00:00').toLocaleDateString('it-IT',{weekday:'long',day:'2-digit',month:'long'})+'<br>🧾 Totale ordini: <span style="font-size:1.4em">'+list.length+'</span> · ❌ annullati: '+(list.length-valid.length)+'<br>'+pl('💵','Contanti',pay.cash)+' · '+pl('💳','Carta',pay.card)+(pay.other[1]?' · '+pl('🧾','Altro',pay.other):'');
+ window.__storDayCount=list.length;
  window.__stor=1; _rol('allOrders',list,false);
  }
  window.__storReload=function(){ if(!el('allTab').classList.contains('hidden')) loadDay(sel); };
@@ -10561,9 +10567,18 @@ try{
  if(!activeOrds.length){
  kb.classList.add("hidden");
  } else {
- var counts = {pizza:0, panino:0, piadina:0, fritti:0, bibite:0};
+ var counts = {pizza:0, panino:0, piadina:0, fritti:0, bibite:0, pn:0, pf:0, kn:0, kf:0, cz:0}, idsBy = {};
  var menuFritti = 0;
  var byItem = {};
+ function kcat(nm, isMaxi){
+ if(/met[àa]\s*met[àa]|½/.test(nm)) return isMaxi ? "pf" : "pn";
+ if(/piadin/.test(nm)) return "piadina";
+ if(/calzon/.test(nm)) return "cz";
+ if(/pizz[^|]*kebab|kebab[^|]*pizz/.test(nm)) return isMaxi ? "kf" : "kn";
+ if(/panin|kebab|kebap|burger|durum|falafel/.test(nm)) return "panino";
+ return isMaxi ? "pf" : "pn";
+ }
+ function kadd(c, q, id){ counts[c] = (counts[c] || 0) + q; (idsBy[c] = idsBy[c] || {})[id] = 1; }
  activeOrds.forEach(function(o){
  var items = itemsByOrder.get(o.id) || [];
  items.forEach(function(i){
@@ -10577,15 +10592,11 @@ try{
  if(mu > 0){
  counts.fritti += fd.f; counts.bibite += fd.d; menuFritti += mu; /* ogni menu = 1 patatine + 1 bibita */
  var nm2 = nm.replace(/^men[uù]\s+/, "");
- if(/piadin/.test(nm2)) counts.piadina += q;
- else if(/panin|kebab|kebap|burger|durum|falafel/.test(nm2)) counts.panino += q;
- else counts.pizza += q;
+ kadd(kcat(nm2, i.size === "Maxi"), q, o.id);
  }
  else if(fd.d > 0) counts.bibite += fd.d;
  else if(fd.f > 0) counts.fritti += fd.f;
- else if(/piadin/.test(nm)) counts.piadina += q;
- else if(/panin|kebab|kebap|burger|durum|falafel/.test(nm)) counts.panino += q;
- else counts.pizza += q;
+ else kadd(kcat(nm, i.size === "Maxi"), q, o.id);
  var k = base + (i.size === "Maxi" ? " (Maxi)" : "");
  byItem[k] = (byItem[k] || 0) + q;
  });
@@ -10594,13 +10605,14 @@ try{
  return "<div>• <b>" + byItem[k] + "×</b> " + esc(k) + "</div>";
  }).join("") + (counts.fritti ? "<div>• <b>" + counts.fritti + "×</b> 🍟 FRITTI TOTALI" + (menuFritti ? " (di cui " + menuFritti + " dai menu)" : "") + "</div>" : "");
  kb.classList.remove("hidden");
+ function kpill(ic, lb, key){ return counts[key] ? '<span class="bp22-k-pill" data-ids="' + Object.keys(idsBy[key] || {}).join(",") + '">' + ic + ' ' + lb + ': ' + counts[key] + '</span>' : ''; }
  kb.innerHTML =
  '<div class="bp22-k-top">' +
  '<strong>👨‍🍳 Radar Forno & Cucina (' + activeOrds.length + ' ordini da preparare)</strong>' +
  '<div class="bp22-k-badges">' +
- '<span class="bp22-k-pill">🍕 Pizze: ' + counts.pizza + '</span>' +
- '<span class="bp22-k-pill">🥙 Kebab/Panini: ' + counts.panino + '</span>' +
- (counts.piadina ? '<span class="bp22-k-pill">🫓 Piadine: ' + counts.piadina + '</span>' : '') +
+ kpill("🍕", "Pizze Normali", "pn") + kpill("🍕", "Pizze Famiglia", "pf") +
+ kpill("🥙", "Pizza Kebab Normale", "kn") + kpill("🥙", "Pizza Kebab Famiglia", "kf") +
+ kpill("🥟", "Calzoni", "cz") + kpill("🥪", "Panini", "panino") + kpill("🫓", "Piadine", "piadina") +
  (counts.fritti ? '<span class="bp22-k-pill">🍟 Fritti: ' + counts.fritti + '</span>' : '') +
  (counts.bibite ? '<span class="bp22-k-pill">🥤 Bibite: ' + counts.bibite + '</span>' : '') +
  '</div>' +
@@ -10873,7 +10885,7 @@ try{
  var itemEl = e.target.closest('.bp22-k-details > div, .bp22-k-pill');
  if(!itemEl) return;
 
- var rawTxt = itemEl.textContent.replace(/^[•\s\d×🍕🥙🫓🍟🥤]+/, '').split(':')[0].replace('(Maxi)','').trim().toLowerCase();
+ var rawTxt = itemEl.getAttribute('data-ids') !== null ? 'ids:' + itemEl.getAttribute('data-ids') : itemEl.textContent.replace(/^[•\s\d×🍕🥙🫓🍟🥤]+/, '').split(':')[0].replace('(Maxi)','').trim().toLowerCase();
  if(activeKitchenFilter === rawTxt){
  activeKitchenFilter = null;
  } else {
@@ -10886,6 +10898,11 @@ try{
  document.querySelectorAll('#openOrders .order').forEach(function(card){
  if(!activeKitchenFilter){
  card.style.display = '';
+ return;
+ }
+ if(activeKitchenFilter.indexOf('ids:') === 0){
+ var hm = /#(\d+)/.exec((card.querySelector('h3') || card).textContent);
+ card.style.display = (hm && activeKitchenFilter.slice(4).split(',').indexOf(hm[1]) >= 0) ? '' : 'none';
  return;
  }
  var txt = card.textContent.toLowerCase();
@@ -26511,5 +26528,21 @@ html:not(.pos64) .voice-input-row textarea{min-height:min(68dvh,600px)!important
  document.addEventListener('visibilitychange', function(){ if(!document.hidden) pend(); });
 })();
 </script>
+<style id="tabletOrdersCss">
+/* ORIZZONTALE / TABLET / PC (>=900px): stessa scheda compatta del verticale, in più colonne, senza spazi vuoti */
+@media (min-width: 900px){
+ #openOrders,#allOrders{display:grid!important;grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),560px))!important;justify-content:start!important;gap:12px!important;align-items:start!important}
+ #openOrders>.panel.muted,#allOrders>.panel.muted{grid-column:1/-1}
+ #openOrders .order,#allOrders .order{grid-template-columns:minmax(0,1fr)!important;gap:10px!important;padding:12px 14px!important;margin:0!important;height:100%;box-sizing:border-box}
+ #openOrders .order .order-right,#allOrders .order .order-right{text-align:left!important;flex-direction:row!important;flex-wrap:wrap!important;align-items:center!important;justify-content:space-between!important;min-width:0!important;border-top:1px solid var(--bp-line,#e8eaf0);padding-top:10px;gap:8px!important}
+ #openOrders .order .order-right>*,#allOrders .order .order-right>*{flex:1 1 130px;min-width:0}
+ #openOrders .order .order-right>strong,#allOrders .order .order-right>strong{flex:0 0 auto;margin-right:auto}
+ #openOrders .order .order-right .bpi,#allOrders .order .order-right .bpi{flex:0 0 auto!important}
+ #openOrders .order .order-items-box,#allOrders .order .order-items-box{margin:6px 0!important}
+}
+@media (min-width: 900px) and (max-height: 820px){
+ #openOrders .order,#allOrders .order{padding:10px 12px!important}
+}
+</style>
 </body>
 </html>
