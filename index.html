@@ -11676,7 +11676,7 @@ function bpKitchenNext(o, st){ /* stessa catena di stati per ogni tipo di ordine
 var __bpKLoaded = {};
 function bpKitchenLoadItems(o){ /* righe ordine non ancora arrivate: le scarico una volta e ridisegno */
  if(__bpKLoaded[o.id] || !/^\d+$/.test(String(o.id))) return; __bpKLoaded[o.id] = 1;
- try{ sb.from('order_items').select('*').eq('order_id', o.id).then(function(r){ if(r && r.data){ itemsByOrder.set(o.id, r.data); try{ renderKitchen(); }catch(e){} } }); }catch(e){}
+ try{ sb.from('order_items').select('*').eq('order_id', o.id).then(function(r){ if(r && r.data){ itemsByOrder.set(o.id, r.data); try{ (window.renderKitchen||renderKitchen)(); }catch(e){} } }); }catch(e){}
 }
 var BP_STATION = 'all';
 function bpStationOf(name){
@@ -26842,7 +26842,8 @@ body[data-role="viewer"] #userBar button:not([onclick*="doLogout"]){display:none
  }
  /* Ordini (viewer): TUTTI gli ordini di oggi, anche completati/annullati, con filtri per stato */
  function viewerOrdersPost(){
-  var all = orders.slice(), f = (typeof statusFilter !== 'undefined') ? statusFilter : 'Tutti';
+  var all = orders.filter(function(o){ var s0 = normStatus(o.status); return s0 !== 'Completato' && s0 !== 'Annullato'; }), f = (typeof statusFilter !== 'undefined') ? statusFilter : 'Tutti';
+  if(f === 'Completato' || f === 'Annullato'){ f = 'Tutti'; try{ statusFilter = 'Tutti'; }catch(e){} }
   try{ all = sortOpenOrdersList(all); }catch(e){}
   var list = all.filter(function(o){
    var st = normStatus(o.status), u = {};
@@ -26856,15 +26857,21 @@ body[data-role="viewer"] #userBar button:not([onclick*="doLogout"]){display:none
   if(!window.__bpVTot){ var bx = document.getElementById('openOrders'); if(bx) bx.innerHTML = '<div class="panel muted">⚠️ Nessun dato ricevuto dal server. Se ci sono ordini, mancano i permessi di lettura per il ruolo viewer: esegui il passo 5 di viewer_role.sql.</div>'; }
   var wrapEl = document.getElementById('statusFilters'); if(!wrapEl) return;
   var first = wrapEl.querySelector('.badge-count'); if(first) first.textContent = all.length;
-  [['Completato', '✅ Completati'], ['Annullato', '🚫 Annullati']].forEach(function(d){
-   var n = all.filter(function(o){ return normStatus(o.status) === d[0]; }).length;
-   var b = document.createElement('button'); b.type = 'button'; b.className = f === d[0] ? 'active' : '';
-   b.innerHTML = '<span>' + d[1] + '</span><span class="badge-count">' + n + '</span>';
-   b.onclick = function(){ statusFilter = d[0]; renderOrders(); };
-   wrapEl.appendChild(b);
-  });
  }
  wrap('renderOrders', viewerOrdersPost); wrap('renderKitchen');
+ /* Cucina: renderKitchen() esce subito se la scheda è nascosta, e switchTab non la ridisegnava: l'apertura restava vuota/bloccata */
+ (function(){
+  var prev = window.switchTab; if(typeof prev !== 'function' || prev.__kw) return;
+  var sw = function(t){
+   var rv = prev.apply(this, arguments);
+   if(t === 'kitchen'){
+    var go = function(){ try{ if(typeof window.renderKitchen === 'function') window.renderKitchen(); }catch(e){ console.warn('[bp] cucina', e); } };
+    go(); setTimeout(go, 250); setTimeout(go, 1200);
+   }
+   return rv;
+  };
+  sw.__kw = 1; window.switchTab = sw; try{ switchTab = sw; }catch(e){}
+ })();
 })();
 </script>
 </body>
