@@ -26990,5 +26990,245 @@ body[data-role="driver"] [data-set-status]{display:none!important}
  document.addEventListener('visibilitychange', function(){ if(!document.hidden) tick(); });
 })();
 </script>
+<script id="bpGeo">
+/* Google Maps: suggerimenti via, controllo indirizzo (comune + distanza max 3 km), ottimizzazione giro. Chiave in localStorage 'bp_gmaps_key' */
+(function(){
+ if(window.__bpGeo) return; window.__bpGeo = 1;
+ var LS = 'bp_gmaps_key', CK = 'bp_geo_cache_v1', MAXKM = 3, C = {lat: 45.3144, lng: 9.4989};
+ var cache = {}; try{ cache = JSON.parse(localStorage.getItem(CK) || '{}') || {}; }catch(e){}
+ var home = null;
+ function $(id){ return document.getElementById(id); }
+ function key(){ try{ return (localStorage.getItem(LS) || '').trim(); }catch(e){ return ''; } }
+ function setKey(){
+  var k = prompt('Incolla la chiave API di Google Maps.\nServono abilitate: Geocoding API, Places API (New), Routes API.', key());
+  if(k !== null){ try{ localStorage.setItem(LS, k.trim()); }catch(e){} }
+  return key();
+ }
+ window.bpSetMapsKey = setKey;
+ function esc2(t){ return String(t == null ? '' : t).replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
+ function hav(a, b){
+  var R = 6371, r = Math.PI / 180, dLa = (b.lat - a.lat) * r, dLo = (b.lng - a.lng) * r;
+  var x = Math.sin(dLa / 2) * Math.sin(dLa / 2) + Math.cos(a.lat * r) * Math.cos(b.lat * r) * Math.sin(dLo / 2) * Math.sin(dLo / 2);
+  return 2 * R * Math.asin(Math.sqrt(x));
+ }
+ function normAddr(a){ try{ return normalizeDeliveryAddress(a); }catch(e){ return a + ', Lodi Vecchio LO, Italia'; } }
+ function short(f){ return String(f || '').replace(/,\s*Italia\s*$/i, ''); }
+ function parseRes(r){
+  var comp = r.address_components || [], com = '', num = false;
+  comp.forEach(function(c){
+   if(c.types.indexOf('locality') >= 0) com = c.long_name;
+   else if(!com && c.types.indexOf('administrative_area_level_3') >= 0) com = c.long_name;
+   if(c.types.indexOf('street_number') >= 0) num = true;
+  });
+  var t = r.types || [];
+  return {formatted: r.formatted_address, lat: r.geometry.location.lat, lng: r.geometry.location.lng, comune: com, num: num,
+   street: t.indexOf('route') >= 0 || t.indexOf('street_address') >= 0 || t.indexOf('premise') >= 0 || t.indexOf('subpremise') >= 0 || t.indexOf('intersection') >= 0, partial: !!r.partial_match};
+ }
+ async function geocode(addr, rawQuery){
+  var q = rawQuery ? addr : normAddr(addr), ck = q.toLowerCase();
+  if(cache[ck]) return cache[ck];
+  var k = key(); if(!k) throw new Error('nokey');
+  var u = 'https://maps.googleapis.com/maps/api/geocode/json?address=' + encodeURIComponent(q) + '&components=country:IT&language=it&region=it'
+   + '&bounds=' + (C.lat - 0.08) + ',' + (C.lng - 0.12) + '|' + (C.lat + 0.08) + ',' + (C.lng + 0.12) + '&key=' + encodeURIComponent(k);
+  var j = await (await fetch(u)).json();
+  if(j.status !== 'OK' && j.status !== 'ZERO_RESULTS') throw new Error(j.status + (j.error_message ? ': ' + j.error_message : ''));
+  var res = (j.results || []).map(parseRes).slice(0, 5);
+  cache[ck] = res; try{ localStorage.setItem(CK, JSON.stringify(cache)); }catch(e){}
+  return res;
+ }
+ async function ensureHome(){
+  if(home) return home;
+  var o = (typeof PIZZERIA_ORIGIN !== 'undefined') ? PIZZERIA_ORIGIN : 'Pizzeria Buona Pizza, Lodi Vecchio LO, Italia';
+  var r = await geocode(o, true);
+  home = r[0] ? {lat: r[0].lat, lng: r[0].lng} : C;
+  return home;
+ }
+
+ /* ---------- 1) Suggerimenti via da Google Maps ---------- */
+ var tokS = 0, timerS = 0;
+ async function suggest(){
+  var inp = $('address'), box = $('suggestAddress'); if(!inp || !box || !key()) return;
+  var v = inp.value.trim(); if(v.length < 3) return; var my = ++tokS;
+  try{
+   var body = {input: v, languageCode: 'it', includedRegionCodes: ['it'], locationBias: {circle: {center: {latitude: C.lat, longitude: C.lng}, radius: 6000}}};
+   var r = await fetch('https://places.googleapis.com/v1/places:autocomplete', {method: 'POST', headers: {'Content-Type': 'application/json', 'X-Goog-Api-Key': key()}, body: JSON.stringify(body)});
+   var j = await r.json(); if(my !== tokS) return;
+   var items = (j.suggestions || []).filter(function(s){ return s.placePrediction && s.placePrediction.text; }).slice(0, 5).map(function(s){ return short(s.placePrediction.text.text); });
+   if(!items.length) return;
+   if(box.classList.contains('hidden')) box.innerHTML = '';
+   var old = box.querySelector('[data-bpg-sec]'); while(old){ var nx = old.nextSibling; box.removeChild(old); old = null; }
+   Array.prototype.slice.call(box.querySelectorAll('[data-bpg]')).forEach(function(n){ n.remove(); });
+   var html = '<div data-bpg-sec style="padding:6px 10px;font-weight:700;font-size:12px;color:#175cd3;background:#eff8ff">🗺️ Google Maps</div>';
+   items.forEach(function(t, i){ html += '<div class="auto-item" data-bpg="' + i + '"><div class="auto-item-top"><span>📍 ' + esc2(t) + '</span><span class="auto-tag street">Usa</span></div></div>'; });
+   box.insertAdjacentHTML('beforeend', html); box.classList.remove('hidden');
+   Array.prototype.slice.call(box.querySelectorAll('[data-bpg]')).forEach(function(n){
+    n.onmousedown = function(e){
+     e.preventDefault(); inp.value = items[Number(n.getAttribute('data-bpg'))]; box.classList.add('hidden');
+     inp.focus(); try{ inp.setSelectionRange(inp.value.length, inp.value.length); }catch(x){}
+     lastVal = ''; setTimeout(check, 50);
+    };
+   });
+  }catch(e){ console.warn('[bp] suggerimenti', e); }
+ }
+
+ /* ---------- 2) Controllo indirizzo: comune + distanza ---------- */
+ var lastVal = '', tokC = 0, warned = {};
+ function status(){
+  var s = $('bpGeoStatus'); if(s) return s;
+  var f = $('addressField'); if(!f) return null;
+  s = document.createElement('div'); s.id = 'bpGeoStatus'; s.style.cssText = 'margin-top:6px;font-size:13px;border-radius:10px;padding:7px 10px;display:none;line-height:1.5';
+  f.appendChild(s); return s;
+ }
+ function show(s, kind, html){
+  var c = {ok: ['#ecfdf3', '#067647'], warn: ['#fffaeb', '#b54708'], bad: ['#fef3f2', '#b42318'], info: ['#eff8ff', '#175cd3']}[kind];
+  s.style.display = 'block'; s.style.background = c[0]; s.style.color = c[1]; s.style.border = '1px solid ' + c[1] + '55'; s.innerHTML = html;
+ }
+ function evaluate(c, h){
+  var km = hav(h, c), warn = [];
+  var comuneOk = /lodi\s*vecchio/i.test(c.comune || '');
+  if(!comuneOk) warn.push('fuori da Lodi Vecchio' + (c.comune ? ' (Comune: ' + esc2(c.comune) + ')' : ''));
+  if(km > MAXKM) warn.push('a ' + km.toFixed(1).replace('.', ',') + ' km dalla pizzeria (oltre ' + MAXKM + ' km)');
+  if(!c.street) warn.push('via non trovata con precisione');
+  return {km: km, warn: warn, comuneOk: comuneOk};
+ }
+ function render(s, c, h, inp){
+  var ev = evaluate(c, h), km = ev.km.toFixed(1).replace('.', ',');
+  var extra = c.num ? '' : '<br><span style="color:#b54708">ℹ️ Manca il numero civico?</span>';
+  if(ev.warn.length){
+   show(s, 'bad', '⚠️ <b>' + esc2(short(c.formatted)) + '</b><br>Attenzione: ' + ev.warn.join(' · ') + extra);
+   var w = c.formatted;
+   if(!warned[w]){ warned[w] = 1; setTimeout(function(){ alert('⚠️ Controlla l\'indirizzo!\n' + short(c.formatted) + '\n' + ev.warn.join('\n').replace(/&[a-z]+;/g, '')); }, 30); }
+  } else show(s, 'ok', '✅ <b>' + esc2(short(c.formatted)) + '</b> · ' + km + ' km dalla pizzeria (in linea d\'aria)' + extra);
+ }
+ async function check(){
+  var inp = $('address'); if(!inp) return; var s = status(); if(!s) return;
+  var v = inp.value.trim(); lastVal = inp.value;
+  var t = $('type'); if(t && !/consegn/i.test(t.value)){ s.style.display = 'none'; return; }
+  if(v.length < 4){ s.style.display = 'none'; return; }
+  if(!key()){
+   show(s, 'warn', '🗺️ Per controllare l\'indirizzo su Google Maps serve la chiave. <button type="button" id="bpGeoKeyBtn" style="margin-right:6px">🔑 Imposta chiave</button>');
+   var b = $('bpGeoKeyBtn'); if(b) b.onclick = function(){ if(setKey()) check(); };
+   return;
+  }
+  var my = ++tokC; show(s, 'info', '🗺️ Controllo su Google Maps…');
+  try{
+   var res = await geocode(v), h = await ensureHome(); if(my !== tokC) return;
+   if(!res.length){ show(s, 'bad', '⚠️ Indirizzo <b>non trovato</b> su Google Maps. Controlla il nome della via.'); return; }
+   var cands = res.filter(function(r){ return r.street; });
+   if(!cands.length) cands = res;
+   var distinct = {}; cands.forEach(function(r){ distinct[short(r.formatted)] = r; });
+   var list = Object.keys(distinct).map(function(k){ return distinct[k]; });
+   if(list.length > 1){
+    var html = '🔎 Trovati <b>' + list.length + '</b> indirizzi simili, scegli quello giusto:';
+    list.forEach(function(r, i){
+     var km = hav(h, r).toFixed(1).replace('.', ',');
+     html += '<div style="margin-top:5px"><button type="button" data-bpgc="' + i + '" style="text-align:right;width:100%">📍 ' + esc2(short(r.formatted)) + ' <span style="opacity:.7">· ' + km + ' km</span></button></div>';
+    });
+    show(s, 'warn', html);
+    Array.prototype.slice.call(s.querySelectorAll('[data-bpgc]')).forEach(function(bn){
+     bn.onclick = function(){
+      var r = list[Number(bn.getAttribute('data-bpgc'))]; inp.value = short(r.formatted); lastVal = inp.value;
+      try{ inp.dispatchEvent(new Event('change', {bubbles: true})); }catch(e){}
+      render(s, r, h, inp);
+     };
+    });
+    return;
+   }
+   render(s, list[0], h, inp);
+  }catch(e){
+   console.warn('[bp] geocode', e);
+   var m = String(e && e.message || e);
+   show(s, 'warn', m === 'nokey' ? '🗺️ Manca la chiave Google Maps.' : '🗺️ Controllo non riuscito (' + esc2(m) + '). Verifica che Geocoding API sia abilitata per la chiave.');
+  }
+ }
+ document.addEventListener('input', function(e){
+  if(e.target && e.target.id === 'address'){ clearTimeout(timerS); timerS = setTimeout(suggest, 300); }
+ });
+ document.addEventListener('change', function(e){
+  if(e.target && (e.target.id === 'address' || e.target.id === 'type')) setTimeout(check, 80);
+ });
+ document.addEventListener('focusout', function(e){ if(e.target && e.target.id === 'address') setTimeout(check, 250); });
+ setInterval(function(){ /* indirizzo compilato da programma (cliente salvato, vocale, ecc.) */
+  var inp = $('address'); if(!inp || document.hidden || document.activeElement === inp) return;
+  if(inp.value !== lastVal) check();
+ }, 1500);
+
+ /* ---------- 3) Ottimizzazione giro (andata e ritorno dalla pizzeria) ---------- */
+ function tsp(h, pts){
+  var n = pts.length, D = function(a, b){ return hav(a, b); };
+  if(n <= 1) return pts.map(function(_, i){ return i; });
+  var best = null, bestL = Infinity;
+  if(n <= 9){
+   var used = new Array(n).fill(false), cur = [];
+   (function rec(last, len){
+    if(len >= bestL) return;
+    if(cur.length === n){ var tot = len + D(last, h); if(tot < bestL){ bestL = tot; best = cur.slice(); } return; }
+    for(var i = 0; i < n; i++){ if(used[i]) continue; used[i] = true; cur.push(i); rec(pts[i], len + D(last, pts[i])); cur.pop(); used[i] = false; }
+   })(h, 0);
+   return best;
+  }
+  var rem = pts.map(function(_, i){ return i; }), ord = [], last = h;
+  while(rem.length){ var bi = 0, bd = Infinity; rem.forEach(function(i, k){ var d = D(last, pts[i]); if(d < bd){ bd = d; bi = k; } }); var i2 = rem.splice(bi, 1)[0]; ord.push(i2); last = pts[i2]; }
+  var improved = true, L = function(o){ var t = D(h, pts[o[0]]); for(var i = 0; i < o.length - 1; i++) t += D(pts[o[i]], pts[o[i + 1]]); return t + D(pts[o[o.length - 1]], h); };
+  while(improved){ improved = false; for(var i = 0; i < n - 1; i++) for(var j = i + 1; j < n; j++){ var c = ord.slice(0, i).concat(ord.slice(i, j + 1).reverse(), ord.slice(j + 1)); if(L(c) + 1e-9 < L(ord)){ ord = c; improved = true; } } }
+  return ord;
+ }
+ window.__bpGeoTest = {hav: hav, tsp: tsp};
+ async function routesOpt(h, pts){
+  var ll = function(p){ return {location: {latLng: {latitude: p.lat, longitude: p.lng}}}; };
+  var r = await fetch('https://routes.googleapis.com/directions/v2:computeRoutes', {method: 'POST',
+   headers: {'Content-Type': 'application/json', 'X-Goog-Api-Key': key(), 'X-Goog-FieldMask': 'routes.optimizedIntermediateWaypointIndex,routes.distanceMeters,routes.duration'},
+   body: JSON.stringify({origin: ll(h), destination: ll(h), intermediates: pts.map(ll), travelMode: 'DRIVE', routingPreference: 'TRAFFIC_UNAWARE', optimizeWaypointOrder: true, languageCode: 'it', units: 'METRIC'})});
+  var j = await r.json(), rt = j.routes && j.routes[0];
+  if(!rt || !rt.optimizedIntermediateWaypointIndex) throw new Error((j.error && j.error.message) || 'Routes API');
+  return {order: rt.optimizedIntermediateWaypointIndex, km: (rt.distanceMeters || 0) / 1000, min: parseInt(rt.duration || '0', 10) / 60};
+ }
+ function info(){
+  var i = $('bpRouteInfo'); if(i) return i;
+  var l = $('routeStopsList'); if(!l) return null;
+  i = document.createElement('div'); i.id = 'bpRouteInfo'; i.style.cssText = 'margin:8px 0;padding:8px 10px;border-radius:10px;font-size:13px;display:none';
+  l.parentNode.insertBefore(i, l); return i;
+ }
+ function say(kind, html){ var i = info(); if(!i) return; var c = {ok: ['#ecfdf3', '#067647'], warn: ['#fffaeb', '#b54708'], info: ['#eff8ff', '#175cd3']}[kind]; i.style.display = 'block'; i.style.background = c[0]; i.style.color = c[1]; i.innerHTML = html; }
+ async function optimize(){
+  try{
+   var ids = selectedRouteOrderIds.slice();
+   var stops = ids.map(function(id){ return orders.find(function(o){ return o.id === id; }); }).filter(function(o){ return o && o.address; });
+   var noAddr = ids.filter(function(id){ return !stops.some(function(o){ return o.id === id; }); });
+   if(stops.length < 2){ say('warn', 'Servono almeno 2 consegne con indirizzo per ottimizzare il giro.'); return; }
+   if(!key() && !setKey()) return;
+   say('info', '⏳ Calcolo il giro più breve…');
+   var h = await ensureHome(), pts = [], missing = [];
+   for(var i = 0; i < stops.length; i++){
+    var r = await geocode(stops[i].address);
+    if(r[0]) pts.push({lat: r[0].lat, lng: r[0].lng, o: stops[i]}); else missing.push(stops[i]);
+   }
+   if(pts.length < 2){ say('warn', 'Non riesco a localizzare abbastanza indirizzi su Google Maps.'); return; }
+   var ord, km, min, how;
+   try{ var ro = await routesOpt(h, pts); ord = ro.order; km = ro.km; min = ro.min; how = 'strade reali (Google)'; }
+   catch(e){
+    console.warn('[bp] Routes API non disponibile, uso stima locale', e);
+    ord = tsp(h, pts); var tot = 0, last = h; ord.forEach(function(ix){ tot += hav(last, pts[ix]); last = pts[ix]; }); tot += hav(last, h);
+    km = tot * 1.3; min = km / 30 * 60 + 0; how = 'stima in linea d\'aria (abilita Routes API per le strade reali)';
+   }
+   var newIds = ord.map(function(ix){ return pts[ix].o.id; }).concat(missing.map(function(o){ return o.id; }), noAddr);
+   selectedRouteOrderIds = newIds;
+   try{ renderOrders(); }catch(e){}
+   say('ok', '⚡ Giro ottimizzato: <b>' + km.toFixed(1).replace('.', ',') + ' km</b> · circa <b>' + Math.round(min) + ' min</b> (andata e ritorno, senza soste) · ' + how
+    + (missing.length ? '<br>⚠️ Non localizzati (messi in fondo): ' + missing.map(function(o){ return '#' + o.id; }).join(', ') : '')
+    + '<br><span style="opacity:.8">Il giro è ordinato solo per percorso, non per orario di consegna.</span>');
+  }catch(e){ console.warn('[bp] ottimizza', e); say('warn', '⚠️ Ottimizzazione non riuscita: ' + esc2(e && e.message || e)); }
+ }
+ window.bpOptimizeRoute = optimize;
+ function mount(){
+  var box = $('routeBuilderBox'); if(!box || $('bpOptBtn')) return;
+  var open = box.querySelector('[onclick*="openGoogleMapsMultiRoute"]'); if(!open) return;
+  var b = document.createElement('button'); b.type = 'button'; b.id = 'bpOptBtn'; b.className = 'blue btn-sm'; b.textContent = '⚡ Ottimizza giro'; b.onclick = optimize;
+  var k = document.createElement('button'); k.type = 'button'; k.className = 'btn-sm'; k.textContent = '🔑'; k.title = 'Chiave Google Maps'; k.onclick = setKey;
+  open.parentNode.insertBefore(b, open); open.parentNode.appendChild(k);
+ }
+ setInterval(mount, 1500); mount();
+})();
+</script>
 </body>
 </html>
