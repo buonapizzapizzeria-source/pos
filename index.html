@@ -11997,10 +11997,9 @@ el('kitchenTab').addEventListener('click', function(e){
  <h2>🔄 Movimenti di cassa</h2>
  <div class="cs-mvform">
  <select id="csMvType">${Object.keys(MOVE).map(function(k){ return '<option value="' + k + '">' + MOVE[k].icon + ' ' + MOVE[k].label + '</option>'; }).join('')}</select>
- <input type="number" step="0.01" min="0" inputmode="decimal" id="csMvAmt" placeholder="Importo €">
- <input class="full" type="text" id="csMvReason" list="csMvReasons" placeholder="Motivo (es. Fornitore mozzarella, Carburante…)">
- <datalist id="csMvReasons"><option value="Fornitore"><option value="Ingredienti / materie prime"><option value="Carburante"><option value="Collaboratori / stipendi"><option value="Manutenzione"><option value="Imballaggi"><option value="Versamento in banca"><option value="Fondo aggiuntivo"></datalist>
- <input class="full" type="text" id="csMvNote" placeholder="Nota (facoltativa)">
+ <input type="number" step="0.01" min="0" inputmode="decimal" id="csMvAmt" autocomplete="off" placeholder="Importo €">
+ <select class="full" id="csMvReasonSel"><option value="">— Scegli il motivo —</option><option value="Fornitore">Fornitore</option><option value="Ingredienti / materie prime">Ingredienti / materie prime</option><option value="Carburante">Carburante</option><option value="Collaboratori / stipendi">Collaboratori / stipendi</option><option value="Manutenzione">Manutenzione</option><option value="Imballaggi">Imballaggi</option><option value="Versamento in banca">Versamento in banca</option><option value="Fondo aggiuntivo">Fondo aggiuntivo</option><option value="__other__">✏️ Altro (scrivi)…</option></select><input class="full" type="text" id="csMvReason" autocomplete="off" placeholder="Scrivi il motivo…" style="display:none">
+ <input class="full" type="text" id="csMvNote" autocomplete="off" placeholder="Nota (facoltativa)">
  </div>
  <button type="button" class="blue" style="width:100%" onclick="csAddMove()">＋ Registra movimento</button>
  <div id="csMovesList" style="margin-top:12px"></div>
@@ -26544,5 +26543,99 @@ html:not(.pos64) .voice-input-row textarea{min-height:min(68dvh,600px)!important
  #openOrders .order,#allOrders .order{padding:10px 12px!important}
 }
 </style>
+<script>
+/* PANNELLO "CASSA CONTANTI" in cima alla Cassa: focus sul contante + stipendi rapidi */
+(function(){
+ if(window.__bpCashFocus) return; window.__bpCashFocus = 1;
+ var WAGES = [['👨‍💼', 'Abu Mahmoud', 60], ['🍕', 'Zio Ahmed', 60], ['🥙', 'Mahmoud', 40], ['🧑‍🍳', 'Khaled', 40]];
+ var ROBERT_RATE = 7; /* €/ora */
+ var HIDE_KEY = 'bp_cash_hide_cards';
+ function g(id){ return document.getElementById(id); }
+ function eur(n){ try{ return euro(n); }catch(e){ return Number(n).toFixed(2).replace('.', ',') + ' €'; } }
+ function inVal(id){ var e = g(id); if(!e || e.value === '' || e.value == null) return '—'; var n = parseFloat(String(e.value).replace(',', '.')); return isNaN(n) ? '—' : eur(n); }
+ function tx(id){ var e = g(id); return e ? e.textContent.trim() : '—'; }
+ function css(){
+  if(g('cashFocusCss')) return;
+  var s = document.createElement('style'); s.id = 'cashFocusCss';
+  s.textContent = '#cashFocus{background:var(--bp-card,#fff);border:2px solid #16794b;border-radius:18px;padding:14px;margin:0 0 14px;box-shadow:var(--bp-shadow,none)}' +
+   '#cashFocus h2{margin:0 0 8px;font-size:18px}#cashFocus .cf-g{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin-bottom:10px}' +
+   '#cashFocus .cf-b{background:var(--bp-soft,#f1f3f8);border-radius:14px;padding:10px 12px}#cashFocus .cf-b small{display:block;color:var(--bp-mute,#6b7280);font-weight:700;font-size:12.5px}#cashFocus .cf-b b{font-size:24px;display:block;margin-top:2px}' +
+   '#cashFocus .cf-b.dep{background:#e7f6ec;border:1.5px solid #16794b}#cashFocus .cf-b.dep b{color:#16794b;font-size:28px}' +
+   '#cashFocus .cf-s{color:var(--bp-mute,#6b7280);font-size:13px;line-height:1.5;margin-bottom:10px}' +
+   '#cashFocus .cf-d{border-radius:14px;padding:10px 12px;font-weight:900;font-size:18px;margin-bottom:10px;background:var(--bp-soft,#f1f3f8)}' +
+   '#cashFocus .cf-w{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}#cashFocus .cf-w button,#cashFocus .cf-t button{border:0;border-radius:12px;padding:11px 14px;font-weight:800;font-size:15px;background:#e0e7ff;color:#1e2a78}' +
+   '#cashFocus .cf-w button:disabled{opacity:.45}#cashFocus .cf-t{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}#cashFocus .cf-t button{background:var(--bp-soft,#f1f3f8);color:inherit}';
+  document.head.appendChild(s);
+ }
+ function isClosed(){ return !document.querySelector('#csShell button[onclick*="csClose"]'); }
+ async function addWage(name, amt){
+  var list = g('csMovesList'), t = list ? list.textContent : '';
+  if(t.indexOf(name) >= 0 && t.indexOf(eur(amt).replace(/\s/g, '')) >= 0 || (t.indexOf(name) >= 0 && /stipendi/i.test(t) && t.replace(/\s/g, '').indexOf(eur(amt).replace(/\s/g, '')) >= 0)){
+   if(!confirm('«' + name + '» ' + eur(amt) + ' sembra già registrato. Registrarlo di nuovo?')) return;
+  }
+  g('csMvType').value = 'spesa'; g('csMvAmt').value = amt; g('csMvReason').value = 'Collaboratori / stipendi'; g('csMvNote').value = name;
+  await window.csAddMove();
+  try{ rdToast('✅ Stipendio registrato', name + ' · ' + eur(amt)); }catch(e){}
+ }
+ function robert(){
+  var h = prompt('Robert: quante ore ha lavorato? (' + eur(ROBERT_RATE) + ' all\'ora)', '2'); if(h === null) return;
+  h = parseFloat(String(h).replace(',', '.')); if(!(h > 0)) return alert('Ore non valide.');
+  addWage('Robert (' + h + 'h × ' + ROBERT_RATE + ')', Math.round(h * ROBERT_RATE * 100) / 100);
+ }
+ function build(){
+  var shell = g('csShell'); if(!shell || g('cashFocus')) return;
+  css();
+  var p = document.createElement('div'); p.id = 'cashFocus';
+  p.innerHTML = '<h2>💵 CASSA CONTANTI · الكاش</h2>' +
+   '<div class="cf-g"><div class="cf-b"><small>Atteso nel cassetto</small><b id="cfExp">—</b></div><div class="cf-b"><small>🪙 Contati (reali)</small><b id="cfCnt">—</b></div><div class="cf-b dep"><small>💼 DA VERSARE (banconote)</small><b id="cfDep">—</b></div></div>' +
+   '<div class="cf-d" id="cfDiff">—</div>' +
+   '<div class="cf-s" id="cfSub"></div>' +
+   '<b style="font-size:14px">⚡ Stipendi rapidi (Spesa)</b><div class="cf-w" id="cfW"></div>' +
+   '<div class="cf-t"><button type="button" id="cfCount">🧮 Conta banconote</button><button type="button" id="cfCards"></button></div>';
+  var anchor = g('csBanner'); if(anchor && anchor.parentNode) anchor.parentNode.insertBefore(p, anchor); else shell.insertBefore(p, shell.children[1] || null);
+  var w = g('cfW');
+  WAGES.forEach(function(x){ var b = document.createElement('button'); b.type = 'button'; b.textContent = x[0] + ' ' + x[1] + ' ' + eur(x[2]); b.onclick = function(){ addWage(x[1], x[2]); }; w.appendChild(b); });
+  var rb = document.createElement('button'); rb.type = 'button'; rb.textContent = '🧹 Robert (ore)'; rb.onclick = robert; w.appendChild(rb);
+  g('cfCount').onclick = function(){ var c = g('csCountPanel'); if(c) c.scrollIntoView({behavior: 'smooth', block: 'start'}); };
+  g('cfCards').onclick = function(){ var h = localStorage.getItem(HIDE_KEY) !== '0'; localStorage.setItem(HIDE_KEY, h ? '0' : '1'); upd(); };
+ }
+ function upd(){
+  var p = g('cashFocus'); if(!p) return;
+  g('cfExp').textContent = tx('csExpected'); g('cfCnt').textContent = inVal('csCounted'); g('cfDep').textContent = tx('csDeposit');
+  var d = g('csDiff'); var cd = g('cfDiff');
+  if(d){ cd.innerHTML = d.innerHTML; cd.className = 'cf-d ' + (d.className || '').replace('cs-result', '').trim(); }
+  g('cfSub').innerHTML = 'Fondo iniziale <b>' + inVal('csFloat') + '</b> + incassi contanti <b>' + tx('csCashSales') + '</b> + entrate <b>' + tx('csIn') + '</b> − spese <b>' + tx('csSpesa') + '</b> − prelievi <b>' + tx('csPrel') + '</b> · Fondo per domani <b>' + inVal('csTomorrow') + '</b>';
+  var closed = isClosed();
+  Array.prototype.forEach.call(g('cfW').querySelectorAll('button'), function(b){ b.disabled = closed; });
+  var cards = g('cassaCards'), hide = localStorage.getItem(HIDE_KEY) !== '0';
+  if(cards) cards.style.display = hide ? 'none' : '';
+  g('cfCards').textContent = hide ? '📊 Mostra carta, consegne e totali' : '📊 Nascondi carta e totali';
+ }
+ function tick(){ try{ build(); upd(); }catch(e){ try{ bpWarn(e); }catch(_){} } }
+ setInterval(tick, 600);
+})();
+</script>
+<script>
+/* Motivo movimento di cassa: menu a tendina + "Altro" */
+(function(){
+ if(window.__bpReasonSel) return; window.__bpReasonSel = 1;
+ function g(id){ return document.getElementById(id); }
+ document.addEventListener('change', function(e){
+  if(!e.target || e.target.id !== 'csMvReasonSel') return;
+  var i = g('csMvReason'); if(!i) return;
+  if(e.target.value === '__other__'){ i.value = ''; i.style.display = ''; try{ i.focus(); }catch(_){} }
+  else { i.value = e.target.value; i.style.display = 'none'; }
+ });
+ var orig = window.csAddMove;
+ if(typeof orig === 'function'){
+  window.csAddMove = async function(){
+   var r = await orig.apply(this, arguments);
+   var sel = g('csMvReasonSel'), i = g('csMvReason');
+   if(sel && i && !i.value){ sel.value = ''; i.style.display = 'none'; }
+   return r;
+  };
+ }
+})();
+</script>
 </body>
 </html>
