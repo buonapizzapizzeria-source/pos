@@ -26824,18 +26824,46 @@ body[data-role="viewer"] #userBar button:not([onclick*="doLogout"]){display:none
  /* solo ordini del giorno corrente (il giorno cambia alle 05:00) in Ordini, Cucina e Storico */
  function dayKey(v){ if(!v) return ''; var t = new Date(new Date(v).getTime() - 5 * 3600 * 1000); return t.getFullYear() + '-' + t.getMonth() + '-' + t.getDate(); }
  var busy = false;
- function wrap(name){
+ function wrap(name, post){
   var orig = window[name]; if(typeof orig !== 'function' || orig.__vw) return;
   var w = function(){
    if(!viewer() || busy) return orig.apply(this, arguments);
    var full = orders, k = dayKey(new Date());
    busy = true;
-   try{ orders = full.filter(function(o){ return dayKey(o.created_at) === k || dayKey(o.scheduled_at) === k; }); return orig.apply(this, arguments); }
+   try{ orders = full.filter(function(o){
+    if(dayKey(o.created_at) === k || dayKey(o.scheduled_at) === k) return true;
+    /* ordine ancora APERTO registrato ieri (es. prenotato per stasera): resta visibile (max 48 ore) */
+    var st = normStatus(o.status); if(st === 'Completato' || st === 'Annullato') return false;
+    var c = o.created_at ? new Date(o.created_at).getTime() : 0; return c && (Date.now() - c) < 48 * 3600 * 1000;
+   }); var rv = orig.apply(this, arguments); if(post){ try{ post(); }catch(e){ console.warn('[bp] viewer', e); } } return rv; }
    finally{ orders = full; busy = false; }
   };
   w.__vw = 1; window[name] = w;
  }
- wrap('renderOrders'); wrap('renderKitchen');
+ /* Ordini (viewer): TUTTI gli ordini di oggi, anche completati/annullati, con filtri per stato */
+ function viewerOrdersPost(){
+  var all = orders.slice(), f = (typeof statusFilter !== 'undefined') ? statusFilter : 'Tutti';
+  try{ all = sortOpenOrdersList(all); }catch(e){}
+  var list = all.filter(function(o){
+   var st = normStatus(o.status), u = {};
+   try{ u = getOrderUrgencyMeta(o); }catch(e){}
+   if(f === 'Tutti') return true;
+   if(f === 'Urgenti') return st !== 'Completato' && st !== 'Annullato' && (u.isOverdue || u.type === 'soon' || u.type === 'asap');
+   if(f === 'Prenotati') return u.type === 'future';
+   return st === f;
+  });
+  renderOrderList('openOrders', list, true);
+  var wrapEl = document.getElementById('statusFilters'); if(!wrapEl) return;
+  var first = wrapEl.querySelector('.badge-count'); if(first) first.textContent = all.length;
+  [['Completato', '✅ Completati'], ['Annullato', '🚫 Annullati']].forEach(function(d){
+   var n = all.filter(function(o){ return normStatus(o.status) === d[0]; }).length;
+   var b = document.createElement('button'); b.type = 'button'; b.className = f === d[0] ? 'active' : '';
+   b.innerHTML = '<span>' + d[1] + '</span><span class="badge-count">' + n + '</span>';
+   b.onclick = function(){ statusFilter = d[0]; renderOrders(); };
+   wrapEl.appendChild(b);
+  });
+ }
+ wrap('renderOrders', viewerOrdersPost); wrap('renderKitchen');
 })();
 </script>
 </body>
