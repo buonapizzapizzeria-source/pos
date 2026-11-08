@@ -26874,5 +26874,96 @@ body[data-role="viewer"] #userBar button:not([onclick*="doLogout"]){display:none
  })();
 })();
 </script>
+<style id="bpDriverCss">
+/* ruolo driver (autisti): niente Modifica, Copia, Stato, Storia */
+body[data-role="driver"] [data-modifica],
+body[data-role="driver"] [data-riordina],
+body[data-role="driver"] .bp-hist-btn,
+body[data-role="driver"] [data-b37date],
+body[data-role="driver"] .status-bar,
+body[data-role="driver"] [data-set-status]{display:none!important}
+</style>
+<script id="bpDriverGuard">
+(function(){
+ function drv(){ return document.body && document.body.getAttribute('data-role') === 'driver'; }
+ var BLOCK = '[data-modifica],[data-riordina],.bp-hist-btn,[data-b37date],.status-bar,[data-set-status]';
+ ['click','pointerdown','mousedown','touchstart'].forEach(function(ev){
+  document.addEventListener(ev, function(e){
+   if(!drv()) return; var t = e.target; if(!t || !t.closest || !t.closest(BLOCK)) return;
+   e.preventDefault(); e.stopPropagation(); if(e.stopImmediatePropagation) e.stopImmediatePropagation();
+  }, true);
+ });
+ ['startEditOrder','repeatOrderIntoCart'].forEach(function(n){
+  var o = window[n]; if(typeof o !== 'function' || o.__dg) return;
+  var w = function(){ if(drv()) return; return o.apply(this, arguments); }; w.__dg = 1; window[n] = w;
+ });
+
+ /* ===== Giro indipendente per autista (colonna orders.route_driver, vedi giro_autisti.sql) ===== */
+ var me = '', askedMe = false, pend = {}, warned = false, busy = false;
+ function sbx(){ try{ return (typeof sb !== 'undefined') ? sb : null; }catch(e){ return null; } }
+ function getMe(){
+  if(me) return me;
+  var c = sbx();
+  if(!askedMe && c && c.auth && c.auth.getSession){
+   askedMe = true;
+   Promise.resolve(c.auth.getSession()).then(function(r){
+    var u = r && r.data && r.data.session && r.data.session.user;
+    if(u && u.email){ me = String(u.email).toLowerCase(); try{ renderOrders(); }catch(e){} }
+    else setTimeout(function(){ askedMe = false; }, 3000);
+   }).catch(function(){ setTimeout(function(){ askedMe = false; }, 3000); });
+  }
+  return me;
+ }
+ function owner(o){ return o && o.route_driver ? String(o.route_driver).toLowerCase() : ''; }
+ function closed(o){ var s = normStatus(o.status); return s === 'Completato' || s === 'Annullato'; }
+ function warnOnce(msg){ if(warned) return; warned = true; alert(msg); }
+ function release(ids){
+  var c = sbx(); if(!c || !ids.length) return;
+  ids.forEach(function(id){ pend[id] = null; });
+  Promise.resolve(c.from('orders').update({route_driver: null}).in('id', ids)).then(function(r){
+   if(r && r.error){ console.warn('[bp] giro: rilascio', r.error); warnOnce('Giro non condiviso: esegui giro_autisti.sql in Supabase.'); }
+  });
+ }
+ function claim(id){
+  var c = sbx(), m = getMe(); if(!c || !m || id in pend) return;
+  pend[id] = m;
+  Promise.resolve(c.from('orders').update({route_driver: m}).eq('id', id).or('route_driver.is.null,route_driver.eq.' + m).select('id')).then(function(r){
+   if(r && r.error){ console.warn('[bp] giro: assegnazione', r.error); warnOnce('Giro non condiviso tra gli autisti: esegui giro_autisti.sql in Supabase.'); return; }
+   if(r && Array.isArray(r.data) && !r.data.length){
+    delete pend[id]; selectedRouteOrderIds = selectedRouteOrderIds.filter(function(x){ return x !== id; });
+    alert('Ordine #' + id + ' è già nel giro di un altro autista.'); try{ loadOrders(); }catch(e){}
+   }
+  });
+ }
+ var origRO = window.renderOrders;
+ if(typeof origRO === 'function' && !origRO.__dr){
+  var wro = function(){
+   if(!drv() || busy) return origRO.apply(this, arguments);
+   var m = getMe(), full = orders; busy = true;
+   try{
+    orders.forEach(function(o){ if(o.id in pend){ if(owner(o) === (pend[o.id] || '')) delete pend[o.id]; else o.route_driver = pend[o.id]; } });
+    orders = full.filter(function(o){ var w = owner(o); return !w || !m || w === m || closed(o); });
+    if(m){
+     selectedRouteOrderIds = selectedRouteOrderIds.filter(function(id){ var o = orders.find(function(x){ return x.id === id; }); return o && owner(o) !== '' ? owner(o) === m : !!o; });
+     orders.forEach(function(o){ if(owner(o) === m && !closed(o) && o.address && selectedRouteOrderIds.indexOf(o.id) < 0) selectedRouteOrderIds.push(o.id); });
+     selectedRouteOrderIds.forEach(function(id){ var o = orders.find(function(x){ return x.id === id; }); if(o && !owner(o)) claim(id); });
+    }
+    return origRO.apply(this, arguments);
+   } finally{ orders = full; busy = false; }
+  };
+  wro.__dr = 1; window.renderOrders = wro;
+ }
+ var origT = window.toggleOrderInRoute;
+ if(typeof origT === 'function' && !origT.__dr){
+  var wt = function(id){ if(drv() && selectedRouteOrderIds.indexOf(id) >= 0) release([id]); return origT.apply(this, arguments); };
+  wt.__dr = 1; window.toggleOrderInRoute = wt;
+ }
+ var origC = window.clearRouteSelection;
+ if(typeof origC === 'function' && !origC.__dr){
+  var wc = function(){ if(drv()) release(selectedRouteOrderIds.slice()); return origC.apply(this, arguments); };
+  wc.__dr = 1; window.clearRouteSelection = wc;
+ }
+})();
+</script>
 </body>
 </html>
