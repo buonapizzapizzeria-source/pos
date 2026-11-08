@@ -26808,7 +26808,7 @@ body[data-role="viewer"] #userBar button:not([onclick*="doLogout"]){display:none
 (function(){
  function viewer(){ return document.body && document.body.getAttribute('data-role') === 'viewer'; }
  function allowed(t){
-  return !!(t.closest('.tabs [data-tab]') || t.closest('#userBar button[onclick*="doLogout"]') ||
+  return !!(t.closest('.tabs [data-tab]') || t.closest('#bpNav') || t.closest('#bpMore') || t.closest('#userBar button[onclick*="doLogout"]') ||
    t.closest('#statusFilters button') || t.closest('#sortTimeBtn,#sortCreatedBtn') || t.closest('#urgencyRadarBanner button') ||
    t.closest('button[onclick="loadOrders()"]'));
  }
@@ -26828,7 +26828,7 @@ body[data-role="viewer"] #userBar button:not([onclick*="doLogout"]){display:none
   var orig = window[name]; if(typeof orig !== 'function' || orig.__vw) return;
   var w = function(){
    if(!viewer() || busy) return orig.apply(this, arguments);
-   var full = orders, k = dayKey(new Date());
+   var full = orders, k = dayKey(new Date()); window.__bpVTot = full.length;
    busy = true;
    try{ orders = full.filter(function(o){
     if(dayKey(o.created_at) === k || dayKey(o.scheduled_at) === k) return true;
@@ -26853,6 +26853,7 @@ body[data-role="viewer"] #userBar button:not([onclick*="doLogout"]){display:none
    return st === f;
   });
   renderOrderList('openOrders', list, true);
+  if(!window.__bpVTot){ var bx = document.getElementById('openOrders'); if(bx) bx.innerHTML = '<div class="panel muted">⚠️ Nessun dato ricevuto dal server. Se ci sono ordini, mancano i permessi di lettura per il ruolo viewer: esegui il passo 5 di viewer_role.sql.</div>'; }
   var wrapEl = document.getElementById('statusFilters'); if(!wrapEl) return;
   var first = wrapEl.querySelector('.badge-count'); if(first) first.textContent = all.length;
   [['Completato', '✅ Completati'], ['Annullato', '🚫 Annullati']].forEach(function(d){
