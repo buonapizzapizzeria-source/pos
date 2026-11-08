@@ -26965,5 +26965,30 @@ body[data-role="driver"] [data-set-status]{display:none!important}
  }
 })();
 </script>
+<script id="bpAutoRefresh">
+/* Aggiornamento automatico: ogni 6 s controlla (query leggera) se gli ordini sono cambiati e ricarica solo se serve; ricarica completa ogni 60 s */
+(function(){
+ if(window.__bpAutoRef) return; window.__bpAutoRef = true;
+ var EVERY = 6000, FULL = 60000, sig = '', lastFull = Date.now(), cols = 'id,status,updated_at,route_driver', running = false;
+ function client(){ try{ return (typeof sb !== 'undefined') ? sb : null; }catch(e){ return null; } }
+ function appOn(){ var a = document.getElementById('app'); return a && !a.classList.contains('hidden'); }
+ async function tick(){
+  if(running || document.hidden || !navigator.onLine || !appOn()) return;
+  var c = client(); if(!c) return; running = true;
+  try{
+   var r = await c.from('orders').select(cols).order('created_at', {ascending: false}).limit(250);
+   if(r && r.error && cols.indexOf('route_driver') >= 0){ cols = 'id,status,updated_at'; r = await c.from('orders').select(cols).order('created_at', {ascending: false}).limit(250); }
+   if(!r || r.error || !Array.isArray(r.data)) return;
+   var n = r.data.map(function(o){ return [o.id, o.status, o.updated_at, o.route_driver].join('|'); }).join(';');
+   var due = Date.now() - lastFull > FULL;
+   if((sig && n !== sig) || due){ lastFull = Date.now(); try{ await loadOrders(); }catch(e){} }
+   sig = n;
+  }catch(e){ console.warn('[bp] auto-refresh', e); }
+  finally{ running = false; }
+ }
+ setInterval(tick, EVERY);
+ document.addEventListener('visibilitychange', function(){ if(!document.hidden) tick(); });
+})();
+</script>
 </body>
 </html>
