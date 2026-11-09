@@ -4684,7 +4684,8 @@ function addQuick(p, size){
 }
 function minusQuick(p){
  var found = null;
- cart.forEach(function(it, k){ if(!found && String(it.menu_id) === String(p.id) && !it.removedIngs.length && !it.addedIngs.length && !it.extraPrice) found = k; });
+ cart.forEach(function(it, k){ if(!found && String(it.menu_id) === String(p.id) && !it.menu && !it.removedIngs.length && !it.addedIngs.length && !it.extraPrice) found = k; });
+ if(!found) cart.forEach(function(it, k){ if(!found && String(it.menu_id) === String(p.id) && !it.removedIngs.length && !it.addedIngs.length && !it.extraPrice) found = k; });
  if(!found) return;
  var it = cart.get(found); it.qty -= 1; if(it.qty <= 0) cart.delete(found);
  renderCart();
@@ -21576,10 +21577,10 @@ try{
  if(cartMode){
  var it = curItem();
  if(it && !!it.menu !== on){ it.basePrice = rnd(it.basePrice + (on ? MP : -MP)); it.menu = on; it.price = rnd(it.basePrice + (it.extraPrice || 0)); }
- return ok0.apply(this, arguments);
+ try{ return ok0.apply(this, arguments); } finally { ss.menu = false; try{ if(window.bpNormalizeMenuKeys) bpNormalizeMenuKeys(); }catch(x){} } /* auto-reset: isMenu = false */
  }
  var before = {}; cart.forEach(function(v, k){ before[k] = v.qty; });
- r = ok0.apply(this, arguments);
+ try{ r = ok0.apply(this, arguments); }catch(err){ ss.menu = false; throw err; }
  if(on && window.bpToggleMenu){
  var jobs = [];
  cart.forEach(function(v, k){ var d = v.qty - (before[k] || 0); if(d > 0 && !v.menu) jobs.push([k, d]); });
@@ -27723,5 +27724,353 @@ function matchIn(q, names, aliases){
  window.__bpVoiceAddrTest = {prepare: prepare, wordsToDigits: wordsToDigits, evaluate: evaluate, numWord: numWord};
 })();
 </script>
+<script id="bpMenuFix">
+/* Fix Menu (bibita + patatine): ogni riga del carrello con Menu ha la sua chiave "…~m", quindi una pizza normale aggiunta dopo
+   NON si fonde più con la riga Menu (prima condividevano la stessa chiave e la nuova diventava Menu). Ogni pizza = oggetto separato. */
+(function(){
+ if(window.__bpMenuFix) return; window.__bpMenuFix = 1;
+ var SKIP = /^(edit-|custom-)/;
+ function normalizeMenuKeys(){
+  if(typeof cart === 'undefined' || !cart || !cart.size) return false;
+  var out = new Map(), changed = false, newActive = null;
+  Array.from(cart.entries()).forEach(function(e){
+   var k = e[0], it = e[1], base = String(k).replace(/~m$/, ''), want = k;
+   if(it && !SKIP.test(base)) want = it.menu ? base + '~m' : base; /* chiave coerente con lo stato Menu della riga */
+   if(want !== k){ changed = true; try{ if(typeof activeCartKey !== 'undefined' && activeCartKey === k) newActive = want; }catch(x){} }
+   var ex = out.get(want);
+   if(ex && ex !== it){ ex.qty = (Number(ex.qty) || 0) + (Number(it.qty) || 0); changed = true; } /* stessa pizza + stesso stato Menu → una sola riga */
+   else out.set(want, it);
+  });
+  if(!changed) return false;
+  cart.clear(); out.forEach(function(v, k){ cart.set(k, v); });
+  if(newActive){ try{ activeCartKey = newActive; }catch(x){} }
+  return true;
+ }
+ window.bpNormalizeMenuKeys = normalizeMenuKeys;
+ var _rc = window.renderCart || (typeof renderCart === 'function' ? renderCart : null);
+ if(_rc){ window.renderCart = renderCart = function(){ try{ normalizeMenuKeys(); }catch(e){ console.error('[bp] menu keys', e); } return _rc.apply(this, arguments); }; }
+ /* chiudendo il pannello ordine, lo stato Menu torna sempre spento (anche il pulsante) */
+ var _sc = (typeof ssClose === 'function') ? ssClose : null;
+ if(_sc){ window.ssClose = ssClose = function(){ var r = _sc.apply(this, arguments); try{ ss.menu = false; }catch(e){} return r; }; }
+ try{ normalizeMenuKeys(); }catch(e){}
+})();
+</script>
+<!-- ===== BPF: Filtri rapidi (Tutti/Domicilio/Ritiro/Tavolo) + Raggruppa per Via + avviso vie aperte ===== -->
+<style id="bpfStyle">
+.bpf-bar{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:8px 0 10px;padding:6px 8px;border-radius:14px;background:rgba(127,127,127,.10)}
+.bpf-chip{appearance:none;border:1.5px solid rgba(127,127,127,.35);background:rgba(127,127,127,.10);color:inherit;font:inherit;font-weight:800;font-size:13px;line-height:1;padding:8px 12px;border-radius:999px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;min-height:36px;white-space:nowrap;transition:background .15s,transform .1s}
+.bpf-chip:active{transform:scale(.96)}
+.bpf-chip .bpf-n{font-size:11px;font-weight:900;min-width:20px;text-align:center;padding:2px 6px;border-radius:999px;background:rgba(127,127,127,.28)}
+.bpf-chip.on{background:var(--red,#d92d20);border-color:var(--red,#d92d20);color:#fff}
+.bpf-chip.on .bpf-n{background:rgba(255,255,255,.28)}
+.bpf-chip[data-f="domicilio"].on{background:#2563eb;border-color:#2563eb}
+.bpf-chip[data-f="ritiro"].on{background:#ea580c;border-color:#ea580c}
+.bpf-chip[data-f="tavolo"].on{background:#15803d;border-color:#15803d}
+.bpf-sep{flex:0 0 1px;align-self:stretch;background:rgba(127,127,127,.35);margin:0 2px}
+.bpf-street{flex:1 1 170px;min-width:140px;max-width:280px;font:inherit;font-size:13px;font-weight:700;padding:8px 12px;border-radius:999px;border:1.5px solid rgba(127,127,127,.35);background:rgba(127,127,127,.08);color:inherit;min-height:36px;box-sizing:border-box}
+.bpf-hint{flex:1 1 100%;font-size:12px;opacity:.75;font-weight:650}
+.bpf-vie{flex:1 1 100%;display:flex;gap:6px;flex-wrap:wrap}
+.bpf-vie .bpf-chip{font-size:12px;padding:6px 10px;min-height:30px}
+.bpf-hide{display:none!important}
+.bpf-grp{grid-column:1/-1;margin:6px 0 0;padding:8px 12px;border-radius:12px;background:rgba(37,99,235,.14);border-inline-start:5px solid #2563eb;font-weight:900;font-size:14px}
+.bpf-grp small{font-weight:700;opacity:.8;margin-inline-start:6px}
+.bpf-empty{grid-column:1/-1;text-align:center;opacity:.7;font-weight:700;padding:14px}
+/* Cucina: colore per tipo ordine */
+#kitchenTab .k35-t{border-inline-start:6px solid transparent}
+#kitchenTab .k35-t.bpf-t-domicilio{border-inline-start-color:#2563eb}
+#kitchenTab .k35-t.bpf-t-ritiro{border-inline-start-color:#ea580c}
+#kitchenTab .k35-t.bpf-t-tavolo{border-inline-start-color:#16a34a}
+#kitchenTab .k35-th>span:not([class]){padding:3px 11px;border-radius:999px;font-weight:900;color:#fff}
+#kitchenTab .k35-t.bpf-t-domicilio .k35-th>span:not([class]){background:#2563eb}
+#kitchenTab .k35-t.bpf-t-ritiro .k35-th>span:not([class]){background:#ea580c}
+#kitchenTab .k35-t.bpf-t-tavolo .k35-th>span:not([class]){background:#16a34a}
+#kitchenTab .bpf-bar{background:rgba(255,255,255,.07)}
+/* Avviso vie aperte (schermata nuovo ordine) */
+#bpfStreetAlert{margin-top:6px}
+#bpfStreetAlert .bpf-badge{display:inline-flex;align-items:center;gap:6px;border:0;font:inherit;font-weight:900;font-size:13px;padding:8px 12px;border-radius:12px;background:#fef0c7;color:#7a2e0e;cursor:pointer;text-align:start}
+#bpfStreetAlert .bpf-det{margin-top:6px;border-radius:12px;border:1.5px solid #fec84b;background:#fffaeb;color:#4a1d06;padding:6px 10px}
+#bpfStreetAlert .bpf-row{display:flex;flex-wrap:wrap;gap:4px 10px;align-items:center;padding:6px 0;border-bottom:1px dashed #fec84b;font-size:13px;font-weight:700}
+#bpfStreetAlert .bpf-row:last-of-type{border-bottom:0}
+#bpfStreetAlert .bpf-row b{font-size:14px}
+#bpfStreetAlert .bpf-tip{font-size:12px;font-weight:700;opacity:.85;margin-top:4px}
+</style>
+<script id="bpfScript">
+(function(){
+ try{
+ if(window.__bpf) return; window.__bpf = true;
+
+ /* ---------- stato (persistito per sessione) ---------- */
+ var S = {ordini:'all', storico:'all', cucina:'all', group:false, via:''};
+ try{ var sv = JSON.parse(sessionStorage.getItem('bpf_state')||'null'); if(sv) for(var k in S) if(k in sv) S[k] = sv[k]; }catch(e){}
+ function save(){ try{ sessionStorage.setItem('bpf_state', JSON.stringify(S)); }catch(e){} }
+ function $(id){ return document.getElementById(id); }
+
+ /* ---------- classificazione ---------- */
+ var CACHE = {}; /* ordini dello storico (caricati per giorno) */
+ function findOrder(id){
+  var o = null;
+  try{ o = orders.find(function(x){ return String(x.id) === String(id); }); }catch(e){}
+  return o || CACHE[id] || null;
+ }
+ function typeOf(o){
+  if(!o) return null;
+  var t = String(o.order_type||''), tb = '';
+  try{ tb = bpTableNo(o); }catch(e){}
+  if(tb) return 'tavolo';
+  if(/consegna|domicilio/i.test(t)) return 'domicilio';
+  if(/tavolo|sala|locale|in\s*loco/i.test(t)) return 'tavolo';
+  return 'ritiro';
+ }
+ function cardId(card){
+  var m;
+  if(card.classList.contains('k35-t')){ var b = card.querySelector('.k35-th b'); m = b && /#(\d+)/.exec(b.textContent); }
+  else { var h = card.querySelector('h3'); m = h && /#(\d+)/.exec(h.textContent); }
+  return m ? m[1] : null;
+ }
+ function cardType(card){
+  var id = cardId(card), o = id ? findOrder(id) : null, t = typeOf(o);
+  if(t) return t;
+  var s = card.querySelector('.order-left p strong, p strong'); /* ripiego: testo del tipo ordine */
+  var tx = s ? s.textContent : '';
+  if(/consegna|domicilio/i.test(tx)) return 'domicilio';
+  if(/tavolo/i.test(tx)) return 'tavolo';
+  return 'ritiro';
+ }
+
+ /* ---------- via: normalizzazione ---------- */
+ var PFX = /^(via|viale|corso|piazza|piazzale|vicolo|strada|largo|localita|loc|frazione|cascina|borgo)\.?\s+/i;
+ function strip(s){ return String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,''); }
+ function streetLabel(addr){ /* "Via SS. Naborre e Felice 12, Lodi" -> "Via SS. Naborre e Felice" */
+  var s = String(addr||'').trim(); if(!s) return '';
+  var m = PFX.exec(s), p = m ? m[0] : '', rest = s.slice(p.length);
+  rest = rest.split(/,|\s+n[°o.]?\s*\d|\s+\d/i)[0];
+  return (p + rest).replace(/\s+/g,' ').trim();
+ }
+ function streetKey(addr){
+  return strip(streetLabel(addr)).toLowerCase().replace(/[.'’`]/g,' ').replace(/\s+/g,' ').trim();
+ }
+
+ /* ---------- barre filtro ---------- */
+ var CFG = {
+  ordini:  {tab:'ordersTab',  box:'openOrders',  card:'.order', key:'ordini',  street:true},
+  storico: {tab:'allTab',     box:'allOrders',   card:'.order', key:'storico', street:false},
+  cucina:  {tab:'kitchenTab', box:'kitchenCols', card:'.k35-t', key:'cucina',  street:false}
+ };
+ var CHIPS = [['all','Tutti',''],['domicilio','Domicilio','🛵'],['ritiro','Ritiro','🛍️'],['tavolo','Tavolo','🍽️']];
+
+ function buildBar(name){
+  var c = CFG[name], tab = $(c.tab), box = $(c.box);
+  if(!tab || !box || $('bpfBar_'+name)) return;
+  var bar = document.createElement('div'); bar.className = 'bpf-bar'; bar.id = 'bpfBar_'+name;
+  var h = CHIPS.map(function(x){
+   return '<button type="button" class="bpf-chip" data-f="'+x[0]+'">'+(x[0]==='all'?'':'<span>'+x[2]+'</span>')+'<span>'+(x[0]==='all'?'Tutti':x[1])+'</span><span class="bpf-n">0</span></button>';
+  }).join('');
+  if(c.street){
+   h += '<span class="bpf-sep"></span>'
+     + '<button type="button" class="bpf-chip" data-grp="1">📍 Raggruppa per Via</button>'
+     + '<input class="bpf-street" type="search" placeholder="🔎 Cerca Via…" autocomplete="off" value="'+String(S.via).replace(/"/g,'&quot;')+'">'
+     + '<div class="bpf-vie" id="bpfVie"></div>';
+  }
+  h += '<div class="bpf-hint">⏰ Ordine sempre per orario di consegna/ritiro'+(c.street?' · con «Raggruppa per Via» le consegne vicine stanno insieme':'')+'</div>';
+  bar.innerHTML = h;
+  /* posizione: dopo la riga titolo (Ordini/Cucina), prima della lista (Storico) */
+  if(name === 'storico') box.parentNode.insertBefore(bar, box);
+  else { var tl = tab.querySelector('.topline'); if(tl) tl.after(bar); else tab.insertBefore(bar, tab.firstChild); }
+  bar.addEventListener('click', function(e){
+   var b = e.target.closest('.bpf-chip'); if(!b) return;
+   if(b.hasAttribute('data-f')) S[name] = b.getAttribute('data-f');
+   else if(b.hasAttribute('data-grp')) S.group = !S.group;
+   else if(b.hasAttribute('data-via')){ S.via = (S.via === b.getAttribute('data-via')) ? '' : b.getAttribute('data-via'); var i = bar.querySelector('.bpf-street'); if(i) i.value = S.via; }
+   save(); apply(name);
+  });
+  var inp = bar.querySelector('.bpf-street');
+  if(inp) inp.addEventListener('input', function(){ S.via = inp.value; save(); apply(name); });
+ }
+
+ /* ---------- applica filtro/ordine (solo DOM, senza ricaricare) ---------- */
+ var busy = false, OBS = {};
+ function apply(name){
+  var c = CFG[name], box = $(c.box); if(!box) return;
+  buildBar(name);
+  var bar = $('bpfBar_'+name); if(!bar) return;
+  if(OBS[name]) OBS[name].disconnect();
+  busy = true;
+  try{
+   var cards = Array.prototype.slice.call(box.querySelectorAll(name==='cucina' ? '.k35-t' : ':scope > .order'));
+   var counts = {all:0, domicilio:0, ritiro:0, tavolo:0}, seq = 0;
+   box.querySelectorAll('.bpf-grp,.bpf-empty').forEach(function(n){ n.remove(); });
+   cards.forEach(function(card){
+    if(!card.hasAttribute('data-bpf-i')) card.setAttribute('data-bpf-i', String(seq));
+    seq++;
+    var t = cardType(card); card.setAttribute('data-bpf-t', t);
+    if(name === 'cucina'){ card.classList.remove('bpf-t-domicilio','bpf-t-ritiro','bpf-t-tavolo'); card.classList.add('bpf-t-'+t); }
+    var id = cardId(card), o = id ? findOrder(id) : null;
+    var addr = o && o.address ? o.address : '';
+    if(!addr){ var a = card.querySelector('a[href*="maps"]'); if(a) addr = a.textContent.replace(/^\s*📍\s*/,''); }
+    card.setAttribute('data-bpf-v', streetKey(addr));
+    card.setAttribute('data-bpf-a', strip(addr).toLowerCase());
+    counts.all++; counts[t]++;
+   });
+   var q = c.street ? strip(S.via).toLowerCase().trim() : '';
+   var fl = S[name];
+   var vis = [];
+   cards.forEach(function(card){
+    var ok = (fl === 'all' || card.getAttribute('data-bpf-t') === fl) && (!q || card.getAttribute('data-bpf-a').indexOf(q) >= 0);
+    card.classList.toggle('bpf-hide', !ok);
+    if(ok) vis.push(card);
+   });
+   /* ordinamento: di base l'ordine naturale (orario); con "Raggruppa per Via" per via, poi orario */
+   var ordered = cards.slice().sort(function(a,b){
+    var ia = +a.getAttribute('data-bpf-i'), ib = +b.getAttribute('data-bpf-i');
+    if(c.street && S.group){
+     var va = a.getAttribute('data-bpf-v'), vb = b.getAttribute('data-bpf-v');
+     if(va !== vb){ if(!va) return 1; if(!vb) return -1; return va < vb ? -1 : 1; }
+    }
+    return ia - ib;
+   });
+   if(name !== 'cucina'){
+    var anchor = null;
+    ordered.forEach(function(card){ box.appendChild(card); });
+    if(c.street && S.group){
+     var last = null, groups = {};
+     vis.forEach(function(card){ var v = card.getAttribute('data-bpf-v') || ''; groups[v] = (groups[v]||0) + 1; });
+     ordered.forEach(function(card){
+      if(card.classList.contains('bpf-hide')) return;
+      var v = card.getAttribute('data-bpf-v') || '';
+      if(v !== last){
+       last = v;
+       var o = findOrder(cardId(card)), lbl = v ? streetLabel(o && o.address) : 'Senza indirizzo (ritiro / tavolo)';
+       var g = document.createElement('div'); g.className = 'bpf-grp';
+       g.innerHTML = (v ? '📍 ' : '🛍️ ') + String(lbl||v).replace(/</g,'&lt;') + '<small>' + groups[v] + (groups[v]===1?' ordine':' ordini') + '</small>';
+       box.insertBefore(g, card);
+      }
+     });
+    }
+    if(cards.length && !vis.length){ var em = document.createElement('div'); em.className = 'panel muted bpf-empty'; em.textContent = 'Nessun ordine con questo filtro.'; box.appendChild(em); }
+   } else {
+    /* Cucina: colonne per stato, filtro per card e contatori aggiornati */
+    box.querySelectorAll('.k35-col').forEach(function(col){
+     var list = col.querySelector('.k35-list'); if(!list) return;
+     var cs = list.querySelectorAll('.k35-t'), n = 0;
+     cs.forEach(function(x){ if(!x.classList.contains('bpf-hide')) n++; });
+     var sp = col.querySelector('h2 span'); if(sp) sp.textContent = n;
+     if(cs.length && !n){ var p = document.createElement('p'); p.className = 'k35-empty bpf-empty'; p.textContent = 'Nessun ordine'; list.appendChild(p); }
+    });
+   }
+   /* contatori sui chip */
+   bar.querySelectorAll('.bpf-chip[data-f]').forEach(function(b){
+    var f = b.getAttribute('data-f'); b.classList.toggle('on', f === fl);
+    var n = b.querySelector('.bpf-n'); if(n) n.textContent = counts[f] || 0;
+   });
+   var g = bar.querySelector('[data-grp]'); if(g) g.classList.toggle('on', !!S.group);
+   if(c.street) drawVie(bar, cards);
+  }catch(e){ console.warn('[bpf]', e); }
+  busy = false;
+  if(OBS[name]) OBS[name].observe(box, {childList:true});
+ }
+ /* chip rapidi delle vie con 2+ ordini aperti (consegne da unire) */
+ function drawVie(bar, cards){
+  var holder = bar.querySelector('#bpfVie'); if(!holder) return;
+  var m = {}, lab = {};
+  cards.forEach(function(card){
+   if(card.getAttribute('data-bpf-t') !== 'domicilio') return;
+   var v = card.getAttribute('data-bpf-v'); if(!v) return;
+   m[v] = (m[v]||0) + 1;
+   if(!lab[v]){ var o = findOrder(cardId(card)); lab[v] = streetLabel(o && o.address) || v; }
+  });
+  var keys = Object.keys(m).filter(function(k){ return m[k] >= 2; }).sort(function(a,b){ return m[b]-m[a]; }).slice(0,8);
+  holder.innerHTML = keys.map(function(k){
+   var on = strip(S.via).toLowerCase().trim() === strip(lab[k]).toLowerCase().trim();
+   return '<button type="button" class="bpf-chip'+(on?' on':'')+'" data-via="'+lab[k].replace(/"/g,'&quot;')+'">🔔 '+lab[k].replace(/</g,'&lt;')+' <span class="bpf-n">'+m[k]+'</span></button>';
+  }).join('');
+ }
+
+ function watch(name){
+  var c = CFG[name], box = $(c.box); if(!box) return;
+  buildBar(name);
+  OBS[name] = new MutationObserver(function(){ if(!busy) apply(name); });
+  OBS[name].observe(box, {childList:true});
+  apply(name);
+ }
+
+ /* storico: memorizzo gli ordini caricati per giorno così riconosco il tipo */
+ try{
+  if(typeof bpOrdersInRange === 'function'){
+   var _r = bpOrdersInRange;
+   bpOrdersInRange = async function(){
+    var r = await _r.apply(this, arguments);
+    try{ ((r && r.data) || []).forEach(function(o){ if(o && o.id != null) CACHE[o.id] = o; }); }catch(e){}
+    return r;
+   };
+  }
+ }catch(e){ console.warn('[bpf] range', e); }
+
+ /* ---------- avviso "ordini aperti nella stessa via" (schermata nuovo ordine) ---------- */
+ var lastSig = '', openDet = false;
+ function openSameStreet(key){
+  var out = [], editing = null;
+  try{ editing = editingOrderId; }catch(e){}
+  try{
+   orders.forEach(function(o){
+    var st = normStatus(o.status);
+    if(st !== 'Nuovo' && st !== 'In preparazione' && st !== 'Pronto') return; /* aperti e non ancora in giro/consegnati */
+    if(editing != null && String(o.id) === String(editing)) return;
+    if(typeOf(o) !== 'domicilio' || !o.address) return;
+    var u = getOrderUrgencyMeta(o); if(u.type === 'future') return;
+    var k = streetKey(o.address); if(!k) return;
+    if(k === key || (key.length >= 8 && k.indexOf(key) === 0)) out.push({o:o, u:u});
+   });
+  }catch(e){ console.warn('[bpf] open', e); }
+  out.sort(function(a,b){ return a.u.sortMinutes - b.u.sortMinutes; });
+  return out;
+ }
+ function esc2(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
+ function refreshAlert(force){
+  var inp = $('address'), f = $('addressField'); if(!inp || !f) return;
+  var box = $('bpfStreetAlert');
+  if(!box){ box = document.createElement('div'); box.id = 'bpfStreetAlert'; box.className = 'hidden'; var sg = $('suggestAddress'); if(sg && sg.parentNode === f) sg.after(box); else f.appendChild(box); }
+  var tp = $('type'), isDel = !tp || /consegna/i.test(tp.value);
+  var addr = inp.value || '', key = (isDel && addr.trim().length >= 6) ? streetKey(addr) : '';
+  var list = (key.length >= 5 && PFX.test(addr.trim())) ? openSameStreet(key) : [];
+  var sig = key + '|' + list.map(function(x){ return x.o.id + ':' + normStatus(x.o.status) + ':' + x.u.timeLabel; }).join(',');
+  if(!force && sig === lastSig) return;
+  lastSig = sig;
+  if(!list.length){ box.className = 'hidden'; box.innerHTML = ''; openDet = false; return; }
+  var n = list.length;
+  var head = '🔔 Hai già ' + n + (n === 1 ? ' ordine aperto' : ' ordini aperti') + ' in questa via!';
+  var rows = list.map(function(x){
+   var o = x.o, nm = o.customer_name && o.customer_name !== 'Cliente' ? ' · 👤 ' + esc2(o.customer_name) : '';
+   var tm = x.u.type === 'asap' ? 'SUBITO' : x.u.timeLabel;
+   return '<div class="bpf-row"><b>#' + esc2(o.id) + '</b><span>⏰ ' + esc2(tm) + '</span><span>📍 ' + esc2(o.address) + '</span><span>' + esc2(normStatus(o.status)) + nm + '</span></div>';
+  }).join('');
+  box.className = '';
+  box.innerHTML = '<button type="button" class="bpf-badge" aria-expanded="' + (openDet?'true':'false') + '">' + head + ' <span>' + (openDet ? '▲' : '▼') + '</span></button>'
+   + '<div class="bpf-det' + (openDet ? '' : ' hidden') + '">' + rows + '<div class="bpf-tip">💡 Puoi unire la consegna nello stesso giro per risparmiare il viaggio: scegli un orario vicino a questi.</div></div>';
+ }
+ document.addEventListener('click', function(e){
+  var b = e.target.closest && e.target.closest('#bpfStreetAlert .bpf-badge'); if(!b) return;
+  openDet = !openDet; refreshAlert(true);
+ });
+ ['input','change','blur','focus'].forEach(function(ev){
+  document.addEventListener(ev, function(e){ var t = e.target; if(t && (t.id === 'address' || t.id === 'type')) setTimeout(function(){ refreshAlert(false); }, 30); }, true);
+ });
+ setInterval(function(){ if(!document.hidden) refreshAlert(false); }, 800); /* copre scelte da suggerimenti / cliente (valore impostato da codice) */
+
+ /* ---------- avvio ---------- */
+ function init(){
+  ['ordini','storico','cucina'].forEach(watch);
+  try{ if(Array.isArray(__renderOrdersHooks)) __renderOrdersHooks.push(function(){ ['ordini','storico','cucina'].forEach(apply); refreshAlert(false); }); }catch(e){}
+  /* quando una scheda diventa visibile, riapplico (es. cucina disegna solo da visibile) */
+  ['ordini','storico','cucina'].forEach(function(n){
+   var t = $(CFG[n].tab); if(!t) return;
+   new MutationObserver(function(){ if(!t.classList.contains('hidden')) apply(n); }).observe(t, {attributes:true, attributeFilter:['class']});
+  });
+  refreshAlert(true);
+ }
+ if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
+ }catch(e){ console.error('[bpf] non caricato', e); }
+})();
+</script>
+
 </body>
 </html>
