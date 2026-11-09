@@ -6499,38 +6499,110 @@ function gemAudioMime(m){
  return s;
 }
 
+const GEM_TEMPERATURE = 0.0; // zero-hallucination: il modello non deve "indovinare" nulla
+const GEM_AUTO_TIME_MIN = 25; // orario non indicato / relativo ("tra 20 minuti", "prima possibile") => ora attuale + 25 min
 const GEM_SCHEMA = {
- type: 'OBJECT',
- properties: {
- transcript: { type: 'STRING' },
- customerName: { type: 'STRING' },
- phone: { type: 'STRING' },
- orderType: { type: 'STRING' },
- deliveryTime: { type: 'STRING' },
- paymentMethod:{ type: 'STRING' },
- cashGiven: { type: 'NUMBER' },
- address: { type: 'STRING' },
- notes: { type: 'STRING' },
- uncertainFields: { type: 'ARRAY', items: { type: 'STRING' } },
- items: {
- type: 'ARRAY',
- items: {
- type: 'OBJECT',
- properties: {
- confidence: { type: 'STRING' },
- name: { type: 'STRING' },
- size: { type: 'STRING' },
- quantity: { type: 'INTEGER' },
- removed: { type: 'ARRAY', items: { type: 'STRING' } },
- added: { type: 'ARRAY', items: { type: 'STRING' } },
- rawText: { type: 'STRING' }
- },
- required: ['name', 'quantity']
- }
- }
- },
- required: ['items']
+  type: 'OBJECT',
+  properties: {
+    tipo:      { type: 'STRING', enum: ['consegna', 'ritiro'] },
+    orario:    { type: 'STRING', nullable: true },
+    cliente:   { type: 'STRING' },
+    telefono:  { type: 'STRING' },
+    indirizzo: { type: 'STRING' },
+    note:      { type: 'STRING' },
+    uncertainFields: { type: 'ARRAY', items: { type: 'STRING' } },
+    righe: {
+      type: 'ARRAY',
+      items: {
+        type: 'OBJECT',
+        properties: {
+          quantita:  { type: 'INTEGER' },
+          nome:      { type: 'STRING' },
+          formato:   { type: 'STRING', enum: ['Normale', 'Maxi', 'Baby'] },
+          is_menu:   { type: 'BOOLEAN' },
+          modifiche: { type: 'STRING' }
+        },
+        required: ['quantita', 'nome', 'formato', 'is_menu', 'modifiche']
+      }
+    }
+  },
+  required: ['tipo', 'orario', 'cliente', 'telefono', 'indirizzo', 'note', 'uncertainFields', 'righe']
 };
+let __gemSys = ''; // System Prompt corrente (impostato in analyzeMediaOrTextWithGemini)
+
+/* ora italiana attuale + N minuti, arrotondata al quarto d'ora successivo (come il menu a tendina dell'orario) -> "HH:MM" */
+function gemRomeTimePlus(minutes){
+  const d = new Date(Date.now() + minutes * 60000);
+  let h, m;
+  try{
+    const p = new Intl.DateTimeFormat('it-IT', { timeZone: 'Europe/Rome', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).formatToParts(d);
+    h = parseInt(p.find(x => x.type === 'hour').value, 10) % 24;
+    m = parseInt(p.find(x => x.type === 'minute').value, 10);
+  }catch(e){ h = d.getHours(); m = d.getMinutes(); }
+  m = Math.ceil(m / 15) * 15;
+  if(m === 60){ m = 0; h = (h + 1) % 24; }
+  return String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0');
+}
+
+/* Adattatore: JSON della pizzeria -> oggetto interno usato da review + carrello */
+function gemNormalizeOrder(o){
+  if(!o || typeof o !== 'object') return o;
+  if(Array.isArray(o.items) && !Array.isArray(o.righe)) return o; // vecchio formato: lascia com'è
+  const str = v => (v == null ? '' : String(v)).trim();
+  let menuList = [];
+  try{ menuList = getActiveMenu() || []; }catch(e){}
+  const t = str(o.tipo).toLowerCase();
+  const orderType = /consegna|domicilio/.test(t) ? 'Consegna' : (/ritiro|asporto/.test(t) ? 'Asporto' : '');
+
+  const items = (Array.isArray(o.righe) ? o.righe : []).map(r => {
+    r = r || {};
+    let nome = str(r.nome);
+    const fmt = str(r.formato).toLowerCase();
+    // formato (dimensione) e is_menu (pasto con patatine + bibita) sono indipendenti
+    // Baby = stesso prezzo e ingredienti del Normale; e' solo un avviso per il pizzaiolo (impasto piu' piccolo).
+    // Qui resta il tag 'Baby' (review, carrello, comanda); il prezzo Normale viene applicato all'inserimento nel carrello.
+    let size = /maxi/.test(fmt) ? 'Maxi' : (/baby|bambin|piccol/.test(fmt) ? 'Baby' : 'Normale');
+    if(size === 'Normale' && /\bbaby\b|per\s+bambin/i.test(nome)){ size = 'Baby'; nome = nome.replace(/\b(pizza\s+)?baby\b|\bper\s+(il\s+)?bambin[oi]\b/ig, '').replace(/\s{2,}/g, ' ').trim(); }
+    let isMenu = r.is_menu === true || /^true$/i.test(str(r.is_menu)) || /^men/i.test(fmt) /* vecchio formato */ || /^men[uù]\b/i.test(nome);
+    nome = nome.replace(/^men[uù]\s+/i, '').trim();
+    // prodotto-menu a listino (es. "Menu Kebab"): usa quello e non applicare il flag +Bibita +Patatine
+    if(isMenu){
+      const lm = menuList.find(p => gemNorm(p.name) === gemNorm('Menu ' + nome));
+      if(lm){ nome = lm.name; isMenu = false; }
+    }
+    const mods = gemParseMods(str(r.modifiche));
+    return {
+      name: nome,
+      quantity: Math.max(parseInt(r.quantita, 10) || 1, 1),
+      size, menu: isMenu,
+      removed: mods.rem, added: mods.add,
+      rawText: str(r.nome), confidence: 'high'
+    };
+  }).filter(it => it.name);
+
+  // campi incerti: nomi italiani del JSON -> nomi interni usati dalla review (❓)
+  const UNC = { cliente: 'customerName', customername: 'customerName', telefono: 'phone', phone: 'phone',
+    indirizzo: 'address', address: 'address', orario: 'deliveryTime', deliverytime: 'deliveryTime', note: 'notes', notes: 'notes' };
+  const unc = [...new Set((Array.isArray(o.uncertainFields) ? o.uncertainFields : []).map(x => UNC[str(x).toLowerCase()]).filter(Boolean))];
+
+  // orario nullo (relativo / non indicato) => ora attuale + 25 minuti
+  let deliveryTime = str(o.orario);
+  if(/^null$/i.test(deliveryTime)) deliveryTime = '';
+  const autoTime = !deliveryTime;
+  if(autoTime) deliveryTime = gemRomeTimePlus(GEM_AUTO_TIME_MIN);
+
+  return {
+    customerName: str(o.cliente),
+    phone: str(o.telefono).replace(/\D/g, ''),
+    orderType, deliveryTime, __autoTime: autoTime,
+    paymentMethod: '', cashGiven: 0,
+    address: str(o.indirizzo),
+    notes: str(o.note),
+    uncertainFields: unc,
+    transcript: '',
+    items
+  };
+}
 
 function gemExtractText(data){
  const parts = (data && data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts) || [];
@@ -6550,7 +6622,8 @@ async function gemCallModel(model, apiKey, parts, timeoutMs){
  for(let attempt = 1; attempt <= 3; attempt++){
  let resp, data;
  try{
- const body = { contents: [{ role: 'user', parts }], generationConfig: { responseMimeType: 'application/json', maxOutputTokens: 8192 } };
+ const body = { contents: [{ role: 'user', parts }], generationConfig: { responseMimeType: 'application/json', temperature: GEM_TEMPERATURE, maxOutputTokens: 8192 } };
+ if(__gemSys) body.systemInstruction = { parts: [{ text: __gemSys }] };
  if(schemaOn) body.generationConfig.responseSchema = GEM_SCHEMA;
  if(thinkOn) body.generationConfig.thinkingConfig = { thinkingLevel: 'low' }; // v47: meno 'ragionamento' = risposta molto piu' veloce
  resp = await gemFetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(apiKey)}`,
@@ -6597,7 +6670,7 @@ async function gemCallModel(model, apiKey, parts, timeoutMs){
  const br = data && data.promptFeedback && data.promptFeedback.blockReason;
  if(br) return { ok: false, kind: 'next', msg: 'Contenuto non elaborabile dall\'AI (' + br + ')' };
  const fr = data && data.candidates && data.candidates[0] && data.candidates[0].finishReason;
- const parsed = gemParseJson(gemExtractText(data));
+ const parsed = gemNormalizeOrder(gemParseJson(gemExtractText(data)));
  if(!parsed || typeof parsed !== 'object'){
  lastMsg = fr === 'MAX_TOKENS' ? 'Risposta AI troncata' : 'Risposta AI non valida';
  if(attempt < 2){ await waitMs(500); continue; }
@@ -6618,31 +6691,66 @@ function gemBuildMenuText(){
 }
 
 function gemBuildPrompt(type){
- let now = '';
- try{ now = new Date().toLocaleString('it-IT', { timeZone: 'Europe/Rome', weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' }); }catch(e){ now = new Date().toString(); }
- return `Sei l'assistente cassa ufficiale della Pizzeria "Buona Pizza" a Lodi Vecchio. Adesso è: ${now} (ora italiana).
-Ricevi un ordine che può essere: FOTO di un biglietto scritto a mano, screenshot WhatsApp, messaggio vocale o testo, in italiano, arabo (anche dialetto egiziano/maghrebino) o misto. Estrai TUTTI i dati e inseriscili nei campi giusti.
+ let menuText = '', extras = '';
+ try{ menuText = gemBuildMenuText(); }catch(e){}
+ try{ extras = (getAllKnownIngredients() || []).slice(0, 90).join(', '); }catch(e){}
+ return `Sei un assistente AI specializzato nella gestione comande e cassa per una pizzeria italiana ("Pizzeria Buona Pizza").
+Il tuo compito è analizzare la trascrizione audio di una telefonata (o un messaggio/foto d'ordine) ed estrarre i dati esatti dell'ordine in un formato JSON strutturato.
+Il cliente parla italiano (a volte arabo o misto): se un nome proprio è in arabo, traslitteralo in lettere latine.
 
-MENU UFFICIALE (nome [categoria] (prezzi) — ingredienti):
-${gemBuildMenuText()}
+### MENU UFFICIALE DEL LOCALE (nome [categoria] (prezzi) — ingredienti):
+${menuText || '(menu non disponibile)'}
 
-REGOLE:
-1. Non inventare MAI dati. Se un'informazione non c'è, usa "" (stringa vuota) o 0 per cashGiven.
-2. customerName = solo nome/cognome del cliente (o cognome sul citofono). Mai cibi, ingredienti, indirizzi o orari. Se il nome è in arabo, traslitteralo in lettere latine.
-3. deliveryTime: converti in 24h "HH:MM" con minuti 00, 15, 30 o 45 (es. "otto e mezza" → "20:30", "٨ ونص" → "20:30"). Se dice "subito/appena possibile" o non indica l'orario → "Prima possibile".
-4. cashGiven: solo se il cliente indica con che banconota paga per il resto ("resto da 50", "pago con 20"). Altrimenti 0.
-5. paymentMethod: "Contanti" o "Carta" solo se esplicito, altrimenti "". orderType: "Consegna" se c'è un indirizzo o dice "domicilio/consegna", "Asporto" se dice "ritiro/asporto/passo io", altrimenti "".
-6. items: ogni prodotto richiesto va abbinato al nome PIÙ VICINO nel menu ufficiale, copiando il nome ESATTO del menu (tollera errori di scrittura, abbreviazioni, nomi arabi o pronunciati male). Se un prodotto NON esiste nel menu, mettilo comunque con il nome come scritto dal cliente (non sostituirlo con un altro prodotto) e riporta la frase originale in rawText.
-7. size: "Maxi" se dice maxi/grande/gigante/famiglia, altrimenti "Normale". quantity: numero intero (converti "due", "un paio" = 2, "٣" = 3, "x2" = 2). Se la stessa pizza compare più volte con modifiche diverse, crea righe separate.
-8. removed = ingredienti da togliere ("senza cipolla" → "cipolla"); added = ingredienti extra ("con extra mozzarella" → "mozzarella"). Scrivi solo il nome dell'ingrediente, senza le parole "senza/extra/con". Usa i nomi presenti negli ingredienti del menu quando possibile.
-9. phone: solo cifre (e +) se presente. address: via/viale/piazza, numero civico e città se presenti. notes: altre indicazioni (citofono, scala, piano, ben cotta, tagliata, allergie, cotture speciali).
-10. ${type === 'text' ? 'transcript: lascia sempre "" (il testo è già disponibile).' : 'transcript: trascrizione fedele e COMPATTA di ciò che hai letto/ascoltato (nella lingua originale).'}
-11. Controlla quantità, taglie, telefono e civico. Rispondi subito, senza commenti.
-12. uncertainFields: elenco dei campi di cui NON sei sicuro (illeggibili, ambigui, dedotti o con audio poco chiaro). Usa SOLO questi nomi: customerName, phone, address, deliveryTime, cashGiven, notes. Se sei sicuro di tutto: [].
-13. Per ogni riga di items: confidence = "low" se il prodotto, la quantità o la taglia sono incerti, altrimenti "high".
+### INGREDIENTI / EXTRA COMUNI (usa questi nomi per le modifiche quando possibile):
+${extras || '(non disponibili)'}
 
-Rispondi ESCLUSIVAMENTE con JSON valido secondo questa struttura:
-{"transcript":"","customerName":"","phone":"","orderType":"","deliveryTime":"","paymentMethod":"","cashGiven":0,"address":"","notes":"","uncertainFields":[],"items":[{"name":"","size":"Normale","quantity":1,"removed":[],"added":[],"rawText":"","confidence":"high"}]}`;
+### REGOLE CRITICHE DI ESTRAZIONE:
+1. **Tipo Ordine & Orario:**
+   - \`tipo\`: "consegna" (a domicilio) oppure "ritiro" (asporto).
+   - \`orario\`: l'ora concordata in formato 24h "HH:MM" (es. "12:30", "20:15"). Se il cliente dice "tra 20 minuti", "prima possibile", "subito" o comunque non indica un orario preciso, metti \`null\`. NON calcolare tu orari relativi: lo fa il sistema.
+
+2. **Dati Cliente:**
+   - \`cliente\`: Nome della persona o attività (es. "Officina Aria 28"). Non inventare.
+   - \`telefono\`: Solo cifre numeriche (es. "324669965495"). Rimuovi spazi e trattini.
+   - \`indirizzo\`: Via, piazza e numero civico (es. "Viale Europa 28").
+   - \`note\`: Solo istruzioni logistiche reali (es. "suonare officina", "scala B", "non va citofono"). NON duplicare il nome cliente o l'indirizzo nelle note.
+
+3. **Articoli, Formato e Menù:**
+   - \`nome\`: il nome UFFICIALE copiato ESATTAMENTE dal menù qui sopra (tollera errori di pronuncia, abbreviazioni, nomi storpiati). Non includere mai "Menu", "Maxi" o "Baby" nel nome. Se un prodotto NON esiste nel menù, scrivilo come l'ha detto il cliente: non sostituirlo con un altro.
+   - \`quantita\`: Numero intero.
+   - \`formato\` (dimensione): "Normale" (default), "Maxi" (maxi/grande/gigante/famiglia) oppure "Baby" (es. "pizza baby", "formato baby", "piccola per bambino", "per bambini"). Baby ha lo STESSO prezzo e ingredienti del Normale: serve solo al pizzaiolo per fare l'impasto piccolo. Riconoscilo sempre come formato "Baby" (mai nel nome) anche se il prodotto è dentro un menu.
+   - \`is_menu\` (booleano, INDIPENDENTE dal formato): true se il cliente chiede il "Menu" (es. "un menu pizza quattro stagioni", "menu kebab") oppure il prodotto con patatine e bibita/lattina; false se vuole solo il prodotto. Esempio: "menu maxi" → formato "Maxi" + is_menu true.
+   - \`modifiche\`: Estrai SOLO le modifiche esplicitamente richieste (es. "+mozzarella", "-cipolla", "senza pomodoro"). NON allucinare né aggiungere modifiche non pronunciate. Ignora convenevoli, battute o frasi fuori contesto tra colleghi (es. "lascia stare", "c'avevo con un amico").
+
+4. **Campi incerti (\`uncertainFields\`):** se telefono, indirizzo, nome cliente, orario o note non sono chiari al 100% (audio disturbato, ambiguo, dedotto), inserisci il nome del campo in \`uncertainFields\`. Usa SOLO questi nomi: "cliente", "telefono", "indirizzo", "orario", "note". Se sei sicuro di tutto: [].
+
+### FORMATO JSON DI RISPOSTA RICHIESTO:
+Restituisci ESCLUSIVAMENTE un oggetto JSON valido con la seguente struttura:
+{
+  "tipo": "consegna",
+  "orario": "12:30",
+  "cliente": "Officina Aria 28",
+  "telefono": "324669965495",
+  "indirizzo": "Viale Europa 28",
+  "note": "",
+  "uncertainFields": [],
+  "righe": [
+    {
+      "quantita": 1,
+      "nome": "Quattro Stagioni",
+      "formato": "Normale",
+      "is_menu": true,
+      "modifiche": ""
+    },
+    {
+      "quantita": 1,
+      "nome": "Prosciutto Cotto",
+      "formato": "Maxi",
+      "is_menu": false,
+      "modifiche": "+doppia mozzarella"
+    }
+  ]
+}`;
 }
 
 /* v51: se il primo modello e' lento parte un secondo in parallelo; vince la prima risposta valida */
@@ -6696,7 +6804,8 @@ async function analyzeMediaOrTextWithGemini(payloadObj, apiKey){
  }
  if(type === 'text' && !String(payloadObj.text || '').trim()) throw new Error('Testo vuoto.');
 
- let parts = [{ text: gemBuildPrompt(type) }];
+ __gemSys = gemBuildPrompt(type);
+ let parts = [{ text: type === 'text' ? 'Estrai i dati dell\'ordine dal testo seguente.' : 'Estrai i dati dell\'ordine da questo contenuto (audio, foto o messaggio).' }];
  if(type === 'image' || type === 'audio'){
  parts.push({ inline_data: { mime_type: payloadObj.mimeType, data: payloadObj.base64 } });
  }else{
@@ -7030,7 +7139,7 @@ function applyExtractedOrderObject(parsed){
  if(localStorage.getItem('bp_gem_autoconfirm') === '1' && allOk){
  gemCommitOrder(parsed, rows.map(r => ({
  prod: r.prod, size: r.it.size, qty: r.it.quantity,
- rem: r.it.removed, add: r.it.added
+ rem: r.it.removed, add: r.it.added, menu: !!r.it.menu
  })), []);
  return;
  }
@@ -7041,7 +7150,7 @@ function gemShowReview(parsed, rows, menu){
  gemCloseReview();
  const chips = [];
  if(parsed.orderType && ['Consegna','Asporto'].includes(parsed.orderType)) chips.push('🛵 ' + parsed.orderType);
- if(parsed.deliveryTime) chips.push('⏰ ' + parsed.deliveryTime + ((parsed.__unc || []).includes('deliveryTime') ? ' ❓' : ''));
+ if(parsed.deliveryTime) chips.push('⏰ ' + parsed.deliveryTime + (parsed.__autoTime ? ' (auto +' + GEM_AUTO_TIME_MIN + '′)' : '') + ((parsed.__unc || []).includes('deliveryTime') ? ' ❓' : ''));
  if(parsed.paymentMethod) chips.push('💳 ' + parsed.paymentMethod);
  if(parsed.cashGiven && Number(parsed.cashGiven) > 0) chips.push('💶 Paga con €' + Number(parsed.cashGiven));
 
@@ -7091,18 +7200,20 @@ function gemShowReview(parsed, rows, menu){
  <select class="gp">${gemProductOptions(menu, r.prod ? r.prod.id : '')}</select>
  </div>
  <div class="gem-r2">
- <select class="gs"><option>Normale</option><option>Maxi</option></select>
+ <select class="gs"><option>Normale</option><option>Maxi</option><option>Baby</option></select>
+ <label class="gmn-l" style="display:flex;align-items:center;gap:4px;white-space:nowrap;font-size:.8em;font-weight:700"><input type="checkbox" class="gmn" style="width:20px;height:20px;min-height:0">🍟🥤 Menu</label>
  <input class="gm" placeholder="Modifiche: -cipolla, +mozzarella" value="${esc(gemFmtMods(it.removed, it.added))}">
  <button type="button" class="secondary gx" title="Rimuovi riga">🗑️</button>
  </div>
  ${d.dataset.ai ? `<div class="gem-src">Letto dall'AI: «${esc(d.dataset.ai)}»${r.prod && r.low ? ' · ❓ <strong>AI incerta: verifica</strong>' : ''}${r.prod && r.fuzzy ? ' · ≈ <strong>abbinato per somiglianza</strong>' : ''}</div>` : ''}`;
  const gs = d.querySelector('.gs'), gp = d.querySelector('.gp');
- gs.value = String(it.size || '').toLowerCase().includes('maxi') ? 'Maxi' : 'Normale';
+ gs.value = /maxi/i.test(String(it.size || '')) ? 'Maxi' : (/baby/i.test(String(it.size || '')) ? 'Baby' : 'Normale');
+ d.querySelector('.gmn').checked = !!it.menu;
  const syncSize = () => {
  const p = menu.find(x => String(x.id) === gp.value);
  const hasMaxi = !!(p && p.price_maxi != null && Number(p.price_maxi) > 0);
  gs.querySelector('option:nth-child(2)').disabled = !hasMaxi;
- if(!hasMaxi) gs.value = 'Normale';
+ if(!hasMaxi && gs.value === 'Maxi') gs.value = 'Normale';
  d.classList.toggle('bad', !p);
  if(p) d.classList.remove('warn');
  };
@@ -7133,7 +7244,7 @@ function gemShowReview(parsed, rows, menu){
  const prod = menu.find(x => String(x.id) === pid);
  if(!prod){ if(d.dataset.ai) skipped.push(d.dataset.ai); return; }
  const mods = gemParseMods(d.querySelector('.gm').value);
- final.push({ prod, size: d.querySelector('.gs').value, qty: d.querySelector('.gq').value, rem: mods.rem, add: mods.add });
+ final.push({ prod, size: d.querySelector('.gs').value, qty: d.querySelector('.gq').value, rem: mods.rem, add: mods.add, menu: d.querySelector('.gmn').checked });
  if(d.dataset.ai && d.dataset.auto !== String(prod.id) && gemAliasSet(d.dataset.ai, prod.id)) learned.push(`«${d.dataset.ai}» → ${prod.name}`);
  });
  const dup2 = gemDupCheck(edited.phone, edited.customerName, final);
@@ -7201,7 +7312,26 @@ function gemCommitOrder(parsed, finalRows, skipped, learned){
  let add = (Array.isArray(r.add) ? r.add : []).map(cleanIng).filter(Boolean);
  try{ if(window.bpSmartExtras){ let __rr = window.bpSmartExtras([...rem.map(x => 'senza ' + x), ...add].join(' '), prod, rem, add); rem = __rr.removed; add = __rr.added; } }catch(_e){}
  addVoiceItemToCart(prod, size, price, qty, rem, add);
- let modStr = [...rem.map(x => `🚫 Senza ${esc(x)}`), ...add.map(a => `➕ ${esc(a)}`)].join(' ');
+ // formato "Menu" (is_menu): attiva il flag +Bibita +Patatine (supplemento a listino) su ogni unità, tranne se il prodotto è già un "Menu ..." a listino
+ const asMenu = !!r.menu && !/^\s*men[uù]/i.test(String(prod.category || '')) && !/^men[uù]\b/i.test(String(prod.name || ''));
+ const isBaby = /baby/i.test(String(r.size || ''));
+ const uq = a => [...new Set((a || []).map(x => String(x).trim().toLowerCase()).filter(x => x.length >= 2))];
+ let tk = `${prod.id}-${size}-${[...uq(rem), ...uq(add)].join('_') || 'base'}`;
+ // Baby: a listino non esiste un prezzo Baby -> prezzo Normale + nota "Baby" su riga separata
+ if(isBaby){
+ const it0 = cart.get(tk);
+ if(it0){
+ const bk = tk + '~baby' + (asMenu ? 'M' : ''), exb = cart.get(bk), moved = Math.min(qty, it0.qty);
+ if(exb){ exb.qty += moved; } else { const c = JSON.parse(JSON.stringify(it0)); c.qty = moved; c.itemNote = 'Baby'; cart.set(bk, c); }
+ if(moved >= it0.qty) cart.delete(tk); else it0.qty -= moved;
+ tk = bk;
+ }
+ }
+ if(asMenu && typeof window.bpToggleMenu === 'function'){
+ for(let n = 0; n < qty; n++){ const ci = cart.get(tk); if(ci && !ci.menu) window.bpToggleMenu(tk); }
+ try{ if(window.bpNormalizeMenuKeys) window.bpNormalizeMenuKeys(); }catch(_e){}
+ }
+ let modStr = [asMenu ? '🍟🥤 Menu' : '', isBaby ? '👶 Baby' : '', ...rem.map(x => `🚫 Senza ${esc(x)}`), ...add.map(a => `➕ ${esc(a)}`)].filter(Boolean).join(' ');
  addedItemsLog.push(`<strong>${qty}× ${esc(prod.name)} (${size})</strong> ${modStr}`);
  });
 
@@ -8077,7 +8207,7 @@ async function insertOrderItemsForOrder(orderId, items, delivFee, extra, extraRe
  let basePayload = items.map(x=>{
  let remUnique = [...new Set(x.removedIngs||[])];
  let addUnique = [...new Set(x.addedIngs||[])];
- let mods = [...remUnique.map(r=>`Senza ${r}`), ...addUnique.map(a=>`+ ${a}`), ...(x.menu?['+ Bibita','+ Patatine']:[]), ...(x.itemNote ? ['Nota: ' + String(x.itemNote).replace(/[(),]/g, ' ').trim()] : [])].join(', ');
+ let mods = [...remUnique.map(r=>`Senza ${r}`), ...addUnique.map(a=>`+ ${a}`), ...(x.menu?['+ Bibita','+ Patatine']:[]), ...(x.itemNote ? [(/^\s*baby\s*$/i.test(String(x.itemNote)) ? 'BABY' : 'Nota: ' + String(x.itemNote)).replace(/[(),]/g, ' ').trim()] : [])].join(', ');
  let finalName = mods ? `${x.name} (${mods})` : x.name;
  return {
  order_id: orderId,
@@ -8213,7 +8343,7 @@ async function _doSaveOrderCore(){
  if(window.__bpRpc !== false){
  try{
  const __rows = items.map(function(x){
- let __m = [...new Set(x.removedIngs||[])].map(function(r){ return 'Senza ' + r; }).concat([...new Set(x.addedIngs||[])].map(function(a){ return '+ ' + a; })).concat(x.menu?['+ Bibita','+ Patatine']:[]).concat(x.itemNote ? ['Nota: ' + String(x.itemNote).replace(/[(),]/g, ' ').trim()] : []).join(', ');
+ let __m = [...new Set(x.removedIngs||[])].map(function(r){ return 'Senza ' + r; }).concat([...new Set(x.addedIngs||[])].map(function(a){ return '+ ' + a; })).concat(x.menu?['+ Bibita','+ Patatine']:[]).concat(x.itemNote ? [(/^\s*baby\s*$/i.test(String(x.itemNote)) ? 'BABY' : 'Nota: ' + String(x.itemNote)).replace(/[(),]/g, ' ').trim()] : []).join(', ');
  return {product_name: __m ? x.name + ' (' + __m + ')' : x.name, size: x.size, quantity: x.qty, unit_price: x.price, line_total: Math.round(x.price * x.qty * 100) / 100};
  });
  if(delivFee > 0) __rows.push({product_name: 'Supplemento Consegna', size: 'Servizio', quantity: 1, unit_price: delivFee, line_total: delivFee});
@@ -11217,7 +11347,7 @@ try{
  function qSet(a){ jset(QK, a); renderQueue(); }
  function rowsFor(q){
  var rows = q.items.map(function(x){
- var m = [...new Set(x.removedIngs || [])].map(function(r){ return 'Senza ' + r; }).concat([...new Set(x.addedIngs || [])].map(function(a){ return '+ ' + a; })).concat(x.menu?['+ Bibita','+ Patatine']:[]).concat(x.itemNote ? ['Nota: ' + String(x.itemNote).replace(/[(),]/g, ' ').trim()] : []).join(', ');
+ var m = [...new Set(x.removedIngs || [])].map(function(r){ return 'Senza ' + r; }).concat([...new Set(x.addedIngs || [])].map(function(a){ return '+ ' + a; })).concat(x.menu?['+ Bibita','+ Patatine']:[]).concat(x.itemNote ? [(/^\s*baby\s*$/i.test(String(x.itemNote)) ? 'BABY' : 'Nota: ' + String(x.itemNote)).replace(/[(),]/g, ' ').trim()] : []).join(', ');
  return {product_name: m ? x.name + ' (' + m + ')' : x.name, size: x.size, quantity: x.qty, unit_price: x.price, line_total: Math.round(x.price * x.qty * 100) / 100};
  });
  if(q.delivFee > 0) rows.push({product_name: 'Supplemento Consegna', size: 'Servizio', quantity: 1, unit_price: q.delivFee, line_total: q.delivFee});
@@ -18455,7 +18585,7 @@ var _ds=doSaveOrder;doSaveOrder=async function(){var o=cartOff();if(o.length){se
 var _aq=addQuick;addQuick=function(p){if(p&&p.active===false){toast('⛔ '+p.name+' non disponibile',true);return}return _aq.apply(this,arguments)};
 var _ro=repeatOrderIntoCart;repeatOrderIntoCart=function(o,items,f){var bad=[];var ok=(items||[]).filter(function(i){if(!bpIsSvc(i.product_name)&&isOff(i.product_name)){bad.push(base(i.product_name));return false}return true});if(bad.length)toast('⛔ Non disponibile, saltato: '+bad.join(', '),true);return _ro.call(this,o,ok,f)};
 var _ps=processSpokenOrder;processSpokenOrder=function(t){S(function(){warnOff(offIn(t))});return _ps.apply(this,arguments)};
-var _gp=gemBuildPrompt;gemBuildPrompt=function(){var s=_gp.apply(this,arguments),o=off();return o.length?s+'\n\nPRODOTTI ESAURITI OGGI (non disponibili): '+o.map(function(p){return p.name}).join(', ')+'. Se il cliente ne chiede uno, riportalo in items con il suo nome ESATTO come scritto qui.':s};
+var _gp=gemBuildPrompt;gemBuildPrompt=function(){var s=_gp.apply(this,arguments),o=off();return o.length?s+'\n\nPRODOTTI ESAURITI OGGI (non disponibili): '+o.map(function(p){return p.name}).join(', ')+'. Se il cliente ne chiede uno, riportalo in righe con il suo nome ESATTO come scritto qui.':s};
 var _ae=applyExtractedOrderObject;applyExtractedOrderObject=function(parsed){S(function(){var hit=[];((parsed&&parsed.items)||[]).forEach(function(it){var nm=it.name||it.rawText||'',mi=gemMatchInfo(nm,getActiveMenu()),mo=gemMatchInfo(nm,off());if(mo.prod&&(!mi.prod||(!mi.sure&&mo.sure)))hit.push(mo.prod)});if(hit.length){parsed.__off=hit;warnOff(hit)}});return _ae.apply(this,arguments)};
 var _gs=gemShowReview;gemShowReview=function(parsed){var r=_gs.apply(this,arguments);S(function(){var m=$('#gemReview');if(m&&parsed&&parsed.__off&&parsed.__off.length){var d=document.createElement('div');d.className='gem-warn red';d.innerHTML='⛔ Non disponibile: '+parsed.__off.map(function(p){return esc(p.name)}).join(', ');m.insertBefore(d,m.children[1]||null)}});return r};
 
