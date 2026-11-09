@@ -26994,8 +26994,19 @@ body[data-role="driver"] [data-set-status]{display:none!important}
 /* Google Maps: suggerimenti via (locali con tolleranza errori + Google), controllo indirizzo (comune + max 3 km), ottimizzazione giro. Chiave in localStorage 'bp_gmaps_key' */
 (function(){
  if(window.__bpGeo) return; window.__bpGeo = 1;
- var LS = 'bp_gmaps_key', CK = 'bp_geo_cache_v2', SK = 'bp_streets_ok', MAXKM = 3, C = {lat: 45.3144, lng: 9.4989};
- var SEED = ['Via Cefalonia'];
+ var LS = 'bp_gmaps_key', CK = 'bp_geo_cache_v3', SK = 'bp_streets_ok', MAXKM = 3, RADIUS = 5, C = {lat: 45.3144, lng: 9.4989};
+ var HOME_Q = 'Via Libertà 29, 26855 Lodi Vecchio LO, Italia';
+ /* Nomi dialettali / abbreviati -> nome ufficiale (chiave senza "via"). Aggiungi qui altre voci. */
+ var ALIASES = {
+  'cefalonia': 'Via Martiri di Cefalonia',
+  'cifalonia': 'Via Martiri di Cefalonia',
+  'martiri di cefalonia': 'Via Martiri di Cefalonia',
+  'garibaldi': 'Via Giuseppe Garibaldi',
+  'roma': 'Via Roma',
+  'liberta': 'Via Libertà',
+  'europa': 'Viale Europa'
+ };
+ var SEED = Object.keys(ALIASES).map(function(k){ return ALIASES[k]; });
  var cache = {}; try{ cache = JSON.parse(localStorage.getItem(CK) || '{}') || {}; }catch(e){}
  var learned = []; try{ learned = JSON.parse(localStorage.getItem(SK) || '[]') || []; }catch(e){}
  var home = null;
@@ -27044,16 +27055,14 @@ body[data-role="driver"] [data-set-status]{display:none!important}
   var s = String(v || '').trim(), m = s.match(/^(.*?)[\s,]+(\d+\s*[a-zA-Z]?(?:\/\d+)?|snc)\s*$/i);
   return (m && m[1]) ? {name: m[1].trim(), civ: m[2].trim()} : {name: s, civ: ''};
  }
- function matchIn(q, names){
+function matchIn(q, names, aliases){
   var qn = splitCivic(String(q || '').split(',')[0]).name, qc = core(nz(qn));
   if(qc.length < 2) return [];
-  var min = qc.length <= 3 ? 0.9 : 0.62, out = [];
-  names.forEach(function(n){
-   var k = nz(n); if(k === nz(qn)) return;
-   var sc = score(qc, core(k)); if(sc >= min) out.push({n: n, s: sc});
-  });
-  out.sort(function(a, b){ return b.s - a.s || a.n.length - b.n.length; });
-  return out.slice(0, 5);
+  var min = qc.length <= 3 ? 0.9 : 0.7, best = {};
+  function put(n, sc){ var k = nz(n); if(nz(qn) === k) return; if(!best[k] || best[k].s < sc) best[k] = {n: n, s: sc}; }
+  names.forEach(function(n){ var sc = score(qc, core(nz(n))); if(sc >= min) put(n, sc); });
+  if(aliases) Object.keys(aliases).forEach(function(a){ var sc = score(qc, core(nz(a))); if(sc >= min) put(aliases[a], sc + 0.01); });
+  return Object.keys(best).map(function(k){ return best[k]; }).sort(function(a, b){ return b.s - a.s || a.n.length - b.n.length; }).slice(0, 5);
  }
  /* elenco strade locali: seme + elenco del programma + strade dei clienti + strade confermate da Google */
  function streetNames(){
@@ -27071,7 +27080,20 @@ body[data-role="driver"] [data-set-status]{display:none!important}
   learned.forEach(add);
   return Object.keys(m).map(function(k){ return m[k]; });
  }
- function localMatches(v){ return matchIn(v, streetNames()); }
+ function localMatches(v){ return matchIn(v, streetNames(), ALIASES); }
+ /* sostituisce nome dialettale/errato con quello ufficiale PRIMA di interrogare Google */
+ function canon(v){
+  v = String(v || ''); var ci = v.indexOf(','), rest = ci >= 0 ? v.slice(ci) : '';
+  var sp = splitCivic(ci >= 0 ? v.slice(0, ci) : v), kn = nz(sp.name), tw = kn.split(' ')[0], hasType = !!TYPE[tw], qc = core(kn);
+  if(qc.length < 3) return v;
+  var best = null, bs = 0;
+  Object.keys(ALIASES).forEach(function(k){ var kc = core(nz(k)), x = (kc === qc) ? 1 : sim(qc, kc); if(x > bs){ bs = x; best = ALIASES[k]; } });
+  if(best && bs >= 0.8){
+   var ot = nz(best).split(' ')[0];
+   if(!hasType || tw === ot || tw === 'v') return best + (sp.civ ? ' ' + sp.civ : '') + rest;
+  }
+  return v;
+ }
  function learn(res){
   var ch = false;
   (res || []).forEach(function(r){
@@ -27079,7 +27101,7 @@ body[data-role="driver"] [data-set-status]{display:none!important}
   });
   if(ch){ learned = learned.slice(-300); try{ localStorage.setItem(SK, JSON.stringify(learned)); }catch(e){} }
  }
- window.__bpGeoTest = {nz: nz, core: core, matchIn: matchIn, splitCivic: splitCivic, sim: sim};
+ window.__bpGeoTest = {nz: nz, core: core, matchIn: matchIn, splitCivic: splitCivic, sim: sim, canon: canon, aliases: ALIASES};
 
  /* ---------- Geocoding (ristretto a Lodi Vecchio se la città non è indicata) ---------- */
  function parseRes(r){
@@ -27095,6 +27117,7 @@ body[data-role="driver"] [data-set-status]{display:none!important}
    street: t.indexOf('route') >= 0 || t.indexOf('street_address') >= 0 || t.indexOf('premise') >= 0 || t.indexOf('subpremise') >= 0 || t.indexOf('intersection') >= 0, partial: !!r.partial_match};
  }
  async function geocode(addr, rawQuery){
+  if(!rawQuery) addr = canon(addr);
   var q = rawQuery ? addr : normAddr(addr), ck = q.toLowerCase();
   if(cache[ck]) return cache[ck];
   var k = key(); if(!k) throw new Error('nokey');
@@ -27108,16 +27131,20 @@ body[data-role="driver"] [data-set-status]{display:none!important}
   }
   var res = await call(loc ? 'locality:Lodi Vecchio|country:IT' : 'country:IT');
   if(!res.length && loc) res = await call('country:IT');
+  if(loc && home) res = res.filter(function(r){ return hav(home, r) <= RADIUS; }); /* mai risultati fuori dal raggio (es. Brescia) */
   cache[ck] = res; try{ localStorage.setItem(CK, JSON.stringify(cache)); }catch(e){}
   learn(res);
   return res;
  }
  async function ensureHome(){
   if(home) return home;
-  var o = (typeof PIZZERIA_ORIGIN !== 'undefined') ? PIZZERIA_ORIGIN : 'Pizzeria Buona Pizza, Lodi Vecchio LO, Italia';
-  var r = await geocode(o, true);
-  home = r[0] ? {lat: r[0].lat, lng: r[0].lng} : C;
+  var r = await geocode(HOME_Q, true);
+  home = r[0] ? {lat: r[0].lat, lng: r[0].lng} : {lat: C.lat, lng: C.lng}; C = {lat: home.lat, lng: home.lng};
   return home;
+ }
+ function areaBox(){
+  var c = home || C, dLa = RADIUS / 111.32, dLo = RADIUS / (111.32 * Math.cos(c.lat * Math.PI / 180));
+  return {rectangle: {low: {latitude: c.lat - dLa, longitude: c.lng - dLo}, high: {latitude: c.lat + dLa, longitude: c.lng + dLo}}};
  }
 
  /* ---------- Menu a tendina sotto l'indirizzo: locale (immediato) + Google ---------- */
@@ -27154,10 +27181,11 @@ body[data-role="driver"] [data-set-status]{display:none!important}
   var sp = splitCivic(String(v).split(',')[0]), qc = core(nz(sp.name));
   if(!key() || qc.length < 3) return;
   try{
-   var body = {input: v, languageCode: 'it', includedRegionCodes: ['it'], locationBias: {circle: {center: {latitude: C.lat, longitude: C.lng}, radius: 6000}}};
+   await ensureHome(); v = canon(v); sp = splitCivic(String(v).split(',')[0]);
+   var body = {input: v, languageCode: 'it', includedRegionCodes: ['it'], locationRestriction: areaBox()};
    var r = await fetch('https://places.googleapis.com/v1/places:autocomplete', {method: 'POST', headers: {'Content-Type': 'application/json', 'X-Goog-Api-Key': key()}, body: JSON.stringify(body)});
    var j = await r.json(); if(tok !== tokS) return;
-   var items = (j.suggestions || []).filter(function(s){ return s.placePrediction && s.placePrediction.text; }).map(function(s){ return short(s.placePrediction.text.text).split(',')[0]; });
+   var items = (j.suggestions || []).filter(function(s){ return s.placePrediction && s.placePrediction.text && /lodi\s*vecchio/i.test(s.placePrediction.text.text); }).map(function(s){ return short(s.placePrediction.text.text).split(',')[0]; });
    secs.google = dedupe(items, secs.local).slice(0, 5); paint();
    if(!secs.google.length && !secs.local.length){
     var res = await geocode(sp.name); if(tok !== tokS) return;
@@ -27218,6 +27246,7 @@ body[data-role="driver"] [data-set-status]{display:none!important}
  async function check(){
   var inp = $('address'); if(!inp) return; var s = status(); if(!s) return;
   var v = inp.value.trim(); lastVal = inp.value;
+  var cv = canon(v); if(cv !== v && document.activeElement !== inp){ inp.value = cv; v = cv; lastVal = cv; }
   var t = $('type'); if(t && !/consegn/i.test(t.value)){ s.style.display = 'none'; return; }
   if(v.length < 4){ s.style.display = 'none'; return; }
   if(!key()){
