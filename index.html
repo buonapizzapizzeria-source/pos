@@ -6544,6 +6544,13 @@ function gemRomeTimePlus(minutes){
   return String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0');
 }
 
+/* Prosciutto = Prosciutto cotto: sulla pizza Prosciutto (non crudo) l'extra "prosciutto"/"prosciutto cotto"/"cotto" e' l'ingrediente base, mai un'aggiunta */
+function gemDedupeBaseExtras(prodName, add){
+  const nm = String(prodName || '').toLowerCase();
+  if(!/prosciutto/.test(nm) || /crudo/.test(nm)) return add || [];
+  return (add || []).filter(a => !/^\s*(prosciutto(\s+cotto)?|cotto)\s*$/i.test(String(a).normalize('NFD').replace(/[\u0300-\u036f]/g, '')));
+}
+
 /* Adattatore: JSON della pizzeria -> oggetto interno usato da review + carrello */
 function gemNormalizeOrder(o){
   if(!o || typeof o !== 'object') return o;
@@ -6570,7 +6577,11 @@ function gemNormalizeOrder(o){
       const lm = menuList.find(p => gemNorm(p.name) === gemNorm('Menu ' + nome));
       if(lm){ nome = lm.name; isMenu = false; }
     }
+    // MENU: solo formato Normale (mai Maxi/Baby) -> bibita + patatine, +3,00 EUR sul prezzo Normale
+    if(size !== 'Normale') isMenu = false;
     const mods = gemParseMods(str(r.modifiche));
+    const __pm = menuList.find(p => gemNorm(p.name) === gemNorm(nome));
+    mods.add = gemDedupeBaseExtras(__pm ? __pm.name : nome, mods.add);
     return {
       name: nome,
       quantity: Math.max(parseInt(r.quantita, 10) || 1, 1),
@@ -6719,8 +6730,8 @@ ${extras || '(non disponibili)'}
    - \`nome\`: il nome UFFICIALE copiato ESATTAMENTE dal menù qui sopra (tollera errori di pronuncia, abbreviazioni, nomi storpiati). Non includere mai "Menu", "Maxi" o "Baby" nel nome. Se un prodotto NON esiste nel menù, scrivilo come l'ha detto il cliente: non sostituirlo con un altro.
    - \`quantita\`: Numero intero.
    - \`formato\` (dimensione): "Normale" (default), "Maxi" (maxi/grande/gigante/famiglia) oppure "Baby" (es. "pizza baby", "formato baby", "piccola per bambino", "per bambini"). Baby ha lo STESSO prezzo e ingredienti del Normale: serve solo al pizzaiolo per fare l'impasto piccolo. Riconoscilo sempre come formato "Baby" (mai nel nome) anche se il prodotto è dentro un menu.
-   - \`is_menu\` (booleano, INDIPENDENTE dal formato): true se il cliente chiede il "Menu" (es. "un menu pizza quattro stagioni", "menu kebab") oppure il prodotto con patatine e bibita/lattina; false se vuole solo il prodotto. Esempio: "menu maxi" → formato "Maxi" + is_menu true.
-   - \`modifiche\`: Estrai SOLO le modifiche esplicitamente richieste (es. "+mozzarella", "-cipolla", "senza pomodoro"). NON allucinare né aggiungere modifiche non pronunciate. Ignora convenevoli, battute o frasi fuori contesto tra colleghi (es. "lascia stare", "c'avevo con un amico").
+   - \`is_menu\` (booleano, INDIPENDENTE dal formato): true se il cliente chiede il "Menu" (es. "un menu pizza quattro stagioni", "menu kebab") oppure il prodotto con patatine e bibita/lattina; false se vuole solo il prodotto. Il Menu vale SOLO per il formato "Normale": se il formato è Maxi o Baby, is_menu = false. Un Menu (bibita + patatine) costa +3,00 € sul prezzo Normale. Esempio: "due menu pizza, una Quattro Stagioni e una Prosciutto con doppia mozzarella" → 2 righe formato "Normale", is_menu true, la seconda con modifiche "+doppia mozzarella".
+   - \`modifiche\`: NON aggiungere mai "+prosciutto" o "+prosciutto cotto" su una pizza Prosciutto / Prosciutto cotto: sono la stessa cosa e il prosciutto cotto è già l'ingrediente base (non è un extra). Estrai SOLO le modifiche esplicitamente richieste (es. "+mozzarella", "-cipolla", "senza pomodoro"). NON allucinare né aggiungere modifiche non pronunciate. Ignora convenevoli, battute o frasi fuori contesto tra colleghi (es. "lascia stare", "c'avevo con un amico").
 
 4. **Campi incerti (\`uncertainFields\`):** se telefono, indirizzo, nome cliente, orario o note non sono chiari al 100% (audio disturbato, ambiguo, dedotto), inserisci il nome del campo in \`uncertainFields\`. Usa SOLO questi nomi: "cliente", "telefono", "indirizzo", "orario", "note". Se sei sicuro di tutto: [].
 
@@ -7213,11 +7224,12 @@ function gemShowReview(parsed, rows, menu){
  const p = menu.find(x => String(x.id) === gp.value);
  const hasMaxi = !!(p && p.price_maxi != null && Number(p.price_maxi) > 0);
  gs.querySelector('option:nth-child(2)').disabled = !hasMaxi;
+ const mn = d.querySelector('.gmn'); if(mn){ if(gs.value !== 'Normale') mn.checked = false; mn.disabled = gs.value !== 'Normale'; }
  if(!hasMaxi && gs.value === 'Maxi') gs.value = 'Normale';
  d.classList.toggle('bad', !p);
  if(p) d.classList.remove('warn');
  };
- gp.onchange = syncSize;
+ gp.onchange = syncSize; gs.onchange = syncSize;
  d.querySelector('.gx').onclick = () => d.remove();
  syncSize();
  rowsBox.appendChild(d);
@@ -7244,7 +7256,7 @@ function gemShowReview(parsed, rows, menu){
  const prod = menu.find(x => String(x.id) === pid);
  if(!prod){ if(d.dataset.ai) skipped.push(d.dataset.ai); return; }
  const mods = gemParseMods(d.querySelector('.gm').value);
- final.push({ prod, size: d.querySelector('.gs').value, qty: d.querySelector('.gq').value, rem: mods.rem, add: mods.add, menu: d.querySelector('.gmn').checked });
+ final.push({ prod, size: d.querySelector('.gs').value, qty: d.querySelector('.gq').value, rem: mods.rem, add: mods.add, menu: d.querySelector('.gmn').checked && d.querySelector('.gs').value === 'Normale' });
  if(d.dataset.ai && d.dataset.auto !== String(prod.id) && gemAliasSet(d.dataset.ai, prod.id)) learned.push(`«${d.dataset.ai}» → ${prod.name}`);
  });
  const dup2 = gemDupCheck(edited.phone, edited.customerName, final);
@@ -7311,9 +7323,10 @@ function gemCommitOrder(parsed, finalRows, skipped, learned){
  let rem = (Array.isArray(r.rem) ? r.rem : []).map(cleanIng).filter(Boolean);
  let add = (Array.isArray(r.add) ? r.add : []).map(cleanIng).filter(Boolean);
  try{ if(window.bpSmartExtras){ let __rr = window.bpSmartExtras([...rem.map(x => 'senza ' + x), ...add].join(' '), prod, rem, add); rem = __rr.removed; add = __rr.added; } }catch(_e){}
+ add = gemDedupeBaseExtras(prod.name, add);
  addVoiceItemToCart(prod, size, price, qty, rem, add);
  // formato "Menu" (is_menu): attiva il flag +Bibita +Patatine (supplemento a listino) su ogni unità, tranne se il prodotto è già un "Menu ..." a listino
- const asMenu = !!r.menu && !/^\s*men[uù]/i.test(String(prod.category || '')) && !/^men[uù]\b/i.test(String(prod.name || ''));
+ const asMenu = !!r.menu && size === 'Normale' && !/baby|maxi/i.test(String(r.size || '')) && !/^\s*men[uù]/i.test(String(prod.category || '')) && !/^men[uù]\b/i.test(String(prod.name || ''));
  const isBaby = /baby/i.test(String(r.size || ''));
  const uq = a => [...new Set((a || []).map(x => String(x).trim().toLowerCase()).filter(x => x.length >= 2))];
  let tk = `${prod.id}-${size}-${[...uq(rem), ...uq(add)].join('_') || 'base'}`;
@@ -20469,6 +20482,7 @@ document.head.appendChild(st);
 /* ---- Menu pizza sul carrello ---- */
 function isPizzaN(it){return it&&/pizz/i.test(it.category||it.name||'')&&/normale/i.test(it.size||'Normale')}
 function toggleMenu(key){var it=cart.get(key);if(!it)return;
+ if(!it.menu&&(!/normale/i.test(it.size||'Normale')||/^\s*baby/i.test(it.itemNote||'')))return; /* Menu solo su Normale (mai Maxi/Baby) */
  if(!it.menu){
  if(it.qty>1){it.qty--;var k2=key+'~m',ex=cart.get(k2);if(ex){ex.qty++}else{var c=JSON.parse(JSON.stringify(it));c.qty=1;c.menu=true;c.basePrice=Math.round((c.basePrice+MENU_PRICE)*100)/100;c.price=Math.round((c.basePrice+(c.extraPrice||0))*100)/100;cart.set(k2,c)}}
  else{it.menu=true;it.basePrice=Math.round((it.basePrice+MENU_PRICE)*100)/100;it.price=Math.round((it.basePrice+(it.extraPrice||0))*100)/100}
