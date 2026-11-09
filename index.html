@@ -15923,9 +15923,10 @@ openCartIngModal = function(key){
  else if(row.key === 'cfg' && isMgr() && (C._u || 0) > ((row.data && row.data._u) || 0)){ push('cfg', C); }
  if(row.key === 'purchases' && row.data && Array.isArray(row.data.list)){
  var loc = purAll(), mer = mergePur(loc, row.data.list);
- if(JSON.stringify(mer) !== JSON.stringify(loc)){ purSave(mer, false); }
+ var chg = JSON.stringify(mer) !== JSON.stringify(loc);
+ if(chg){ purSave(mer, false); }
  if(JSON.stringify(mer) !== JSON.stringify(row.data.list) && isMgr()) push('purchases', {list: mer});
- renderPurchases();
+ if(chg) renderPurchases(); /* fix: ridisegna solo se i dati sono cambiati (niente tremolio) */
  }
  });
  if(isMgr() && !(r.data || []).some(function(x){ return x.key === 'purchases'; }) && purAll().length) push('purchases', {list: purAll()});
@@ -21979,14 +21980,17 @@ try{
  }
  window.bpAcc = {open: open};
  /* زرار الدخول في تبويبي المشتريات والمخزون (للمدير فقط) */
- setInterval(function(){
+ function bpAccIns(){
  if(!mgr()) return;
  ['purchasesTab', 'inventoryTab'].forEach(function(id){
  var t = document.getElementById(id); if(!t || t.classList.contains('hidden') || t.querySelector('#bpAccBtn')) return;
  var b = document.createElement('button'); b.type = 'button'; b.id = 'bpAccBtn'; b.className = 'secondary'; b.textContent = '🧮 Contabilità articoli · محاسبة الأصناف';
  b.onclick = open; t.insertBefore(b, t.firstChild);
  });
- }, 1500);
+ 
+ ['purchasesTab', 'inventoryTab'].forEach(function(id){ var t = document.getElementById(id); if(t && !t._bpAccObs){ t._bpAccObs = new MutationObserver(bpAccIns); t._bpAccObs.observe(t, {childList: true}); } });
+ }
+ setInterval(bpAccIns, 1500);
 })();
 }catch(e){console.error("[bp] bp-v84-acc",e)}
 
