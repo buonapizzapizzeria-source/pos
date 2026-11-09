@@ -27250,6 +27250,19 @@ function matchIn(q, names, aliases){
    inp.value = e.official + ' '; inp.focus(); try{ inp.setSelectionRange(inp.value.length, inp.value.length); }catch(x){}
   }
  }
+ /* usato dal vocale (bpVoiceAddr): scrive "Via X 2", ferma i suggerimenti in corso e lancia controllo + distanza + barra verde */
+ window.bpGeoApplyVoice = function(official, civic){
+  var inp = $('address'); if(!inp || !official) return false;
+  skipUntil = 0; inp.value = official + (civic ? ' ' + civic : ' ');
+  try{ inp.dispatchEvent(new Event('input', {bubbles: true})); }catch(e){} /* aggiorna anche la regola consegna (dentro/fuori Lodi Vecchio) */
+  clearTimeout(timerS); tokS++;
+  var box = $('suggestAddress'); if(box) box.classList.add('hidden');
+  secs = {engine: [], local: [], fuzzy: [], google: []};
+  trustedCore = core(nz(official)); inp.value = official + (civic ? ' ' + civic : ' '); lastVal = inp.value;
+  if(civic){ try{ inp.dispatchEvent(new Event('change', {bubbles: true})); }catch(e){ setTimeout(check, 60); } }
+  else { inp.focus(); try{ inp.setSelectionRange(inp.value.length, inp.value.length); }catch(e){} }
+  return true;
+ };
  function paint(){
   var box = $('suggestAddress'); if(!box) return;
   if(box.classList.contains('hidden')) box.innerHTML = '';
@@ -27512,6 +27525,202 @@ function matchIn(q, names, aliases){
   open.parentNode.insertBefore(b, open); open.parentNode.appendChild(k);
  }
  setInterval(mount, 1500); mount();
+})();
+</script>
+<script id="bpVoiceAddr">
+/* Voce → Indirizzo (🎤 accanto a "Indirizzo / Via di consegna"):
+   1) it-IT fisso, con 5 alternative di ascolto e fallback ibrido (parole arabe → traslitterate, numeri arabi → cifre)
+   2) numeri italiani parlati → cifre (due→2, dieci→10, venticinque→25 ...)
+   3) pulizia parole inutili: al numero / numero / civico / in via / via / vicolo ...
+   4) a fine ascolto (onresult finale / onend) il testo passa al dizionario locale (resolveLodiVecchioStreets)
+      → scrive "Via Martiri di Cefalonia 2" e lancia controllo indirizzo + distanza + barra verde, senza ritocchi a mano */
+(function(){
+ if(window.__bpVoiceAddr) return; window.__bpVoiceAddr = 1;
+ var LANG = 'it-IT', MAX_ALT = 5, STRONG = 0.75;
+
+ /* ---------- 1) numeri italiani parlati -> cifre ---------- */
+ var UNITS = {zero: 0, uno: 1, un: 1, una: 1, due: 2, tre: 3, quattro: 4, cinque: 5, sei: 6, sette: 7, otto: 8, nove: 9, dieci: 10, undici: 11, dodici: 12, tredici: 13, quattordici: 14, quindici: 15, sedici: 16, diciassette: 17, diciotto: 18, diciannove: 19};
+ var TENS = {venti: 20, trenta: 30, quaranta: 40, cinquanta: 50, sessanta: 60, settanta: 70, ottanta: 80, novanta: 90};
+ function numWord(w){
+  if(!w || /^\d/.test(w)) return null;
+  if(Object.prototype.hasOwnProperty.call(UNITS, w)) return UNITS[w];
+  if(Object.prototype.hasOwnProperty.call(TENS, w)) return TENS[w];
+  var keys = Object.keys(TENS);
+  for(var i = 0; i < keys.length; i++){
+   var stem = keys[i].slice(0, -1); /* vent / trent / quarant ... (ventuno, ventotto, ventitre, venticinque) */
+   if(w.length > stem.length && w.indexOf(stem) === 0){
+    var rest = w.slice(stem.length), c = [rest, rest.slice(1)];
+    for(var k = 0; k < c.length; k++){ var u = UNITS[c[k]]; if(Object.prototype.hasOwnProperty.call(UNITS, c[k]) && u >= 1 && u <= 9) return TENS[keys[i]] + u; }
+   }
+  }
+  if(w === 'cento') return 100;
+  if(w.length > 5 && w.indexOf('cento') === 0){ var r = numWord(w.slice(5)); if(r != null && r < 100) return 100 + r; }
+  return null;
+ }
+ function wordsToDigits(s){
+  var out = [], tk = String(s).split(' ');
+  tk.forEach(function(t){
+   if(!t) return;
+   var n = numWord(t);
+   if(n == null){ out.push({t: t, w: false}); return; }
+   var p = out[out.length - 1], tail = p && p.w ? p.n % 100 : -1; /* "venti"+"cinque" → 25 · "cento"+"due" → 102 · "cento"+"venti"+"cinque" → 125 */
+   if(p && p.w && ((p.n >= 100 && tail === 0 && n < 100) || (tail >= 20 && tail % 10 === 0 && n >= 1 && n <= 9))){ p.n += n; p.t = String(p.n); return; }
+   out.push({t: String(n), w: true, n: n});
+  });
+  return out.map(function(o){ return o.t; }).join(' ');
+ }
+
+ /* ---------- fallback ibrido: parole arabe → latino / cifre ---------- */
+ var AR_NOISE = {'شارع': 1, 'الشارع': 1, 'رقم': 1, 'عماره': 1, 'العماره': 1, 'بيت': 1, 'في': 1, 'علي': 1, 'عند': 1, 'لو': 1, 'سمحت': 1, 'بتاع': 1, 'ده': 1, 'دي': 1};
+ function arToLatin(s){
+  if(!/[\u0600-\u06ff]/.test(s)) return s;
+  var haveAr = (typeof arNorm === 'function'), toks = (haveAr ? arNorm(s) : s).split(' '), out = [];
+  toks.forEach(function(w){
+   if(!w) return;
+   if(!/[\u0600-\u06ff]/.test(w)){ out.push(w); return; }
+   if(AR_NOISE[w]) return;
+   if(w === 'و'){ out.push('و'); return; }
+   var core = (w.length > 3 && w.charAt(0) === 'و') ? w.slice(1) : w, pre = core !== w;
+   var n = null;
+   try{ if(typeof AR_NUM !== 'undefined' && AR_NUM[core] != null) n = AR_NUM[core]; else if(typeof AR_TENS !== 'undefined' && AR_TENS[core] != null) n = AR_TENS[core]; }catch(e){}
+   if(n != null){ if(pre) out.push('و'); out.push(String(n)); return; }
+   try{ out.push(typeof arTranslit === 'function' ? arTranslit(w) : ''); }catch(e){}
+  });
+  var res = []; /* "5 و 20" → 25 */
+  for(var i = 0; i < out.length; i++){
+   if(/^\d$/.test(out[i]) && out[i + 1] === 'و' && /^\d0$/.test(out[i + 2] || '')){ res.push(String(+out[i + 2] + +out[i])); i += 2; continue; }
+   if(out[i] !== 'و') res.push(out[i]);
+  }
+  return res.join(' ');
+ }
+
+ /* ---------- 2) pulizia del testo parlato + conversione numeri ---------- */
+ function stripAcc(s){ try{ return s.normalize('NFD').replace(/[\u0300-\u036f]/g, ''); }catch(e){ return s; } }
+ function prepare(raw){
+  var s = String(raw || '').toLowerCase()
+   .replace(/[٠-٩]/g, function(d){ return String(d.charCodeAt(0) - 1632); })
+   .replace(/[۰-۹]/g, function(d){ return String(d.charCodeAt(0) - 1776); });
+  s = stripAcc(s).replace(/['’`´]/g, ' ').replace(/[^a-z0-9\u0600-\u06ff\/ ]+/g, ' ').replace(/\s+/g, ' ').trim();
+  s = arToLatin(s);
+  var type = /\bpiazz(?:a|ale)\b|\bpza\b/.test(s) ? 'Piazza' : (/\bviale\b/.test(s) ? 'Viale' : (/\b(?:via|vicolo)\b/.test(s) ? 'Via' : ''));
+  s = s
+   .replace(/\b(?:al|allo|alla|il|del|dal)\s+(?:numero|civico)\b/g, ' ')            /* "al numero" */
+   .replace(/\b(?:numero|numeri|civico)\b/g, ' ')                                    /* "numero", "civico" */
+   .replace(/\b(?:in|sulla|sul|nella|nel)\s+(?:via|viale|vicolo|piazza|piazzale|corso|largo|strada)\b/g, ' ') /* "in via" */
+   .replace(/\b(?:via|viale|vicolo|strada)\b/g, ' ')                                 /* "via", "vicolo" */
+   .replace(/\b(?:abito|abitiamo|siamo|sono|indirizzo|consegna|consegnare|ecco|allora|dunque|ehm|prego|grazie|per favore|per piacere|a lodi vecchio|lodi vecchio|a lodi)\b/g, ' ')
+   .replace(/^(?:in|a|al|alla|su|sul)\s+/, '')
+   .replace(/\s+/g, ' ').trim();
+  s = wordsToDigits(s)
+   .replace(/\b(?:n|nr|num)\s+(?=\d)/g, ' ')
+   .replace(/\bgiovanni\s+(?:23|xxiii)\b/g, 'giovanni xxiii')                         /* Papa Giovanni XXIII ≠ civico 23 */
+   .replace(/\s+/g, ' ').trim();
+  return {text: s, type: type};
+ }
+ function variants(t){ /* "2 cefalonia" → anche "cefalonia 2" */
+  var v = [t], m = t.match(/^(\d+[a-z]?)\s+(.{3,})$/);
+  if(m && !/^(?:aprile|novembre|maggio|giugno)\b/.test(m[2])) v.push(m[2] + ' ' + m[1]);
+  return v;
+ }
+
+ /* ---------- 3) risoluzione con il dizionario locale ---------- */
+ function resolver(txt, n){ return (typeof resolveLodiVecchioStreets === 'function') ? (resolveLodiVecchioStreets(txt, n) || []) : []; }
+ function pickType(list, type){
+  if(!type || list.length < 2) return null;
+  for(var i = 0; i < list.length; i++){ if(list[i].officialStreet.indexOf(type + ' ') === 0) return list[i]; }
+  return null;
+ }
+ function nice(civ){ return String(civ || '').replace(/[a-z]$/, function(c){ return c.toUpperCase(); }); }
+ function title(s){ try{ if(typeof bpTitle === 'function') return bpTitle(s); }catch(e){} return String(s).replace(/\S+/g, function(w){ return w.charAt(0).toUpperCase() + w.slice(1); }); }
+
+ function evaluate(alts, curVal){
+  var cands = [], preps = alts.map(function(a){ return prepare(a.transcript); });
+  /* solo un numero (es. "dieci") e la via è già nel campo → aggiorna solo il civico */
+  for(var q = 0; q < preps.length; q++){
+   if(/^\d+[a-z]?$/.test(preps[q].text)){
+    var cur = resolver(String(curVal || '').split(',')[0].replace(/\s+\d+\s*[a-zA-Z]?(?:\/\w+)?\s*$/, ''), 1)[0];
+    if(cur && cur.score >= STRONG) return {kind: 'street', official: cur.officialStreet, civic: nice(preps[q].text), score: cur.score};
+   }
+  }
+  alts.forEach(function(a, i){
+   var p = preps[i]; if(!p.text) return;
+   variants(p.text).forEach(function(v, vi){
+    var rs = resolver(v, 5); if(!rs.length) return;
+    var tied = rs.filter(function(r){ return rs[0].score - r.score < 0.02; }), ch = pickType(tied, p.type) || rs[0];
+    cands.push({r: ch, i: i, rank: ch.score + (ch.civic ? 0.03 : 0) - i * 0.01 - vi * 0.005 + (a.confidence || 0) * 0.02});
+   });
+  });
+  if(!cands.length){ var t0 = (preps.filter(function(p){ return p.text; })[0] || {}).text || ''; return {kind: 'none', text: t0}; }
+  cands.sort(function(a, b){ return b.rank - a.rank; });
+  var best = cands[0], civ = best.r.civic;
+  if(!civ){ for(var k = 1; k < cands.length; k++){ if(cands[k].r.officialStreet === best.r.officialStreet && cands[k].r.civic){ civ = cands[k].r.civic; break; } } }
+  if(best.r.score >= STRONG) return {kind: 'street', official: best.r.officialStreet, civic: nice(civ), score: best.r.score};
+  return {kind: 'weak', text: preps[best.i].text};
+ }
+
+ /* ---------- scrittura nel campo + controllo indirizzo ---------- */
+ function flash(m, bad){ try{ bpFlash(m, bad); }catch(e){ console.log('[bp] voce indirizzo', m); } }
+ function fire(inp, n){ try{ inp.dispatchEvent(new Event(n, {bubbles: true})); }catch(e){} }
+ function handle(alts, inp){
+  var raw = (alts[0] && alts[0].transcript) || '', ev = evaluate(alts, inp.value);
+  if(ev.kind === 'street'){
+   var ok = false;
+   try{ ok = typeof window.bpGeoApplyVoice === 'function' && window.bpGeoApplyVoice(ev.official, ev.civic); }catch(e){ console.warn('[bp] bpGeoApplyVoice', e); }
+   if(!ok){ inp.value = ev.official + (ev.civic ? ' ' + ev.civic : ' '); fire(inp, 'input'); if(ev.civic) fire(inp, 'change'); }
+   flash('🎙️ «' + raw + '» → ' + ev.official + (ev.civic ? ' ' + ev.civic : '') + (ev.civic ? '' : ' · قول رقم العمارة'));
+  } else if(ev.text){
+   inp.value = title(ev.text); fire(inp, 'input'); inp.focus(); /* il menu ✨ "Forse cercavi" propone le strade più vicine */
+   flash((ev.kind === 'weak' ? '❓ «' : '❌ «') + raw + '» · اختار من الاقتراحات', true);
+  } else flash('❌ «' + raw + '»', true);
+ }
+
+ /* ---------- riconoscimento vocale (it-IT) ---------- */
+ function readAlts(res){
+  var out = [], seen = {};
+  for(var k = 0; k < MAX_ALT; k++){
+   var t = '', c = 0, n = 0;
+   for(var i = 0; i < res.length; i++){ var it = res[i][Math.min(k, res[i].length - 1)] || res[i][0]; if(it){ t += (t ? ' ' : '') + it.transcript; c += it.confidence || 0; n++; } }
+   t = t.trim(); var key = t.toLowerCase();
+   if(t && !seen[key]){ seen[key] = 1; out.push({transcript: t, confidence: n ? c / n : 0}); }
+  }
+  return out;
+ }
+ function listen(inp, btn, done){
+  var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if(!SR){ alert('Il riconoscimento vocale non è supportato da questo browser. Usa il microfono 🎤 della tastiera.'); return null; }
+  var r = new SR(), fin = null, lastInt = null, handled = false;
+  r.lang = LANG; r.interimResults = true; r.continuous = false; r.maxAlternatives = MAX_ALT;
+  function run(a){ if(handled || !a || !a.length) return; handled = true; try{ handle(a, inp); }catch(e){ console.error('[bp] voce indirizzo', e); } }
+  r.onresult = function(e){
+   var res = e.results, last = res[res.length - 1], alts = readAlts(res);
+   if(last.isFinal){ fin = alts; run(alts); }
+   else { lastInt = alts; if(alts[0]) inp.value = title(prepare(alts[0].transcript).text || alts[0].transcript); } /* anteprima già pulita */
+  };
+  r.onend = function(){ btn.classList.remove('on'); run(fin || lastInt); done(); };
+  r.onerror = function(e){ btn.classList.remove('on'); if(e && e.error === 'not-allowed') flash('🎤 Consenti il microfono al browser · فعّل الميكروفون', true); };
+  try{ r.start(); btn.classList.add('on'); }catch(err){ btn.classList.remove('on'); return null; }
+  return r;
+ }
+
+ /* ---------- pulsante 🎤 (sostituisce quello generico del campo indirizzo) ---------- */
+ function mount(){
+  var inp = document.getElementById('address'); if(!inp || inp.getAttribute('data-bpaddr') === '1') return;
+  var f = inp.closest('.field') || inp.parentNode; if(!f) return;
+  [].slice.call(f.querySelectorAll('.mic-btn')).forEach(function(n){ if(!n.hasAttribute('data-bpaddr')) n.remove(); });
+  inp.setAttribute('data-bpmic', '1'); inp.setAttribute('data-bpaddr', '1'); inp.classList.remove('has-mic'); inp.classList.add('has-mic2');
+  var b = document.createElement('button'); b.type = 'button'; b.className = 'mic-btn'; b.setAttribute('data-bpaddr', '1'); b.textContent = '🎤';
+  b.title = 'Indirizzo a voce (italiano) · إملاء العنوان بالإيطالي'; b.setAttribute('aria-label', b.title);
+  var x = document.createElement('button'); x.type = 'button'; x.className = 'mic-btn clr'; x.setAttribute('data-bpaddr', '1'); x.textContent = '✖'; x.title = 'Cancella · مسح';
+  var rec = null;
+  b.onclick = function(){
+   if(rec){ try{ rec.stop(); }catch(e){ console.warn(e); } return; }
+   rec = listen(inp, b, function(){ rec = null; });
+  };
+  x.onclick = function(){ if(rec){ try{ rec.abort(); }catch(e){ console.warn(e); } rec = null; b.classList.remove('on'); } inp.value = ''; fire(inp, 'input'); fire(inp, 'change'); };
+  f.appendChild(b); f.appendChild(x);
+ }
+ setInterval(mount, 1200); mount();
+ window.__bpVoiceAddrTest = {prepare: prepare, wordsToDigits: wordsToDigits, evaluate: evaluate, numWord: numWord};
 })();
 </script>
 </body>
