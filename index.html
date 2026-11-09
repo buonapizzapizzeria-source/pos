@@ -27286,35 +27286,64 @@ function matchIn(q, names, aliases){
   if(inp.value !== lastVal) check();
  }, 1500);
 
- /* ---------- 3) Ottimizzazione giro (andata e ritorno dalla pizzeria) ---------- */
- function tsp(h, pts){
-  var n = pts.length, D = function(a, b){ return hav(a, b); };
-  if(n <= 1) return pts.map(function(_, i){ return i; });
-  var best = null, bestL = Infinity;
-  if(n <= 9){
-   var used = new Array(n).fill(false), cur = [];
+ /* ---------- 3) Ottimizzazione giro: andata e ritorno da Via Libertà 29 (strade reali, sensi unici) ---------- */
+ /* D[i][j] = costo da i a j (anche asimmetrico); indice 0 = pizzeria, 1..n = consegne. Restituisce l'ordine (indici 0..n-1) del giro completo più corto. */
+ function tspM(D){
+  var n = D.length - 1; if(n <= 0) return []; if(n === 1) return [0];
+  var best = null, bestL = Infinity, i, j;
+  if(n <= 9){ /* tutte le permutazioni (con taglio dei rami peggiori) */
+   var used = new Array(n + 1).fill(false), cur = [];
    (function rec(last, len){
     if(len >= bestL) return;
-    if(cur.length === n){ var tot = len + D(last, h); if(tot < bestL){ bestL = tot; best = cur.slice(); } return; }
-    for(var i = 0; i < n; i++){ if(used[i]) continue; used[i] = true; cur.push(i); rec(pts[i], len + D(last, pts[i])); cur.pop(); used[i] = false; }
-   })(h, 0);
+    if(cur.length === n){ var tot = len + D[last][0]; if(tot < bestL){ bestL = tot; best = cur.slice(); } return; }
+    for(var x = 1; x <= n; x++){ if(used[x]) continue; used[x] = true; cur.push(x - 1); rec(x, len + D[last][x]); cur.pop(); used[x] = false; }
+   })(0, 0);
    return best;
   }
-  var rem = pts.map(function(_, i){ return i; }), ord = [], last = h;
-  while(rem.length){ var bi = 0, bd = Infinity; rem.forEach(function(i, k){ var d = D(last, pts[i]); if(d < bd){ bd = d; bi = k; } }); var i2 = rem.splice(bi, 1)[0]; ord.push(i2); last = pts[i2]; }
-  var improved = true, L = function(o){ var t = D(h, pts[o[0]]); for(var i = 0; i < o.length - 1; i++) t += D(pts[o[i]], pts[o[i + 1]]); return t + D(pts[o[o.length - 1]], h); };
-  while(improved){ improved = false; for(var i = 0; i < n - 1; i++) for(var j = i + 1; j < n; j++){ var c = ord.slice(0, i).concat(ord.slice(i, j + 1).reverse(), ord.slice(j + 1)); if(L(c) + 1e-9 < L(ord)){ ord = c; improved = true; } } }
-  return ord;
+  var rem = [], ord = [], last = 0;
+  for(i = 1; i <= n; i++) rem.push(i);
+  while(rem.length){ var bi = 0, bd = Infinity; rem.forEach(function(x, k){ if(D[last][x] < bd){ bd = D[last][x]; bi = k; } }); var x2 = rem.splice(bi, 1)[0]; ord.push(x2); last = x2; }
+  function L(o){ var t = D[0][o[0]]; for(var q = 0; q < o.length - 1; q++) t += D[o[q]][o[q + 1]]; return t + D[o[o.length - 1]][0]; }
+  var improved = true;
+  while(improved){ improved = false; for(i = 0; i < n - 1; i++) for(j = i + 1; j < n; j++){ var c = ord.slice(0, i).concat(ord.slice(i, j + 1).reverse(), ord.slice(j + 1)); if(L(c) + 1e-9 < L(ord)){ ord = c; improved = true; } } }
+  return ord.map(function(x){ return x - 1; });
  }
- window.__bpGeoTest = Object.assign(window.__bpGeoTest || {}, {hav: hav, tsp: tsp});
+ function tsp(h, pts){
+  var all = [h].concat(pts), D = all.map(function(a){ return all.map(function(b){ return hav(a, b); }); });
+  return tspM(D);
+ }
+ window.__bpGeoTest = Object.assign(window.__bpGeoTest || {}, {hav: hav, tsp: tsp, tspM: tspM});
+ async function jfetch(url, opt){
+  var r;
+  try{ r = await fetch(url, opt); }catch(e){ throw new Error('rete/CORS: ' + (e && e.message || e)); }
+  var t = await r.text(), j = null; try{ j = JSON.parse(t); }catch(e){}
+  if(!r.ok){ var m = (j && (j.error && j.error.message || (Array.isArray(j) && j[0] && j[0].error && j[0].error.message))) || t.slice(0, 200); throw new Error('HTTP ' + r.status + ': ' + m); }
+  return j;
+ }
+ function llw(p){ return {location: {latLng: {latitude: p.lat, longitude: p.lng}}}; }
+ /* A) Google computeRoutes con optimizeWaypointOrder: Google risolve il TSP sulle strade reali */
  async function routesOpt(h, pts){
-  var ll = function(p){ return {location: {latLng: {latitude: p.lat, longitude: p.lng}}}; };
-  var r = await fetch('https://routes.googleapis.com/directions/v2:computeRoutes', {method: 'POST',
+  var j = await jfetch('https://routes.googleapis.com/directions/v2:computeRoutes', {method: 'POST',
    headers: {'Content-Type': 'application/json', 'X-Goog-Api-Key': key(), 'X-Goog-FieldMask': 'routes.optimizedIntermediateWaypointIndex,routes.distanceMeters,routes.duration'},
-   body: JSON.stringify({origin: ll(h), destination: ll(h), intermediates: pts.map(ll), travelMode: 'DRIVE', routingPreference: 'TRAFFIC_UNAWARE', optimizeWaypointOrder: true, languageCode: 'it', units: 'METRIC'})});
-  var j = await r.json(), rt = j.routes && j.routes[0];
-  if(!rt || !rt.optimizedIntermediateWaypointIndex) throw new Error((j.error && j.error.message) || 'Routes API');
+   body: JSON.stringify({origin: llw(h), destination: llw(h), intermediates: pts.map(llw), travelMode: 'DRIVE', routingPreference: 'TRAFFIC_UNAWARE', optimizeWaypointOrder: true, languageCode: 'it', units: 'METRIC'})});
+  var rt = j && j.routes && j.routes[0];
+  if(!rt || !rt.optimizedIntermediateWaypointIndex) throw new Error('risposta senza ordine ottimizzato');
   return {order: rt.optimizedIntermediateWaypointIndex, km: (rt.distanceMeters || 0) / 1000, min: parseInt(rt.duration || '0', 10) / 60};
+ }
+ /* B) Matrice distanze/tempi reali (computeRouteMatrix) + tutte le permutazioni in locale */
+ async function matrixOpt(h, pts){
+  var wps = [h].concat(pts).map(llw), n = wps.length;
+  var j = await jfetch('https://routes.googleapis.com/distanceMatrix/v2:computeRouteMatrix', {method: 'POST',
+   headers: {'Content-Type': 'application/json', 'X-Goog-Api-Key': key(), 'X-Goog-FieldMask': 'originIndex,destinationIndex,duration,distanceMeters,condition'},
+   body: JSON.stringify({origins: wps.map(function(w){ return {waypoint: w}; }), destinations: wps.map(function(w){ return {waypoint: w}; }), travelMode: 'DRIVE', routingPreference: 'TRAFFIC_UNAWARE'})});
+  if(!Array.isArray(j)) throw new Error('matrice non valida');
+  var Du = [], Di = [], a, b2;
+  for(a = 0; a < n; a++){ Du.push(new Array(n).fill(1e7)); Di.push(new Array(n).fill(1e7)); Du[a][a] = 0; Di[a][a] = 0; }
+  j.forEach(function(e){ if(e.originIndex == null || e.destinationIndex == null || e.originIndex === e.destinationIndex) return; if(e.condition && e.condition !== 'ROUTE_EXISTS') return; Du[e.originIndex][e.destinationIndex] = parseInt(e.duration || '0', 10); Di[e.originIndex][e.destinationIndex] = e.distanceMeters || 0; });
+  var cost = Du.map(function(row, r){ return row.map(function(v, c){ return v + Di[r][c] * 0.001; }); }); /* tempo reale; a parità, meno metri */
+  var ord = tspM(cost), tu = 0, td = 0, last = 0;
+  ord.forEach(function(x){ tu += Du[last][x + 1]; td += Di[last][x + 1]; last = x + 1; }); tu += Du[last][0]; td += Di[last][0];
+  return {order: ord, km: td / 1000, min: tu / 60};
  }
  function info(){
   var i = $('bpRouteInfo'); if(i) return i;
@@ -27330,29 +27359,46 @@ function matchIn(q, names, aliases){
    var noAddr = ids.filter(function(id){ return !stops.some(function(o){ return o.id === id; }); });
    if(stops.length < 2){ say('warn', 'Servono almeno 2 consegne con indirizzo per ottimizzare il giro.'); return; }
    if(!key() && !setKey()) return;
-   say('info', '⏳ Calcolo il giro più breve…');
+   say('info', '⏳ Calcolo il giro più breve sulle strade reali…');
    var h = await ensureHome(), pts = [], missing = [];
    for(var i = 0; i < stops.length; i++){
     var r = await geocode(stops[i].address);
-    if(r[0]) pts.push({lat: r[0].lat, lng: r[0].lng, o: stops[i]}); else missing.push(stops[i]);
+    var g = r.filter(function(x){ return x.street; })[0] || r[0];
+    if(g) pts.push({lat: g.lat, lng: g.lng, o: stops[i]}); else missing.push(stops[i]);
    }
    if(pts.length < 2){ say('warn', 'Non riesco a localizzare abbastanza indirizzi su Google Maps.'); return; }
-   var ord, km, min, how;
-   try{ var ro = await routesOpt(h, pts); ord = ro.order; km = ro.km; min = ro.min; how = 'strade reali (Google)'; }
-   catch(e){
-    console.warn('[bp] Routes API non disponibile, uso stima locale', e);
-    ord = tsp(h, pts); var tot = 0, last = h; ord.forEach(function(ix){ tot += hav(last, pts[ix]); last = pts[ix]; }); tot += hav(last, h);
-    km = tot * 1.3; min = km / 30 * 60 + 0; how = 'stima in linea d\'aria (abilita Routes API per le strade reali)';
+   var res, how, err1 = '';
+   try{ res = await routesOpt(h, pts); how = '🛣️ strade reali e sensi unici (Google Routes)'; }
+   catch(e1){
+    err1 = String(e1 && e1.message || e1); console.warn('[bp] computeRoutes', e1);
+    try{ res = await matrixOpt(h, pts); how = '🛣️ strade reali e sensi unici (matrice Google + tutte le combinazioni)'; }
+    catch(e2){
+     console.warn('[bp] computeRouteMatrix', e2);
+     var ord = tsp(h, pts), tot = 0, last = h; ord.forEach(function(ix){ tot += hav(last, pts[ix]); last = pts[ix]; }); tot += hav(last, h);
+     res = {order: ord, km: tot * 1.3, min: tot * 1.3 / 30 * 60}; how = '⚠️ stima in linea d\'aria (Routes API non risponde: ' + esc2(err1) + ')';
+     err1 = '';
+    }
    }
-   var newIds = ord.map(function(ix){ return pts[ix].o.id; }).concat(missing.map(function(o){ return o.id; }), noAddr);
+   var newIds = res.order.map(function(ix){ return pts[ix].o.id; }).concat(missing.map(function(o){ return o.id; }), noAddr);
    selectedRouteOrderIds = newIds;
    try{ renderOrders(); }catch(e){}
-   say('ok', '⚡ Giro ottimizzato: <b>' + km.toFixed(1).replace('.', ',') + ' km</b> · circa <b>' + Math.round(min) + ' min</b> (andata e ritorno, senza soste) · ' + how
+   say(how.indexOf('⚠️') === 0 ? 'warn' : 'ok', '⚡ Giro ottimizzato: <b>' + res.km.toFixed(1).replace('.', ',') + ' km</b> · circa <b>' + Math.round(res.min) + ' min</b> (andata e ritorno, senza soste) · ' + how
+    + (err1 ? '<br><small style="opacity:.75">computeRoutes non disponibile (' + esc2(err1) + '): usata la matrice.</small>' : '')
     + (missing.length ? '<br>⚠️ Non localizzati (messi in fondo): ' + missing.map(function(o){ return '#' + o.id; }).join(', ') : '')
-    + '<br><span style="opacity:.8">Il giro è ordinato solo per percorso, non per orario di consegna.</span>');
+    + '<br><span style="opacity:.8">Ordinato per percorso, non per orario di consegna. Ora «Apri Giro su Google Maps» usa questo ordine.</span>');
   }catch(e){ console.warn('[bp] ottimizza', e); say('warn', '⚠️ Ottimizzazione non riuscita: ' + esc2(e && e.message || e)); }
  }
  window.bpOptimizeRoute = optimize;
+ /* Apri su Google Maps: giro completo con l'ordine attuale (dopo l'ottimizzazione), partenza e ritorno Via Libertà 29 */
+ window.openGoogleMapsMultiRoute = function(){
+  var stops = selectedRouteOrderIds.map(function(id){ return orders.find(function(x){ return x.id === id; }); }).filter(function(o){ return o && o.address; }).map(function(o){
+   var q = normAddr(canon(o.address)), c = cache[q.toLowerCase()];
+   return (c && c[0] && c[0].street) ? short(c[0].formatted) : q;
+  });
+  if(!stops.length){ alert('Seleziona almeno un ordine con indirizzo di consegna!'); return; }
+  var enc = encodeURIComponent, hq = enc(HOME_Q);
+  window.open('https://www.google.com/maps/dir/?api=1&origin=' + hq + '&destination=' + hq + '&waypoints=' + stops.map(enc).join('|') + '&travelmode=driving', '_blank');
+ };
  function mount(){
   var box = $('routeBuilderBox'); if(!box || $('bpOptBtn')) return;
   var open = box.querySelector('[onclick*="openGoogleMapsMultiRoute"]'); if(!open) return;
