@@ -7363,12 +7363,15 @@ function gemCommitOrder(parsed, finalRows, skipped, learned){
  let add = (Array.isArray(r.add) ? r.add : []).map(cleanIng).filter(Boolean);
  try{ if(window.bpSmartExtras){ let __rr = window.bpSmartExtras([...rem.map(x => 'senza ' + x), ...add].join(' '), prod, rem, add); rem = __rr.removed; add = __rr.added; } }catch(_e){}
  add = gemDedupeBaseExtras(prod.name, add);
- addVoiceItemToCart(prod, size, price, qty, rem, add);
+ const __before = new Map(); cart.forEach((v, k) => __before.set(k, v.qty));
+addVoiceItemToCart(prod, size, price, qty, rem, add);
+// chiave REALE della riga nel carrello (con extra a pagamento la chiave cambia: ingredienti canonici + "ext2"), cosi' Menu/Baby si applicano alla riga giusta
+let __realKey = null; cart.forEach((v, k) => { if(__realKey === null && (!__before.has(k) || v.qty > __before.get(k))) __realKey = k; });
  // formato "Menu" (is_menu): attiva il flag +Bibita +Patatine (supplemento a listino) su ogni unità, tranne se il prodotto è già un "Menu ..." a listino
  const asMenu = !!r.menu && size === 'Normale' && !/baby|maxi/i.test(String(r.size || '')) && !/^\s*men[uù]/i.test(String(prod.category || '')) && !/^men[uù]\b/i.test(String(prod.name || ''));
  const isBaby = /baby/i.test(String(r.size || ''));
  const uq = a => [...new Set((a || []).map(x => String(x).trim().toLowerCase()).filter(x => x.length >= 2))];
- let tk = `${prod.id}-${size}-${[...uq(rem), ...uq(add)].join('_') || 'base'}`;
+ let tk = __realKey || `${prod.id}-${size}-${[...uq(rem), ...uq(add)].join('_') || 'base'}`;
  // Baby: a listino non esiste un prezzo Baby -> prezzo Normale + nota "Baby" su riga separata
  if(isBaby){
  const it0 = cart.get(tk);
