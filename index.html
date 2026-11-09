@@ -27078,7 +27078,8 @@ function resolveLodiVecchioStreet(rawInput) { return resolveLodiVecchioStreets(r
 </script>
 <!-- ===== bpGq: portafoglio mensile Google Maps con riporto giornaliero + circuit breaker ===== -->
 <style id="bpGqStyle">
-#bpGqBadge{white-space:nowrap}
+#bpGqBadge{display:flex;align-items:center;justify-content:center;gap:6px;box-sizing:border-box;margin:6px 10px 0;padding:7px 12px;border-radius:12px;font-weight:800;font-size:13px;line-height:1.25;text-align:center;cursor:pointer;background:rgba(127,127,127,.12);border:1.5px solid rgba(127,127,127,.35);color:inherit;-webkit-tap-highlight-color:transparent}
+html.bp-shut #bpGqBadge{display:none!important}
 #bpGqBadge.gq-warn{background:#f79009!important;border-color:#f79009!important;color:#fff!important}
 #bpGqBadge.gq-full{background:#d92d20!important;border-color:#d92d20!important;color:#fff!important}
 #bpGqToast{position:fixed;left:50%;bottom:calc(84px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:100000;max-width:min(92vw,460px);padding:12px 16px;border-radius:14px;font-weight:800;font-size:14px;box-shadow:0 8px 24px rgba(0,0,0,.28);color:#fff;text-align:center}
@@ -27091,7 +27092,7 @@ function resolveLodiVecchioStreet(rawInput) { return resolveLodiVecchioStreets(r
 #bpGqCard .gq-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:8px}
 #bpGqCard input[type=number]{width:110px}
 </style>
-<script id="bpGq">
+<script id="bpGqScript">
 (function(){
  if(window.bpGq) return;
  var PFX = 'gmaps_usage_', KIND = 'gmaps_kinds_', WAL = 'gmaps_wallet', LIM = 'bp_gmaps_daily_limit', FLG = 'gmaps_flags', DEF = 100, WARN = 0.8;
@@ -27187,7 +27188,8 @@ function resolveLodiVecchioStreet(rawInput) { return resolveLodiVecchioStreets(r
   var s = state(), b = document.getElementById('bpGqBadge');
   if(b){
    b.textContent = '🗺️ Google API: متبقي ' + s.rem + ' طلب (شامل المرحّل)' + (s.cls === 'gq-full' ? ' · locale' : '');
-   b.className = 'sound-btn ' + s.cls;
+   b.className = s.cls;
+   var ub = document.getElementById('userBar'); b.style.display = (ub && ub.classList.contains('hidden')) ? 'none' : ''; /* visibile solo dopo il login */
    b.title = s.cls === 'gq-full' ? MSG : (s.cls === 'gq-warn' ? 'Attenzione: 80% quota Google raggiunta' : 'Richieste Google Maps disponibili (base giornaliera + riporto dei giorni scorsi). Tocca per le impostazioni.');
   }
   var l = document.getElementById('bpGqLine');
@@ -27202,15 +27204,16 @@ function resolveLodiVecchioStreet(rawInput) { return resolveLodiVecchioStreets(r
   }
  }
  function mountBadge(){
-  var bar = document.getElementById('userBar'); if(!bar) return;
+  var hdr = document.querySelector('header'); if(!hdr) return;
   if(!document.getElementById('bpGqBadge')){
-   var b = document.createElement('button'); b.type = 'button'; b.id = 'bpGqBadge'; b.className = 'sound-btn';
+   /* NON un <button>: gli stili di #userBar button riducono i pulsanti a icone 42px con font-size 0 */
+   var b = document.createElement('div'); b.id = 'bpGqBadge'; b.setAttribute('role', 'button'); b.tabIndex = 0;
+   b.onkeydown = function(e){ if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); b.onclick(); } };
    b.onclick = function(){
     try{ switchTab('settings'); }catch(e){}
     setTimeout(function(){ var c = document.getElementById('bpGqCard'); if(c) c.scrollIntoView({behavior: 'smooth', block: 'center'}); }, 250);
    };
-   var snd = document.getElementById('soundToggleBtn');
-   if(snd && snd.parentNode === bar) snd.after(b); else bar.appendChild(b);
+   hdr.after(b); /* striscia subito sotto l'header: non tocca il layout dei pulsanti; visibile aprendo «Strumenti» */
    refresh();
   }
  }
