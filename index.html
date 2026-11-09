@@ -27197,7 +27197,7 @@ html.bp-shut #bpGqBadge{display:none!important}
    var ks = kinds();
    l.innerHTML = 'Disponibili: <b>' + s.rem + '</b> richieste (incluso il riporto) · usate nel mese <b>' + s.w.used + '/' + s.w.credit + '</b> (' + Math.round(s.pct * 100) + '%)'
     + '<br>Oggi usate: ' + todayUsed() + ' (Geocoding ' + (ks.geocoding || 0) + ' · Places ' + (ks.places || 0) + ' · Routes ' + (ks.routes || 0) + ')'
-    + '<br><span style="opacity:.75">Azzeramento totale automatico: 1° ' + nextReset() + '</span>'
+    + '<br><span style="opacity:.75">Azzeramento totale automatico: ' + nextReset() + '</span>'
     + (s.cls === 'gq-full' ? '<br><b style="color:#d92d20">🔒 ' + MSG + '</b>' : (s.cls === 'gq-warn' ? '<br><b style="color:#f79009">⚠️ Attenzione: 80% quota Google raggiunta</b>' : ''));
    var bar = document.querySelector('#bpGqCard .gq-bar>i');
    if(bar){ bar.style.width = Math.min(100, Math.round(s.pct * 100)) + '%'; bar.className = s.cls === 'gq-full' ? 'f' : (s.cls === 'gq-warn' ? 'w' : ''); }
