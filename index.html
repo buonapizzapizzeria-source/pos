@@ -27076,6 +27076,169 @@ function resolveLodiVecchioStreets(rawInput, limit) {
 }
 function resolveLodiVecchioStreet(rawInput) { return resolveLodiVecchioStreets(rawInput, 1)[0] || null; }
 </script>
+<!-- ===== bpGq: portafoglio mensile Google Maps con riporto giornaliero + circuit breaker ===== -->
+<style id="bpGqStyle">
+#bpGqBadge{white-space:nowrap}
+#bpGqBadge.gq-warn{background:#f79009!important;border-color:#f79009!important;color:#fff!important}
+#bpGqBadge.gq-full{background:#d92d20!important;border-color:#d92d20!important;color:#fff!important}
+#bpGqToast{position:fixed;left:50%;bottom:calc(84px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:100000;max-width:min(92vw,460px);padding:12px 16px;border-radius:14px;font-weight:800;font-size:14px;box-shadow:0 8px 24px rgba(0,0,0,.28);color:#fff;text-align:center}
+#bpGqToast.t-warn{background:#f79009}
+#bpGqToast.t-full{background:#175cd3}
+#bpGqCard .gq-line{font-weight:800;font-size:14px;margin:6px 0}
+#bpGqCard .gq-bar{height:10px;border-radius:99px;background:rgba(127,127,127,.25);overflow:hidden}
+#bpGqCard .gq-bar>i{display:block;height:100%;width:0;background:#12b76a;transition:width .3s}
+#bpGqCard .gq-bar>i.w{background:#f79009}#bpGqCard .gq-bar>i.f{background:#d92d20}
+#bpGqCard .gq-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:8px}
+#bpGqCard input[type=number]{width:110px}
+</style>
+<script id="bpGq">
+(function(){
+ if(window.bpGq) return;
+ var PFX = 'gmaps_usage_', KIND = 'gmaps_kinds_', WAL = 'gmaps_wallet', LIM = 'bp_gmaps_daily_limit', FLG = 'gmaps_flags', DEF = 100, WARN = 0.8;
+ var MSG = 'Quota Google esaurita per oggi - Modalità locale attiva';
+ var mem = {w: null, day: '', n: 0, kinds: {}}; /* ripiego se localStorage non è disponibile */
+ function p2(n){ return (n < 10 ? '0' : '') + n; }
+ function day(){ var d = new Date(); return d.getFullYear() + '-' + p2(d.getMonth() + 1) + '-' + p2(d.getDate()); }
+ function month(){ return day().slice(0, 7); }
+ function dayDiff(a, b){ return Math.round((new Date(b + 'T12:00:00') - new Date(a + 'T12:00:00')) / 864e5); }
+ function rd(k){ try{ return window.localStorage.getItem(k); }catch(e){ return null; } }
+ function wr(k, v){ try{ window.localStorage.setItem(k, v); return true; }catch(e){ return false; } }
+ function limit(){ var v = parseInt(rd(LIM), 10); return (isFinite(v) && v >= 1 && v <= 100000) ? v : DEF; }
+
+ /* chiavi dei giorni di mesi passati: eliminate (azzeramento mensile) */
+ function cleanOld(){
+  try{
+   var m = month(), ls = window.localStorage, del = [];
+   for(var i = 0; i < ls.length; i++){ var k = ls.key(i); if(!k) continue;
+    if((k.indexOf(PFX) === 0 && k.indexOf(PFX + m) !== 0) || (k.indexOf(KIND) === 0 && k.indexOf(KIND + m) !== 0)) del.push(k); }
+   del.forEach(function(k){ ls.removeItem(k); });
+  }catch(e){}
+ }
+ function sumMonth(){ /* consumi già registrati nel mese corrente (migrazione dal contatore giornaliero) */
+  var t = 0, m = month();
+  try{ var ls = window.localStorage; for(var i = 0; i < ls.length; i++){ var k = ls.key(i); if(k && k.indexOf(PFX + m) === 0){ var v = parseInt(ls.getItem(k), 10); if(isFinite(v) && v > 0) t += v; } } }catch(e){}
+  return t;
+ }
+ function saveW(w){ if(!wr(WAL, JSON.stringify(w))) mem.w = w; }
+
+ /* ---- portafoglio mensile: {m: mese, used: consumate nel mese, credit: totale accreditato, base: base di oggi, last: ultimo giorno accreditato} ---- */
+ function wallet(){
+  var w = null, raw = rd(WAL);
+  try{ w = raw ? JSON.parse(raw) : mem.w; }catch(e){ w = mem.w; }
+  var mo = month(), d = day(), ch = false;
+  if(!w || w.m !== mo){ /* 1° del mese (o primo avvio): azzeramento totale */
+   cleanOld();
+   w = {m: mo, used: sumMonth(), credit: 0, base: 0, last: null}; ch = true;
+  }
+  if(w.last !== d){ /* nuovo giorno: base giornaliera + riporto automatico di ciò che non è stato usato */
+   var add = w.last ? Math.max(0, dayDiff(w.last, d)) : 1;
+   if(add > 0){ w.credit += add * limit(); w.base = limit(); }
+   w.last = d; ch = true;
+  }
+  if(ch) saveW(w);
+  return w;
+ }
+ function remaining(){ var w = wallet(); return Math.max(0, w.credit - w.used); }
+ function blocked(){ return remaining() <= 0; }
+ function todayUsed(){ var v = parseInt(rd(PFX + day()), 10); if(isFinite(v) && v >= 0) return v; return mem.day === day() ? mem.n : 0; }
+ function kinds(){ try{ return JSON.parse(rd(KIND + day()) || '{}') || {}; }catch(e){ return mem.day === day() ? mem.kinds : {}; } }
+ function setLimit(v){
+  v = parseInt(v, 10); if(!isFinite(v) || v < 1) v = DEF; if(v > 100000) v = 100000;
+  var w = wallet(); w.credit += v - (w.base || 0); w.base = v; saveW(w); /* vale da oggi in poi; i giorni passati non cambiano */
+  wr(LIM, String(v)); refresh(); checkState(false); return v;
+ }
+
+ /* ---- punto unico di passaggio: ogni richiesta di rete a Google chiama take() PRIMA di partire ---- */
+ function take(kind){
+  var w = wallet();
+  if(w.credit - w.used <= 0){ checkState(true); return false; }
+  w.used++; saveW(w); /* salvataggio immediato */
+  var n = todayUsed() + 1, ks = kinds(); ks[kind] = (ks[kind] || 0) + 1;
+  if(wr(PFX + day(), String(n))) wr(KIND + day(), JSON.stringify(ks)); else mem.day = day(), mem.n = n, mem.kinds = ks;
+  refresh(); checkState(false);
+  return true;
+ }
+
+ /* ---- avvisi: 80% (arancione) e 100% (modalità locale) ---- */
+ function toast(cls, text){
+  var t = document.getElementById('bpGqToast');
+  if(!t){ t = document.createElement('div'); t.id = 'bpGqToast'; document.body.appendChild(t); }
+  t.className = cls; t.textContent = text; t.style.display = 'block';
+  clearTimeout(toast.tm); toast.tm = setTimeout(function(){ t.style.display = 'none'; }, 8000);
+ }
+ function flags(w){ try{ var f = JSON.parse(rd(FLG) || '{}') || {}; return (f.k === w.m + ':' + w.credit) ? f : {k: w.m + ':' + w.credit}; }catch(e){ return {k: w.m + ':' + w.credit}; } }
+ function checkState(fromBlockedCall){
+  var w = wallet(), f = flags(w);
+  if(w.credit - w.used <= 0){
+   if(!f.full){ f.full = 1; f.w80 = 1; wr(FLG, JSON.stringify(f)); toast('t-full', '🔒 ' + MSG); }
+   else if(fromBlockedCall && !checkState.shown){ checkState.shown = 1; toast('t-full', '🔒 ' + MSG); }
+  } else if(w.used >= Math.ceil(w.credit * WARN)){
+   if(!f.w80){ f.w80 = 1; wr(FLG, JSON.stringify(f)); toast('t-warn', '⚠️ Attenzione: 80% quota Google raggiunta'); }
+  } else { checkState.shown = 0; }
+ }
+
+ /* ---- interfaccia: badge nell'header (Strumenti) + scheda in Impostazioni ---- */
+ function state(){
+  var w = wallet(), rem = Math.max(0, w.credit - w.used);
+  return {w: w, rem: rem, pct: w.credit ? w.used / w.credit : 1, cls: rem <= 0 ? 'gq-full' : (w.used >= Math.ceil(w.credit * WARN) ? 'gq-warn' : '')};
+ }
+ function nextReset(){ var d = new Date(); d = new Date(d.getFullYear(), d.getMonth() + 1, 1); return d.toLocaleDateString('it-IT', {day: 'numeric', month: 'long'}); }
+ function refresh(){
+  var s = state(), b = document.getElementById('bpGqBadge');
+  if(b){
+   b.textContent = '🗺️ Google API: متبقي ' + s.rem + ' طلب (شامل المرحّل)' + (s.cls === 'gq-full' ? ' · locale' : '');
+   b.className = 'sound-btn ' + s.cls;
+   b.title = s.cls === 'gq-full' ? MSG : (s.cls === 'gq-warn' ? 'Attenzione: 80% quota Google raggiunta' : 'Richieste Google Maps disponibili (base giornaliera + riporto dei giorni scorsi). Tocca per le impostazioni.');
+  }
+  var l = document.getElementById('bpGqLine');
+  if(l){
+   var ks = kinds();
+   l.innerHTML = 'Disponibili: <b>' + s.rem + '</b> richieste (incluso il riporto) · usate nel mese <b>' + s.w.used + '/' + s.w.credit + '</b> (' + Math.round(s.pct * 100) + '%)'
+    + '<br>Oggi usate: ' + todayUsed() + ' (Geocoding ' + (ks.geocoding || 0) + ' · Places ' + (ks.places || 0) + ' · Routes ' + (ks.routes || 0) + ')'
+    + '<br><span style="opacity:.75">Azzeramento totale automatico: 1° ' + nextReset() + '</span>'
+    + (s.cls === 'gq-full' ? '<br><b style="color:#d92d20">🔒 ' + MSG + '</b>' : (s.cls === 'gq-warn' ? '<br><b style="color:#f79009">⚠️ Attenzione: 80% quota Google raggiunta</b>' : ''));
+   var bar = document.querySelector('#bpGqCard .gq-bar>i');
+   if(bar){ bar.style.width = Math.min(100, Math.round(s.pct * 100)) + '%'; bar.className = s.cls === 'gq-full' ? 'f' : (s.cls === 'gq-warn' ? 'w' : ''); }
+  }
+ }
+ function mountBadge(){
+  var bar = document.getElementById('userBar'); if(!bar) return;
+  if(!document.getElementById('bpGqBadge')){
+   var b = document.createElement('button'); b.type = 'button'; b.id = 'bpGqBadge'; b.className = 'sound-btn';
+   b.onclick = function(){
+    try{ switchTab('settings'); }catch(e){}
+    setTimeout(function(){ var c = document.getElementById('bpGqCard'); if(c) c.scrollIntoView({behavior: 'smooth', block: 'center'}); }, 250);
+   };
+   var snd = document.getElementById('soundToggleBtn');
+   if(snd && snd.parentNode === bar) snd.after(b); else bar.appendChild(b);
+   refresh();
+  }
+ }
+ function mountCard(){
+  var grid = document.querySelector('#settingsTab .bp-set-grid'); if(!grid || document.getElementById('bpGqCard')) return;
+  var c = document.createElement('div'); c.className = 'bp-set-card'; c.id = 'bpGqCard'; c.style.borderTopColor = '#1a73e8';
+  c.innerHTML = '<div class="bp-set-head"><span class="bp-set-ico" style="background:#e8f0fe;color:#1a73e8">🗺️</span><h3>Google Maps · Quota mensile con riporto</h3></div>'
+   + '<p class="bp-set-desc">Ogni giorno si aggiunge la base giornaliera; ciò che non usi (es. infrasettimanale) viene riportato ai giorni dopo, utile per venerdì-sabato-domenica. Ogni richiesta reale a Geocoding / Places / Routes viene contata. All\'80% compare un avviso; a 0 disponibili le richieste a Google si fermano e l\'app usa solo il dizionario locale di Lodi Vecchio. Tutto si azzera il 1° di ogni mese.</p>'
+   + '<div class="gq-bar"><i></i></div><div class="gq-line" id="bpGqLine"></div>'
+   + '<div class="gq-row"><label style="font-weight:800;font-size:12px">Base giornaliera (richieste/giorno) <input type="number" id="bpGqLimitInp" min="1" max="100000" step="1"></label>'
+   + '<button type="button" class="blue btn-sm" id="bpGqSave">💾 Salva</button>'
+   + '<button type="button" class="secondary btn-sm" id="bpGqKey">🔑 Chiave Google Maps</button></div>';
+  grid.appendChild(c);
+  var inp = document.getElementById('bpGqLimitInp'); inp.value = limit();
+  document.getElementById('bpGqSave').onclick = function(){ var v = setLimit(inp.value); inp.value = v; toast('t-warn', '✅ Base giornaliera: ' + v + ' richieste/giorno'); };
+  inp.addEventListener('keydown', function(e){ if(e.key === 'Enter') document.getElementById('bpGqSave').click(); });
+  document.getElementById('bpGqKey').onclick = function(){ try{ window.bpSetMapsKey(); }catch(e){} };
+  refresh();
+ }
+ function tick(){ wallet(); mountBadge(); mountCard(); refresh(); }
+ window.addEventListener('storage', function(e){ if(e.key && (e.key.indexOf(PFX) === 0 || e.key === WAL || e.key === LIM)) refresh(); });
+
+ window.bpGq = {take: take, blocked: blocked, remaining: remaining, used: todayUsed, limit: limit, setLimit: setLimit, MSG: MSG, refresh: refresh};
+ function init(){ tick(); checkState(false); setInterval(tick, 5000); }
+ if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
+})();
+</script>
+
 <script id="bpGeo">
 /* Google Maps: suggerimenti via (locali con tolleranza errori + Google), controllo indirizzo (comune + max 3 km), ottimizzazione giro. Chiave in localStorage 'bp_gmaps_key' */
 (function(){
@@ -27204,6 +27367,7 @@ function matchIn(q, names, aliases){
   async function call(comp){
    var u = 'https://maps.googleapis.com/maps/api/geocode/json?address=' + encodeURIComponent(q) + '&components=' + encodeURIComponent(comp) + '&language=it&region=it'
     + '&bounds=' + (C.lat - 0.08) + ',' + (C.lng - 0.12) + '|' + (C.lat + 0.08) + ',' + (C.lng + 0.12) + '&key=' + encodeURIComponent(k);
+   if(!window.bpGq.take('geocoding')) throw new Error(window.bpGq.MSG); /* contatore + circuit breaker */
    var j = await (await fetch(u)).json();
    if(j.status !== 'OK' && j.status !== 'ZERO_RESULTS') throw new Error(j.status + (j.error_message ? ': ' + j.error_message : ''));
    return (j.results || []).map(parseRes).slice(0, 5);
@@ -27295,6 +27459,7 @@ function matchIn(q, names, aliases){
   try{
    await ensureHome(); v = canon(v); sp = splitCivic(String(v).split(',')[0]);
    var body = {input: v, languageCode: 'it', includedRegionCodes: ['it'], locationRestriction: areaBox()};
+   if(!window.bpGq.take('places')) return; /* quota esaurita: restano i suggerimenti locali */
    var r = await fetch('https://places.googleapis.com/v1/places:autocomplete', {method: 'POST', headers: {'Content-Type': 'application/json', 'X-Goog-Api-Key': key()}, body: JSON.stringify(body)});
    var j = await r.json(); if(tok !== tokS) return;
    var items = (j.suggestions || []).filter(function(s){ return s.placePrediction && s.placePrediction.text && /lodi\s*vecchio/i.test(s.placePrediction.text.text); }).map(function(s){ return short(s.placePrediction.text.text).split(',')[0]; });
@@ -27393,6 +27558,11 @@ function matchIn(q, names, aliases){
   }catch(e){
    console.warn('[bp] geocode', e);
    var m = String(e && e.message || e);
+   if(m === window.bpGq.MSG){ /* quota esaurita: solo dizionario locale Lodi Vecchio */
+    var lr = null; try{ lr = resolveLodiVecchioStreet(v); }catch(x){}
+    show(s, lr ? 'info' : 'warn', '🔒 ' + esc2(m) + '<br>' + (lr ? '📍 Dizionario locale: <b>' + esc2(lr.officialStreet + (lr.civic ? ' ' + lr.civic : '')) + '</b>, Lodi Vecchio' + (lr.exact ? ' ✅' : ' (controlla il nome)') : '⚠️ Via non riconosciuta nel dizionario locale.'));
+    return;
+   }
    show(s, 'warn', m === 'nokey' ? '🗺️ Manca la chiave Google Maps.' : '🗺️ Controllo non riuscito (' + esc2(m) + '). Verifica che Geocoding API sia abilitata per la chiave.');
   }
  }
@@ -27434,6 +27604,7 @@ function matchIn(q, names, aliases){
  window.__bpGeoTest = Object.assign(window.__bpGeoTest || {}, {hav: hav, tsp: tsp, tspM: tspM});
  async function jfetch(url, opt){
   var r;
+  if(!window.bpGq.take('routes')) throw new Error(window.bpGq.MSG); /* contatore + circuit breaker */
   try{ r = await fetch(url, opt); }catch(e){ throw new Error('rete/CORS: ' + (e && e.message || e)); }
   var t = await r.text(), j = null; try{ j = JSON.parse(t); }catch(e){}
   if(!r.ok){ var m = (j && (j.error && j.error.message || (Array.isArray(j) && j[0] && j[0].error && j[0].error.message))) || t.slice(0, 200); throw new Error('HTTP ' + r.status + ': ' + m); }
@@ -27481,11 +27652,11 @@ function matchIn(q, names, aliases){
    say('info', '⏳ Calcolo il giro più breve sulle strade reali…');
    var h = await ensureHome(), pts = [], missing = [];
    for(var i = 0; i < stops.length; i++){
-    var r = await geocode(stops[i].address);
+    var r; try{ r = await geocode(stops[i].address); }catch(eq){ if(String(eq && eq.message) === window.bpGq.MSG){ missing.push(stops[i]); continue; } throw eq; }
     var g = r.filter(function(x){ return x.street; })[0] || r[0];
     if(g) pts.push({lat: g.lat, lng: g.lng, o: stops[i]}); else missing.push(stops[i]);
    }
-   if(pts.length < 2){ say('warn', 'Non riesco a localizzare abbastanza indirizzi su Google Maps.'); return; }
+   if(pts.length < 2){ say('warn', window.bpGq.blocked() ? '🔒 ' + window.bpGq.MSG + ': non riesco a localizzare gli indirizzi non ancora in memoria.' : 'Non riesco a localizzare abbastanza indirizzi su Google Maps.'); return; }
    var res, how, err1 = '';
    try{ res = await routesOpt(h, pts); how = '🛣️ strade reali e sensi unici (Google Routes)'; }
    catch(e1){
