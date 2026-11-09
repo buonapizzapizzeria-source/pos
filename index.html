@@ -6511,6 +6511,7 @@ const GEM_SCHEMA = {
     indirizzo: { type: 'STRING' },
     note:      { type: 'STRING' },
     uncertainFields: { type: 'ARRAY', items: { type: 'STRING' } },
+    numero_menu: { type: 'INTEGER' },
     righe: {
       type: 'ARRAY',
       items: {
@@ -6526,8 +6527,9 @@ const GEM_SCHEMA = {
       }
     }
   },
-  required: ['tipo', 'orario', 'cliente', 'telefono', 'indirizzo', 'note', 'uncertainFields', 'righe']
+  required: ['tipo', 'orario', 'cliente', 'telefono', 'indirizzo', 'note', 'uncertainFields', 'numero_menu', 'righe']
 };
+let __gemSrcText = ''; // testo originale (solo input testuale): per leggere "due menu pizza" anche se il modello non lo distribuisce
 let __gemSys = ''; // System Prompt corrente (impostato in analyzeMediaOrTextWithGemini)
 
 /* ora italiana attuale + N minuti, arrotondata al quarto d'ora successivo (come il menu a tendina dell'orario) -> "HH:MM" */
@@ -6551,6 +6553,39 @@ function gemDedupeBaseExtras(prodName, add){
   return (add || []).filter(a => !/^\s*(prosciutto(\s+cotto)?|cotto)\s*$/i.test(String(a).normalize('NFD').replace(/[\u0300-\u036f]/g, '')));
 }
 
+/* MENU DISTRIBUTIVO: "due menu pizza: una X e una Y" => il Menu vale per TUTTE le pizze Normale fino a coprire il numero richiesto */
+function gemMenuCountFromText(txt){
+  const W = { un: 1, uno: 1, una: 1, due: 2, tre: 3, quattro: 4, cinque: 5, sei: 6, sette: 7, otto: 8 };
+  let n = 0; const re = /\b(\d{1,2}|un[oa]?|due|tre|quattro|cinque|sei|sette|otto)\s+men[uù]\b/ig; let m;
+  while((m = re.exec(String(txt || '')))){ const k = m[1].toLowerCase(); n += /^\d/.test(k) ? parseInt(k, 10) : (W[k] || 0); }
+  return n;
+}
+function gemSpreadMenuIntent(righe, count, menuList){
+  righe = (Array.isArray(righe) ? righe : []).map(r => Object.assign({}, r));
+  count = Math.max(parseInt(count, 10) || 0, 0);
+  if(!count) return righe;
+  const isNormal = r => !/maxi|baby|bambin|piccol/i.test(String(r.formato || ''));
+  const isMenuRow = r => r.is_menu === true || /^true$/i.test(String(r.is_menu)) || /^men[uù]\b/i.test(String(r.nome || ''));
+  const eligible = r => {
+    if(!isNormal(r)) return false;
+    const nm = String(r.nome || '').replace(/^men[uù]\s+/i, '');
+    const pm = (menuList || []).find(p => gemNorm(p.name) === gemNorm(nm));
+    return !pm || /pizz/i.test(String(pm.category || pm.name || ''));
+  };
+  let have = 0; righe.forEach(r => { if(isMenuRow(r) && isNormal(r)) have += Math.max(parseInt(r.quantita, 10) || 1, 1); });
+  let need = count - have; if(need <= 0) return righe;
+  const out = [];
+  righe.forEach(r => {
+    const q = Math.max(parseInt(r.quantita, 10) || 1, 1);
+    if(need > 0 && !isMenuRow(r) && eligible(r)){
+      const take = Math.min(q, need); need -= take;
+      out.push(Object.assign({}, r, { quantita: take, is_menu: true }));
+      if(q > take) out.push(Object.assign({}, r, { quantita: q - take, is_menu: false }));
+    }else out.push(r);
+  });
+  return out;
+}
+
 /* Adattatore: JSON della pizzeria -> oggetto interno usato da review + carrello */
 function gemNormalizeOrder(o){
   if(!o || typeof o !== 'object') return o;
@@ -6561,7 +6596,8 @@ function gemNormalizeOrder(o){
   const t = str(o.tipo).toLowerCase();
   const orderType = /consegna|domicilio/.test(t) ? 'Consegna' : (/ritiro|asporto/.test(t) ? 'Asporto' : '');
 
-  const items = (Array.isArray(o.righe) ? o.righe : []).map(r => {
+  const __menuN = Math.max(parseInt(o.numero_menu, 10) || 0, gemMenuCountFromText(__gemSrcText));
+  const items = gemSpreadMenuIntent(o.righe, __menuN, menuList).map(r => {
     r = r || {};
     let nome = str(r.nome);
     const fmt = str(r.formato).toLowerCase();
@@ -6731,6 +6767,7 @@ ${extras || '(non disponibili)'}
    - \`quantita\`: Numero intero.
    - \`formato\` (dimensione): "Normale" (default), "Maxi" (maxi/grande/gigante/famiglia) oppure "Baby" (es. "pizza baby", "formato baby", "piccola per bambino", "per bambini"). Baby ha lo STESSO prezzo e ingredienti del Normale: serve solo al pizzaiolo per fare l'impasto piccolo. Riconoscilo sempre come formato "Baby" (mai nel nome) anche se il prodotto è dentro un menu.
    - \`is_menu\` (booleano, INDIPENDENTE dal formato): true se il cliente chiede il "Menu" (es. "un menu pizza quattro stagioni", "menu kebab") oppure il prodotto con patatine e bibita/lattina; false se vuole solo il prodotto. Il Menu vale SOLO per il formato "Normale": se il formato è Maxi o Baby, is_menu = false. Un Menu (bibita + patatine) costa +3,00 € sul prezzo Normale. Esempio: "due menu pizza, una Quattro Stagioni e una Prosciutto con doppia mozzarella" → 2 righe formato "Normale", is_menu true, la seconda con modifiche "+doppia mozzarella".
+   - \`numero_menu\` (intero, a livello di ordine): se il cliente chiede i menu al plurale/distributivo (es. "due menu pizza: una Quattro Stagioni e una Prosciutto", "3 menu pizza") scrivi il NUMERO TOTALE di menu richiesti (qui 2); is_menu va messo true su TUTTE le pizze Normale che compongono quel numero, non solo sulla prima. Se non ci sono menu: 0.
    - \`modifiche\`: NON aggiungere mai "+prosciutto" o "+prosciutto cotto" su una pizza Prosciutto / Prosciutto cotto: sono la stessa cosa e il prosciutto cotto è già l'ingrediente base (non è un extra). Estrai SOLO le modifiche esplicitamente richieste (es. "+mozzarella", "-cipolla", "senza pomodoro"). NON allucinare né aggiungere modifiche non pronunciate. Ignora convenevoli, battute o frasi fuori contesto tra colleghi (es. "lascia stare", "c'avevo con un amico").
 
 4. **Campi incerti (\`uncertainFields\`):** se telefono, indirizzo, nome cliente, orario o note non sono chiari al 100% (audio disturbato, ambiguo, dedotto), inserisci il nome del campo in \`uncertainFields\`. Usa SOLO questi nomi: "cliente", "telefono", "indirizzo", "orario", "note". Se sei sicuro di tutto: [].
@@ -6745,6 +6782,7 @@ Restituisci ESCLUSIVAMENTE un oggetto JSON valido con la seguente struttura:
   "indirizzo": "Viale Europa 28",
   "note": "",
   "uncertainFields": [],
+  "numero_menu": 2,
   "righe": [
     {
       "quantita": 1,
@@ -6823,6 +6861,7 @@ async function analyzeMediaOrTextWithGemini(payloadObj, apiKey){
  parts.push({ text: `TESTO DELL'ORDINE DA ANALIZZARE:\n${payloadObj.text}` });
  }
 
+ __gemSrcText = type === 'text' ? String(payloadObj.text || '') : '';
  const timeoutMs = type === 'audio' ? 60000 : 30000;
  const models = await getAvailableGeminiModels(apiKey);
  let parsed = null, lastError = '', lastKind = '';
