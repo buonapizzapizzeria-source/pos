@@ -4617,7 +4617,7 @@ function openIngPicker(cfg){
  }
  var QUICK = kind === "pizza" ? [["Ben cotta","🔥",0],["Doppia mozzarella","🧀",2],["Poco mozzarella","🧀",0]] : [];
  var isKeb = bpIsKebabName(cfg.product && cfg.product.name);
- function soloBtn(){ return isKeb ? bpSoloBtnHtml(bpSoloActive(cfg.product.name, cfg.baseIngs, cfg.removed)) : ""; }
+ function soloBtn(){ return isKeb ? bpSoloBtnHtml(bpSoloActive(cfg.product.name, cfg.baseIngs, cfg.removed), bpSoloKeepNow(cfg.product.name, cfg.baseIngs, cfg.removed)) : ""; }
  var _qOpen = false;
  try{ _qOpen = localStorage.getItem('bp_pk_qopen') === '1'; }catch(e){}
  function drawQuick(){
@@ -9327,9 +9327,11 @@ function renderOrders(){
 
 function renderOrderItemLineWithIcons(i){
  let parsed = splitProductAndMods(i.product_name);
+ let soloKeep = null; try{ soloKeep = bpSoloKeepOf(parsed); }catch(e){ bpWarn(e); }
  let modsHtml = ((window.bpIsMenu&&bpIsMenu(parsed))?bpMenuStrip(parsed):parsed).mods.map(m=>{
  let ml = m.toLowerCase();
- if(/^\+?\s*solo\b/i.test(m)) return `<span class="pill" style="font-size:12px;padding:1px 8px;background:#111;color:#fff;font-weight:900">🥩 SOLO CARNE</span>`;
+ if(/^\+?\s*solo\b/i.test(m)) return soloKeep ? '' : `<span class="pill" style="font-size:12px;padding:1px 8px;background:#111;color:#fff;font-weight:900">🥩 SOLO CARNE</span>`;
+ if(soloKeep && ml.startsWith('senza')) return '';
  if(ml.startsWith('senza')){
  let ingName = m.replace(/^senza\s+/i,'').trim();
  return `<span class="pill st-annullato" style="font-size:11px;padding:1px 6px">🚫 Senza ${esc(ingName)}</span>`;
@@ -9340,7 +9342,7 @@ function renderOrderItemLineWithIcons(i){
  }
  return `<span class="pill st-prep" style="font-size:11px;padding:1px 6px">${esc(m)}</span>`;
  }).join(' ');
- try{ if(bpSoloOf(parsed)) modsHtml = '<span class="pill" style="font-size:12px;padding:1px 8px;background:#111;color:#fff;font-weight:900">🥩 SOLO CARNE</span> ' + modsHtml; }catch(e){ bpWarn(e); }
+ try{ if(soloKeep) modsHtml = '<span class="pill" style="font-size:12px;padding:1px 8px;background:#111;color:#fff;font-weight:900">🥩 ' + esc(bpSoloText(soloKeep)) + '</span> ' + modsHtml; }catch(e){ bpWarn(e); }
 
  return `
  <div class="order-item-line">
@@ -9552,6 +9554,7 @@ function bpRcModsHtml(parsed, isService, noBase){
  else other.push(m);
  });
  if(!solo && !isService){ try{ solo = bpSoloOf(parsed); }catch(e){ bpWarn(e); } }
+ var soloKeep = [], soloKeepN = []; if(solo){ try{ soloKeep = bpSoloKeepOf(parsed) || []; soloKeepN = soloKeep.map(ingNorm); }catch(e){ bpWarn(e); } }
  function row(cls, lbl, txt){ return '<div class="rc-ing-row ' + cls + '">' + (lbl ? '<span class="rc-ing-lbl">' + lbl + '</span>' : '') + '<span class="rc-ing-txt">' + txt + '</span></div>'; }
  var up = function(a){ return a.map(function(x){ return esc(x.toUpperCase()); }).join(' <i>•</i> '); };
  var h = "", prod = isService ? null : bpRcFindProd(parsed.baseName);
@@ -9568,13 +9571,13 @@ function bpRcModsHtml(parsed, isService, noBase){
  var off = rn.indexOf(ingNorm(base[x[0]])) >= 0;
  cells.push('<span class="rc-ing-ico' + (off ? ' x' : '') + '" title="' + esc(base[x[0]]) + '">' + x[1] + '</span>');
  });
- base.forEach(function(b, i){ if(i !== LS.t && i !== LS.m){ if(solo && !bpIsMeat(b)) return; cells.push(bpMkCell(b)); } });
+ base.forEach(function(b, i){ if(i !== LS.t && i !== LS.m){ if(solo && !bpIsMeat(b) && soloKeepN.indexOf(ingNorm(b)) < 0) return; cells.push(bpMkCell(b)); } });
  } else {
- base.forEach(function(b){ if(solo && !bpIsMeat(b)) return; cells.push(bpMkCell(b)); });
+ base.forEach(function(b){ if(solo && !bpIsMeat(b) && soloKeepN.indexOf(ingNorm(b)) < 0) return; cells.push(bpMkCell(b)); });
  }
  /* ingredienti tolti che non sono nella lista del prodotto: restano comunque barrati (niente riga SENZA) */
  if(!solo) rem.filter(function(r){ return baseN.indexOf(ingNorm(r)) < 0; }).forEach(function(r){ cells.push('<s class="rc-ing-x">' + esc(r) + '</s>'); });
- if(solo) h += '<div class="rc-solo">SOLO CARNE</div>';
+ if(solo) h += '<div class="rc-solo">' + esc(bpSoloText(soloKeep)) + '</div>';
  
   if(cells.length){
     if(ingMode === 'full'){
@@ -10211,7 +10214,8 @@ function bpCompletoLabel(i){ /* '' | 'Completo' (m.: panino, falafel) | 'Complet
  if(!okType) return false;
  if(!pr || !parseIngredients(pr.description).length) return false;
  var mods = pa.mods || [];
- if(mods.some(function(m){ return /^\s*(senza|no)\b/i.test(m) || /^\+?\s*solo\b/i.test(m); })) return false;
+ /* v96: Completo/Completa SOLO se non manca NESSUN ingrediente: qualsiasi "senza/no/niente/meno/poco/solo" (anche dentro una Nota) lo toglie */
+ if(mods.some(function(m){ var t = String(m || '').replace(/^\s*\+\s*/, '').replace(/^\s*nota\s*:\s*/i, '').trim(); return /^(senza|no|non|niente|meno|poco|pochi|sin|togli|tolto|tolta|zero|solo)\b/i.test(t) || /\bsenza\b|\bniente\b|\bsolo\b|بدون|من غير|بلا/i.test(t); })) return false;
  try{ if(bpSoloOf(pa)) return false; }catch(e){}
  var fem = (w.k === 'pizza') || /pizz|piadin/.test(raw.toLowerCase());
  return fem ? 'Completa' : 'Completo';
@@ -10280,8 +10284,8 @@ function bpKitchenHtml(plan, mode, sections){
  var p = splitProductAndMods(i.product_name), isF = false;
  try{ isF = bpIsMenu(p); if(isF) p = bpMenuStrip(p); }catch(e){}
  var disp = isF ? 'Menu ' + p.baseName : p.baseName.replace(/^men[uù]\s+/i, '');
- var so = false; try{ so = bpSoloOf(p); }catch(e){}
- var mods = (so ? '<div class="' + cm + ' solo">🥩 SOLO CARNE</div>' : '') + p.mods.map(function(m){
+ var sk = null; try{ sk = bpSoloKeepOf(p); }catch(e){} var so = sk !== null;
+ var mods = (so ? '<div class="' + cm + ' solo">🥩 ' + esc(bpSoloText(sk)) + '</div>' : '') + p.mods.map(function(m){
  if(/^\+?\s*solo\b/i.test(m)) return '';
  var no = /^senza\s+/i.test(m); if(no && so) return '';
  return '<div class="' + cm + ' ' + (no ? 'no' : 'ex') + '">' + (no ? '🚫 SENZA ' : /^nota:/i.test(m) ? '📝 ' : '➕ EXTRA ') + esc(m.replace(/^senza\s+|^\+\s*|^nota:\s*/i, '').toUpperCase()) + '</div>';
@@ -14883,33 +14887,47 @@ function bpSoloPlan(name, base){ /* v95: ingredienti da barrare con SOLO. Sulle 
  var pizza = /pizz/i.test(String(name || "")), LS = pizza ? bpLogoSplit(arr) : {t: -1, m: -1};
  return arr.filter(function(x, idx){ return !bpIsMeat(x) && !(pizza && (idx === LS.t || idx === LS.m)); });
 }
-function bpSoloActive(name, base, removed){
- var plan = bpSoloPlan(name, base); if(!plan.length) return false;
- var rn = []; removed.forEach(function(r){ rn.push(ingNorm(r)); });
- return plan.every(function(x){ return rn.indexOf(ingNorm(x)) >= 0; });
+/* v96: SOLO CARNE puo' avere ECCEZIONI: se il cliente toglie il solo e rimette 1-2 ingredienti (es. insalata) resta "SOLO CARNE E INSALATA".
+   Regola: tutto barrato tranne la carne, con al massimo 2 ingredienti rimasti e meno ingredienti rimasti che barrati. Ritorna null = non e' solo, [] = solo puro, [..] = solo + eccezioni */
+function bpSoloKeepIn(plan, rn){
+  var kept = plan.filter(function(x){ return rn.indexOf(ingNorm(x)) < 0; });
+  var removed = plan.length - kept.length;
+  if(!plan.length || !removed) return null;
+  if(!kept.length) return [];
+  if(kept.length <= 2 && removed > kept.length) return kept;
+  return null;
 }
+function bpSoloText(keep){ return "SOLO CARNE" + (keep && keep.length ? " E " + keep.join(" E ").toUpperCase() : ""); }
+function bpSoloKeepNow(name, base, removed){
+  var rn = []; removed.forEach(function(r){ rn.push(ingNorm(r)); });
+  return bpSoloKeepIn(bpSoloPlan(name, base), rn);
+}
+function bpSoloActive(name, base, removed){ return bpSoloKeepNow(name, base, removed) !== null; }
 function bpSoloToggle(name, base, removed){
- var plan = bpSoloPlan(name, base), pn = plan.map(ingNorm);
- if(bpSoloActive(name, base, removed)){
- Array.from(removed).forEach(function(r){ if(pn.indexOf(ingNorm(r)) >= 0) removed.delete(r); });
- return;
- }
- var rn = []; removed.forEach(function(r){ rn.push(ingNorm(r)); });
- plan.forEach(function(x){ if(rn.indexOf(ingNorm(x)) < 0) removed.add(x); });
+  var plan = bpSoloPlan(name, base), pn = plan.map(ingNorm);
+  if(bpSoloActive(name, base, removed)){
+    Array.from(removed).forEach(function(r){ if(pn.indexOf(ingNorm(r)) >= 0) removed.delete(r); });
+    return;
+  }
+  var rn = []; removed.forEach(function(r){ rn.push(ingNorm(r)); });
+  plan.forEach(function(x){ if(rn.indexOf(ingNorm(x)) < 0) removed.add(x); });
 }
-function bpSoloOf(parsed){ /* vero se l'articolo kebab ha TUTTO barrato tranne la carne (regola nuova o vecchia) */
- try{
- if(!parsed || !bpIsKebabName(parsed.baseName)) return false;
- var mods = parsed.mods || [];
- if(mods.some(function(m){ return /^\+?\s*solo\b/i.test(m); })) return true;
- var rem = mods.filter(function(m){ return /^senza\b/i.test(m); }).map(function(m){ return ingNorm(m.replace(/^senza\s+/i, "")); });
- return [bpSoloPlan(parsed.baseName, []), bpSoloPlanLegacy(parsed.baseName, [])].some(function(plan){
- return plan.length > 0 && plan.every(function(x){ return rem.indexOf(ingNorm(x)) >= 0; });
- });
- }catch(e){ return false; }
+function bpSoloKeepOf(parsed){ /* null = non e' solo carne; [] = solo puro; [ing..] = solo carne + ingredienti rimessi */
+  try{
+    if(!parsed || !bpIsKebabName(parsed.baseName)) return null;
+    var mods = parsed.mods || [];
+    var rem = mods.filter(function(m){ return /^senza\b/i.test(m); }).map(function(m){ return ingNorm(m.replace(/^senza\s+/i, "")); });
+    var best = null;
+    [bpSoloPlan(parsed.baseName, []), bpSoloPlanLegacy(parsed.baseName, [])].forEach(function(plan){
+      var k = bpSoloKeepIn(plan, rem); if(k && (best === null || k.length < best.length)) best = k;
+    });
+    if(best === null && mods.some(function(m){ return /^\+?\s*solo\b/i.test(m); })) return [];
+    return best;
+  }catch(e){ return null; }
 }
-function bpSoloBtnHtml(on){
- return '<button type="button" class="pk-solo' + (on ? " on" : "") + '" data-solo="1"><span class="pk-solo-ico">🥩</span><span class="pk-solo-t"><b>SOLO</b> CARNE<small>' + (on ? "Attivo · tocca per togliere" : "Tutto barrato tranne la carne") + '</small></span><span class="pk-solo-sw"><i></i></span></button>';
+function bpSoloOf(parsed){ return bpSoloKeepOf(parsed) !== null; }
+function bpSoloBtnHtml(on, keep){
+ return '<button type="button" class="pk-solo' + (on ? " on" : "") + '" data-solo="1"><span class="pk-solo-ico">🥩</span><span class="pk-solo-t"><b>SOLO</b> CARNE' + (on && keep && keep.length ? " e " + esc(keep.join(" e ")) : "") + '<small>' + (on ? "Attivo · tocca per togliere" : "Tutto barrato tranne la carne") + '</small></span><span class="pk-solo-sw"><i></i></span></button>';
 }
 function ssDrawCust(b, i){
  var c = ssCtx(); if(!c){ b.innerHTML = ""; return; }
@@ -14920,7 +14938,7 @@ function ssDrawCust(b, i){
  c.sizes.forEach(function(s){ h += '<button type="button" class="ss-ch sz' + (s[0] === c.size ? " on" : "") + '" data-sz="' + esc(s[0]) + '">' + esc(s[0]) + ' <small>' + euro(s[1]) + '</small></button>'; });
  h += '<span class="ss-qty"><button type="button" data-q="-1">−</button><b style="font-size:18px">' + c.qty + '</b><button type="button" data-q="1">＋</button></span>';
  if(bpIsKebabName(c.name)){
- h += bpSoloBtnHtml(bpSoloActive(c.name, c.base, c.removed));
+ h += bpSoloBtnHtml(bpSoloActive(c.name, c.base, c.removed), bpSoloKeepNow(c.name, c.base, c.removed));
  var kq = []; try{ kq = bpQuickGet(bpQkind(c.name, getProductKind(c.prod))); }catch(e){ bpWarn(e); }
  h += '<div class="ss-lb">⭐ Extra kebab <button type="button" class="ss-ch" data-qedit="kebab">✏️ Modifica lista</button></div>' +
  kq.map(function(x){ var pr = ingPrice(x[0]); return '<button type="button" class="ss-ch ex' + (c.added.has(x[0]) ? " on" : "") + '" data-e="' + esc(x[0]) + '">' + esc(x[1] || "➕") + " " + esc(x[0]) + ' <small>' + (pr > 0 ? "+" + euro(pr) : "gratis") + '</small></button>'; }).join("");
@@ -23983,6 +24001,7 @@ html:not(.x) body #userBar button#thermalToggleBtn.ap-off,#thermalToggleBtn.ap-o
  } else R.other.push(m);
  });
  if(!R.solo){ try{ R.solo = bpSoloOf(parsed); }catch(e){} }
+ R.soloKeep = []; if(R.solo){ try{ R.soloKeep = bpSoloKeepOf(parsed) || []; }catch(e){} }
  if(!isDrink && !g){
  try{
  var prod = bpRcFindProd(parsed.baseName);
@@ -23990,7 +24009,7 @@ html:not(.x) body #userBar button#thermalToggleBtn.ap-off,#thermalToggleBtn.ap-o
  var rn = R.rem.map(ingNorm); R.base = ingUnique(parseIngredients(prod.description)).filter(function(b){ return rn.indexOf(ingNorm(b)) < 0; });
  if(R.solo){ /* v95: SOLO CARNE = (pizza: salsa base + mozzarella) + carne, nient'altro */
  var LS2 = bpLogoSplit(R.base), pz = /pizz/i.test(parsed.baseName) || getProductKind(prod) === 'pizza';
- R.base = R.base.filter(function(b, idx){ return bpIsMeat(b) || (pz && (idx === LS2.t || idx === LS2.m)); });
+ var skn = (R.soloKeep || []).map(ingNorm); R.base = R.base.filter(function(b, idx){ return bpIsMeat(b) || skn.indexOf(ingNorm(b)) >= 0 || (pz && (idx === LS2.t || idx === LS2.m)); });
  }
  }
  }catch(e){}
@@ -24022,7 +24041,7 @@ html:not(.x) body #userBar button#thermalToggleBtn.ap-off,#thermalToggleBtn.ap-o
  });
  }
  var mk = kit ? '>> ' : '', hg = hang + (kit ? 3 : 0);
- if(inf.solo) P(ind + mk + '*** SOLO CARNE ***', st);
+ if(inf.solo) P(ind + mk + '*** ' + bpSoloText(inf.soloKeep) + ' ***', st);
  if(showIng && inf.base.length) d.p(ind + 'Ingr.: ' + inf.base.join(', '), sm, hang);
  if(!showIng && ingMode === 'compact' && inf.base.length) d.p(ind + '🍅🧀', sm, hang);
  if(inf.rem.length && !inf.solo) P(ind + mk + 'SENZA: ' + up(inf.rem), st, hg);
