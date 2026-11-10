@@ -6423,9 +6423,31 @@ async function toggleCallRecorder(){
  }
 }
 
+/* Estrae SOLO il numero di telefono dal nome file di una registrazione chiamata
+   (es. "Registrazione chiamata +390341348967_261110_154853.m4a" -> "0341348967").
+   Ignora nomi, date e orari. Nessun numero valido -> "". */
+function extractPhoneFromFilename(filename){
+ try{
+ let n = String(filename || '').replace(/^.*[\\\/]/, '');
+ n = n.replace(/\.(m4a|mp3|ogg|oga|opus|wav|aac|amr|3gp|webm|mp4|flac|wma)$/i, '');
+ n = n.replace(/[_\-\s]?\d{6}[_\-]\d{6}\s*$/, '');
+ let m = n.match(/(?:\+|00)?\d[\d\s.\-()]{7,}\d/g) || [];
+ for(let i = 0; i < m.length; i++){
+ let raw = m[i], hasPrefix = /^(\+|00)/.test(raw.trim());
+ let d = raw.replace(/\D/g, '');
+ if(/^0039/.test(d)) d = d.slice(4);
+ else if(hasPrefix && /^39/.test(d)) d = d.slice(2);
+ else if(d.length >= 12 && /^39/.test(d)) d = d.slice(2);
+ if(d.length >= 9 && d.length <= 11 && /^[03]/.test(d)) return d;
+ }
+ }catch(e){ try{ bpWarn(e); }catch(_){} }
+ return '';
+}
+
 async function handleAudioFileUpload(input){
  let file = input.files && input.files[0];
  if(!file) return;
+ window.__lastUploadedAudioPhone = extractPhoneFromFilename(file.name);
  let apiKey = (el('geminiApiKey')?.value || localStorage.getItem('bp_gemini_key') || '').trim();
  if(!apiKey){
  el('aiKeyBox').classList.remove('hidden');
@@ -6435,7 +6457,11 @@ async function handleAudioFileUpload(input){
  return;
  }
  let b64 = await blobToBase64(file);
+ try{
  await analyzeMediaOrTextWithGemini({type:'audio', base64: b64, mimeType: file.type || 'audio/mp3'}, apiKey);
+ }finally{
+ window.__lastUploadedAudioPhone = ''; /* non riusare il numero per registrazioni successive */
+ }
  input.value = '';
 }
 
@@ -6530,6 +6556,7 @@ const GEM_AUTO_TIME_MIN = 25; // orario non indicato / relativo ("tra 20 minuti"
 const GEM_SCHEMA = {
   type: 'OBJECT',
   properties: {
+    ordine_presente: { type: 'BOOLEAN' },
     tipo:      { type: 'STRING', enum: ['consegna', 'ritiro'] },
     orario:    { type: 'STRING', nullable: true },
     cliente:   { type: 'STRING' },
@@ -6553,7 +6580,7 @@ const GEM_SCHEMA = {
       }
     }
   },
-  required: ['tipo', 'orario', 'cliente', 'telefono', 'indirizzo', 'note', 'uncertainFields', 'numero_menu', 'righe']
+  required: ['ordine_presente', 'tipo', 'orario', 'cliente', 'telefono', 'indirizzo', 'note', 'uncertainFields', 'numero_menu', 'righe']
 };
 let __gemSrcText = ''; // testo originale (solo input testuale): per leggere "due menu pizza" anche se il modello non lo distribuisce
 let __gemSys = ''; // System Prompt corrente (impostato in analyzeMediaOrTextWithGemini)
@@ -6664,7 +6691,9 @@ function gemNormalizeOrder(o){
   const autoTime = !deliveryTime;
   if(autoTime) deliveryTime = gemRomeTimePlus(GEM_AUTO_TIME_MIN);
 
+  const __flagNo = (o.ordine_presente === false || /^false$/i.test(str(o.ordine_presente)));
   return {
+    noOrder: __flagNo || items.length === 0,
     customerName: str(o.cliente),
     phone: str(o.telefono).replace(/\D/g, ''),
     orderType, deliveryTime, __autoTime: autoTime,
@@ -6777,6 +6806,11 @@ ${menuText || '(menu non disponibile)'}
 ### INGREDIENTI / EXTRA COMUNI (usa questi nomi per le modifiche quando possibile):
 ${extras || '(non disponibili)'}
 
+### CONTROLLO PRELIMINARE OBBLIGATORIO (fallo PRIMA di estrarre qualsiasi dato):
+Ascolta/leggi TUTTO il contenuto e decidi: il cliente sta ordinando davvero almeno un prodotto del locale (pizza, panino, piadina, bevanda, dolce, fritto, menu...)?
+- SE SÌ: \`ordine_presente\` = true ed estrai tutto normalmente secondo le regole qui sotto.
+- SE NO (richiesta di informazioni su orari/prezzi/menu, numero sbagliato, reclamo, chiamata muta o disturbata, saluti senza ordine, conversazione non pertinente, solo prenotazione di un tavolo senza piatti): \`ordine_presente\` = false, \`righe\` = [], \`numero_menu\` = 0 e tutti gli altri campi vuoti (\"\" / [] / null). NON inventare MAI un ordine, un prodotto, una quantità o un cliente di esempio e NON usare i dati dell'esempio JSON.
+
 ### REGOLE CRITICHE DI ESTRAZIONE:
 1. **Tipo Ordine & Orario:**
    - \`tipo\`: "consegna" (a domicilio) oppure "ritiro" (asporto).
@@ -6801,6 +6835,7 @@ ${extras || '(non disponibili)'}
 ### FORMATO JSON DI RISPOSTA RICHIESTO:
 Restituisci ESCLUSIVAMENTE un oggetto JSON valido con la seguente struttura:
 {
+  "ordine_presente": true,
   "tipo": "consegna",
   "orario": "12:30",
   "cliente": "Officina Aria 28",
@@ -6829,7 +6864,7 @@ Restituisci ESCLUSIVAMENTE un oggetto JSON valido con la seguente struttura:
 }
 
 /* v51: se il primo modello e' lento parte un secondo in parallelo; vince la prima risposta valida */
-function gemHasContent(p){ return !!(p && ((Array.isArray(p.items) && p.items.length) || p.customerName || p.address || p.phone)); }
+function gemHasContent(p){ return !!(p && (p.noOrder || (Array.isArray(p.items) && p.items.length) || p.customerName || p.address || p.phone)); }
 function gemRunHedged(models, apiKey, parts, timeoutMs, hedgeMs, onStart){
  return new Promise(resolve => {
  let next = 0, inflight = 0, done = false, lastErr = '', lastKind = '', emptyRes = null, hedgeT = null;
@@ -6915,6 +6950,23 @@ async function analyzeMediaOrTextWithGemini(payloadObj, apiKey){
 
  if(type === 'image'){
  el('orderImgStatus').textContent = '✅ Foto letta con successo! Controlla i dati inseriti.';
+ }
+ /* Validazione rigida (audio): nessun ordine nella chiamata => niente ordine finto, carrello svuotato, avviso chiaro */
+ if(type === 'audio' && parsed.noOrder){
+ const __noMsg = '⚠️ تنبيه: هذه المكالمة لا تحتوي على أي أوردر للبيتساريا (استفسار أو مكالمة فارغة).';
+ if(!(typeof editingOrderId !== 'undefined' && editingOrderId)){ try{ cart.clear(); renderCart(); }catch(e){ bpWarn(e); } }
+ try{ if(parsed.transcript) el('voiceSmartInput').value = parsed.transcript; }catch(e){}
+ setVoiceMsg(__noMsg, 'error');
+ try{ if(typeof rdToast === 'function') rdToast('⚠️ Nessun ordine nella chiamata', __noMsg); }catch(e){ bpWarn(e); }
+ return;
+ }
+ /* Fallback telefono dal nome del file audio: solo se il cliente non l'ha detto in chiamata e il campo è vuoto */
+ if(type === 'audio' && window.__lastUploadedAudioPhone){
+ const __dg = String(parsed.phone || '').replace(/\D/g, '').length;
+ if(__dg < 6 && !String(el('phone').value || '').trim()){
+ parsed.phone = window.__lastUploadedAudioPhone;
+ if(Array.isArray(parsed.uncertainFields)) parsed.uncertainFields = parsed.uncertainFields.filter(f => String(f) !== 'phone');
+ }
  }
  applyExtractedOrderObject(parsed);
  }catch(e){
