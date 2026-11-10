@@ -4184,6 +4184,21 @@ function toLocalDateStr(d){
 }
 
 /* ================= FUNZIONE MODIFICA ORDINE APERTO / ESISTENTE (EDIT MODE v11) ================= */
+function bpMapOrderType(o){
+ var t = String((o && o.order_type) || '');
+ if(/tavolo/i.test(t)) return 'Tavolo';
+ if(/consegna|domicilio/i.test(t)) return 'Consegna';
+ if(/asporto|ritiro/i.test(t)) return 'Asporto';
+ try{ if(bpTableNo(o)) return 'Tavolo'; }catch(e){}
+ return (o && o.address) ? 'Consegna' : 'Asporto';
+}
+function bpTypeToSave(){
+ var cur = el('type').value;
+ if(typeof editingOrderId !== 'undefined' && editingOrderId && window.__bpEditOrigType){
+ try{ if(bpMapOrderType({order_type: window.__bpEditOrigType}) === cur) return window.__bpEditOrigType; }catch(e){}
+ }
+ return cur;
+}
 async function startEditOrder(o){
  if(!o) return;
  let items = itemsByOrder.get(o.id);
@@ -4203,9 +4218,11 @@ async function startEditOrder(o){
 
  el('customer').value = o.customer_name || '';
  el('phone').value = o.phone || '';
- el('type').value = (o.order_type && ['Consegna','Asporto'].includes(o.order_type)) ? o.order_type : 'Consegna';
+ window.__bpEditOrigType = o.order_type || '';
+ el('type').value = bpMapOrderType(o);
  toggleAddress();
  el('address').value = o.address || '';
+ if(el('tableNo')) el('tableNo').value = (function(){ try{ return bpTableNo(o) || ''; }catch(e){ return ''; } })();
  el('payment').value = (o.payment_method && ['Contanti','Carta','Altro'].includes(o.payment_method)) ? o.payment_method : 'Contanti';
  onPaymentMethodChange();
 
@@ -4228,12 +4245,21 @@ async function startEditOrder(o){
  if(_da) _da.value = _dx ? String(Math.abs(Number(_dx.unit_price || 0))) : '';
  if(_dr) _dr.value = _dx ? String(_dx.product_name).replace(/^Sconto manuale:?\s*/i, '') : ''; }
  let delivServiceItem = items.find(i => i.product_name === 'Supplemento Consegna');
- if(delivServiceItem && el('deliveryFeeSelect')){
- let feeVal = String(Number(delivServiceItem.unit_price || 0));
+ if(el('deliveryFeeSelect')){
+ let feeVal = delivServiceItem ? String(Number(delivServiceItem.unit_price || 0)) : '0';
  if([...el('deliveryFeeSelect').options].some(opt => opt.value === feeVal)){
  el('deliveryFeeSelect').value = feeVal;
  }
+ window.__bpEditFee = el('deliveryFeeSelect').value;
  }
+ try{
+ let _b = 0; items.filter(i => !bpIsSvc(i.product_name)).forEach(i => { _b += Math.round(Number(i.line_total != null ? i.line_total : (Number(i.unit_price||0) * Number(i.quantity||1))) * 100); });
+ let _ex2 = items.find(i => /^Aggiunta manuale/.test(String(i.product_name || ''))), _dx2 = items.find(i => /^Sconto manuale/.test(String(i.product_name || '')));
+ if(_ex2) _b += Math.round(Number(_ex2.unit_price || 0) * 100);
+ if(_dx2) _b -= Math.round(Math.abs(Number(_dx2.unit_price || 0)) * 100);
+ window.__bpEditBase = _b / 100;
+ }catch(e){ window.__bpEditBase = null; }
+ if(typeof window.__bpFeeResetManual === 'function') window.__bpFeeResetManual();
 
  let foodItems = items.filter(i => !bpIsSvc(i.product_name));
  let activeMenu = getActiveMenu();
@@ -8388,7 +8414,7 @@ async function _doSaveOrderCore(){
 
  let custNameVal = el('customer').value.trim();
  let phoneVal = el('phone').value.trim();
- let addrVal = el('type').value==='Consegna' ? el('address').value.trim() : '';
+ let addrVal = (el('type').value==='Consegna' || editingOrderId) ? el('address').value.trim() : '';
 
  upsertCustomerProfile(custNameVal, phoneVal, addrVal, !editingOrderId);
  saveCustomerDirectoryToStorage();
@@ -8406,7 +8432,7 @@ async function _doSaveOrderCore(){
  { const __d = discountRowFor(getDiscountAmount(), getDiscountReason()); if(__d) __rows.push(__d); }
  const tblNoUpdate = el('type').value==='Tavolo' ? (el('tableNo')?el('tableNo').value:'') : '';
  const __r = await sb.rpc('update_order_with_items', {p_order_id: targetId,
- p_order: {customer_name: custNameVal, phone: phoneVal, order_type: el('type').value, address: addrVal, table_no: tblNoUpdate || null, payment_method: el('payment').value, notes: combinedNotes, total: total},
+ p_order: {customer_name: custNameVal, phone: phoneVal, order_type: bpTypeToSave(), address: addrVal, table_no: tblNoUpdate || null, payment_method: el('payment').value, notes: combinedNotes, total: total},
  p_items: __rows});
  if(!__r.error){
  await bpSaveScheduleOnEdit(targetId, __sch);
@@ -8421,7 +8447,7 @@ async function _doSaveOrderCore(){
  let {error: updErr} = await sb.from('orders').update({
  customer_name: custNameVal,
  phone: phoneVal,
- order_type: el('type').value,
+ order_type: bpTypeToSave(),
  address: addrVal,
  table_no: tblNoVal2 || null,
  payment_method: el('payment').value,
@@ -22736,7 +22762,7 @@ try{
 /* ===== bpV93fee ===== */
 try{
 (function(){try{
- /* Lodi Vecchio: ordine >= 10 € = consegna gratis; sotto 10 € = 2 € di servizio. Fuori Lodi Vecchio restano le regole esistenti. */
+ /* Domicilio (Lodi Vecchio): ordine fino a 10,00 € compresi = 2 € di servizio; oltre 10 € = consegna gratis. Solo domicilio. Fuori Lodi Vecchio restano le regole esistenti. */
  var FREE_FROM=10,FEE=2,manual=false,lastOuter=false;
  var OUTER=/tavazzano|salerano|borgo\s*san\s*giovanni|pieve|cornegliano|casalmaiocco|sordio|melegnano|mulazzano|cervignano|zelo|senna|ospedaletto|lodi\b(?!\s*vecchio)/i;
  var $=function(i){return document.getElementById(i)};
@@ -22749,13 +22775,14 @@ try{
  function auto(){
  var s=$('deliveryFeeSelect');if(!s)return;
  var t=$('type');if(!t||t.value!=='Consegna'||!cart.size){if(!cart.size)manual=false;say('','');return}
- if(typeof editingOrderId!=='undefined'&&editingOrderId){say('','');return}
+ if(typeof editingOrderId!=='undefined'&&editingOrderId&&window.__bpEditBase!=null&&Math.abs(base()-window.__bpEditBase)<0.005&&window.__bpEditFee!=null){if(s.value!==window.__bpEditFee){s.value=window.__bpEditFee;try{refreshFeeSeg()}catch(e){}}say('','');return}
  if(OUTER.test(($('address')||{}).value||'')){say('','');return}
  if(manual){say('man','Supplemento impostato a mano <button type="button" class="secondary">↺ Automatico</button>');return}
- var b=base(),free=b>=FREE_FROM,want=free?'0':String(FEE);
+ var b=base(),free=b>FREE_FROM,want=free?'0':String(FEE);
  if(s.value!==want){s.value=want;try{refreshFeeSeg()}catch(e){}}
- if(free)say('free','✓ Consegna gratuita a Lodi Vecchio (da '+eur(FREE_FROM)+') · التوصيل مجاني');
- else say('pay','Servizio consegna '+eur(FEE)+' · mancano '+eur(FREE_FROM-b)+' per la consegna gratis')}
+ if(free)say('free','✓ Consegna gratuita (oltre '+eur(FREE_FROM)+') · التوصيل مجاني');
+ else say('pay','Servizio consegna '+eur(FEE)+' (ordini fino a '+eur(FREE_FROM)+') · serve più di '+eur(FREE_FROM)+' per la consegna gratis')}
+ window.__bpFeeResetManual=function(){manual=false};
  /* scelta manuale dell'operatore = vince sulla regola automatica */
  document.addEventListener('change',function(e){if(e.isTrusted&&e.target&&e.target.id==='deliveryFeeSelect')manual=true},true);
  document.addEventListener('click',function(e){if(e.isTrusted&&e.target.closest&&e.target.closest('#pkFeeSeg [data-fee]'))manual=true},true);
