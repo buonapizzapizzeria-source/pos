@@ -23528,20 +23528,49 @@ html:not(.x) body #userBar button#thermalToggleBtn.ap-off,#thermalToggleBtn.ap-o
  }
  function concat(parts){ var n = 0; parts.forEach(function(p){ n += p.length; }); var r = new Uint8Array(n), o = 0; parts.forEach(function(p){ r.set(p, o); o += p.length; }); return r; }
  function b64(u8){ var s = '', CH = 0x8000; for(var i = 0; i < u8.length; i += CH){ s += String.fromCharCode.apply(null, u8.subarray(i, i + CH)); } return btoa(s); }
+ /* v99: RawBT in BACKGROUND: invio dei byte via WebSocket (app "Server for RawBT", ws://127.0.0.1:40213).
+   Nessun intent: la pagina resta in primo piano e il programma continua a girare. Se il server non risponde
+   si torna all'intent classico (fallback). */
+ if(!window.bpRawbtSend){ (function(){
+  var downUntil = 0;
+  window.bpRawbtSend = function(u8){
+   return new Promise(function(resolve){
+    if(Date.now() < downUntil || typeof WebSocket === 'undefined') return resolve(false);
+    var done = false, ws = null, t = null;
+    function fin(ok){ if(done) return; done = true; clearTimeout(t); if(!ok) downUntil = Date.now() + 20000; try{ if(ws) ws.close(1000, 'done'); }catch(e){} resolve(ok); }
+    try{
+     ws = new WebSocket('ws://127.0.0.1:40213/'); ws.binaryType = 'arraybuffer';
+     t = setTimeout(function(){ fin(false); }, 4000);
+     ws.onerror = function(){ fin(false); };
+     ws.onopen = function(){
+      try{
+       ws.send(u8.buffer.slice(u8.byteOffset, u8.byteOffset + u8.byteLength));
+       (function w(){ if(done) return; if(ws.bufferedAmount > 0) setTimeout(w, 40); else setTimeout(function(){ fin(true); }, 250); })();
+      }catch(e){ fin(false); }
+     };
+    }catch(e){ fin(false); }
+   });
+  };
+  window.bpRawbtIntent = function(u8){
+   var s = '', CH = 0x8000; for(var i = 0; i < u8.length; i += CH){ s += String.fromCharCode.apply(null, u8.subarray(i, i + CH)); }
+   try{ window.__bpPrinting = true; }catch(e){}
+   try{ window.location.href = 'intent:base64,' + btoa(s) + '#Intent;scheme=rawbt;package=ru.a402d.rawbtprinter;end;'; }catch(e){ try{ window.__bpPrinting = false; }catch(x){} }
+   try{ window.setTimeout(function(){ try{ window.dispatchEvent(new Event('afterprint')); }catch(e){} }, 1200); }catch(e){}
+  };
+  window.bpRawbtDeliver = function(u8){
+   return window.bpRawbtSend(u8).then(function(ok){
+    if(ok){ try{ window.__bpPrinting = false; }catch(e){} try{ window.dispatchEvent(new Event('afterprint')); }catch(e){} try{ ssToast('🖨️ Stampa inviata (background)'); }catch(e){} }
+    else { window.bpRawbtIntent(u8); }
+   });
+  };
+ })(); }
  function sendToRawBT(tickets){ /* tickets = [[canvas,...], ...]: un taglio dopo ogni gruppo */
  var parts = [new Uint8Array([0x1B, 0x40])];
  tickets.forEach(function(cvs){
  cvs.forEach(function(cv){ toRaster(cv).forEach(function(b){ parts.push(b); }); });
  parts.push(new Uint8Array([0x1B, 0x64, 0x01, 0x1D, 0x56, 0x42, 0x00]));
  });
- /* v42: l'intent RawBT porta via la pagina. Non aspettare: il redirect e' sincrono e
- il promise non si risolverebbe mai (la pagina diventa hidden -> timers fermi -> lock screen). */
- try{ window.__bpPrinting = true; }catch(e){}
- try{ window.location.href = 'intent:base64,' + b64(concat(parts)) + '#Intent;scheme=rawbt;package=ru.a402d.rawbtprinter;end;';
- }catch(e){ try{ window.__bpPrinting = false; }catch(x){} }
- /* v42: l'intent e' sincrono e porta via la pagina. Segnala subito 'stampa finita' cosi'
- la coda auto-print non rimane in attesa di un afterprint che non arrivera mai. */
- try{ window.setTimeout(function(){ try{ window.dispatchEvent(new Event('afterprint')); }catch(e){} }, 1200); }catch(e){}
+ window.bpRawbtDeliver(concat(parts));
  }
  /* i QR sono immagini esterne: li converto in data-URL prima del rendering (se il server lo permette) */
  async function inlineImgs(root){
@@ -24476,14 +24505,8 @@ function vsDoc(d, VS, title){
  window._wifiTrySecure = location.protocol === 'https:';
  function bpB64(u8){ var s = '', CH = 0x8000; for(var i = 0; i < u8.length; i += CH){ s += String.fromCharCode.apply(null, u8.subarray(i, i + CH)); } return btoa(s); }
  async function doSend(u8){
- if(cfg.transport === 'rawbt'){ /* RawBT in modalita' TESTO: i byte ESC/POS vanno all'app RawBT (leggerissimo, nessuna immagine) */
- /* v42: l'intent porta via la pagina. Non aspettare: il redirect e' sincrono e il promise
- non si risolverebbe mai (pagina hidden -> timers fermi -> lock screen -> ordine appeso). */
- try{ window.__bpPrinting = true; }catch(e){}
- try{ window.location.href = 'intent:base64,' + bpB64(u8) + '#Intent;scheme=rawbt;package=ru.a402d.rawbtprinter;end;';
- }catch(e){ try{ window.__bpPrinting = false; }catch(x){} }
- /* v42: segnala subito la fine della stampa (l'intent porta via la pagina). */
- try{ window.setTimeout(function(){ try{ window.dispatchEvent(new Event('afterprint')); }catch(e){} }, 1200); }catch(e){}
+ if(cfg.transport === 'rawbt'){ /* RawBT TESTO: prima WebSocket in background, poi intent come fallback */
+ window.bpRawbtDeliver(u8);
  return;
  }
  if(!(await ensureConn())) throw new Error('stampante non collegata: apri il pulsante di stampa diretta e collegala');
