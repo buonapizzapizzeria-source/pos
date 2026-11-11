@@ -28279,6 +28279,31 @@ function matchIn(q, names, aliases){
 #bpfStreetAlert .bpf-row b{font-size:14px}
 #bpfStreetAlert .bpf-tip{font-size:12px;font-weight:700;opacity:.85;margin-top:4px}
 </style>
+<style id="bp-buy-form-bigger">
+/* ===== فورم المشتريات: خانات أكبر وأوضح ===== */
+.bp36-line.card{display:grid!important;grid-template-columns:minmax(0,1fr) 58px minmax(0,1fr)!important;gap:12px 8px!important;padding:14px!important;border-radius:20px!important;align-items:stretch!important}
+.bp36-line .l2{grid-column:1/-1!important;display:grid!important;grid-template-columns:minmax(0,1fr) 58px 50px!important;gap:8px!important;align-items:stretch!important}
+.bp36-line input,.bp36-line select{box-sizing:border-box;width:100%;min-height:60px!important;height:60px;font-size:20px!important;font-weight:800;padding:8px 14px!important;border-radius:16px!important;background:#fff;border:2px solid #d0d5dd}
+.bp36-line input:focus,.bp36-line select:focus{border-color:#16794b;outline:none;box-shadow:0 0 0 3px rgba(22,121,75,.2)}
+.bp36-line input[data-ln]{font-size:21px!important}
+.bp36-line .mic61{min-width:0!important;width:58px;height:60px;min-height:60px;padding:0!important;font-size:24px;border-radius:16px}
+.bp36-line .x{width:50px!important;height:60px!important;font-size:22px!important;border-radius:16px!important;background:#fee4e2!important}
+.bp36-line .bp36-lt{grid-column:3;display:flex;align-items:center;justify-content:center;min-height:60px;font-size:22px!important;font-weight:900!important;background:#e7f6ec;color:#0b5d33;border-radius:16px}
+.bp36-line .linv{grid-column:1/-1!important}
+.bp36-line .linv select{font-size:17px!important;height:56px;min-height:56px!important}
+.bp36-line .linv input{width:110px!important;height:52px;min-height:52px!important}
+.bp36-line .bp37-badge{font-size:15px!important;padding:6px 14px!important;border-radius:10px}
+/* حقول عامة (مورّد، إجمالي، ملاحظات) + المايك جنبها */
+.bp36-body .bp36-in{min-height:58px!important;font-size:19px!important;font-weight:700;padding:8px 14px!important;border-radius:16px!important;box-sizing:border-box}
+.bp36-body .bp36-note{font-size:14px;font-weight:800}
+.bp36-body .bp36-note:has(> .mic61){display:grid!important;grid-template-columns:minmax(0,1fr) 58px;gap:6px 8px;align-items:center}
+.bp36-body .bp36-note:has(> .mic61) > .bp36-in{grid-column:1}
+.bp36-body .bp36-note:has(> .mic61) > .mic61{grid-column:2;grid-row:2;min-width:0!important;width:58px;height:58px;min-height:58px;padding:0!important;font-size:24px;border-radius:16px}
+.bp36-body input[data-ft]{font-size:26px!important}
+.bp36-body [data-fadd]{min-height:56px!important;font-size:18px!important;border-radius:16px!important}
+.bp36-body{padding-bottom:calc(90px + env(safe-area-inset-bottom))!important}
+</style>
+
 <script id="bpfScript">
 (function(){
  try{
