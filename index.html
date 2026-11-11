@@ -8004,7 +8004,8 @@ function showApp(user){
  })()
  .on('postgres_changes',{event:'*',schema:'public',table:'orders'},(payload)=>{
  if(payload.eventType === 'INSERT' && payload.new && !knownOrderIds.has(payload.new.id)){ knownOrderIds.add(payload.new.id);
- triggerNewOrderNotification(payload.new);
+ var __vis = true; try{ if(window.BP_ROLE !== 'manager'){ var __l=[payload.new]; if(window.BP_ROLE==='driver') __l=__l.filter(function(o){ return /consegna|domicilio/i.test(String(o.order_type||'')); }); if(window.bpAccFilter) __l=window.bpAccFilter(__l); __vis = __l.length>0; } }catch(e){}
+ if(__vis) triggerNewOrderNotification(payload.new);
  }
  loadOrders();
  })
@@ -9188,6 +9189,8 @@ async function _loadOrdersNow(){
  let {data,error}=await sb.from('orders').select('*').order('created_at',{ascending:false}).limit(250);
  if(error){console.error(error);return;}
  let incoming = data||[];
+ try{ if(window.BP_ROLE === 'driver'){ incoming = incoming.filter(function(o){ var tb=''; try{ tb = bpTableNo(o); }catch(e){} return !tb && /consegna|domicilio/i.test(String(o.order_type||'')); }); }
+  if(window.bpAccFilter && window.BP_ROLE !== 'manager') incoming = window.bpAccFilter(incoming); }catch(e){ console.warn('[bp] acc src', e); }
  if(firstOrdersLoadDone){
  let newOnes = incoming.filter(o => !knownOrderIds.has(o.id));
  if(newOnes.length) triggerNewOrderNotification(newOnes[0]);
@@ -11470,7 +11473,7 @@ try{
  if(!orders.length){
  var c = jget(CO, null);
  if(c && c.orders && c.orders.length){
- orders = c.orders; itemsByOrder.clear();
+ orders = (window.bpAccFilter && window.BP_ROLE !== 'manager') ? window.bpAccFilter(c.orders) : c.orders; itemsByOrder.clear();
  Object.keys(c.items || {}).forEach(function(k){ itemsByOrder.set(isIdNum(k) ? Number(k) : k, c.items[k]); });
  renderOrders();
  }
@@ -28646,8 +28649,14 @@ function matchIn(q, names, aliases){
  function mins(t){ var a = String(t||'').split(':'); return (parseInt(a[0],10)||0)*60 + (parseInt(a[1],10)||0); }
  window.BP_ACC = null;
  window.bpAccFilter = function(list){
-  var r = window.BP_ACC; if(!r || window.BP_ROLE === 'manager') return list;
+  var r = window.BP_ACC; if(window.BP_ROLE === 'manager') return list;
+  if(!r) return (window.BP_ROLE === 'driver') ? [] : list; /* driver: senza regola caricata/impostata non vede nulla */
   var f = mins(r.from_time), t = mins(r.to_time), days = (r.days||[]).map(Number);
+  if(window.BP_ROLE === 'driver'){ /* driver: conta l'ORA ATTUALE, non l'ora di creazione dell'ordine */
+   var n = new Date(), nwd = new Date(n.getTime() - 5*3600*1000).getDay(), nm = n.getHours()*60 + n.getMinutes();
+   var nok = f <= t ? (nm >= f && nm <= t) : (nm >= f || nm <= t);
+   return (days.indexOf(nwd) >= 0 && nok) ? list : [];
+  }
   return list.filter(function(o){
    var d = new Date(o.created_at || o.scheduled_at); if(isNaN(d)) return true;
    var wd = new Date(d.getTime() - 5*3600*1000).getDay(), m = d.getHours()*60 + d.getMinutes();
@@ -28666,6 +28675,7 @@ function matchIn(q, names, aliases){
    rerender();
   });
  }
+ setInterval(function(){ try{ if(window.BP_ROLE && window.BP_ROLE !== 'manager' && window.BP_ACC && typeof loadOrders === 'function') loadOrders(); }catch(e){} }, 60000);
  var _al = window.bpAfterLogin;
  window.bpAfterLogin = function(user){
   if(typeof _al === 'function') _al.apply(this, arguments);
