@@ -1,10 +1,10 @@
-const CACHE = 'bp-pos-v124';
+const CACHE = 'bp-pos-v125';
 const CDN = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2';
 
 self.addEventListener('install', (e) => {
   e.waitUntil((async () => {
     const c = await caches.open(CACHE);
-    try { await c.add('./'); } catch (err) {}
+    try { await c.add(new Request('./', { cache: 'reload' })); } catch (err) {}
     try { const r = await fetch(new Request(CDN, { mode: 'no-cors' })); await c.put(CDN, r); } catch (err) {}
     self.skipWaiting();
   })());
@@ -25,7 +25,8 @@ self.addEventListener('fetch', (e) => {
   if (!isDoc && !isLib) return;                       // mai toccare Supabase / Gemini / API
   e.respondWith((async () => {
     try {
-      const r = await fetch(req);
+      // le pagine HTML: sempre dalla rete, ignorando la cache HTTP del browser
+      const r = isDoc ? await fetch(req, { cache: 'no-store' }) : await fetch(req);
       const c = r.clone();
       caches.open(CACHE).then((ca) => ca.put(req, c)).catch(() => {});
       return r;
