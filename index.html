@@ -28681,6 +28681,17 @@ function matchIn(q, names, aliases){
   if(typeof _al === 'function') _al.apply(this, arguments);
   var email = String((user && user.email) || '').toLowerCase(); if(email) loadMine(email);
  };
+ /* v103: se il login e' partito prima di questo script, carico comunque le regole */
+ function bootMine(){ try{ if(typeof sb !== 'undefined' && sb && sb.auth){ sb.auth.getSession().then(function(r){ var u = r && r.data && r.data.session && r.data.session.user; if(u && u.email) loadMine(String(u.email).toLowerCase()); }); } }catch(e){} }
+ setTimeout(bootMine, 800); setTimeout(bootMine, 4000);
+ /* v103: etichetta diagnostica (solo account non manager) */
+ setInterval(function(){ try{
+  var c = document.getElementById('bpAccDbg');
+  if(window.BP_ROLE === 'manager'){ if(c) c.remove(); return; }
+  if(!c){ c = document.createElement('div'); c.id = 'bpAccDbg'; c.style.cssText = 'position:fixed;left:6px;bottom:78px;z-index:99998;background:rgba(0,0,0,.75);color:#fff;font:10px/1.3 monospace;padding:3px 6px;border-radius:6px;pointer-events:none;max-width:92vw'; document.body.appendChild(c); }
+  var r = window.BP_ACC, n = new Date();
+  c.textContent = 'v103 role=' + window.BP_ROLE + ' | regola=' + (r ? (JSON.stringify(r.days) + ' ' + r.from_time + '-' + r.to_time) : 'NESSUNA') + ' | oggi=' + n.getDay() + ' ' + n.getHours() + ':' + ('0'+n.getMinutes()).slice(-2) + ' | ordini=' + (typeof orders !== 'undefined' ? orders.length : '?');
+ }catch(e){} }, 2000);
  /* --- pannello del responsabile --- */
  function E(x){ return String(x==null?'':x).replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
  function openPanel(){
