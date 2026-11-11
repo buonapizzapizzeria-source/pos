@@ -2529,6 +2529,7 @@ html body #kitchenTab .k35-t .kt-item .gx .gx-sep i,html body #bp35KDS .k35-t .k
 </style>
 <style id="bpCutSepCss">@media screen{.bp-cut-sep{height:0!important;margin:10px 0!important;border-top:2px dashed #000!important}}@media print{.bp-cut-sep{display:block!important;visibility:hidden;height:0!important;margin:0!important;padding:0!important;border:0!important;page-break-after:always!important;break-after:page!important}}</style>
 
+<style id="bpDrvCss">body[data-role="driver"] .bpf-bar{display:none!important}</style>
 </head>
  <body>
  <header class="no-print">
@@ -9358,6 +9359,8 @@ function renderOrderItemLineWithIcons(i){
 function renderOrderList(id, list, isOpenTab=false){
  let box=el(id);box.innerHTML='';
  /* v101: ruolo "viewer" (pizzaiolo / kebabbaro): solo ordini del giorno corrente (il giorno cambia alle 05:00) */
+ if(window.bpAccFilter) list=window.bpAccFilter(list);
+ /* v101 */
  if(document.body.getAttribute('data-role')==='viewer'){
   let __n=new Date(Date.now()-5*3600*1000), __k=__n.getFullYear()+'-'+__n.getMonth()+'-'+__n.getDate();
   let __same=function(v){ if(!v) return false; let t=new Date(new Date(v).getTime()-5*3600*1000); return t.getFullYear()+'-'+t.getMonth()+'-'+t.getDate()===__k; };
@@ -14729,7 +14732,54 @@ function ssScoreQ(p, q){
  });
  if(!cnt) return 1; if(miss > Math.floor(cnt / 3)) return 0; return sum;
 }
+/* v102: ricerca per ingredienti — prima la pizza che ha SOLO quegli ingredienti (base pomodoro/mozzarella gratis), poi le piu' vicine */
+var SS_BASE_RX = /^(pomodoro|passata( di pomodoro)?|salsa( di pomodoro)?|sugo( di pomodoro)?|mozzarella|fior ?di ?latte|fiordilatte|basilico|olio( evo| d'oliva| extravergine)?|origano)$/;
+var SS_SKIPW = {e:1, ed:1, con:1, di:1, del:1, della:1, al:1, alla:1, e_:1};
+function ssIngTerms(q){
+ var toks = arTok(String(q).toLowerCase()), terms = [], base = false;
+ toks.forEach(function(w){
+  if(!w || w === "و" || SS_SKIPW[w] === 1) return;
+  if(AR_NUM[w] != null || /^\d+$/.test(w) || AR_SENZA[w] || AR_EXTRA[w] || AR_MAXI[w] || AR_NORM[w] || AR_GENERIC[w] || AR_SOLO[w] || AR_CATQ[w] || AR_IT_GEN[w]) return;
+  var raw = AR_RX.test(w) ? "" : ingNorm(w), s = tokSkel(w);
+  if(!raw && !s) return;
+  if(raw === "margherita" || (s && skOk(s, latSkel("margherita")))){ base = true; return; }
+  terms.push({raw: raw, s: s});
+ });
+ return terms.length ? {terms: terms, base: base} : null;
+}
+function ssIngHit(g, t){
+ if(t.raw && t.raw.length >= 3 && g.txt.split(" ").some(function(x){ return x.indexOf(t.raw) === 0; })) return true;
+ if(t.raw && t.raw.length < 3 && g.txt === t.raw) return true;
+ return !!(t.s && ssBest(t.s, g.keys, 1.8) > 0);
+}
+function ssIngSearch(list, q){
+ var m = ssIngTerms(q); if(!m) return null;
+ var rows = list.map(function(p){
+  var gs = parseIngredients(p.description).map(function(x){ return {txt: ingNorm(x), keys: arKeys(x, 2)}; });
+  return {p: p, gs: gs};
+ });
+ /* ogni termine deve corrispondere ad almeno un ingrediente del menu, altrimenti e' un nome/categoria: logica vecchia */
+ var known = m.terms.every(function(t){ return rows.some(function(r){ return r.gs.some(function(g){ return ssIngHit(g, t); }); }); });
+ if(!known) return null;
+ var out = [];
+ rows.forEach(function(r){
+  var cov = 0, extra = 0, hasBase = false;
+  m.terms.forEach(function(t){ if(r.gs.some(function(g){ return ssIngHit(g, t); })) cov++; });
+  if(!cov) return;
+  r.gs.forEach(function(g){
+   var isBase = SS_BASE_RX.test(g.txt); if(isBase) hasBase = true;
+   if(m.terms.some(function(t){ return ssIngHit(g, t); })) return;
+   if(!isBase) extra++;
+  });
+  var kind = getProductKind(r.p);
+  if(m.base && kind === "pizza" && !hasBase) extra += 0.5;
+  out.push({p: r.p, cov: cov, extra: extra, pz: kind === "pizza" ? 0 : 1});
+ });
+ out.sort(function(a, b){ return (b.cov - a.cov) || (a.extra - b.extra) || (a.pz - b.pz) || a.p.name.localeCompare(b.p.name, "it"); });
+ return out.map(function(x){ return x.p; });
+}
 function ssSearch(list, q){
+ var __ing = ssIngSearch(list, q); if(__ing) return __ing;
  var qs = [q]; if(ss.altQ === q) qs = qs.concat(ss.alts || []), out = [];
  var out = [];
  list.forEach(function(p){ var b = 0; qs.forEach(function(x){ b = Math.max(b, ssScoreQ(p, x)); }); if(b > 0) out.push([b, p]); });
@@ -28582,5 +28632,179 @@ function matchIn(q, names, aliases){
 })();
 </script>
 
+
+<script id="bpStaffAccess">
+/* v102: il responsabile decide quali ordini vede ogni account (giorni + fascia oraria). Tabella Supabase: staff_access */
+(function(){
+ if(window.__bpAcc) return; window.__bpAcc = true;
+ var DAYS = [['1','Lun · الاثنين'],['2','Mar · الثلاثاء'],['3','Mer · الأربعاء'],['4','Gio · الخميس'],['5','Ven · الجمعة'],['6','Sab · السبت'],['0','Dom · الأحد']];
+ var SQL = "create table if not exists staff_access (email text primary key, days int[] not null default '{0,1,2,3,4,5,6}', from_time text not null default '00:00', to_time text not null default '23:59', updated_at timestamptz default now());\n"
+  + "alter table staff_access enable row level security;\n"
+  + "drop policy if exists \"sa_read\" on staff_access; drop policy if exists \"sa_write\" on staff_access;\n"
+  + "create policy \"sa_read\" on staff_access for select to authenticated using (true);\n"
+  + "create policy \"sa_write\" on staff_access for all to authenticated using (exists (select 1 from staff_profiles s where lower(s.email)=lower(auth.jwt()->>'email') and s.role='manager')) with check (exists (select 1 from staff_profiles s where lower(s.email)=lower(auth.jwt()->>'email') and s.role='manager'));";
+ function mins(t){ var a = String(t||'').split(':'); return (parseInt(a[0],10)||0)*60 + (parseInt(a[1],10)||0); }
+ window.BP_ACC = null;
+ window.bpAccFilter = function(list){
+  var r = window.BP_ACC; if(!r || window.BP_ROLE === 'manager') return list;
+  var f = mins(r.from_time), t = mins(r.to_time), days = (r.days||[]).map(Number);
+  return list.filter(function(o){
+   var d = new Date(o.created_at || o.scheduled_at); if(isNaN(d)) return true;
+   var wd = new Date(d.getTime() - 5*3600*1000).getDay(), m = d.getHours()*60 + d.getMinutes();
+   var okH = f <= t ? (m >= f && m <= t) : (m >= f || m <= t);
+   return days.indexOf(wd) >= 0 && okH;
+  });
+ };
+ function rerender(){ try{ if(typeof renderOrders === 'function') renderOrders(); }catch(e){ console.warn(e); } try{ if(typeof loadOrders === 'function') loadOrders(); }catch(e){ console.warn(e); } }
+ function loadMine(email){
+  var ck = 'bp_acc_' + email; try{ var c = localStorage.getItem(ck); if(c) window.BP_ACC = JSON.parse(c); }catch(e){}
+  if(typeof sb === 'undefined' || !sb) return;
+  Promise.resolve(sb.from('staff_access').select('*').ilike('email', email).limit(1)).then(function(r){
+   if(!r || r.error) return;
+   var d = r.data && r.data[0]; window.BP_ACC = d || null;
+   try{ if(d) localStorage.setItem(ck, JSON.stringify(d)); else localStorage.removeItem(ck); }catch(e){}
+   rerender();
+  });
+ }
+ var _al = window.bpAfterLogin;
+ window.bpAfterLogin = function(user){
+  if(typeof _al === 'function') _al.apply(this, arguments);
+  var email = String((user && user.email) || '').toLowerCase(); if(email) loadMine(email);
+ };
+ /* --- pannello del responsabile --- */
+ function E(x){ return String(x==null?'':x).replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
+ function openPanel(){
+  var o = document.getElementById('bpAccBox'); if(o) o.remove();
+  o = document.createElement('div'); o.id = 'bpAccBox';
+  o.style.cssText = 'position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;padding:12px';
+  o.innerHTML = '<div style="background:#f8f9fb;color:#202124;border-radius:20px;max-width:580px;width:100%;max-height:94vh;overflow:auto;font-family:inherit;box-shadow:0 24px 60px rgba(0,0,0,.35);display:flex;flex-direction:column"><div style="background:linear-gradient(135deg,#b42318 0%,#7f1d1d 100%);padding:18px 20px;border-radius:20px 20px 0 0;display:flex;justify-content:space-between;align-items:center"><div style="display:flex;align-items:center;gap:10px"><div style="background:rgba(255,255,255,.18);border-radius:10px;padding:8px;font-size:22px;line-height:1">🛡️</div><div><div style="color:#fff;font-size:17px;font-weight:900;letter-spacing:.3px">صلاحيات الحسابات</div><div style="color:#fca5a5;font-size:12px;font-weight:600;margin-top:2px">Gestione accessi staff</div></div></div><button type="button" id="bpAccX" style="background:rgba(255,255,255,.15);border:1.5px solid rgba(255,255,255,.3);color:#fff;border-radius:10px;padding:7px 11px;font-size:16px;font-weight:900;cursor:pointer">✕</button></div><div id="bpAccBody" style="padding:18px 20px;direction:rtl">...</div></div>';
+  document.body.appendChild(o);
+  o.querySelector('#bpAccX').onclick = function(){ o.remove(); };
+  var rows = [], staff = [];
+  function draw(){
+   /* ── شريط المعلومة ── */
+   var h = '<div style="background:linear-gradient(135deg,#fffbeb,#fef3c7);border:1.5px solid #fcd34d;border-radius:12px;padding:11px 14px;margin-bottom:16px;display:flex;gap:9px;align-items:flex-start"><span style="font-size:18px;line-height:1.2">💡</span><p style="font-size:12.5px;color:#78350f;margin:0;line-height:1.6">كل حساب بيشوف <b>بس</b> الطلبات اللي اتعملت في الأيام والساعات المحددة.<br>اليوم بيتغيّر الساعة <b>05:00</b>. الـ <b>manager</b> بيشوف كل حاجة دايمًا.</p></div>';
+   /* ── إضافة موظف ── */
+   h += '<div style="background:#fff;border:1.5px solid #e5e7eb;border-radius:14px;padding:13px 14px;margin-bottom:16px"><div style="font-size:12px;font-weight:800;color:#6b7280;margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px">➕ إضافة موظف</div><div style="display:flex;gap:8px;align-items:center"><input id="bpAccEm" list="bpAccDl" placeholder="email الموظف" style="flex:1;padding:10px 12px;border:1.5px solid #d1d5db;border-radius:10px;direction:ltr;font-size:14px"><datalist id="bpAccDl">' + staff.map(function(s){ return '<option value="'+E(s)+'">'; }).join('') + '</datalist><button type="button" id="bpAccAdd" style="padding:10px 16px;background:#b42318;color:#fff;border:0;border-radius:10px;font-size:18px;font-weight:900;cursor:pointer;flex-shrink:0">＋</button></div></div>';
+   /* ── قائمة الموظفين ── */
+   if(rows.length === 0){
+    h += '<div style="text-align:center;padding:24px;color:#9ca3af;font-size:14px">👤 لم يُضف أي موظف بعد</div>';
+   }
+   rows.forEach(function(r, i){
+    h += '<div style="background:#fff;border:1.5px solid #e5e7eb;border-radius:14px;padding:14px;margin-bottom:12px;box-shadow:0 2px 6px rgba(0,0,0,.05)" data-i="'+i+'">'
+     /* header الموظف */
+     + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><div style="display:flex;align-items:center;gap:8px"><div style="background:#fee2e2;border-radius:8px;padding:6px;font-size:16px">👤</div><span style="direction:ltr;font-weight:800;font-size:14px;color:#111827">'+E(r.email)+'</span></div><button type="button" data-del="'+i+'" style="background:#fee2e2;border:1px solid #fca5a5;border-radius:8px;padding:6px 10px;font-size:14px;cursor:pointer;color:#991b1b">🗑️</button></div>'
+     /* أيام الأسبوع */
+     + '<div style="font-size:11.5px;font-weight:800;color:#6b7280;margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px">📅 أيام العمل</div>'
+     + '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:5px;margin-bottom:12px">'
+     + DAYS.map(function(d){
+        var chk = (r.days||[]).map(String).indexOf(d[0]) >= 0;
+        var parts = d[1].split(' · ');
+        return '<label style="display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;background:'+(chk?'#fee2e2':'#f9fafb')+';border:1.5px solid '+(chk?'#fca5a5':'#e5e7eb')+';border-radius:9px;padding:7px 4px;font-size:11px;font-weight:700;color:'+(chk?'#991b1b':'#374151')+';transition:.15s"><input type="checkbox" data-d="'+i+'" value="'+d[0]+'" '+(chk?'checked':'')+' style="display:none"><span style="font-size:14px">'+(chk?'✅':'⬜')+'</span><span>'+parts[0]+'</span><span style="font-size:10px;color:#9ca3af">'+parts[1]+'</span></label>';
+       }).join('')
+     + '</div>'
+     /* الساعات */
+     + '<div style="font-size:11.5px;font-weight:800;color:#6b7280;margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px">🕐 ساعات العمل</div>'
+     + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><div style="background:#f0fdf4;border:1.5px solid #bbf7d0;border-radius:10px;padding:10px"><div style="font-size:11px;font-weight:800;color:#166534;margin-bottom:5px">▶ من</div><input type="time" data-f="'+i+'" value="'+E(r.from_time)+'" style="width:100%;border:0;background:transparent;font-size:16px;font-weight:800;color:#14532d;padding:0;direction:ltr"></div><div style="background:#fff7ed;border:1.5px solid #fed7aa;border-radius:10px;padding:10px"><div style="font-size:11px;font-weight:800;color:#9a3412;margin-bottom:5px">⏹ إلى</div><input type="time" data-t="'+i+'" value="'+E(r.to_time)+'" style="width:100%;border:0;background:transparent;font-size:16px;font-weight:800;color:#7c2d12;padding:0;direction:ltr"></div></div>'
+     + '</div>';
+   });
+   /* ── زرار الحفظ ── */
+   h += '<button type="button" id="bpAccSave" style="width:100%;padding:14px;font-weight:900;font-size:15px;background:linear-gradient(135deg,#16a34a,#15803d);color:#fff;border:0;border-radius:12px;margin-top:4px;cursor:pointer;box-shadow:0 4px 14px rgba(22,163,74,.35);letter-spacing:.3px">💾 حفظ · Salva</button>';
+   h += '<div id="bpAccMsg" style="margin-top:10px;font-size:13px;text-align:center;min-height:20px"></div>';
+   h += '<details style="margin-top:12px"><summary style="cursor:pointer;font-size:12.5px;font-weight:700;color:#6b7280;padding:8px;background:#f3f4f6;border-radius:8px">◀ SQL (مرة واحدة في Supabase)</summary><textarea readonly style="width:100%;height:120px;direction:ltr;font-size:11px;margin-top:6px;border:1px solid #e5e7eb;border-radius:8px;padding:8px;background:#1e1e1e;color:#9cdcfe;resize:none">'+E(SQL)+'</textarea></details>';
+   var b = o.querySelector('#bpAccBody'); b.innerHTML = h;
+   b.querySelector('#bpAccAdd').onclick = function(){ var v = b.querySelector('#bpAccEm').value.trim().toLowerCase(); if(!v || rows.some(function(r){ return r.email === v; })) return; rows.push({email: v, days: ['0','1','2','3','4','5','6'], from_time: '00:00', to_time: '23:59'}); draw(); };
+   b.querySelectorAll('[data-del]').forEach(function(x){ x.onclick = function(){ var i = +x.getAttribute('data-del'); var em = rows[i].email; rows.splice(i,1); draw(); if(typeof sb !== 'undefined' && sb) sb.from('staff_access').delete().eq('email', em); }; });
+   b.querySelectorAll('[data-d]').forEach(function(x){
+    x.onchange = function(){
+     var i = +x.getAttribute('data-d'); var set = rows[i].days.map(String);
+     var k = set.indexOf(x.value); if(x.checked && k<0) set.push(x.value); if(!x.checked && k>=0) set.splice(k,1); rows[i].days = set;
+     /* تحديث مظهر الـ label */ var lbl = x.closest('label');
+     if(lbl){ lbl.style.background = x.checked?'#fee2e2':'#f9fafb'; lbl.style.borderColor = x.checked?'#fca5a5':'#e5e7eb'; lbl.style.color = x.checked?'#991b1b':'#374151'; lbl.querySelector('span').textContent = x.checked?'✅':'⬜'; }
+    };
+   });
+   b.querySelectorAll('[data-f]').forEach(function(x){ x.onchange = function(){ rows[+x.getAttribute('data-f')].from_time = x.value || '00:00'; }; });
+   b.querySelectorAll('[data-t]').forEach(function(x){ x.onchange = function(){ rows[+x.getAttribute('data-t')].to_time = x.value || '23:59'; }; });
+   b.querySelector('#bpAccSave').onclick = function(){
+    var msg = b.querySelector('#bpAccMsg'); msg.textContent = '...';
+    if(typeof sb === 'undefined' || !sb){ msg.textContent = '❌ مفيش اتصال بـ Supabase'; return; }
+    var payload = rows.map(function(r){ return {email: r.email, days: r.days.map(Number), from_time: r.from_time, to_time: r.to_time, updated_at: new Date().toISOString()}; });
+    if(!payload.length){ msg.textContent = '✅'; return; }
+    Promise.resolve(sb.from('staff_access').upsert(payload, {onConflict: 'email'})).then(function(r){ msg.textContent = (r && r.error) ? ('❌ ' + r.error.message + ' — نفّذ الـ SQL اللي تحت الأول') : '✅ اتحفظ'; });
+   };
+  }
+  draw();
+  if(typeof sb !== 'undefined' && sb){
+   Promise.resolve(sb.from('staff_access').select('*')).then(function(r){ if(r && !r.error && r.data){ rows = r.data.map(function(d){ return {email: d.email, days: (d.days||[]).map(String), from_time: d.from_time, to_time: d.to_time}; }); } return sb.from('staff_profiles').select('email,role'); })
+    .then(function(r){ if(r && !r.error && r.data) staff = r.data.filter(function(x){ return x.role !== 'manager'; }).map(function(x){ return x.email; }); draw(); });
+  }
+ }
+ function addBtn(){
+  var bar = document.getElementById('userBar'); if(!bar) return;
+  if(document.getElementById('bpAccBtn')) return;
+  var b = document.createElement('button');
+  b.id = 'bpAccBtn'; b.type = 'button'; b.className = 'secondary btn-sm';
+  b.innerHTML = '🛡️'; b.title = 'Accessi staff · صلاحيات الحسابات';
+  b.onclick = function(){
+   if(window.BP_ROLE === 'manager'){ openPanel(); return; }
+   /* مش manager — طلب PIN */
+   var pin = prompt('🔐 PIN المدير · PIN responsabile:');
+   if(pin === null) return;
+   /* جرّب تسجيل دخول بالـ PIN عن طريق staff_profiles */
+   if(typeof sb !== 'undefined' && sb){
+    Promise.resolve(sb.from('staff_profiles').select('role').ilike('pin', pin).limit(1)).then(function(r){
+     var role = r && r.data && r.data[0] && r.data[0].role;
+     if(role === 'manager'){ openPanel(); }
+     else { alert('❌ PIN غلط'); }
+    });
+   } else { alert('❌ مفيش اتصال'); }
+  };
+  bar.insertBefore(b, bar.firstChild);
+ }
+ /* v103: la regola di accesso deve valere ovunque (Cucina, contatori, radar) e dopo ogni aggiornamento pagina:
+    renderOrders/renderKitchen lavorano su una copia filtrata di `orders` (solo per account non responsabile) */
+ (function(){
+  var depth = 0;
+  function wrapFiltered(name){
+   var orig = window[name]; if(typeof orig !== 'function' || orig.__bpAccW) return;
+   var w = function(){
+    var full = null, swapped = false;
+    try{
+     if(depth === 0 && window.BP_ROLE !== 'manager' && Array.isArray(orders)){
+      var isDrv = window.BP_ROLE === 'driver';
+      if(isDrv || window.BP_ACC){
+       full = orders; var l = full;
+       if(isDrv) l = l.filter(function(o){ var tb = ''; try{ tb = bpTableNo(o); }catch(e){} return !tb && /consegna|domicilio/i.test(String(o.order_type||'')); });
+       orders = window.bpAccFilter(l); swapped = true;
+      }
+     }
+    }catch(e){ console.warn('[bp] acc', e); }
+    depth++;
+    try{ return orig.apply(this, arguments); }
+    finally{ depth--; if(swapped){ try{ orders = full; }catch(e){} } }
+   };
+   w.__bpAccW = true; window[name] = w;
+  }
+  wrapFiltered('renderOrders'); wrapFiltered('renderKitchen');
+ })();
+ var _ar = window.bpApplyRole;
+ window.bpApplyRole = function(role){ if(typeof _ar === 'function') _ar.apply(this, arguments); addBtn(); };
+ // ✅ لو الـ role اتحدد قبل تحميل الـ script، بنضيف الزرار بعد تحميل الصفحة
+ if(document.readyState === 'loading'){
+  document.addEventListener('DOMContentLoaded', function(){ setTimeout(addBtn, 500); });
+ } else {
+  setTimeout(addBtn, 500);
+ }
+ // وكمان بنراقب لو userBar ظهر متأخر
+ (function watchBar(){
+  var tries = 0;
+  var t = setInterval(function(){
+   tries++;
+   addBtn();
+   if(document.getElementById('bpAccBtn') || tries > 20) clearInterval(t);
+  }, 300);
+ })();
+})();
+</script>
 </body>
 </html>
