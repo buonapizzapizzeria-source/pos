@@ -9223,7 +9223,7 @@ async function _loadOrdersNow(){
 
 /* loadOrders = _loadOrdersNow con raggruppamento delle chiamate ravvicinate (ex patch v25-debounce) */
 var __loWaiters = [], __loTimer = null, __loRunning = false, __loRerun = false;
-function __loSchedule(){ if(__loTimer) clearTimeout(__loTimer); __loTimer = setTimeout(__loFlush, 250); }
+function __loSchedule(){ if(__loTimer) clearTimeout(__loTimer); __loTimer = setTimeout(__loFlush, 800); }
 function __loFlush(){
  __loTimer = null;
  if(__loRunning){ __loRerun = true; return; }
@@ -16278,7 +16278,7 @@ openCartIngModal = function(key){
  var ivSb = setInterval(function(){
  if(hasSb()){
  clearInterval(ivSb); pull();
- try{ sb.channel('bp36').on('postgres_changes', {event: '*', schema: 'public', table: 'bp36_data'}, pull).subscribe(); }catch(e){}
+ try{ sb.channel('bp36').on('postgres_changes', {event: '*', schema: 'public', table: 'bp36_data'}, function(){ clearTimeout(window.__bpPullT); window.__bpPullT = setTimeout(pull, 1500); }).subscribe(); }catch(e){}
  }
  }, 1000);
  document.addEventListener('visibilitychange', function(){ if(!document.hidden) pull(); });
