@@ -1103,7 +1103,7 @@
   var CSS_ID = 'ops-engine-css';
   var CSS = [
     '.ops-chips{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}',
-    '.ops-chip{border:1px solid #cbd5e1;background:#f8fafc;border-radius:999px;padding:6px 12px;font-size:13px;font-weight:700;cursor:pointer}',
+    '.ops-chip{border:1px solid #cbd5e1;background:#f8fafc;color:#1f2937;border-radius:999px;padding:6px 12px;font-size:13px;font-weight:700;cursor:pointer}',
     '.ops-chip.on{background:#c62828;border-color:#c62828;color:#fff}',
     '.ops-tmap{display:grid;grid-template-columns:repeat(auto-fill,minmax(78px,1fr));gap:6px;margin-top:8px}',
     '.ops-tbl{border-radius:12px;padding:10px 4px;font-weight:800;font-size:13px;border:1px solid #cbd5e1;cursor:pointer}',
@@ -30397,6 +30397,122 @@ function matchIn(q, names, aliases){
   }, 300);
  })();
 })();
+</script>
+<script>
+/* ---- screen-freeze.js (تثبيت شاشة الطلبات) ---- */
+/* =========================================================
+ * screen-freeze.js — تثبيت شاشة الطلبات
+ * عند التفعيل: قائمة الطلبات ماتتحدثش لوحدها (لا رسم ولا تحميل من السيرفر).
+ * التحديثات بتتجمع، وعند إلغاء التثبيت تتطبق مرة واحدة.
+ * الإعداد محفوظ على الجهاز. لا يغيّر أي شيء وهو غير مفعّل.
+ * ========================================================= */
+(function (global) {
+  'use strict';
+  if (global.ScreenFreeze) return;
+  var doc = global.document;
+  var KEY = 'bp_screen_freeze';
+  var frozen = false, pendingRender = false, pendingLoad = 0;
+  var origRender = null, origLoad = null, btn = null;
+
+  function readStored() { try { return global.localStorage.getItem(KEY) === '1'; } catch (e) { return false; } }
+  function save() { try { global.localStorage.setItem(KEY, frozen ? '1' : '0'); } catch (e) { /* ignore */ } }
+  function hasUpdates() { return pendingRender || pendingLoad > 0; }
+
+  function wrap() {
+    if (!origRender && typeof global.renderOrders === 'function' && !global.renderOrders.__freeze) {
+      origRender = global.renderOrders;
+      var r = function () {
+        if (frozen) { pendingRender = true; paint(); return; }
+        return origRender.apply(this, arguments);
+      };
+      r.__freeze = true;
+      global.renderOrders = r;
+    }
+    if (!origLoad && typeof global.loadOrders === 'function' && !global.loadOrders.__freeze) {
+      origLoad = global.loadOrders;
+      var l = function () {
+        if (frozen) { pendingLoad++; paint(); return Promise.resolve(); }
+        return origLoad.apply(this, arguments);
+      };
+      l.__freeze = true;
+      global.loadOrders = l;
+    }
+  }
+
+  function pendingCount() { return pendingLoad + (pendingRender ? 1 : 0); }
+
+  function paint() {
+    if (!btn) return;
+    var n = pendingCount();
+    btn.textContent = frozen ? '🔒 الشاشة مثبّتة' : '⏸ تثبيت الشاشة';
+    btn.className = 'ops-chip' + (frozen ? ' on' : '');
+    btn.setAttribute('aria-pressed', frozen ? 'true' : 'false');
+    if (note) {
+      note.textContent = frozen
+        ? (n > 0 ? 'تحديثات جديدة في الانتظار · اضغط لتطبيقها' : 'القائمة ثابتة، التحديثات هتظهر لما تلغي التثبيت')
+        : '';
+      note.style.color = frozen && n > 0 ? '#b45309' : '#6b7280';
+    }
+  }
+
+  function setFrozen(v) {
+    frozen = !!v;
+    save();
+    if (!frozen && hasUpdates()) {
+      pendingRender = false;
+      pendingLoad = 0;
+      if (origLoad) origLoad(); else if (origRender) origRender();
+    }
+    paint();
+  }
+
+  var note = null, mountTries = 0;
+  function mountButton() {
+    if (!doc || !doc.body || doc.getElementById('bpFreezeBar')) return;
+    // نضعه داخل تدفق الصفحة فوق القائمة (مش عائم) حتى ما يغطيش الفلاتر
+    var anchor = doc.getElementById('opsChips') || doc.getElementById('openOrders');
+    if (!anchor || !anchor.parentNode) {
+      if (++mountTries < 20) global.setTimeout(mountButton, 300);
+      return;
+    }
+    var bar = doc.createElement('div');
+    bar.id = 'bpFreezeBar';
+    bar.style.cssText = 'display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:6px 0;';
+    btn = doc.createElement('button');
+    btn.id = 'bpScreenFreeze';
+    btn.type = 'button';
+    btn.onclick = function () { setFrozen(!frozen); };
+    note = doc.createElement('span');
+    note.id = 'bpFreezeNote';
+    note.style.cssText = 'font-size:12px;font-weight:600;';
+    bar.appendChild(btn);
+    bar.appendChild(note);
+    anchor.parentNode.insertBefore(bar, anchor);
+    paint();
+  }
+
+  var inited = false;
+  function init() {
+    if (inited || !doc) return;
+    inited = true;
+    wrap();
+    frozen = readStored();
+    mountButton();
+    paint();
+  }
+
+  global.ScreenFreeze = {
+    init: init,
+    freeze: function () { setFrozen(true); },
+    unfreeze: function () { setFrozen(false); },
+    isFrozen: function () { return frozen; },
+    _t: { get pendingRender() { return pendingRender; }, get pendingLoad() { return pendingLoad; } }
+  };
+
+  if (doc && doc.readyState === 'loading') doc.addEventListener('DOMContentLoaded', init);
+  else init();
+})(typeof window !== 'undefined' ? window : globalThis);
+
 </script>
 </body>
 </html>
