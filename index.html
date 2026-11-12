@@ -2,6 +2,1626 @@
 <html lang="it">
  <head>
  <meta charset="utf-8"/>
+<script>
+/* ---- template-config.js (inlined) ---- */
+/* =========================================================
+ * template-config.js — المرحلة 2 (v2)
+ * محرك الإعدادات المركزي TemplateConfig + معالج الإعداد الأولي
+ * لا يغيّر أي سلوك حالي: يُحمَّل فقط، ولا يفتح شيئاً إلا عند استدعائه.
+ * ========================================================= */
+(function (global) {
+  'use strict';
+  if (global.TemplateConfig) return;
+
+  var LS_KEY = 'bp_tpl_config_v1';
+  // أقسام تُزامن مع جدول shop_settings في Supabase
+  var SYNC = ['restaurant', 'locale', 'receipt', 'ops', 'ui'];
+  // backend و secrets تبقى على الجهاز فقط ولا تُرسل إلى السحابة أبداً
+
+  var DEFAULTS = {
+    v: 1,
+    setupDone: false,
+    restaurant: {
+      name: '', logoUrl: '', address: '', phone: '',
+      originAddress: '', reviewUrl: '', city: '', addressSuffix: '', homeQuery: '',
+      lat: 0, lng: 0
+    },
+    locale: { currency: '€', language: 'it' },
+    receipt: {
+      paperWidth: 80, showIngredients: true, compactFooter: true,
+      kitchenOnlyPrint: false, showBabyBadge: true
+    },
+    ops: {
+      tables: 10, ovenPerSlot: 12, slotMinutes: 15,
+      deliveryFee: 0, vatRate: 0, streets: []
+    },
+    ui: {
+      tileSize: 'standard', threeColumnDesktop: true,
+      keyboardShortcuts: true, accent: '#c62828'
+    },
+    backend: { supabaseUrl: '', supabaseAnonKey: '' },
+    secrets: { geminiKey: '', mapsKey: '', pin: '' }
+  };
+
+  var state = null;
+  var pushTimer = null;
+  var wz = { open: false, step: 0, draft: {}, errors: {}, status: '', busy: false, syncFailed: false };
+
+  /* ---------- أدوات مساعدة ---------- */
+  function isObj(v) { return v !== null && typeof v === 'object' && !Array.isArray(v); }
+  function clone(v) { return JSON.parse(JSON.stringify(v)); }
+  function errText(e) { return String((e && e.message) || e).slice(0, 200); }
+
+  function storageGet(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
+  function storageSet(k, v) {
+    try { localStorage.setItem(k, v); return true; } catch (e) { console.warn('[TemplateConfig]', e); return false; }
+  }
+  function emit(name, detail) {
+    try { global.dispatchEvent(new CustomEvent(name, { detail: detail || {} })); } catch (e) { /* ignore */ }
+  }
+
+  // ينسخ فقط المفاتيح الموجودة في الشكل الافتراضي ويطابق النوع (يمنع الحقول الغريبة)
+  function mergeInto(target, src) {
+    if (!isObj(src)) return target;
+    Object.keys(target).forEach(function (k) {
+      var sv = src[k], tv = target[k];
+      if (sv === undefined) return;
+      if (isObj(tv)) {
+        if (isObj(sv)) mergeInto(tv, sv);
+      } else if (Array.isArray(tv)) {
+        if (Array.isArray(sv)) {
+          target[k] = sv.filter(function (x) { return typeof x === 'string'; })
+                        .slice(0, 500).map(function (x) { return x.slice(0, 120); });
+        }
+      } else if (typeof sv === typeof tv) {
+        target[k] = sv;
+      }
+    });
+    return target;
+  }
+
+  /* ---------- التخزين المحلي والتهجير من النسخة القديمة ---------- */
+  function save() {
+    storageSet(LS_KEY, JSON.stringify(state));
+    emit('tpl:change');
+  }
+
+  function migrateLegacy() {
+    var url = storageGet('bp_sb_url'), key = storageGet('bp_sb_key');
+    var gem = storageGet('bp_gemini_key'), fee = storageGet('bp_deliv_fee');
+    if (url) state.backend.supabaseUrl = url;
+    if (key) state.backend.supabaseAnonKey = key;
+    if (gem) state.secrets.geminiKey = gem;
+    if (fee !== null && isFinite(Number(fee))) state.ops.deliveryFee = Number(fee);
+    // تثبيت قديم موجود: لا نُجبر المستخدم على المعالج
+    if (url || gem) state.setupDone = true;
+  }
+
+  function load() {
+    var raw = storageGet(LS_KEY), parsed = null;
+    try { parsed = raw ? JSON.parse(raw) : null; } catch (e) { parsed = null; }
+    state = mergeInto(clone(DEFAULTS), parsed);
+    if (!parsed) {
+      migrateLegacy();
+      save();
+    }
+    return state;
+  }
+
+  function all() { if (!state) load(); return clone(state); }
+
+  /* ---------- القراءة والكتابة بالمسار (مثال: 'ops.tables') ---------- */
+  function get(path, fb) {
+    if (!state) load();
+    var cur = state, parts = String(path).split('.');
+    for (var i = 0; i < parts.length; i++) {
+      if (!isObj(cur) || !(parts[i] in cur)) return fb;
+      cur = cur[parts[i]];
+    }
+    return cur === undefined ? fb : cur;
+  }
+
+  function coerce(v, dv) {
+    if (typeof dv === 'number') {
+      var n = Number(v);
+      return (v !== '' && v !== null && v !== undefined && isFinite(n)) ? n : undefined;
+    }
+    if (typeof dv === 'boolean') return !!v;
+    if (typeof dv === 'string') return v == null ? '' : String(v).trim().slice(0, 500);
+    if (Array.isArray(dv)) {
+      return Array.isArray(v)
+        ? v.filter(function (x) { return typeof x === 'string'; }).slice(0, 500)
+        : undefined;
+    }
+    return undefined;
+  }
+
+  function set(path, value) {
+    if (!state) load();
+    var parts = String(path).split('.'), def = DEFAULTS, cur = state;
+    for (var i = 0; i < parts.length - 1; i++) {
+      if (!isObj(def[parts[i]]) || !isObj(cur[parts[i]])) return false;
+      def = def[parts[i]];
+      cur = cur[parts[i]];
+    }
+    var last = parts[parts.length - 1];
+    if (!isObj(def) || !(last in def)) return false;
+    var v = coerce(value, def[last]);
+    if (v === undefined) return false;
+    cur[last] = v;
+    save();
+    if (SYNC.indexOf(parts[0]) > -1) schedulePush();
+    return true;
+  }
+
+  /* ---------- المزامنة مع Supabase (REST بدون SDK) ---------- */
+  function rest(base, key, method, path, body, prefer) {
+    var ctrl = typeof AbortController !== 'undefined' ? new AbortController() : null;
+    var timer = ctrl ? setTimeout(function () { ctrl.abort(); }, 12000) : null;
+    var headers = { apikey: key, Authorization: 'Bearer ' + key, 'Content-Type': 'application/json' };
+    if (prefer) headers.Prefer = prefer;
+    return fetch(String(base).replace(/\/+$/, '') + path, {
+      method: method,
+      headers: headers,
+      body: body ? JSON.stringify(body) : undefined,
+      signal: ctrl ? ctrl.signal : undefined
+    }).finally(function () { if (timer) clearTimeout(timer); });
+  }
+
+  function syncPayload() {
+    var p = {};
+    SYNC.forEach(function (s) { p[s] = clone(state[s]); });
+    return p;
+  }
+
+  function schedulePush() {
+    if (!get('backend.supabaseUrl', '')) return;
+    clearTimeout(pushTimer);
+    pushTimer = setTimeout(function () { push(); }, 1200);
+  }
+
+  function push() {
+    clearTimeout(pushTimer);
+    var url = get('backend.supabaseUrl', ''), key = get('backend.supabaseAnonKey', '');
+    if (!url || !key) return Promise.resolve({ ok: false, reason: 'local' });
+    var body = [{ id: 'main', data: syncPayload(), updated_at: new Date().toISOString() }];
+    return rest(url, key, 'POST', '/rest/v1/shop_settings?on_conflict=id', body,
+                'resolution=merge-duplicates,return=minimal')
+      .then(function (res) {
+        if (!res.ok) return res.text().then(function (t) { throw new Error('HTTP ' + res.status + ' ' + t); });
+        emit('tpl:sync', { ok: true });
+        return { ok: true };
+      })
+      .catch(function (e) {
+        emit('tpl:sync', { ok: false, error: errText(e) });
+        return { ok: false, error: errText(e) };
+      });
+  }
+
+  function applySynced(data) {
+    SYNC.forEach(function (s) { if (isObj(data[s])) mergeInto(state[s], data[s]); });
+  }
+
+  // القاعدة: السحابة تفوز عند السحب (pull)
+  function pull() {
+    var url = get('backend.supabaseUrl', ''), key = get('backend.supabaseAnonKey', '');
+    if (!url || !key) return Promise.resolve({ ok: false, reason: 'local' });
+    return rest(url, key, 'GET', '/rest/v1/shop_settings?id=eq.main&select=data')
+      .then(function (res) {
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        return res.json();
+      })
+      .then(function (rows) {
+        var row = rows && rows[0];
+        if (row && isObj(row.data)) {
+          applySynced(row.data);
+          save();
+        }
+        return { ok: true, found: !!row };
+      })
+      .catch(function (e) { return { ok: false, error: errText(e) }; });
+  }
+
+  function testConnection(url, key) {
+    if (!url || !key) return Promise.resolve({ ok: false, message: 'أدخل الرابط والمفتاح أولاً' });
+    return rest(url, key, 'GET', '/rest/v1/shop_settings?select=id&limit=1')
+      .then(function (res) {
+        if (res.ok) return { ok: true, message: '✅ الاتصال ناجح والجدول موجود' };
+        if (res.status === 401 || res.status === 403) return { ok: false, message: '❌ المفتاح غير صحيح أو بلا صلاحية' };
+        if (res.status === 404 || res.status === 400) return { ok: false, message: '❌ الجدول shop_settings غير موجود: نفّذ ملف SQL أولاً' };
+        return { ok: false, message: '❌ خطأ HTTP ' + res.status };
+      })
+      .catch(function (e) { return { ok: false, message: '❌ تعذر الاتصال: ' + errText(e) }; });
+  }
+
+  /* ---------- تصدير واستيراد (بدون أي أسرار) ---------- */
+  function exportJSON() {
+    if (!state) load();
+    var p = { schema: 'buonapizza-template', v: 1 };
+    SYNC.forEach(function (s) { p[s] = clone(state[s]); });
+    return JSON.stringify(p, null, 2);
+  }
+
+  function importJSON(text) {
+    if (!state) load();
+    var obj = typeof text === 'string' ? JSON.parse(text) : text;
+    if (!isObj(obj)) throw new Error('ملف غير صالح');
+    applySynced(obj);
+    save();
+    schedulePush();
+    return true;
+  }
+
+  /* ---------- معالج الإعداد الأولي ---------- */
+  var STEPS = [
+    { id: 'restaurant', title: 'بيانات المطعم', fields: [
+      { path: 'restaurant.name', label: 'اسم المطعم *', type: 'text', required: true },
+      { path: 'restaurant.phone', label: 'الهاتف', type: 'text' },
+      { path: 'restaurant.address', label: 'العنوان على الفاتورة', type: 'text' },
+      { path: 'restaurant.originAddress', label: 'عنوان الانطلاق لحساب التوصيل (Google Maps)', type: 'text' },
+      { path: 'restaurant.reviewUrl', label: 'رابط تقييم Google (اختياري)', type: 'url' },
+      { path: 'locale.currency', label: 'رمز العملة', type: 'text' }
+    ] },
+    { id: 'backend', title: 'قاعدة البيانات (Supabase)', test: true, fields: [
+      { path: 'backend.supabaseUrl', label: 'Supabase URL (اختياري للعمل المحلي)', type: 'url' },
+      { path: 'backend.supabaseAnonKey', label: 'Supabase anon key', type: 'password' }
+    ] },
+    { id: 'ops', title: 'قواعد التشغيل', fields: [
+      { path: 'ops.tables', label: 'عدد الطاولات *', type: 'number', min: 1, max: 99, required: true },
+      { path: 'ops.ovenPerSlot', label: 'سعة الفرن لكل فترة (بيتزا) *', type: 'number', min: 1, max: 500, required: true },
+      { path: 'ops.slotMinutes', label: 'طول الفترة بالدقائق', type: 'select', options: ['5', '10', '15', '20', '30'] },
+      { path: 'ops.deliveryFee', label: 'رسوم التوصيل', type: 'number', min: 0, max: 1000 },
+      { path: 'secrets.pin', label: 'رمز PIN للإعدادات (4 إلى 6 أرقام، اختياري)', type: 'password', pin: true }
+    ] },
+    { id: 'ai', title: 'الذكاء الاصطناعي والخرائط (اختياري)', fields: [
+      { path: 'secrets.geminiKey', label: 'Gemini API key', type: 'password' },
+      { path: 'secrets.mapsKey', label: 'Google Maps API key', type: 'password' }
+    ] },
+    { id: 'finish', title: 'مراجعة وحفظ', finish: true }
+  ];
+
+  var CSS =
+    '.tpl-ov{position:fixed;inset:0;background:rgba(15,23,42,.6);z-index:999999;display:flex;align-items:center;justify-content:center;padding:12px;font-family:system-ui,Tahoma,sans-serif}' +
+    '.tpl-box{background:#fff;color:#111;width:min(520px,100%);max-height:92vh;overflow:auto;border-radius:16px;padding:18px;box-shadow:0 20px 60px rgba(0,0,0,.35);box-sizing:border-box}' +
+    '.tpl-top{display:flex;justify-content:space-between;align-items:center;font-size:16px}' +
+    '.tpl-x{border:0;background:#eee;border-radius:8px;width:34px;height:34px;cursor:pointer;font-size:16px}' +
+    '.tpl-prog{display:flex;gap:6px;margin:12px 0}' +
+    '.tpl-dot{flex:1;height:6px;border-radius:4px;background:#e5e7eb}' +
+    '.tpl-dot.on{background:#c62828}' +
+    '.tpl-box h3{margin:6px 0 12px;font-size:18px}' +
+    '.tpl-f{display:block;margin-bottom:10px}' +
+    '.tpl-f>span{display:block;font-size:13px;color:#374151;margin-bottom:4px}' +
+    '.tpl-f input,.tpl-f select{width:100%;box-sizing:border-box;padding:10px;border:1px solid #cbd5e1;border-radius:10px;font-size:15px;background:#fff;color:#111}' +
+    '.tpl-err{color:#b42318;font-size:12px;margin-top:3px}' +
+    '.tpl-nav{display:flex;gap:8px;margin-top:14px}' +
+    '.tpl-btn{flex:1;padding:12px;border:1px solid #cbd5e1;background:#f8fafc;color:#111;border-radius:12px;font-size:15px;cursor:pointer;margin-top:6px}' +
+    '.tpl-btn.tpl-pri{background:#c62828;color:#fff;border-color:#c62828}' +
+    '.tpl-btn:disabled{opacity:.6;cursor:wait}' +
+    '.tpl-status{font-size:14px;margin:10px 0;padding:8px;border-radius:8px;background:#f1f5f9}' +
+    '.tpl-sum{background:#f8fafc;border-radius:10px;padding:10px;font-size:14px;line-height:1.9}';
+
+  function h(tag, attrs, kids) {
+    var n = document.createElement(tag);
+    Object.keys(attrs || {}).forEach(function (k) {
+      var v = attrs[k];
+      if (v === null || v === undefined || v === false) return;
+      if (k === 'text') n.textContent = String(v);
+      else if (k.indexOf('on') === 0 && typeof v === 'function') n[k] = v;
+      else if (k === 'disabled') n.disabled = !!v;
+      else n.setAttribute(k, String(v));
+    });
+    (kids || []).forEach(function (c) {
+      if (c === null || c === undefined || c === false) return;
+      n.appendChild(typeof c === 'string' ? document.createTextNode(c) : c);
+    });
+    return n;
+  }
+
+  function fid(path) { return 'tpl_' + path.replace(/\./g, '_'); }
+  function draftOr(p) { return wz.draft[p] !== undefined ? wz.draft[p] : get(p, ''); }
+
+  function isUrl(s) {
+    try { var u = new URL(s); return u.protocol === 'https:' || u.protocol === 'http:'; } catch (e) { return false; }
+  }
+
+  function collect() {
+    var step = STEPS[wz.step];
+    if (!step || !step.fields) return;
+    step.fields.forEach(function (f) {
+      var inp = document.getElementById(fid(f.path));
+      if (inp) wz.draft[f.path] = inp.value;
+    });
+  }
+
+  function validateStep(step) {
+    var ok = true;
+    wz.errors = {};
+    step.fields.forEach(function (f) {
+      var v = wz.draft[f.path];
+      v = v == null ? '' : String(v).trim();
+      if (f.required && !v) { wz.errors[f.path] = 'هذا الحقل مطلوب'; ok = false; return; }
+      if (!v) return;
+      if (f.type === 'url' && !isUrl(v)) { wz.errors[f.path] = 'رابط غير صالح'; ok = false; }
+      if (f.type === 'number') {
+        var n = Number(v);
+        if (!isFinite(n) || n < f.min || n > f.max) { wz.errors[f.path] = 'قيمة بين ' + f.min + ' و ' + f.max; ok = false; }
+      }
+      if (f.pin && !/^\d{4,6}$/.test(v)) { wz.errors[f.path] = 'PIN يجب أن يكون من 4 إلى 6 أرقام'; ok = false; }
+    });
+    return ok;
+  }
+
+  function renderFields(box, step) {
+    step.fields.forEach(function (f) {
+      var cur = draftOr(f.path), input;
+      if (f.type === 'select') {
+        input = h('select', { id: fid(f.path) }, f.options.map(function (o) {
+          return h('option', { value: o, text: o });
+        }));
+        input.value = String(cur);
+      } else {
+        var ltr = f.type === 'url' || f.type === 'password' || f.type === 'number';
+        input = h('input', {
+          id: fid(f.path),
+          type: f.type === 'password' ? 'password' : (f.type === 'number' ? 'number' : (f.type === 'url' ? 'url' : 'text')),
+          dir: ltr ? 'ltr' : 'rtl',
+          autocomplete: 'off',
+          min: f.min,
+          max: f.max
+        });
+        input.value = cur == null ? '' : String(cur);
+      }
+      box.appendChild(h('label', { class: 'tpl-f' }, [
+        h('span', { text: f.label }),
+        input,
+        wz.errors[f.path] ? h('div', { class: 'tpl-err', text: wz.errors[f.path] }) : null
+      ]));
+    });
+
+    if (step.test) {
+      box.appendChild(h('button', {
+        class: 'tpl-btn', text: 'اختبار الاتصال',
+        onclick: function () {
+          collect();
+          var u = String(wz.draft['backend.supabaseUrl'] || '').trim();
+          var k = String(wz.draft['backend.supabaseAnonKey'] || '').trim();
+          wz.status = '⏳ جارٍ الاختبار...';
+          render();
+          testConnection(u, k).then(function (r) { wz.status = r.message; render(); });
+        }
+      }));
+    }
+  }
+
+  function renderFinish(box) {
+    var rows = [
+      ['المطعم', draftOr('restaurant.name') || '—'],
+      ['العملة', draftOr('locale.currency')],
+      ['الطاولات', draftOr('ops.tables')],
+      ['سعة الفرن / فترة', draftOr('ops.ovenPerSlot')],
+      ['السحابة', draftOr('backend.supabaseUrl') ? 'متصل (مزامنة سحابية)' : 'محلي فقط'],
+      ['PIN', draftOr('secrets.pin') ? 'مفعّل' : 'غير مفعّل'],
+      ['Gemini / Maps', (draftOr('secrets.geminiKey') ? 'Gemini ✔' : 'Gemini ✖') + ' · ' + (draftOr('secrets.mapsKey') ? 'Maps ✔' : 'Maps ✖')]
+    ];
+    box.appendChild(h('div', { class: 'tpl-sum' }, rows.map(function (r) {
+      return h('div', {}, [h('b', { text: r[0] + ': ' }), String(r[1])]);
+    })));
+    var btn = h('button', { class: 'tpl-btn tpl-pri', text: wz.busy ? 'جارٍ الحفظ...' : 'حفظ وتشغيل', onclick: finishSetup });
+    if (wz.busy) btn.disabled = true;
+    box.appendChild(btn);
+    if (wz.syncFailed) {
+      box.appendChild(h('button', { class: 'tpl-btn', text: 'متابعة بدون مزامنة', onclick: finishReady }));
+    }
+  }
+
+  function render() {
+    var box = document.getElementById('tpl-box');
+    if (!box) return;
+    var step = STEPS[wz.step];
+    box.textContent = '';
+    box.appendChild(h('div', { class: 'tpl-top' }, [
+      h('strong', { text: 'معالج الإعداد الأولي' }),
+      h('button', { class: 'tpl-x', text: '✕', title: 'إغلاق بدون حفظ', onclick: closeWizard })
+    ]));
+    var bar = h('div', { class: 'tpl-prog' });
+    STEPS.forEach(function (s, i) {
+      bar.appendChild(h('span', { class: 'tpl-dot' + (i <= wz.step ? ' on' : '') }));
+    });
+    box.appendChild(bar);
+    box.appendChild(h('h3', { text: (wz.step + 1) + ' / ' + STEPS.length + ' — ' + step.title }));
+    if (step.finish) renderFinish(box); else renderFields(box, step);
+    if (wz.status) box.appendChild(h('p', { class: 'tpl-status', text: wz.status }));
+    var nav = h('div', { class: 'tpl-nav' });
+    if (wz.step > 0) nav.appendChild(h('button', { class: 'tpl-btn', text: 'السابق', onclick: prev }));
+    if (!step.finish) nav.appendChild(h('button', { class: 'tpl-btn tpl-pri', text: 'التالي', onclick: next }));
+    box.appendChild(nav);
+  }
+
+  function next() {
+    collect();
+    if (!validateStep(STEPS[wz.step])) { render(); return; }
+    wz.step++;
+    wz.status = '';
+    render();
+  }
+
+  function prev() {
+    collect();
+    wz.step = Math.max(0, wz.step - 1);
+    wz.status = '';
+    wz.errors = {};
+    render();
+  }
+
+  function commit() {
+    STEPS.forEach(function (s) {
+      if (!s.fields) return;
+      s.fields.forEach(function (f) {
+        var v = wz.draft[f.path];
+        if (v !== undefined) set(f.path, v);
+      });
+    });
+  }
+
+  function finishReady() {
+    closeWizard();
+    emit('tpl:ready', { synced: false });
+  }
+
+  function finishSetup() {
+    if (wz.busy) return;
+    commit();
+    set('setupDone', true);
+    wz.busy = true;
+    wz.syncFailed = false;
+    wz.status = '⏳ جارٍ الحفظ...';
+    render();
+    push().then(function (r) {
+      wz.busy = false;
+      if (r.ok || r.reason === 'local') {
+        wz.status = '';
+        closeWizard();
+        emit('tpl:ready', { synced: !!r.ok });
+        return;
+      }
+      wz.syncFailed = true;
+      wz.status = '⚠️ تم الحفظ محلياً لكن المزامنة فشلت: ' + r.error;
+      render();
+    });
+  }
+
+  function injectCss() {
+    if (document.getElementById('tpl-css')) return;
+    var s = h('style', { id: 'tpl-css' });
+    s.textContent = CSS;
+    document.head.appendChild(s);
+  }
+
+  function openWizard() {
+    if (!document.body) {
+      document.addEventListener('DOMContentLoaded', openWizard, { once: true });
+      return;
+    }
+    if (wz.open) return;
+    if (!state) load();
+    wz.open = true;
+    wz.step = 0;
+    wz.draft = {};
+    wz.errors = {};
+    wz.status = '';
+    wz.busy = false;
+    wz.syncFailed = false;
+    injectCss();
+    document.body.appendChild(h('div', { id: 'tpl-wizard', class: 'tpl-ov', role: 'dialog', 'aria-modal': 'true' }, [
+      h('div', { id: 'tpl-box', class: 'tpl-box', dir: 'rtl' })
+    ]));
+    render();
+  }
+
+  function closeWizard() {
+    var ov = document.getElementById('tpl-wizard');
+    if (ov) ov.remove();
+    wz.open = false;
+  }
+
+  /* ---------- تعبئة من حزمة المطعم (Tenant Pack): الحقول الفارغة فقط ---------- */
+  function fillEmpty(target, src) {
+    Object.keys(src).forEach(function (k) {
+      if (!(k in target)) return;
+      var sv = src[k], tv = target[k];
+      if (isObj(tv) && isObj(sv)) { fillEmpty(tv, sv); return; }
+      if (isObj(tv)) return;
+      var empty = tv === '' || tv === 0 || tv === null || (Array.isArray(tv) && tv.length === 0);
+      if (!empty) return;
+      var v = coerce(sv, tv);
+      if (v !== undefined) target[k] = v;
+    });
+    return target;
+  }
+
+  function seed(pack) {
+    if (!state) load();
+    if (!isObj(pack)) return false;
+    ['restaurant', 'locale', 'ops', 'ui', 'backend'].forEach(function (s) {
+      if (isObj(pack[s]) && isObj(state[s])) fillEmpty(state[s], pack[s]);
+    });
+    if (pack.setupDone === true) state.setupDone = true;
+    save();
+    return true;
+  }
+
+  /* ---------- نقطة الدخول ---------- */
+  function init(opts) {
+    opts = opts || {};
+    load();
+    if (opts.autoPull && get('backend.supabaseUrl', '')) pull();
+    if (opts.autoWizard && !get('setupDone', false)) openWizard();
+    return state;
+  }
+
+  global.TemplateConfig = {
+    version: 2,
+    init: init,
+    load: load,
+    get: get,
+    set: set,
+    all: all,
+    isSetup: function () { return !!get('setupDone', false); },
+    openWizard: openWizard,
+    closeWizard: closeWizard,
+    pull: pull,
+    push: push,
+    testConnection: testConnection,
+    exportJSON: exportJSON,
+    importJSON: importJSON,
+    seed: seed,
+    onChange: function (fn) { global.addEventListener('tpl:change', fn); }
+  };
+})(typeof window !== 'undefined' ? window : globalThis);
+
+</script>
+<script>
+/* ---- tenant-buonapizza.js (inlined) ---- */
+/* =========================================================
+ * tenant-buonapizza.js — حزمة بيانات المطعم (Tenant Pack)
+ * خاصة بمطعم Buona Pizza فقط. أي مطعم آخر يضع ملف حزمته الخاص.
+ * يُحمَّل قبل index.html ويعبّئ الحقول الفارغة فقط (لا يكتب فوق إعدادات المستخدم).
+ * ========================================================= */
+(function () {
+  var PACK = {
+    setupDone: true,
+    restaurant: {
+      name: "Buona Pizza",
+      originAddress: "Pizzeria Buona Pizza, Lodi Vecchio LO, Italia",
+      reviewUrl: "https://search.google.com/local/writereview?placeid=ChIJDQv27rAsgUcRLVWzwXo5kzY",
+      homeQuery: "Via Libertà 29, 26855 Lodi Vecchio LO, Italia",
+      city: "Lodi Vecchio",
+      addressSuffix: "Lodi Vecchio LO, Italia",
+      lat: 45.3144,
+      lng: 9.4989
+    },
+    backend: { supabaseUrl: "https://jfgizazsjjgzyhqfngnl.supabase.co", supabaseAnonKey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpmZ2l6YXpzampnenlocWZuZ25sIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTE3ODI0ODEsImV4cCI6MjEwNzM1ODQ4MX0.Tp_bFfR-G55OaK5i3A0fi5gF6g7pc-a3LO_IDCpsuhE" },
+    ops: { streets: [
+ 'Via Libertà, Lodi Vecchio',
+ 'Via Roma, Lodi Vecchio',
+ 'Via IV Novembre, Lodi Vecchio',
+ 'Via Alessandro Manzoni, Lodi Vecchio',
+ 'Via Giuseppe Garibaldi, Lodi Vecchio',
+ 'Via Giuseppe Mazzini, Lodi Vecchio',
+ 'Via Dante Alighieri, Lodi Vecchio',
+ 'Via Giacomo Matteotti, Lodi Vecchio',
+ 'Via San Bassiano, Lodi Vecchio',
+ 'Via Guglielmo Marconi, Lodi Vecchio',
+ 'Via Enrico Fermi, Lodi Vecchio',
+ 'Via Leonardo da Vinci, Lodi Vecchio',
+ 'Via Sandro Pertini, Lodi Vecchio',
+ 'Via Aldo Moro, Lodi Vecchio',
+ 'Via Fratelli Cervi, Lodi Vecchio',
+ 'Via Papa Giovanni XXIII, Lodi Vecchio',
+ 'Via Alcide De Gasperi, Lodi Vecchio',
+ 'Via Vittorio Veneto, Lodi Vecchio',
+ 'Via Piave, Lodi Vecchio',
+ 'Via Monte Grappa, Lodi Vecchio',
+ 'Via Verdi, Lodi Vecchio',
+ 'Via Cavour, Lodi Vecchio',
+ 'Piazza Vittorio Emanuele II, Lodi Vecchio',
+ 'Piazza Santa Maria, Lodi Vecchio',
+ 'Viale Europa, Lodi Vecchio',
+ 'Via Lodi, Lodi Vecchio',
+ 'Via Pandina, Lodi Vecchio'
+] }
+  };
+  window.TEMPLATE_TENANT = { streetDb: [
+  { official: "Via Martiri di Cefalonia", aliases: ["cefalonia", "cifalonia", "de cefalonia", "martiri cefalonia", "martiri di cefalonia"] },
+  { official: "Via SS. Naborre e Felice", aliases: ["naborre", "san naborre", "felice", "naborre e felice", "ss naborre", "santi naborre"] },
+  { official: "Via Libertà", aliases: ["liberta", "libertà", "via liberta"] },
+  { official: "Via Roma", aliases: ["roma", "via roma"] },
+  { official: "Via Giuseppe Garibaldi", aliases: ["garibaldi", "giuseppe garibaldi", "g garibaldi"] },
+  { official: "Via San Rocco", aliases: ["san rocco", "s rocco", "s. rocco", "rocco"] },
+  { official: "Viale Europa", aliases: ["europa", "viale europa"] },
+  { official: "Via Giuseppe Verdi", aliases: ["verdi", "giuseppe verdi", "g verdi"] },
+  { official: "Via Dante Alighieri", aliases: ["dante", "dante alighieri", "alighieri"] },
+  { official: "Via Alessandro Manzoni", aliases: ["manzoni", "alessandro manzoni"] },
+  { official: "Via Giacomo Matteotti", aliases: ["matteotti", "giacomo matteotti"] },
+  { official: "Via Sandro Pertini", aliases: ["pertini", "sandro pertini"] },
+  { official: "Via Papa Giovanni XXIII", aliases: ["papa giovanni", "giovanni xxiii", "papa giovanni xxiii"] },
+  { official: "Via XXV Aprile", aliases: ["25 aprile", "xxv aprile", "aprile"] },
+  { official: "Via IV Novembre", aliases: ["4 novembre", "iv novembre", "novembre"] },
+  { official: "Via I Maggio", aliases: ["1 maggio", "primo maggio", "i maggio", "maggio"] },
+  { official: "Via II Giugno", aliases: ["2 giugno", "ii giugno", "giugno"] },
+  { official: "Via Grazia Deledda", aliases: ["deledda", "grazia deledda"] },
+  { official: "Via Fratelli Cervi", aliases: ["cervi", "fratelli cervi"] },
+  { official: "Via Rodolfo Morandi", aliases: ["morandi", "rodolfo morandi"] },
+  { official: "Via Achinti", aliases: ["achinti", "via achinti"] },
+  { official: "Via Martin Luther King", aliases: ["king", "martin luther king", "ml king"] },
+  { official: "Via Cascina Santa Maria", aliases: ["santa maria", "cascina santa maria", "s maria"] },
+  { official: "Via Cascina San Lorenzo", aliases: ["san lorenzo", "cascina san lorenzo", "s lorenzo"] },
+  { official: "Piazza Santa Maria", aliases: ["piazza santa maria", "pza santa maria"] },
+  { official: "Piazza Vittorio Emanuele", aliases: ["vittorio emanuele", "piazza vittorio"] }
+] };
+  if (window.TemplateConfig && window.TemplateConfig.seed) window.TemplateConfig.seed(PACK);
+})();
+
+</script>
+<script>
+/* ---- ui-engine.js (inlined) ---- */
+/* =========================================================
+ * ui-engine.js — المرحلة 3
+ * محرك واجهة الكمبيوتر والتابلت:
+ *  - أحجام البلاطات (compact / standard / large) من TemplateConfig.ui.tileSize
+ *  - تخطيط 3 أعمدة على الشاشات ≥1400px (منيو | تحكم | سلة) بنقل العقد نفسها
+ *    دون استنساخ، فتبقى كل المعالجات الحالية تعمل. لا يعمل في وضع pos64.
+ *  - ردّ فعل اللمس (وميض + اهتزاز) على البلاطات
+ *  - اختصارات الكيبورد: F1 بحث، Alt+C العميل، F3 الوقت، F4 نوع الطلب، F8 حفظ
+ *    (F2 و F9 و Ctrl+Enter تبقى لمعالجاتها الحالية)
+ * عند القيم الافتراضية لا يتغير شيء في الشاشة إلا التخطيط الجانبي على الشاشات العريضة.
+ * ========================================================= */
+(function (global) {
+  'use strict';
+  if (global.UIEngine) return;
+  var doc = global.document;
+
+  var TILE = {
+    compact:  { min: '56px', font: '12px', cols: 7 },
+    standard: { min: '72px', font: '14px', cols: 6 },
+    large:    { min: '96px', font: '16px', cols: 5 }
+  };
+  var WIDE_QUERY = '(min-width: 1400px)';
+
+  var CSS = [
+    '.bp-hit{animation:bp-hit .32s ease-out}',
+    '@keyframes bp-hit{0%{transform:scale(.93);box-shadow:0 0 0 0 rgba(22,163,74,.7)}60%{transform:scale(1.03);box-shadow:0 0 0 10px rgba(22,163,74,0)}100%{transform:none;box-shadow:none}}',
+    'html.bp-tile-compact .pk-tile,html.bp-tile-compact #bpmGrid .bpm-tile{min-height:var(--bp-tile-min)}',
+    'html.bp-tile-large .pk-tile,html.bp-tile-large #bpmGrid .bpm-tile{min-height:var(--bp-tile-min);font-size:var(--bp-tile-font)}',
+    '@media (min-width:1400px){',
+    'html.bp-3col #newTab>.grid{grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important}',
+    'html.bp-3col #newTab>.grid>section.panel:nth-child(2){display:grid!important;grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important;gap:14px;align-items:start;max-height:none!important;overflow:visible!important}',
+    'html.bp-3col .bp-col-cart{position:sticky;top:calc(var(--bp-hdr,60px) + 14px);min-width:0}',
+    'html.bp-3col .bp-col-mid{min-width:0}',
+    'html.bp-3col #bpmGrid{grid-template-columns:repeat(var(--bp-cols,6),minmax(0,1fr))!important}',
+    '}',
+    '@media (prefers-reduced-motion:reduce){.bp-hit{animation:none}}'
+  ].join('\n');
+
+  function cfg(path, fb) {
+    var c = global.TemplateConfig;
+    return c ? c.get(path, fb) : fb;
+  }
+  function byId(id) { return doc.getElementById(id); }
+  function q(sel) { return doc.querySelector(sel); }
+  function html() { return doc.documentElement; }
+  function isPos64() { return html().classList.contains('pos64'); }
+  function isWide() {
+    if (global.matchMedia) return global.matchMedia(WIDE_QUERY).matches;
+    return (global.innerWidth || 0) >= 1400;
+  }
+
+  function injectCss() {
+    if (byId('bp-ui-engine-css')) return;
+    var s = doc.createElement('style');
+    s.id = 'bp-ui-engine-css';
+    s.textContent = CSS;
+    doc.head.appendChild(s);
+  }
+
+  /* ---------- أحجام البلاطات ---------- */
+  function applyTiles() {
+    var size = cfg('ui.tileSize', 'standard');
+    if (!TILE[size]) size = 'standard';
+    var h = html();
+    Object.keys(TILE).forEach(function (s) {
+      var on = s === size;
+      if (h.classList.contains('bp-tile-' + s) !== on) h.classList.toggle('bp-tile-' + s, on);
+    });
+    h.style.setProperty('--bp-tile-min', TILE[size].min);
+    h.style.setProperty('--bp-tile-font', TILE[size].font);
+    h.style.setProperty('--bp-cols', String(TILE[size].cols));
+  }
+
+  /* ---------- التخطيط ثلاثي الأعمدة (نقل العقد دون استنساخ) ---------- */
+  var split = null; // { p2, kids, mid, cartCol }
+
+  function splitPanel() {
+    if (split) return true;
+    var p2 = q('#newTab > .grid > section.panel:nth-child(2)');
+    var cart = byId('cart'), save = byId('saveOrder');
+    if (!p2 || !cart || !save || !p2.contains(cart) || !p2.contains(save)) return false;
+    var kids = Array.prototype.slice.call(p2.children);
+    var idx = -1;
+    for (var i = 0; i < kids.length; i++) {
+      if (kids[i] === cart || kids[i].contains(cart)) { idx = i; break; }
+    }
+    if (idx < 1) return false;
+    var mid = doc.createElement('div'); mid.className = 'bp-col-mid';
+    var cartCol = doc.createElement('div'); cartCol.className = 'bp-col-cart';
+    kids.forEach(function (k, n) { (n < idx ? mid : cartCol).appendChild(k); });
+    p2.appendChild(mid);
+    p2.appendChild(cartCol);
+    if (!cartCol.contains(save)) {
+      // أمان: إن لم يقع زر الحفظ داخل عمود السلة نتراجع فوراً
+      kids.forEach(function (k) { p2.appendChild(k); });
+      mid.remove(); cartCol.remove();
+      return false;
+    }
+    split = { p2: p2, kids: kids, mid: mid, cartCol: cartCol };
+    return true;
+  }
+
+  function unsplitPanel() {
+    if (!split) return;
+    split.kids.forEach(function (k) { split.p2.appendChild(k); });
+    split.mid.remove();
+    split.cartCol.remove();
+    split = null;
+  }
+
+  function applyLayout() {
+    var want = !!cfg('ui.threeColumnDesktop', true) && isWide() && !isPos64();
+    var h = html();
+    if (want && splitPanel()) {
+      if (!h.classList.contains('bp-3col')) h.classList.add('bp-3col');
+    } else {
+      unsplitPanel();
+      if (h.classList.contains('bp-3col')) h.classList.remove('bp-3col');
+    }
+  }
+
+  /* ---------- ردّ فعل اللمس ---------- */
+  function onPointerDown(e) {
+    var t = e.target && e.target.closest ? e.target.closest('.bpm-tile, .pk-tile') : null;
+    if (!t) return;
+    t.classList.remove('bp-hit');
+    void t.offsetWidth; // إعادة تشغيل الحركة
+    t.classList.add('bp-hit');
+    if (global.navigator && typeof global.navigator.vibrate === 'function') global.navigator.vibrate(10);
+  }
+  function onAnimEnd(e) {
+    if (e.target && e.target.classList) e.target.classList.remove('bp-hit');
+  }
+
+  /* ---------- اختصارات الكيبورد ---------- */
+  function focusId(id) {
+    var el = byId(id);
+    if (!el) return false;
+    el.focus();
+    if (el.tagName === 'INPUT' && typeof el.select === 'function') el.select();
+    return true;
+  }
+
+  function cycleType() {
+    var sel = byId('type');
+    if (!sel || !sel.options || !sel.options.length) return false;
+    sel.selectedIndex = (sel.selectedIndex + 1) % sel.options.length;
+    sel.dispatchEvent(new global.Event('change', { bubbles: true }));
+    return true;
+  }
+
+  function onKey(e) {
+    if (!cfg('ui.keyboardShortcuts', true)) return;
+    var nt = byId('newTab');
+    if (!nt || nt.classList.contains('hidden')) return;
+    var k = e.key, handled = false;
+    if (k === 'F1') handled = focusId('ddQuickFilterInput');
+    else if (e.altKey && (e.code === 'KeyC' || k === 'c' || k === 'C')) handled = focusId('customer');
+    else if (k === 'F3') handled = focusId('deliveryHour');
+    else if (k === 'F4') handled = cycleType();
+    else if (k === 'F8') {
+      var s = byId('saveOrder');
+      if (s && !s.disabled) { s.click(); handled = true; }
+    }
+    if (handled) e.preventDefault();
+  }
+
+  /* ---------- الواجهة العامة ---------- */
+  function apply() { applyTiles(); applyLayout(); }
+
+  function set(key, value) {
+    var c = global.TemplateConfig;
+    if (!c) return false;
+    if (key === 'tileSize' && !TILE[value]) return false;
+    var ok = c.set('ui.' + key, value);
+    apply();
+    return ok;
+  }
+
+  var inited = false;
+  function init() {
+    if (inited || !doc || !doc.documentElement) return;
+    inited = true;
+    injectCss();
+    apply();
+    doc.addEventListener('pointerdown', onPointerDown, { passive: true });
+    doc.addEventListener('animationend', onAnimEnd);
+    doc.addEventListener('keydown', onKey);
+    global.addEventListener('tpl:change', apply);
+    if (global.matchMedia) {
+      var mq = global.matchMedia(WIDE_QUERY);
+      if (mq && mq.addEventListener) mq.addEventListener('change', applyLayout);
+    }
+    var timer = null;
+    global.addEventListener('resize', function () {
+      clearTimeout(timer);
+      timer = setTimeout(applyLayout, 150);
+    });
+    if (global.MutationObserver) {
+      new global.MutationObserver(applyLayout).observe(html(), { attributes: true, attributeFilter: ['class'] });
+    }
+  }
+
+  global.UIEngine = {
+    init: init,
+    apply: apply,
+    set: set,
+    get: function (k) { return cfg('ui.' + k); },
+    status: function () {
+      return {
+        tileSize: cfg('ui.tileSize', 'standard'),
+        threeCol: html().classList.contains('bp-3col'),
+        shortcuts: !!cfg('ui.keyboardShortcuts', true)
+      };
+    }
+  };
+
+  if (doc && doc.readyState === 'loading') doc.addEventListener('DOMContentLoaded', init);
+  else init();
+})(typeof window !== 'undefined' ? window : globalThis);
+
+</script>
+<script>
+/* ---- ops-engine.js (inlined) ---- */
+/* =========================================================
+ * ops-engine.js — المرحلة 4
+ * طبقة تشغيل فوق الشاشات الحالية (بدون إعادة كتابة أي دالة):
+ *  - فلترة الطلبات المفتوحة: الكل / توصيل / استلام / طاولة
+ *  - ترتيب: الافتراضي (كما كان) / حسب الموعد / حسب اسم الشارع
+ *  - خريطة الطاولات: مشغولة (طلب مفتوح) أو متاحة، والنقر على المشغولة يفتح طلبها
+ *  - قفل الحجز المزدوج: يمنع حفظ طلب جديد على طاولة مشغولة (إلا بوضع التعديل)
+ * الدوال الأصلية تُستبدل بمغلِّفات (wrappers) تستدعي الأصل، فلا يتغير السلوك الافتراضي.
+ * ========================================================= */
+(function (global) {
+  'use strict';
+  if (global.OpsEngine) return;
+  var doc = global.document;
+
+  var OPS = { filter: 'all', sort: 'default', rendering: false, inited: false };
+  var FILTERS = { all: null, delivery: 'Consegna', pickup: 'Asporto', table: 'Tavolo' };
+  var SORTS = ['default', 'due', 'street'];
+  var CLOSED = ['Completato', 'Annullato'];
+  var FL = [['all', 'Tutti'], ['delivery', '🛵 Consegna'], ['pickup', '🛍️ Asporto'], ['table', '🍽️ Tavolo']];
+  var SL = [['default', 'Standard'], ['due', '⏰ Orario'], ['street', '🛣️ Via']];
+
+  function cfg(p, fb) { return global.TemplateConfig ? global.TemplateConfig.get(p, fb) : fb; }
+  function allOrders() { return (typeof orders !== 'undefined' && Array.isArray(orders)) ? orders : []; }
+  function itemsOf(o) {
+    return (typeof itemsByOrder !== 'undefined' && itemsByOrder && typeof itemsByOrder.get === 'function') ? (itemsByOrder.get(o.id) || []) : [];
+  }
+  function statusOf(o) { return typeof normStatus === 'function' ? normStatus(o.status) : o.status; }
+  function isOpen(o) { return CLOSED.indexOf(statusOf(o)) < 0; }
+  function timeOf(o) {
+    try { return (typeof splitTimeAndNotes === 'function' && splitTimeAndNotes(o.notes).time) || ''; } catch (e) { return ''; }
+  }
+  function cartSize() { return (typeof cart !== 'undefined' && cart && cart.size) ? cart.size : 0; }
+
+  /* ---------- منطق الفرز والفلترة (نقي، قابل للاختبار) ---------- */
+  function streetOf(o) {
+    var a = String(o.address || '').split(',')[0].trim().toLowerCase().replace(/\s+/g, ' ');
+    a = a.replace(/\s+\d+[a-z]?$/, '');
+    return a || '~';
+  }
+  function dueKey(o) {
+    var t = timeOf(o);
+    return /^\d{1,2}:\d{2}$/.test(t) ? (t.length === 4 ? '0' + t : t) : '99:99';
+  }
+  function cmpDue(a, b) {
+    var ka = dueKey(a), kb = dueKey(b);
+    if (ka !== kb) return ka < kb ? -1 : 1;
+    var ca = String(a.created_at || ''), cb = String(b.created_at || '');
+    return ca === cb ? 0 : (ca < cb ? -1 : 1);
+  }
+  function cmpStreet(a, b) {
+    var sa = streetOf(a), sb = streetOf(b);
+    if (sa !== sb) {
+      if (sa === '~') return 1;
+      if (sb === '~') return -1;
+      return sa < sb ? -1 : 1;
+    }
+    return cmpDue(a, b);
+  }
+  function passFilter(o) {
+    var want = FILTERS[OPS.filter];
+    return !want || o.order_type === want;
+  }
+
+  /* ---------- المغلِّفات ---------- */
+  function wrapSort() {
+    var orig = global.sortOpenOrdersList;
+    if (typeof orig !== 'function' || orig.__ops) return;
+    var wrapped = function (list) {
+      if (!OPS.rendering) return orig.apply(this, arguments); // الاستدعاءات الأخرى تبقى كما هي
+      var arr = (list || []).filter(passFilter);
+      if (OPS.sort === 'street') return arr.slice().sort(cmpStreet);
+      if (OPS.sort === 'due') return arr.slice().sort(cmpDue);
+      return orig.call(this, arr);
+    };
+    wrapped.__ops = true;
+    global.sortOpenOrdersList = wrapped;
+  }
+
+  function wrapRender() {
+    var orig = global.renderOrders;
+    if (typeof orig !== 'function' || orig.__ops) return;
+    var wrapped = function () {
+      OPS.rendering = true;
+      try { return orig.apply(this, arguments); }
+      finally { OPS.rendering = false; renderChips(); renderTableMap(); }
+    };
+    wrapped.__ops = true;
+    global.renderOrders = wrapped;
+  }
+
+  /* ---------- قفل الحجز المزدوج ---------- */
+  function occupiedTables() {
+    var map = {};
+    allOrders().forEach(function (o) {
+      if (o.order_type !== 'Tavolo' || !isOpen(o)) return;
+      var t = String(o.table_no || '').trim();
+      if (t) map[t] = o;
+    });
+    return map;
+  }
+  function isEditing() {
+    var b = doc && doc.getElementById('editingOrderBanner');
+    if (b && !b.classList.contains('hidden')) return true;
+    return typeof editingOrderId !== 'undefined' && !!editingOrderId;
+  }
+  function saveBlockReason() {
+    var type = doc.getElementById('type'), tn = doc.getElementById('tableNo');
+    if (!type || type.value !== 'Tavolo' || isEditing()) return null;
+    var t = tn ? String(tn.value || '').trim() : '';
+    if (!t) return null;
+    return occupiedTables()[t]
+      ? '⛔ الطاولة #' + t + ' مشغولة بطلب مفتوح. افتحها من الخريطة لإضافة أصناف أو إغلاق حسابها.'
+      : null;
+  }
+  function wrapSave() {
+    var orig = global.doSaveOrder;
+    if (typeof orig !== 'function' || orig.__ops) return;
+    var wrapped = function () {
+      var reason = saveBlockReason();
+      if (reason) { global.alert(reason); return; }
+      return orig.apply(this, arguments);
+    };
+    wrapped.__ops = true;
+    global.doSaveOrder = wrapped;
+  }
+
+  /* ---------- شريط الفلترة والترتيب ---------- */
+  function setFilter(f) {
+    if (!Object.prototype.hasOwnProperty.call(FILTERS, f)) return false;
+    OPS.filter = f;
+    if (typeof global.renderOrders === 'function') global.renderOrders();
+    return true;
+  }
+  function setSort(s) {
+    if (SORTS.indexOf(s) < 0) return false;
+    OPS.sort = s;
+    if (typeof global.renderOrders === 'function') global.renderOrders();
+    return true;
+  }
+  function chipButton(label, active, onclick) {
+    var b = doc.createElement('button');
+    b.type = 'button';
+    b.className = 'ops-chip' + (active ? ' on' : '');
+    b.textContent = label;
+    b.onclick = onclick;
+    return b;
+  }
+  function renderChips() {
+    var anchor = doc && doc.getElementById('openOrders');
+    if (!anchor || !anchor.parentNode) return;
+    var bar = doc.getElementById('opsChips');
+    if (!bar) {
+      bar = doc.createElement('div');
+      bar.id = 'opsChips';
+      bar.className = 'ops-chips';
+      anchor.parentNode.insertBefore(bar, anchor);
+    }
+    bar.textContent = '';
+    FL.forEach(function (f) { bar.appendChild(chipButton(f[1], OPS.filter === f[0], function () { setFilter(f[0]); })); });
+    SL.forEach(function (s) { bar.appendChild(chipButton(s[1], OPS.sort === s[0], function () { setSort(s[0]); })); });
+  }
+
+  /* ---------- خريطة الطاولات ---------- */
+  function tableCount() {
+    var n = Number(cfg('ops.tables', 10));
+    return (n >= 1 && n <= 99) ? Math.floor(n) : 10;
+  }
+  function onTable(t, o) {
+    var input = doc.getElementById('tableNo');
+    if (o) {
+      if (cartSize() > 0 && !global.confirm('يوجد طلب جديد غير محفوظ، فتح طاولة #' + t + ' سيستبدله. متابعة؟')) return;
+      if (typeof global.startEditOrder === 'function') global.startEditOrder(o);
+      return;
+    }
+    if (input) {
+      input.value = String(t);
+      input.dispatchEvent(new global.Event('input', { bubbles: true }));
+    }
+  }
+  function renderTableMap() {
+    var sel = doc && doc.getElementById('tableSelector');
+    if (!sel) return;
+    var box = doc.getElementById('opsTableMap');
+    if (!box) {
+      box = doc.createElement('div');
+      box.id = 'opsTableMap';
+      box.className = 'ops-tmap';
+      sel.appendChild(box);
+    }
+    var show = sel.style.display === 'block';
+    box.style.display = show ? 'grid' : 'none';
+    box.textContent = '';
+    if (!show) return;
+    var occ = occupiedTables(), n = tableCount(), now = Date.now();
+    for (var t = 1; t <= n; t++) {
+      var o = occ[String(t)];
+      var b = doc.createElement('button');
+      b.type = 'button';
+      b.className = 'ops-tbl ' + (o ? 'occ' : 'free');
+      if (o) {
+        var mins = Math.max(0, Math.round((now - new Date(o.created_at).getTime()) / 60000));
+        b.textContent = '#' + t + ' · ' + itemsOf(o).length + ' · ' + mins + "'";
+      } else {
+        b.textContent = '#' + t;
+      }
+      b.onclick = (function (tt, oo) { return function () { onTable(tt, oo); }; })(t, o);
+      box.appendChild(b);
+    }
+  }
+
+  /* ---------- التشغيل ---------- */
+  var CSS_ID = 'ops-engine-css';
+  var CSS = [
+    '.ops-chips{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}',
+    '.ops-chip{border:1px solid #cbd5e1;background:#f8fafc;border-radius:999px;padding:6px 12px;font-size:13px;font-weight:700;cursor:pointer}',
+    '.ops-chip.on{background:#c62828;border-color:#c62828;color:#fff}',
+    '.ops-tmap{display:grid;grid-template-columns:repeat(auto-fill,minmax(78px,1fr));gap:6px;margin-top:8px}',
+    '.ops-tbl{border-radius:12px;padding:10px 4px;font-weight:800;font-size:13px;border:1px solid #cbd5e1;cursor:pointer}',
+    '.ops-tbl.free{background:#ecfdf3;border-color:#86efac;color:#166534}',
+    '.ops-tbl.occ{background:#fef2f2;border-color:#fca5a5;color:#991b1b}'
+  ].join('\n');
+
+  function injectCss() {
+    if (doc.getElementById(CSS_ID)) return;
+    var s = doc.createElement('style');
+    s.id = CSS_ID;
+    s.textContent = CSS;
+    doc.head.appendChild(s);
+  }
+
+  function init() {
+    if (OPS.inited || !doc || !doc.documentElement) return;
+    OPS.inited = true;
+    injectCss();
+    wrapSort();
+    wrapRender();
+    wrapSave();
+    doc.addEventListener('change', function (e) { if (e.target && e.target.id === 'type') renderTableMap(); });
+    doc.addEventListener('input', function (e) { if (e.target && e.target.id === 'tableNo') renderTableMap(); });
+    renderChips();
+    renderTableMap();
+  }
+
+  global.OpsEngine = {
+    init: init,
+    setFilter: setFilter,
+    setSort: setSort,
+    status: function () {
+      return { filter: OPS.filter, sort: OPS.sort, occupied: Object.keys(occupiedTables()) };
+    },
+    _t: { streetOf: streetOf, cmpStreet: cmpStreet, cmpDue: cmpDue, passFilter: passFilter,
+          occupiedTables: occupiedTables, saveBlockReason: saveBlockReason, tableCount: tableCount }
+  };
+
+  if (doc && doc.readyState === 'loading') doc.addEventListener('DOMContentLoaded', init);
+  else init();
+})(typeof window !== 'undefined' ? window : globalThis);
+
+</script>
+<script>
+/* ---- day-cash.js (inlined) ---- */
+/* =========================================================
+ * day-cash.js — المرحلة 5: تقفيل الدرج اليومي
+ * الرصيد المتوقع = الرصيد الافتتاحي + مبيعات نقدية − المصروفات
+ * الفرق = النقد المعدود − المتوقع  (موجب = زيادة، سالب = عجز)
+ * البيانات محلية لكل تاريخ (localStorage)، ولا تُرسل إلى السحابة.
+ * ========================================================= */
+(function (global) {
+  'use strict';
+  if (global.DayCash) return;
+  var KEY = 'bp_daycash_v1';
+
+  function read() {
+    try { return JSON.parse(global.localStorage.getItem(KEY) || '{}') || {}; } catch (e) { return {}; }
+  }
+  function write(all) {
+    try { global.localStorage.setItem(KEY, JSON.stringify(all)); } catch (e) { /* ignore */ }
+  }
+  function blank() { return { opening: 0, cashSales: 0, expenses: [], counted: null }; }
+  function money(v) { return Math.round(Number(v) * 100) / 100; }
+  function parseAmount(v) {
+    if (v === '' || v === null || v === undefined) return NaN;
+    var n = money(v);
+    return isFinite(n) && n >= 0 ? n : NaN;
+  }
+  function update(date, fn) {
+    var all = read();
+    var d = all[date] || blank();
+    fn(d);
+    all[date] = d;
+    write(all);
+    return d;
+  }
+
+  function get(date) {
+    var d = read()[date];
+    return d ? JSON.parse(JSON.stringify(d)) : blank();
+  }
+
+  function setOpening(date, v) {
+    var n = parseAmount(v); if (isNaN(n)) return false;
+    update(date, function (d) { d.opening = n; });
+    return true;
+  }
+  function setCashSales(date, v) {
+    var n = parseAmount(v); if (isNaN(n)) return false;
+    update(date, function (d) { d.cashSales = n; });
+    return true;
+  }
+  function setCounted(date, v) {
+    if (v === '' || v === null || v === undefined) {
+      update(date, function (d) { d.counted = null; });
+      return true;
+    }
+    var n = parseAmount(v); if (isNaN(n)) return false;
+    update(date, function (d) { d.counted = n; });
+    return true;
+  }
+  function addExpense(date, label, amount) {
+    var text = String(label || '').trim().slice(0, 80);
+    var n = parseAmount(amount);
+    if (!text || isNaN(n) || n <= 0) return false;
+    update(date, function (d) {
+      d.expenses.push({
+        id: Date.now().toString(36) + Math.random().toString(36).slice(2, 7),
+        label: text, amount: n, ts: new Date().toISOString()
+      });
+    });
+    return true;
+  }
+  function removeExpense(date, id) {
+    update(date, function (d) { d.expenses = d.expenses.filter(function (e) { return e.id !== id; }); });
+    return true;
+  }
+
+  function summary(date) {
+    var d = get(date);
+    var spent = money(d.expenses.reduce(function (s, e) { return s + e.amount; }, 0));
+    var expected = money(d.opening + d.cashSales - spent);
+    return {
+      date: date,
+      opening: d.opening,
+      cashSales: d.cashSales,
+      expenses: spent,
+      expected: expected,
+      counted: d.counted,
+      difference: d.counted === null ? null : money(d.counted - expected)
+    };
+  }
+
+  global.DayCash = {
+    get: get, setOpening: setOpening, setCashSales: setCashSales, setCounted: setCounted,
+    addExpense: addExpense, removeExpense: removeExpense, summary: summary
+  };
+})(typeof window !== 'undefined' ? window : globalThis);
+
+</script>
+<script>
+/* ---- settings-hub.js (inlined) ---- */
+/* =========================================================
+ * settings-hub.js — المرحلة 5: بطاقات الإعدادات الجديدة
+ *  - إعدادات مُطبّقة فعلياً فقط (لا حقول وهمية)
+ *  - تصدير / استيراد JSON للإعدادات (بدون أي مفاتيح أو أسرار)
+ *  - نسخ كود SQL التأسيسي كاملاً
+ *  - إعادة تشغيل معالج الإعداد
+ *  - تقفيل الدرج اليومي عبر DayCash
+ * ========================================================= */
+(function (global) {
+  'use strict';
+  if (global.SettingsHub) return;
+  var doc = global.document;
+  var SQL = "-- =========================================================\n-- Buona Pizza Template — المرحلة 1: جدول إعدادات المتجر\n-- نفّذ هذا الملف كاملاً في: Supabase → SQL Editor → Run\n-- آمن لإعادة التنفيذ (idempotent)\n-- =========================================================\n\ncreate table if not exists public.shop_settings (\n  id          text primary key default 'main',\n  data        jsonb not null default '{}'::jsonb check (jsonb_typeof(data) = 'object'),\n  updated_at  timestamptz not null default now()\n);\n\ncreate or replace function public.shop_settings_touch()\nreturns trigger\nlanguage plpgsql\nas $$\nbegin\n  new.updated_at := now();\n  return new;\nend;\n$$;\n\ndrop trigger if exists trg_shop_settings_touch on public.shop_settings;\ncreate trigger trg_shop_settings_touch\n  before update on public.shop_settings\n  for each row execute function public.shop_settings_touch();\n\ninsert into public.shop_settings (id, data)\nvalues ('main', '{}'::jsonb)\non conflict (id) do nothing;\n\nalter table public.shop_settings enable row level security;\n\ndrop policy if exists \"shop_settings_select\" on public.shop_settings;\ncreate policy \"shop_settings_select\" on public.shop_settings\n  for select to anon, authenticated\n  using (id = 'main');\n\ndrop policy if exists \"shop_settings_insert\" on public.shop_settings;\ncreate policy \"shop_settings_insert\" on public.shop_settings\n  for insert to anon, authenticated\n  with check (id = 'main');\n\ndrop policy if exists \"shop_settings_update\" on public.shop_settings;\ncreate policy \"shop_settings_update\" on public.shop_settings\n  for update to anon, authenticated\n  using (id = 'main')\n  with check (id = 'main');\n\ngrant select, insert, update on public.shop_settings to anon, authenticated;\n\n-- تحقق سريع بعد التنفيذ (يجب أن يرجع صفاً واحداً):\n-- select id, data, updated_at from public.shop_settings;\n";
+
+  // الإعدادات المعروضة: فقط ما يُقرأ فعلياً من الكود الحالي
+  var FIELDS = [
+    { group: 'التشغيل', path: 'ops.tables', label: 'عدد الطاولات', type: 'number', min: 1, max: 99, live: true },
+    { group: 'الواجهة', path: 'ui.tileSize', label: 'حجم البلاطات', type: 'select', options: ['compact', 'standard', 'large'], live: true },
+    { group: 'الواجهة', path: 'ui.threeColumnDesktop', label: 'تخطيط 3 أعمدة على الشاشات العريضة', type: 'bool', live: true },
+    { group: 'الواجهة', path: 'ui.keyboardShortcuts', label: 'اختصارات الكيبورد', type: 'bool', live: true },
+    { group: 'المطعم', path: 'restaurant.originAddress', label: 'عنوان الانطلاق (خرائط التوصيل)', type: 'text', live: false },
+    { group: 'المطعم', path: 'restaurant.reviewUrl', label: 'رابط تقييم Google (QR)', type: 'url', live: false }
+  ];
+
+  function h(tag, attrs, kids) {
+    var n = doc.createElement(tag);
+    Object.keys(attrs || {}).forEach(function (k) {
+      var v = attrs[k];
+      if (v === null || v === undefined || v === false) return;
+      if (k === 'text') n.textContent = String(v);
+      else if (k.indexOf('on') === 0 && typeof v === 'function') n[k] = v;
+      else n.setAttribute(k, String(v));
+    });
+    (kids || []).forEach(function (c) {
+      if (c === null || c === undefined || c === false) return;
+      n.appendChild(typeof c === 'string' ? doc.createTextNode(c) : c);
+    });
+    return n;
+  }
+  function pad(n) { return (n < 10 ? '0' : '') + n; }
+  function todayStr() {
+    var d = new Date();
+    return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+  }
+  function isUrl(s) {
+    try { var u = new URL(s); return u.protocol === 'https:' || u.protocol === 'http:'; } catch (e) { return false; }
+  }
+
+  /* ---------- الإعدادات ---------- */
+  function validate(f, raw) {
+    if (f.type === 'bool') return { ok: true, value: raw === true || raw === 'true' };
+    var s = String(raw === null || raw === undefined ? '' : raw).trim();
+    if (f.type === 'number') {
+      var n = Number(s);
+      if (s === '' || !isFinite(n) || n < f.min || n > f.max) return { ok: false, msg: 'قيمة بين ' + f.min + ' و ' + f.max };
+      return { ok: true, value: n };
+    }
+    if (f.type === 'select') {
+      if (f.options.indexOf(s) < 0) return { ok: false, msg: 'اختيار غير صالح' };
+      return { ok: true, value: s };
+    }
+    if (f.type === 'url' && s && !isUrl(s)) return { ok: false, msg: 'رابط غير صالح' };
+    return { ok: true, value: s };
+  }
+  function setField(f, raw) {
+    var v = validate(f, raw);
+    if (!v.ok) return v;
+    if (!global.TemplateConfig || !global.TemplateConfig.set(f.path, v.value)) return { ok: false, msg: 'تعذر الحفظ' };
+    if (f.path.indexOf('ui.') === 0 && global.UIEngine) global.UIEngine.apply();
+    return { ok: true, msg: f.live ? 'تم الحفظ' : 'تم الحفظ — يُطبَّق بعد إعادة التحميل' };
+  }
+
+  /* ---------- استيراد / تصدير / SQL ---------- */
+  function importText(text) {
+    try {
+      global.TemplateConfig.importJSON(text);
+      return { ok: true, msg: 'تم استيراد الإعدادات' };
+    } catch (e) {
+      return { ok: false, msg: 'ملف غير صالح: ' + ((e && e.message) || e) };
+    }
+  }
+  function exportFile() {
+    var text = global.TemplateConfig.exportJSON();
+    var blob = new global.Blob([text], { type: 'application/json' });
+    var url = global.URL.createObjectURL(blob);
+    var a = doc.createElement('a');
+    a.href = url;
+    a.download = 'buonapizza-template-' + todayStr() + '.json';
+    doc.body.appendChild(a);
+    a.click();
+    a.remove();
+    global.setTimeout(function () { global.URL.revokeObjectURL(url); }, 1000);
+  }
+  function copySql(cb) {
+    var nav = global.navigator;
+    if (nav && nav.clipboard && nav.clipboard.writeText) {
+      return nav.clipboard.writeText(SQL).then(function () { cb(true); }, function () { cb(false); });
+    }
+    var ta = doc.createElement('textarea');
+    ta.value = SQL;
+    doc.body.appendChild(ta);
+    ta.select();
+    var ok = false;
+    try { ok = doc.execCommand('copy'); } catch (e) { ok = false; }
+    ta.remove();
+    cb(ok);
+  }
+
+  /* ---------- بطاقة الدرج اليومي ---------- */
+  function dayCard() {
+    var card = h('div', { class: 'bp-set-card', id: 'bpDayCashCard' });
+    var date = todayStr();
+    var status = h('div', { class: 'bp-set-status' });
+    var summaryBox = h('div', { class: 'bp-set-summary' });
+    var listBox = h('div', {});
+    function say(ok, msg) { status.textContent = (ok ? '✅ ' : '❌ ') + msg; }
+    function money(x) { return x === null ? '—' : Number(x).toFixed(2) + ' €'; }
+
+    function refresh() {
+      var s = global.DayCash.summary(date);
+      summaryBox.textContent = '';
+      [
+        ['الرصيد الافتتاحي', money(s.opening)],
+        ['مبيعات نقدية', money(s.cashSales)],
+        ['المصروفات', money(s.expenses)],
+        ['المتوقع في الدرج', money(s.expected)],
+        ['النقد المعدود', money(s.counted)],
+        ['الفرق', s.difference === null ? '—' : (s.difference >= 0 ? '+' : '') + s.difference.toFixed(2) + ' €']
+      ].forEach(function (r) {
+        summaryBox.appendChild(h('div', {}, [h('b', { text: r[0] + ': ' }), r[1]]));
+      });
+      listBox.textContent = '';
+      global.DayCash.get(date).expenses.forEach(function (e) {
+        listBox.appendChild(h('div', { class: 'bp-set-row' }, [
+          h('span', { text: e.label + ' — ' + money(e.amount) }),
+          h('button', { type: 'button', text: 'حذف', onclick: function () { global.DayCash.removeExpense(date, e.id); refresh(); } })
+        ]));
+      });
+    }
+
+    function numInput(value, onchange) {
+      var i = h('input', { type: 'number', min: 0, step: '0.01', dir: 'ltr' });
+      i.value = value === null || value === undefined ? '' : String(value);
+      i.onchange = function () { onchange(i.value); refresh(); };
+      return i;
+    }
+    var cur = global.DayCash.get(date);
+    var labelIn = h('input', { type: 'text', placeholder: 'وصف المصروف' });
+    var amountIn = h('input', { type: 'number', min: 0, step: '0.01', placeholder: '0.00', dir: 'ltr' });
+
+    card.appendChild(h('h3', { text: '💵 تقفيل الدرج اليومي — ' + date }));
+    card.appendChild(h('label', { class: 'bp-set-row' }, [h('span', { text: 'الرصيد الافتتاحي' }),
+      numInput(cur.opening, function (v) { say(global.DayCash.setOpening(date, v), 'تم حفظ الرصيد الافتتاحي'); })]));
+    card.appendChild(h('label', { class: 'bp-set-row' }, [h('span', { text: 'مبيعات نقدية اليوم (أدخلها من الكاشير)' }),
+      numInput(cur.cashSales, function (v) { say(global.DayCash.setCashSales(date, v), 'تم حفظ المبيعات النقدية'); })]));
+    card.appendChild(h('label', { class: 'bp-set-row' }, [h('span', { text: 'النقد المعدود فعلياً في الدرج' }),
+      numInput(cur.counted, function (v) { say(global.DayCash.setCounted(date, v), 'تم حفظ النقد المعدود'); })]));
+    card.appendChild(h('div', { class: 'bp-set-row' }, [labelIn, amountIn,
+      h('button', { type: 'button', text: '+ مصروف', onclick: function () {
+        var ok = global.DayCash.addExpense(date, labelIn.value, amountIn.value);
+        if (ok) { labelIn.value = ''; amountIn.value = ''; }
+        say(ok, ok ? 'تم تسجيل المصروف' : 'أدخل وصفاً ومبلغاً صحيحاً');
+        refresh();
+      } })]));
+    card.appendChild(listBox);
+    card.appendChild(summaryBox);
+    card.appendChild(status);
+    refresh();
+    return card;
+  }
+
+  /* ---------- بطاقة القالب ---------- */
+  function templateCard() {
+    var card = h('div', { class: 'bp-set-card', id: 'bpTemplateCard' });
+    var status = h('div', { class: 'bp-set-status' });
+    function say(r) { status.textContent = (r.ok ? '✅ ' : '❌ ') + r.msg; }
+    var fileIn = h('input', { type: 'file', accept: 'application/json,.json', class: 'hidden' });
+    fileIn.onchange = function () {
+      var f = fileIn.files && fileIn.files[0];
+      if (!f) return;
+      var reader = new global.FileReader();
+      reader.onload = function () { say(importText(String(reader.result || ''))); };
+      reader.readAsText(f);
+    };
+
+    card.appendChild(h('h3', { text: '🧩 إعدادات القالب' }));
+    FIELDS.forEach(function (f) {
+      var cur = global.TemplateConfig.get(f.path, '');
+      var input;
+      if (f.type === 'bool') {
+        input = h('input', { type: 'checkbox' });
+        input.checked = !!cur;
+        input.onchange = function () { say(setField(f, input.checked)); };
+      } else if (f.type === 'select') {
+        input = h('select', {}, f.options.map(function (o) { return h('option', { value: o, text: o }); }));
+        input.value = String(cur);
+        input.onchange = function () { say(setField(f, input.value)); };
+      } else {
+        input = h('input', { type: f.type === 'number' ? 'number' : (f.type === 'url' ? 'url' : 'text'), dir: f.type === 'text' ? 'rtl' : 'ltr' });
+        input.value = String(cur === null || cur === undefined ? '' : cur);
+        input.onchange = function () { say(setField(f, input.value)); };
+      }
+      card.appendChild(h('label', { class: 'bp-set-row' }, [
+        h('span', { text: f.label + (f.live ? '' : ' (بعد إعادة التحميل)') }), input
+      ]));
+    });
+
+    card.appendChild(h('div', { class: 'bp-set-row' }, [
+      h('button', { type: 'button', text: '⬇ تصدير JSON', onclick: exportFile }),
+      h('button', { type: 'button', text: '⬆ استيراد JSON', onclick: function () { fileIn.click(); } }),
+      h('button', { type: 'button', text: '📋 نسخ SQL التأسيسي', onclick: function () {
+        copySql(function (ok) { say({ ok: ok, msg: ok ? 'تم نسخ كود SQL — الصقه في Supabase → SQL Editor' : 'تعذر النسخ تلقائياً' }); });
+      } }),
+      h('button', { type: 'button', text: '🧭 إعادة تشغيل المعالج', onclick: function () { global.TemplateConfig.openWizard(); } })
+    ]));
+    card.appendChild(fileIn);
+    card.appendChild(h('p', { class: 'muted', text: 'التصدير لا يتضمن مفاتيح API ولا رمز PIN.' }));
+    card.appendChild(status);
+    return card;
+  }
+
+  var inited = false;
+  function init() {
+    if (inited || !doc) return;
+    var tab = doc.getElementById('settingsTab');
+    if (!tab || doc.getElementById('bpTemplateCard')) return;
+    inited = true;
+    var grid = tab.querySelector('.bp-set-grid') || tab;
+    grid.appendChild(templateCard());
+    grid.appendChild(dayCard());
+  }
+
+  global.SettingsHub = {
+    init: init,
+    _t: { validate: validate, setField: setField, importText: importText, FIELDS: FIELDS, SQL: SQL }
+  };
+
+  if (doc && doc.readyState === 'loading') doc.addEventListener('DOMContentLoaded', init);
+  else init();
+})(typeof window !== 'undefined' ? window : globalThis);
+
+</script>
+<script>
+/* ---- device-role.js (inlined) ---- */
+/* =========================================================
+ * device-role.js — دور الجهاز (طابعة / متابعة)
+ *  - جهاز "طابعة": الطباعة التلقائية حسب زر الشريط العلوي (السلوك الافتراضي).
+ *  - جهاز "متابعة": الطباعة التلقائية مقفولة دائماً، ويظل متاحاً له الطباعة اليدوية.
+ * الدور محفوظ على هذا الجهاز فقط (localStorage) ولا يُزامَن مع السحابة.
+ * المصدر الوحيد للطباعة التلقائية هو الإعداد bp_auto_print، فنضبطه على '0' لجهاز المتابعة.
+ * ========================================================= */
+(function (global) {
+  'use strict';
+  if (global.DeviceRole) return;
+  var doc = global.document;
+  var ROLE_KEY = 'bp_device_role';
+  var AUTO_KEY = 'bp_auto_print';
+  var ROLES = {
+    printer: 'طابعة: يطبع تلقائياً',
+    view: 'متابعة: بدون طباعة تلقائية'
+  };
+
+  function storage() { try { return global.localStorage; } catch (e) { return null; } }
+
+  function get() {
+    var s = storage(), r = s ? s.getItem(ROLE_KEY) : null;
+    return ROLES[r] ? r : 'printer';
+  }
+
+  function enforce() {
+    if (get() !== 'view') return;
+    var s = storage();
+    if (s && s.getItem(AUTO_KEY) !== '0') s.setItem(AUTO_KEY, '0');
+    syncButton();
+  }
+
+  function toast(msg) {
+    if (typeof global.ssToast === 'function') { try { global.ssToast(msg); return; } catch (e) { /* fall through */ } }
+    if (typeof global.alert === 'function') global.alert(msg);
+  }
+
+  function syncButton() {
+    var b = doc && doc.getElementById('autoPrintToggleBtn');
+    if (!b) return;
+    b.title = get() === 'view' ? 'الطباعة التلقائية متوقفة على جهاز المتابعة' : 'Stampa automatica';
+  }
+
+  function set(role) {
+    if (!ROLES[role]) return false;
+    var s = storage();
+    if (!s) return false;
+    s.setItem(ROLE_KEY, role);
+    enforce();
+    syncButton();
+    return true;
+  }
+
+  // يمنع تشغيل زر الطباعة التلقائية من جهاز المتابعة قبل أن يصل الحدث للزر
+  function guardClick(e) {
+    if (get() !== 'view') return;
+    var t = e.target;
+    var btn = t && t.closest ? t.closest('#autoPrintToggleBtn') : null;
+    if (!btn) return;
+    e.preventDefault();
+    e.stopImmediatePropagation();
+    toast('هذا الجهاز للمتابعة فقط. الطباعة التلقائية تعمل من جهاز الطابعة.');
+  }
+
+  function card() {
+    var box = doc.createElement('div');
+    box.id = 'bpDeviceRoleCard';
+    box.className = 'bp-set-card';
+    var h3 = doc.createElement('h3');
+    h3.textContent = '🖥️ دور هذا الجهاز';
+    box.appendChild(h3);
+    var note = doc.createElement('p');
+    note.textContent = 'اختر "طابعة" على الجهاز المتصل بالطابعة فقط. الأجهزة الأخرى اختر لها "متابعة" حتى لا تطبع الفواتير مرتين أو تُطبع في جهاز بلا طابعة.';
+    box.appendChild(note);
+    var sel = doc.createElement('select');
+    Object.keys(ROLES).forEach(function (k) {
+      var o = doc.createElement('option');
+      o.value = k;
+      o.textContent = ROLES[k];
+      sel.appendChild(o);
+    });
+    sel.value = get();
+    sel.onchange = function () { set(sel.value); status.textContent = '✅ تم حفظ دور الجهاز'; };
+    var row = doc.createElement('label');
+    row.className = 'bp-set-row';
+    var span = doc.createElement('span');
+    span.textContent = 'دور هذا الجهاز';
+    row.appendChild(span);
+    row.appendChild(sel);
+    box.appendChild(row);
+    var status = doc.createElement('div');
+    status.className = 'bp-set-status';
+    box.appendChild(status);
+    return box;
+  }
+
+  var mounted = false;
+  function mount() {
+    if (mounted || !doc) return;
+    var tab = doc.getElementById('settingsTab');
+    if (!tab || doc.getElementById('bpDeviceRoleCard')) return;
+    mounted = true;
+    var grid = tab.querySelector('.bp-set-grid') || tab;
+    grid.appendChild(card());
+  }
+
+  var inited = false;
+  function init() {
+    if (inited || !doc || !doc.documentElement) return;
+    inited = true;
+    doc.addEventListener('click', guardClick, true);
+    enforce();
+    syncButton();
+    mount();
+    global.setInterval(function () { enforce(); mount(); }, 3000);
+  }
+
+  global.DeviceRole = {
+    init: init,
+    get: get,
+    set: set,
+    _t: { ROLES: ROLES, ROLE_KEY: ROLE_KEY, AUTO_KEY: AUTO_KEY, enforce: enforce }
+  };
+
+  if (doc && doc.readyState === 'loading') doc.addEventListener('DOMContentLoaded', init);
+  else init();
+})(typeof window !== 'undefined' ? window : globalThis);
+
+</script>
+<script>TemplateConfig.init({autoWizard:true});</script>
 <script id="bpSyncPkSchedule">
 function syncPkSchedule(){
   var g=function(id){return document.getElementById(id);};
@@ -18,8 +1638,7 @@ function syncPkSchedule(){
 }
 </script>
  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin/>
- <link rel="preconnect" href="https://jfgizazsjjgzyhqfngnl.supabase.co" crossorigin/>
- <script id="bpPauseHidden">(function(){var _si=window.setInterval;window.setInterval=function(fn,ms){var a=Array.prototype.slice.call(arguments,2);if(typeof fn!=='function')return _si.apply(window,arguments);return _si.apply(window,[function(){if(document.hidden&&!window.__bpPrinting)return;return fn.apply(this,arguments);},ms].concat(a));};})();</script>
+  <script id="bpPauseHidden">(function(){var _si=window.setInterval;window.setInterval=function(fn,ms){var a=Array.prototype.slice.call(arguments,2);if(typeof fn!=='function')return _si.apply(window,arguments);return _si.apply(window,[function(){if(document.hidden&&!window.__bpPrinting)return;return fn.apply(this,arguments);},ms].concat(a));};})();</script>
 <script id="bp-fast-timers">
  /* v-fast: alleggerisce i timer di interfaccia (UI ticks).
  - tick < 800ms (>=250ms) -> 800ms
@@ -4112,10 +5731,16 @@ function bpWarn(e){
  }catch(_){}
 }
 
-const FALLBACK_URL = 'https://jfgizazsjjgzyhqfngnl.supabase.co';
-const FALLBACK_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpmZ2l6YXpzampnenlocWZuZ25sIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTE3ODI0ODEsImV4cCI6MjEwNzM1ODQ4MX0.Tp_bFfR-G55OaK5i3A0fi5gF6g7pc-a3LO_IDCpsuhE';
-const PIZZERIA_ORIGIN = 'Pizzeria Buona Pizza, Lodi Vecchio LO, Italia';
-const GOOGLE_REVIEW_URL = 'https://search.google.com/local/writereview?placeid=ChIJDQv27rAsgUcRLVWzwXo5kzY';
+/* ---- Template settings: المصدر TemplateConfig (لا قيم ثابتة للمطعم هنا) ---- */
+const TPL_CFG = window.TemplateConfig || { get: function (p, fb) { return fb; } };
+const FALLBACK_URL = TPL_CFG.get('backend.supabaseUrl', '');
+const FALLBACK_KEY = TPL_CFG.get('backend.supabaseAnonKey', '');
+const PIZZERIA_ORIGIN = TPL_CFG.get('restaurant.originAddress', '');
+const GOOGLE_REVIEW_URL = TPL_CFG.get('restaurant.reviewUrl', '');
+const TPL_CITY = String(TPL_CFG.get('restaurant.city', '') || '').trim();
+const TPL_ADDR_SUFFIX = TPL_CFG.get('restaurant.addressSuffix', '') || '';
+const TPL_CITY_RE = new RegExp(TPL_CITY ? TPL_CITY.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\s+/g, '\\s*') : '(?!)', 'i');
+const TPL_CENTER = { lat: Number(TPL_CFG.get('restaurant.lat', 0)) || 0, lng: Number(TPL_CFG.get('restaurant.lng', 0)) || 0 };
 
 const COMMON_INGREDIENTS = [
  'Pomodoro','Mozzarella','Mozzarella di Bufala','Salame piccante','Prosciutto cotto','Prosciutto crudo',
@@ -4124,35 +5749,7 @@ const COMMON_INGREDIENTS = [
  'Insalata','Salsa piccante','Salsa yogurt','Maionese','Ketchup','Uova','Pollo','Pancetta','Melanzane','Zucchine','Bresaola','Gamberetti','Salmone','Panna','Scamorza','Brie','Speck','Ben cotta','Tagliata'
 ];
 
-const DEFAULT_LODI_VECCHIO_STREETS = [
- 'Via Libertà, Lodi Vecchio',
- 'Via Roma, Lodi Vecchio',
- 'Via IV Novembre, Lodi Vecchio',
- 'Via Alessandro Manzoni, Lodi Vecchio',
- 'Via Giuseppe Garibaldi, Lodi Vecchio',
- 'Via Giuseppe Mazzini, Lodi Vecchio',
- 'Via Dante Alighieri, Lodi Vecchio',
- 'Via Giacomo Matteotti, Lodi Vecchio',
- 'Via San Bassiano, Lodi Vecchio',
- 'Via Guglielmo Marconi, Lodi Vecchio',
- 'Via Enrico Fermi, Lodi Vecchio',
- 'Via Leonardo da Vinci, Lodi Vecchio',
- 'Via Sandro Pertini, Lodi Vecchio',
- 'Via Aldo Moro, Lodi Vecchio',
- 'Via Fratelli Cervi, Lodi Vecchio',
- 'Via Papa Giovanni XXIII, Lodi Vecchio',
- 'Via Alcide De Gasperi, Lodi Vecchio',
- 'Via Vittorio Veneto, Lodi Vecchio',
- 'Via Piave, Lodi Vecchio',
- 'Via Monte Grappa, Lodi Vecchio',
- 'Via Verdi, Lodi Vecchio',
- 'Via Cavour, Lodi Vecchio',
- 'Piazza Vittorio Emanuele II, Lodi Vecchio',
- 'Piazza Santa Maria, Lodi Vecchio',
- 'Viale Europa, Lodi Vecchio',
- 'Via Lodi, Lodi Vecchio',
- 'Via Pandina, Lodi Vecchio'
-];
+const DEFAULT_LODI_VECCHIO_STREETS = (TPL_CFG.get('ops.streets', []) || []).slice();
 
 let sb=null, allMenu=[], cart=new Map(), category='Tutti', adminCategory='Tutti', orders=[], itemsByOrder=new Map(), statusFilter='Tutti';
 let openOrdersSortMode = 'time';
@@ -5686,7 +7283,7 @@ function upsertCustomerProfile(name, phone, address, incrementCount=false, lastO
  if(cAddr.length > 4){
  knownStreets.add(cAddr);
  let baseSt = extractStreetBaseName(cAddr);
- if(baseSt.length > 5) knownStreets.add(baseSt + ', Lodi Vecchio');
+ if(baseSt.length > 5) knownStreets.add(baseSt + ', ' + TPL_CITY);
  }
 
  let phoneKey = normalizePhoneKey(cPhone);
@@ -7928,6 +9525,7 @@ function connect(){
  return false;
  }
  try{
+ if(!c.url || !c.key){ setMsg('loginMsg','أدخل رابط ومفتاح Supabase أولاً (الإعدادات ← قاعدة البيانات)','error'); return false; }
  sb = window.supabase.createClient(c.url, c.key);
  return true;
  }catch(e){
@@ -24427,7 +26025,7 @@ function vsDoc(d, VS, title){
  d.p(' EXTRA: BACON', {b: 1});
  d.p(fmtWhen(new Date()), {a: 'c', f: 'B'});
  d.p('Larghezza: ' + d.cols + ' colonne - ' + String(cfg.cp).toUpperCase(), {a: 'c', f: 'B'});
- if(cfg.qr && typeof GOOGLE_REVIEW_URL !== 'undefined'){ d.blank(1); d.qrCode(GOOGLE_REVIEW_URL, d.cols <= 32 ? 5 : 6); }
+ if(cfg.qr && typeof GOOGLE_REVIEW_URL !== 'undefined' && GOOGLE_REVIEW_URL){ d.blank(1); d.qrCode(GOOGLE_REVIEW_URL, d.cols <= 32 ? 5 : 6); }
  d.cut();
  return d;
  }
@@ -27363,34 +28961,7 @@ body[data-role="driver"] [data-set-status]{display:none!important}
 </script>
 <script id="bpStreetsDb">
 /* Dizionario strade Lodi Vecchio + alias/errori comuni (modificabile: aggiungi voci qui) */
-const LODI_VECCHIO_STREETS_DB = [
-  { official: "Via Martiri di Cefalonia", aliases: ["cefalonia", "cifalonia", "de cefalonia", "martiri cefalonia", "martiri di cefalonia"] },
-  { official: "Via SS. Naborre e Felice", aliases: ["naborre", "san naborre", "felice", "naborre e felice", "ss naborre", "santi naborre"] },
-  { official: "Via Libertà", aliases: ["liberta", "libertà", "via liberta"] },
-  { official: "Via Roma", aliases: ["roma", "via roma"] },
-  { official: "Via Giuseppe Garibaldi", aliases: ["garibaldi", "giuseppe garibaldi", "g garibaldi"] },
-  { official: "Via San Rocco", aliases: ["san rocco", "s rocco", "s. rocco", "rocco"] },
-  { official: "Viale Europa", aliases: ["europa", "viale europa"] },
-  { official: "Via Giuseppe Verdi", aliases: ["verdi", "giuseppe verdi", "g verdi"] },
-  { official: "Via Dante Alighieri", aliases: ["dante", "dante alighieri", "alighieri"] },
-  { official: "Via Alessandro Manzoni", aliases: ["manzoni", "alessandro manzoni"] },
-  { official: "Via Giacomo Matteotti", aliases: ["matteotti", "giacomo matteotti"] },
-  { official: "Via Sandro Pertini", aliases: ["pertini", "sandro pertini"] },
-  { official: "Via Papa Giovanni XXIII", aliases: ["papa giovanni", "giovanni xxiii", "papa giovanni xxiii"] },
-  { official: "Via XXV Aprile", aliases: ["25 aprile", "xxv aprile", "aprile"] },
-  { official: "Via IV Novembre", aliases: ["4 novembre", "iv novembre", "novembre"] },
-  { official: "Via I Maggio", aliases: ["1 maggio", "primo maggio", "i maggio", "maggio"] },
-  { official: "Via II Giugno", aliases: ["2 giugno", "ii giugno", "giugno"] },
-  { official: "Via Grazia Deledda", aliases: ["deledda", "grazia deledda"] },
-  { official: "Via Fratelli Cervi", aliases: ["cervi", "fratelli cervi"] },
-  { official: "Via Rodolfo Morandi", aliases: ["morandi", "rodolfo morandi"] },
-  { official: "Via Achinti", aliases: ["achinti", "via achinti"] },
-  { official: "Via Martin Luther King", aliases: ["king", "martin luther king", "ml king"] },
-  { official: "Via Cascina Santa Maria", aliases: ["santa maria", "cascina santa maria", "s maria"] },
-  { official: "Via Cascina San Lorenzo", aliases: ["san lorenzo", "cascina san lorenzo", "s lorenzo"] },
-  { official: "Piazza Santa Maria", aliases: ["piazza santa maria", "pza santa maria"] },
-  { official: "Piazza Vittorio Emanuele", aliases: ["vittorio emanuele", "piazza vittorio"] }
-];
+const LODI_VECCHIO_STREETS_DB = (window.TEMPLATE_TENANT && window.TEMPLATE_TENANT.streetDb) || [];
 
 /* Distanza di Levenshtein */
 function getLevenshteinDistance(a, b) {
@@ -27616,8 +29187,8 @@ html.bp-shut #bpGqBadge{display:none!important}
 /* Google Maps: suggerimenti via (locali con tolleranza errori + Google), controllo indirizzo (comune + max 3 km), ottimizzazione giro. Chiave in localStorage 'bp_gmaps_key' */
 (function(){
  if(window.__bpGeo) return; window.__bpGeo = 1;
- var LS = 'bp_gmaps_key', CK = 'bp_geo_cache_v3', SK = 'bp_streets_ok', MAXKM = 3, RADIUS = 5, PLACES_KM = 3, C = {lat: 45.3144, lng: 9.4989};
- var HOME_Q = 'Via Libertà 29, 26855 Lodi Vecchio LO, Italia';
+ var LS = 'bp_gmaps_key', CK = 'bp_geo_cache_v3', SK = 'bp_streets_ok', MAXKM = 3, RADIUS = 5, PLACES_KM = 3, C = {lat: TPL_CENTER.lat, lng: TPL_CENTER.lng};
+ var HOME_Q = TPL_CFG.get('restaurant.homeQuery', '') || PIZZERIA_ORIGIN;
  /* Alias -> nome ufficiale: generati dal dizionario LODI_VECCHIO_STREETS_DB */
  var DB = (typeof LODI_VECCHIO_STREETS_DB !== 'undefined') ? LODI_VECCHIO_STREETS_DB : [];
  var ALIASES = {}; DB.forEach(function(e){ e.aliases.forEach(function(x){ ALIASES[x] = e.official; }); });
@@ -27639,7 +29210,7 @@ html.bp-shut #bpGqBadge{display:none!important}
   var x = Math.sin(dLa / 2) * Math.sin(dLa / 2) + Math.cos(a.lat * r) * Math.cos(b.lat * r) * Math.sin(dLo / 2) * Math.sin(dLo / 2);
   return 2 * R * Math.asin(Math.sqrt(x));
  }
- function normAddr(a){ try{ return normalizeDeliveryAddress(a); }catch(e){ return a + ', Lodi Vecchio LO, Italia'; } }
+ function normAddr(a){ try{ return normalizeDeliveryAddress(a); }catch(e){ return a + ', ' + TPL_ADDR_SUFFIX; } }
  function short(f){ return String(f || '').replace(/,\s*Italia\s*$/i, ''); }
 
  /* ---------- Testo: normalizzazione e somiglianza (Levenshtein) ---------- */
@@ -27684,7 +29255,7 @@ function matchIn(q, names, aliases){
   var m = {};
   function add(raw){
    raw = String(raw || ''); var parts = raw.split(',');
-   if(parts.length > 1 && !/lodi\s*vecchio/i.test(raw) && !/^\s*\d/.test(parts[1]) && !/^\s*(lo|italia)\b/i.test(parts[1])) return;
+   if(parts.length > 1 && !TPL_CITY_RE.test(raw) && !/^\s*\d/.test(parts[1]) && !/^\s*(lo|italia)\b/i.test(parts[1])) return;
    var n = parts[0].replace(/\s+\d+.*$/, '').trim();
    if(n.length < 4 || !/^(via|viale|piazza|piazzale|corso|vicolo|largo|strada|localit)/i.test(n)) return;
    var k = nz(n); if(!m[k]) m[k] = n;
@@ -27712,7 +29283,7 @@ function matchIn(q, names, aliases){
  function learn(res){
   var ch = false;
   (res || []).forEach(function(r){
-   if(r.street && r.route && /lodi\s*vecchio/i.test(r.comune || '') && !learned.some(function(x){ return nz(x) === nz(r.route); })){ learned.push(r.route); ch = true; }
+   if(r.street && r.route && TPL_CITY_RE.test(r.comune || '') && !learned.some(function(x){ return nz(x) === nz(r.route); })){ learned.push(r.route); ch = true; }
   });
   if(ch){ learned = learned.slice(-300); try{ localStorage.setItem(SK, JSON.stringify(learned)); }catch(e){} }
  }
@@ -27736,10 +29307,10 @@ function matchIn(q, names, aliases){
   var q = rawQuery ? addr : normAddr(addr), ck = q.toLowerCase();
   if(cache[ck]) return cache[ck];
   var k = key(); if(!k) throw new Error('nokey');
-  var loc = !rawQuery && /lodi\s*vecchio/i.test(q);
+  var loc = !rawQuery && TPL_CITY_RE.test(q);
   async function call(comp){
    var u = 'https://maps.googleapis.com/maps/api/geocode/json?address=' + encodeURIComponent(q) + '&components=' + encodeURIComponent(comp) + '&language=it&region=it'
-    + '&bounds=' + (C.lat - 0.08) + ',' + (C.lng - 0.12) + '|' + (C.lat + 0.08) + ',' + (C.lng + 0.12) + '&key=' + encodeURIComponent(k);
+    + (C.lat || C.lng ? '&bounds=' + (C.lat - 0.08) + ',' + (C.lng - 0.12) + '|' + (C.lat + 0.08) + ',' + (C.lng + 0.12) : '') + '&key=' + encodeURIComponent(k);
    if(!window.bpGq.take('geocoding')) throw new Error(window.bpGq.MSG); /* contatore + circuit breaker */
    var j = await (await fetch(u)).json();
    if(j.status !== 'OK' && j.status !== 'ZERO_RESULTS') throw new Error(j.status + (j.error_message ? ': ' + j.error_message : ''));
@@ -27782,7 +29353,7 @@ function matchIn(q, names, aliases){
   secs = {engine: [], local: [], fuzzy: [], google: []};
   trustedCore = core(nz(e.official)); lastVal = '';
   if(e.civic){
-   inp.value = e.official + ' ' + e.civic + ', Lodi Vecchio';
+   inp.value = e.official + ' ' + e.civic + ', ' + TPL_CITY;
    try{ inp.dispatchEvent(new Event('change', {bubbles: true})); }catch(x){ setTimeout(check, 60); } /* il listener 'change' avvia geocoding + distanza */
   } else {
    inp.value = e.official + ' '; inp.focus(); try{ inp.setSelectionRange(inp.value.length, inp.value.length); }catch(x){}
@@ -27835,11 +29406,11 @@ function matchIn(q, names, aliases){
    if(!window.bpGq.take('places')) return; /* quota esaurita: restano i suggerimenti locali */
    var r = await fetch('https://places.googleapis.com/v1/places:autocomplete', {method: 'POST', headers: {'Content-Type': 'application/json', 'X-Goog-Api-Key': key()}, body: JSON.stringify(body)});
    var j = await r.json(); if(tok !== tokS) return;
-   var items = (j.suggestions || []).filter(function(s){ return s.placePrediction && s.placePrediction.text && /lodi\s*vecchio/i.test(s.placePrediction.text.text); }).map(function(s){ return short(s.placePrediction.text.text).split(',')[0]; });
+   var items = (j.suggestions || []).filter(function(s){ return s.placePrediction && s.placePrediction.text && TPL_CITY_RE.test(s.placePrediction.text.text); }).map(function(s){ return short(s.placePrediction.text.text).split(',')[0]; });
    secs.google = dedupe(items, secs.local.concat(secs.engine.map(function(x){ return x.official; }))).slice(0, 5); paint();
    if(!secs.google.length && !secs.local.length && !secs.engine.length){
     var res = await geocode(sp.name); if(tok !== tokS) return;
-    var routes = res.filter(function(x){ return x.street && x.route && /lodi\s*vecchio/i.test(x.comune || ''); }).map(function(x){ return x.route; });
+    var routes = res.filter(function(x){ return x.street && x.route && TPL_CITY_RE.test(x.comune || ''); }).map(function(x){ return x.route; });
     secs.fuzzy = dedupe(routes, secs.local).slice(0, 4); paint();
    }
   }catch(e){ console.warn('[bp] suggerimenti', e); }
@@ -27848,7 +29419,7 @@ function matchIn(q, names, aliases){
   var inp = $('address'); if(!inp) return; var v = inp.value; var tok = ++tokS;
   var eng = [], rest = v.indexOf(',') >= 0 ? v.slice(v.indexOf(',') + 1) : '';
   if(!rest || /lodi\s*vecchio|26855|^\s*lo\s*$/i.test(rest)){ /* se è indicata un'altra città, niente motore locale */
-   try{ eng = resolveLodiVecchioStreets(v, 1).map(function(r){ return {official: r.officialStreet, civic: r.civic, exact: r.exact, label: r.officialStreet + (r.civic ? ' ' + r.civic : '') + ', Lodi Vecchio'}; }); }catch(e){ eng = []; }
+   try{ eng = resolveLodiVecchioStreets(v, 1).map(function(r){ return {official: r.officialStreet, civic: r.civic, exact: r.exact, label: r.officialStreet + (r.civic ? ' ' + r.civic : '') + ', ' + TPL_CITY}; }); }catch(e){ eng = []; }
   }
   var skip = eng.length ? nz(eng[0].official) : '';
   secs = {engine: eng, local: localMatches(v).map(function(m){ return m.n; }).filter(function(n){ return nz(n) !== skip; }), fuzzy: [], google: []}; paint();
@@ -27870,7 +29441,7 @@ function matchIn(q, names, aliases){
  }
  function evaluate(c, h){
   var km = hav(h, c), warn = [];
-  if(!/lodi\s*vecchio/i.test(c.comune || '')) warn.push('fuori da Lodi Vecchio' + (c.comune ? ' (Comune: ' + esc2(c.comune) + ')' : ''));
+  if(!TPL_CITY_RE.test(c.comune || '')) warn.push('fuori da Lodi Vecchio' + (c.comune ? ' (Comune: ' + esc2(c.comune) + ')' : ''));
   if(km > MAXKM) warn.push('a ' + km.toFixed(1).replace('.', ',') + ' km dalla pizzeria (oltre ' + MAXKM + ' km)');
   return {km: km, warn: warn};
  }
