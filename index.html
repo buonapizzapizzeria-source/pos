@@ -30582,5 +30582,118 @@ function matchIn(q, names, aliases){
 })(typeof window !== 'undefined' ? window : globalThis);
 
 </script>
+<!-- ===== Header v2: layout moderno e pulito (Aggiorna / Strumenti / griglia icone) ===== -->
+<style id="bpHdrModern">
+/* 1) il pallino-freccia non va più sull'angolo di .brand (dove c'è Aggiorna): resta sull'angolo del logo */
+html:not(.bp-shut) header .brand::after{inset-inline-end:auto!important;inset-inline-start:22px!important;bottom:-3px!important}
+#bpCollapseBtn{display:none}
+#bpSyncBtn small:empty{display:none}
+#bpSyncBtn .ic{display:inline-flex}
+#bpSyncBtn .ic svg{width:17px;height:17px}
+
+/* 2) icone che risultavano vuote (font-size:0 senza ::before) */
+#resOpenBtn::before{content:'🍽️'}
+#bpAccBtn::before{content:'🛡️'}
+#resOpenBtn{position:relative}
+#resOpenBtn .rb{position:absolute;top:-5px;inset-inline-end:-5px;margin:0!important;min-width:17px;padding:0 5px!important;font-size:11px!important;line-height:17px;text-align:center;border:2px solid var(--bp-card,#fff)}
+
+@media (max-width:899px){
+ /* header = griglia a 2 righe: [logo · Aggiorna ········ Strumenti]  /  [griglia strumenti] */
+ html.pos64:not(.bp-shut) header{
+  display:grid!important;
+  grid-template-columns:auto auto minmax(0,1fr) auto;
+  grid-template-areas:"logo sync . collapse" "tools tools tools tools";
+  align-items:center;column-gap:10px!important;row-gap:10px!important;
+  padding:10px 12px 12px!important;
+  border-radius:0 0 24px 24px;
+  box-shadow:0 12px 26px -16px rgba(120,60,20,.45);
+ }
+ html.pos64:not(.bp-shut) header .brand{display:contents!important}
+ html.pos64 header .brand::after{display:none!important}
+ html.pos64:not(.bp-shut) header .logo{grid-area:logo;align-self:center}
+
+ /* pulsante Aggiorna */
+ html.pos64:not(.bp-shut) header #bpSyncBtn{
+  grid-area:sync;justify-self:start;margin:0!important;
+  height:42px;min-height:42px;padding:0 14px 0 12px!important;gap:7px!important;
+  border:0!important;border-radius:999px!important;
+  background:var(--bp-card,#fff)!important;color:var(--bp-ink,#2b1a12)!important;
+  box-shadow:inset 0 0 0 1.5px var(--bp-line,#ecdcbc),0 2px 6px rgba(120,60,20,.10)!important;
+  font-size:13px!important;font-weight:800!important;line-height:1!important;font-family:inherit;
+ }
+ html.pos64 header #bpSyncBtn small{font-size:12px;font-weight:700;opacity:.6;font-variant-numeric:tabular-nums}
+ html.pos64 header #bpSyncBtn .md{width:9px;height:9px;box-shadow:0 0 0 3px rgba(18,183,106,.16)}
+ html.pos64 header #bpSyncBtn:not(.auto) .md{box-shadow:none}
+
+ /* pulsante Strumenti (chiudi barra) */
+ html.pos64:not(.bp-shut) header #bpCollapseBtn{
+  display:inline-flex;grid-area:collapse;justify-self:end;align-items:center;gap:6px;
+  height:42px;min-height:42px;min-width:0;width:auto;margin:0;padding:0 14px 0 10px;
+  border:0;border-radius:999px;color:#fff;font:800 12px/1 inherit;font-family:inherit;letter-spacing:.3px;
+  background:linear-gradient(135deg,var(--bp-brand,#c8281e),var(--bp-brand2,#9f1d14));
+  box-shadow:0 6px 14px rgba(200,40,30,.28);-webkit-tap-highlight-color:transparent;
+ }
+ html.pos64 header #bpCollapseBtn:active{transform:scale(.95)}
+ html.pos64 header #bpCollapseBtn svg{width:16px;height:16px;flex:0 0 auto}
+
+ /* griglia strumenti: righe bilanciate, tasti uniformi, mai fuori schermo */
+ html.pos64:not(.bp-shut) header #bpHdrR{
+  grid-area:tools;display:block!important;width:100%;min-width:0;margin:0!important;padding:0;overflow:visible!important;
+ }
+ html.pos64:not(.bp-shut) header #userBar{
+  display:grid!important;grid-template-columns:repeat(var(--bpc,8),minmax(0,1fr))!important;
+  gap:8px!important;width:100%!important;max-width:560px!important;margin:0 auto;flex:none!important;
+ }
+ html.pos64:not(.bp-shut) header #userBar button[type=button]{
+  width:100%!important;min-width:0!important;height:auto!important;min-height:0!important;
+  aspect-ratio:1/1;max-height:52px;padding:0!important;position:relative;
+  border-radius:14px!important;
+  box-shadow:inset 0 0 0 1px var(--bp-line,#ecdcbc),0 1px 2px rgba(120,60,20,.07);
+  transition:transform .12s ease;-webkit-tap-highlight-color:transparent;
+ }
+ html.pos64 header #userBar button[type=button]:active{transform:scale(.93)}
+}
+@media (max-width:350px){
+ html.pos64 header #bpCollapseBtn span{display:none}
+ html.pos64 header #bpCollapseBtn{padding:0 11px!important}
+ html.pos64 header #bpSyncBtn .lb{display:none}
+}
+</style>
+<script id="bpHdrModernJs">
+(function(){
+ if(window.__bpHdrModern) return; window.__bpHdrModern = 1;
+ var SYNC = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 16h5v5"/></svg>';
+ var UP = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 15 6-6 6 6"/></svg>';
+ function mount(){
+  var h = document.querySelector('header'); if(!h) return;
+  /* pulsante "Strumenti" vero e proprio (prima era solo un pallino sopra Aggiorna) */
+  if(!document.getElementById('bpCollapseBtn')){
+   var c = document.createElement('button'); c.type = 'button'; c.id = 'bpCollapseBtn';
+   c.setAttribute('aria-label', 'Chiudi barra strumenti'); c.title = 'Chiudi barra strumenti · ضم الشريط';
+   c.innerHTML = UP + '<span>Strumenti</span>';
+   c.addEventListener('click', function(){ var b = h.querySelector('.brand'); if(b) b.click(); });
+   h.appendChild(c);
+  }
+  /* Aggiorna: decorIcons() lo riduceva alla sola emoji; lo ricostruiamo con icona SVG + etichetta + ora */
+  var s = document.getElementById('bpSyncBtn');
+  if(s && s.getAttribute('data-bpm') !== '1'){
+   s.setAttribute('data-bpm', '1'); s.setAttribute('aria-label', 'تحديث');
+   s.innerHTML = '<span class="md"></span><span class="ic">' + SYNC + '</span><span class="lb">تحديث</span><small></small>';
+   try{ if(window.__bpLastSync){ var d = new Date(window.__bpLastSync); s.querySelector('small').textContent = ('0'+d.getHours()).slice(-2)+':'+('0'+d.getMinutes()).slice(-2); } }catch(e){}
+  }
+  /* colonne bilanciate: 15 icone = 8 + 7, mai una icona orfana */
+  var ub = document.getElementById('userBar'); if(!ub) return;
+  var n = 0; [].forEach.call(ub.children, function(x){ if(x.tagName === 'BUTTON' && x.offsetParent !== null) n++; });
+  if(!n) return;
+  var rows = Math.ceil(n / 8), cols = Math.max(4, Math.ceil(n / rows));
+  if(ub.style.getPropertyValue('--bpc') !== String(cols)) ub.style.setProperty('--bpc', String(cols));
+ }
+ function safe(){ try{ mount(); }catch(e){ console.warn('[bp] header v2', e); } }
+ if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', safe); else safe();
+ setInterval(safe, 600);
+ window.addEventListener('resize', safe);
+})();
+</script>
+
 </body>
 </html>
