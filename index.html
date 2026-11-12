@@ -8724,7 +8724,7 @@ function gemAliasClear(){
  }
  }, 1500);
  document.addEventListener('visibilitychange', function(){ if(!document.hidden) gemAliasSync(); });
- setInterval(function(){ if(!document.hidden) gemAliasSync(); }, 90000);
+ setInterval(function(){ if(!document.hidden && window.bpIsPeak && window.bpIsPeak()) gemAliasSync(); }, 300000);
  document.addEventListener('click', function(e){
  const b = e.target.closest && e.target.closest('#gemAliasSql'); if(!b) return;
  e.preventDefault();
@@ -10790,7 +10790,7 @@ async function markRouteInConsegna(){
 async function _loadOrdersNow(){
  if(!sb)return;
  try{
- let {data,error}=await sb.from('orders').select('*').order('created_at',{ascending:false}).limit(250);
+ let {data,error}=await sb.from('orders').select('*').gte('created_at', new Date(Date.now()-4*86400000).toISOString()).order('created_at',{ascending:false}).limit(250);
  if(error){console.error(error);return;}
  let incoming = data||[];
  try{ if(window.BP_ROLE === 'driver'){ incoming = incoming.filter(function(o){ var tb=''; try{ tb = bpTableNo(o); }catch(e){} return !tb && /consegna|domicilio/i.test(String(o.order_type||'')); }); }
@@ -10803,14 +10803,21 @@ async function _loadOrdersNow(){
  firstOrdersLoadDone = true;
 
  orders = incoming;
+ window.__bpLastSync = Date.now();
  let ids=orders.map(o=>o.id);
- itemsByOrder.clear();
- if(ids.length){
- let {data:allItems}=await sb.from('order_items').select('*').in('order_id',ids);
- (allItems||[]).forEach(it=>{
- if(!itemsByOrder.has(it.order_id))itemsByOrder.set(it.order_id,[]);
- itemsByOrder.get(it.order_id).push(it);
- });
+ /* جلب تدريجي: الأصناف تُجلب فقط للطلبات الجديدة/المعدّلة أو التي لا أصناف محفوظة لها */
+ const __ver = window.__bpItemsVer || (window.__bpItemsVer = new Map());
+ const __fp = o => [o.updated_at,o.status,o.total,o.payment_method,o.notes,o.address,o.customer_name].join('|');
+ const __idSet = new Set(ids);
+ Array.from(itemsByOrder.keys()).forEach(k=>{ if(!__idSet.has(k)){ itemsByOrder.delete(k); __ver.delete(k); } });
+ const __need = orders.filter(o=>{ const c=itemsByOrder.get(o.id); return !c || !c.length || __ver.get(o.id)!==__fp(o); }).map(o=>o.id);
+ if(__need.length){
+ let {data:allItems,error:__ie}=await sb.from('order_items').select('*').in('order_id',__need);
+ if(!__ie){
+ __need.forEach(id=>itemsByOrder.set(id,[]));
+ (allItems||[]).forEach(it=>{ itemsByOrder.get(it.order_id).push(it); });
+ orders.forEach(o=>{ if(__need.indexOf(o.id)>=0) __ver.set(o.id,__fp(o)); });
+ }
  }
  rebuildCustomerDirectoryFromOrders(orders);
  renderOrders();
@@ -12963,11 +12970,13 @@ try{
  var last = 0;
  function refresh(){
  var n = Date.now(); if(n - last < 4000) return; last = n;
- try{ if(sb && !el('app').classList.contains('hidden')){ loadOrders(); loadMenu(); } }catch(e){ bpWarn(e); }
+ try{ if(sb && !el('app').classList.contains('hidden')){ loadOrders(); } }catch(e){ bpWarn(e); }
  }
- document.addEventListener('visibilitychange', function(){ if(!document.hidden) refresh(); });
+ var lastAuto = 0;
+ function autoRefresh(){ if(!(window.bpIsPeak && window.bpIsPeak())) return; var n = Date.now(); if(n - lastAuto < 60000) return; lastAuto = n; refresh(); }
+ document.addEventListener('visibilitychange', function(){ if(!document.hidden) autoRefresh(); });
  window.addEventListener('online', function(){ last = 0; refresh(); });
- window.addEventListener('focus', refresh);
+ window.addEventListener('focus', autoRefresh);
  setInterval(function(){
  var b = el('bp23ConnBadge'), t = el('bp23ConnTxt'); if(!b || !t) return;
  var st = window.__bpRtStatus, on = navigator.onLine, live = on && st === 'SUBSCRIBED';
@@ -12987,7 +12996,7 @@ try{
  if(window.__bp25cust) return; window.__bp25cust = true;
  async function load(){
  try{
- var r = await sb.from('customers').select('*').order('last_seen', {ascending: false}).limit(2000);
+ var r = await sb.from('customers').select('name,phone,address,last_order_id').order('last_seen', {ascending: false}).limit(2000);
  if(r.error || !r.data) return;
  r.data.forEach(function(c){ upsertCustomerProfile(c.name, c.phone, c.address, false, c.last_order_id); });
  saveCustomerDirectoryToStorage();
@@ -13279,7 +13288,7 @@ try{
  }
  async function check(){ await setOnline(await probe()); }
  window.addEventListener('online', check); window.addEventListener('offline', check);
- setInterval(check, 15000);
+ setInterval(check, 30000);
  setInterval(function(){ if(online && (qGet().length || Object.keys(jget(SK, {})).length)) syncPending(false); }, 25000);
 
  /* ---------- enter the app without internet (saved login on this device) ---------- */
@@ -14621,8 +14630,9 @@ el('kitchenTab').addEventListener('click', function(e){
 
  setInterval(function(){
  var app = el('app');
+ if(!(window.bpIsPeak && window.bpIsPeak())) return;
  if(app && !app.classList.contains('hidden') && typeof sb !== 'undefined' && sb) loadInventoryData(false);
- }, 120000);
+ }, 300000);
 })();
 
  // --- Programma fedeltà clienti (Loyalty v33, tradotto + dati dal database) ---
@@ -28934,29 +28944,87 @@ body[data-role="driver"] [data-set-status]{display:none!important}
  }
 })();
 </script>
-<script id="bpAutoRefresh">
-/* Aggiornamento automatico: ogni 6 s controlla (query leggera) se gli ordini sono cambiati e ricarica solo se serve; ricarica completa ogni 60 s */
+<script id="bpSmartSync">
+/* مزامنة ذكية + زر تحديث يدوي
+   - أوقات الذروة (الجمعة/السبت/الأحد 18:00 → 21:30): تحديث تلقائي (شبكة أمان فوق الـ Realtime)
+   - خارج الذروة: لا يوجد أي تحديث تلقائي دوري → الزر 🔄 في الشريط العلوي للتحديث عند الحاجة
+   لتغيير الأوقات عدّل PEAK هنا: days (0=الأحد … 5=الجمعة، 6=السبت) و from/to = [ساعة, دقيقة] */
 (function(){
- if(window.__bpAutoRef) return; window.__bpAutoRef = true;
- var EVERY = 6000, FULL = 60000, sig = '', lastFull = Date.now(), cols = 'id,status,updated_at,route_driver', running = false;
+ if(window.__bpSmartSync) return; window.__bpSmartSync = true;
+ var PEAK = { days: [5, 6, 0], from: [18, 0], to: [21, 30] };
+ var EVERY = 30000, cols = 'id,status,updated_at,route_driver', sig = '', running = false;
+ function isPeak(d){
+  d = d || new Date();
+  if(PEAK.days.indexOf(d.getDay()) < 0) return false;
+  var m = d.getHours() * 60 + d.getMinutes();
+  return m >= PEAK.from[0] * 60 + PEAK.from[1] && m < PEAK.to[0] * 60 + PEAK.to[1];
+ }
+ window.bpIsPeak = isPeak;
  function client(){ try{ return (typeof sb !== 'undefined') ? sb : null; }catch(e){ return null; } }
  function appOn(){ var a = document.getElementById('app'); return a && !a.classList.contains('hidden'); }
+
+ /* شبكة أمان وقت الذروة فقط، وفقط إذا كان الـ Realtime غير متصل: فحص خفيف، وتحميل كامل فقط عند وجود تغيير */
  async function tick(){
-  if(running || document.hidden || !navigator.onLine || !appOn()) return;
+  if(running || document.hidden || !navigator.onLine || !appOn() || !isPeak()) return;
+  if(window.__bpRtStatus === 'SUBSCRIBED'){ sig = ''; return; }
   var c = client(); if(!c) return; running = true;
   try{
-   var r = await c.from('orders').select(cols).order('created_at', {ascending: false}).limit(250);
-   if(r && r.error && cols.indexOf('route_driver') >= 0){ cols = 'id,status,updated_at'; r = await c.from('orders').select(cols).order('created_at', {ascending: false}).limit(250); }
+   var r = await c.from('orders').select(cols).order('created_at', {ascending: false}).limit(100);
+   if(r && r.error && cols.indexOf('route_driver') >= 0){ cols = 'id,status,updated_at'; r = await c.from('orders').select(cols).order('created_at', {ascending: false}).limit(100); }
    if(!r || r.error || !Array.isArray(r.data)) return;
    var n = r.data.map(function(o){ return [o.id, o.status, o.updated_at, o.route_driver].join('|'); }).join(';');
-   var due = Date.now() - lastFull > FULL;
-   if((sig && n !== sig) || due){ lastFull = Date.now(); try{ await loadOrders(); }catch(e){} }
+   if(sig && n !== sig){ try{ await loadOrders(); }catch(e){} }
    sig = n;
-  }catch(e){ console.warn('[bp] auto-refresh', e); }
+  }catch(e){ console.warn('[bp] smart-sync', e); }
   finally{ running = false; }
  }
  setInterval(tick, EVERY);
- document.addEventListener('visibilitychange', function(){ if(!document.hidden) tick(); });
+
+ /* ---------- زر التحديث اليدوي ---------- */
+ var st = document.createElement('style');
+ st.textContent = '#bpSyncBtn{margin-inline-start:8px;display:inline-flex;align-items:center;gap:6px;padding:5px 11px;border-radius:999px;border:1px solid currentColor;background:rgba(255,255,255,.14);color:inherit;font:700 12px/1 inherit;cursor:pointer;white-space:nowrap;-webkit-tap-highlight-color:transparent}'
+  + '#bpSyncBtn:active{transform:scale(.96)}#bpSyncBtn small{opacity:.8;font-weight:600}'
+  + '#bpSyncBtn .ic{display:inline-block}#bpSyncBtn.spin .ic{animation:bpSyncSpin .8s linear infinite}'
+  + '#bpSyncBtn .md{width:8px;height:8px;border-radius:50%;background:#98a2b3}#bpSyncBtn.auto .md{background:#12b76a}'
+  + '#bpSyncBtn.fixed{position:fixed;left:10px;bottom:10px;z-index:99999;background:#1d2939;color:#fff}'
+  + '@keyframes bpSyncSpin{to{transform:rotate(360deg)}}@media print{#bpSyncBtn{display:none!important}}';
+ document.head.appendChild(st);
+ var btn = null;
+ function hhmm(t){ var d = new Date(t); return ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2); }
+ function paint(){
+  if(!btn) return;
+  btn.classList.toggle('auto', isPeak());
+  btn.title = isPeak() ? 'تحديث تلقائي (وقت الذروة) — اضغط للتحديث الآن' : 'التحديث يدوي خارج وقت الذروة — اضغط للتحديث';
+  var t = btn.querySelector('small'); if(t) t.textContent = window.__bpLastSync ? hhmm(window.__bpLastSync) : '';
+ }
+ var busy = false;
+ async function manual(){
+  if(busy) return; busy = true; btn.classList.add('spin');
+  try{
+   if(window.__bpItemsVer) window.__bpItemsVer.clear();   /* يجبر إعادة جلب أصناف الطلبات */
+   var jobs = [];
+   try{ if(typeof loadOrders === 'function') jobs.push(loadOrders()); }catch(e){}
+   try{ if(typeof loadMenu === 'function') jobs.push(loadMenu()); }catch(e){}
+   try{ if(typeof window.loadInventoryData === 'function') jobs.push(window.loadInventoryData(false)); }catch(e){}
+   try{ if(typeof gemAliasSync === 'function') jobs.push(gemAliasSync()); }catch(e){}
+   await Promise.all(jobs.map(function(p){ return Promise.resolve(p).catch(function(){}); }));
+   window.__bpLastSync = Date.now();
+  }catch(e){ console.warn('[bp] manual refresh', e); }
+  btn.classList.remove('spin'); busy = false; paint();
+ }
+ window.bpManualRefresh = manual;
+ function mount(){
+  if(document.getElementById('bpSyncBtn')){ btn = document.getElementById('bpSyncBtn'); return; }
+  btn = document.createElement('button');
+  btn.id = 'bpSyncBtn'; btn.type = 'button';
+  btn.innerHTML = '<span class="md"></span><span class="ic">🔄</span><span>تحديث</span><small></small>';
+  btn.addEventListener('click', manual);
+  var brand = document.querySelector('header .brand');
+  if(brand) brand.appendChild(btn); else { btn.classList.add('fixed'); document.body.appendChild(btn); }
+  paint();
+ }
+ function init(){ mount(); setInterval(function(){ if(!document.getElementById('bpSyncBtn')) mount(); paint(); }, 20000); }
+ if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
 })();
 </script>
 <script id="bpStreetsDb">
