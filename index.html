@@ -5398,13 +5398,7 @@ body[data-role="driver"] #bpGqBadge{display:none!important}
  </div>
  </div>
  </main>
- <div class="mobile-cart-bar no-print" id="mobileCartBar" onclick="el('cart').scrollIntoView({behavior:'smooth'})">
- <span id="mcbText">
- </span>
- <span>
- 🛒 Vai al carrello ↓
- </span>
- </div>
+ 
  <!-- MODAL RICEVUTA / COMANDA -->
  <div class="modal-backdrop hidden" id="detailsModal">
  <div class="modal" style="max-width:480px;padding:16px">
@@ -19968,6 +19962,7 @@ try{
  window.addEventListener('resize', function(){ var d = el('bpAct'); if(d) applyPos(d); });
 
  function mountAct(){
+ return; /* barra fluttuante rimossa */
  if(el('bpAct')) return;
  var d = document.createElement('div'); d.id = 'bpAct'; d.className = 'no-print';
  d.addEventListener('click', function(e){
