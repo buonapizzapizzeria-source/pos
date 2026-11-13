@@ -4204,6 +4204,125 @@ window.bpPayLabel=function(pm){ return /^altro$/i.test(String(pm||'').trim()) ? 
  },{passive:false});
 })();
 </script>
+<script>
+/* v5: (1) frecce + trascinamento per la barra categorie su PC  (2) colonne ridimensionabili in "Nuovo ordine" */
+(function(){
+ var LS=null; try{ LS=window.localStorage; }catch(e){}
+ function lsGet(k){ try{ var v=parseFloat(LS.getItem(k)); return isFinite(v)?v:NaN; }catch(e){ return NaN; } }
+ function lsSet(k,v){ try{ LS.setItem(k,String(v)); }catch(e){} }
+ function lsDel(k){ try{ LS.removeItem(k); }catch(e){} }
+ var st=document.createElement('style');
+ st.textContent=
+ '.bp-split{position:absolute;top:0;bottom:0;width:18px;margin-left:-9px;cursor:col-resize;z-index:60;touch-action:none;display:none}'+
+ '@media(min-width:900px){.bp-split.on{display:block}}'+
+ '.bp-split::after{content:"";position:absolute;top:50%;left:7px;width:4px;height:60px;margin-top:-30px;border-radius:4px;background:rgba(120,100,80,.38);transition:background .15s,height .15s}'+
+ '.bp-split:hover::after,.bp-split.drag::after{background:#c8281e;height:96px}'+
+ 'html.bp-resizing,html.bp-resizing *{cursor:col-resize!important;user-select:none!important;-webkit-user-select:none!important}'+
+ '.bp-catarr{position:absolute;z-index:6;width:36px;border:0;border-radius:99px;background:rgba(255,253,248,.95);box-shadow:0 2px 10px rgba(0,0,0,.28);font-size:26px;font-weight:900;line-height:1;color:#7a2a1a;cursor:pointer;display:none;padding:0}'+
+ '.bp-catarr:hover{background:#c8281e;color:#fff}'+
+ '@media(hover:none){.bp-catarr{display:none!important}}';
+ document.head.appendChild(st);
+
+ /* ---------- frecce barra categorie ---------- */
+ function catArrows(){
+  var bar=document.getElementById('bpmCats'); if(!bar||!bar.parentNode) return;
+  var p=bar.parentNode;
+  if(!bar.__arr){
+   bar.__arr=1;
+   if(getComputedStyle(p).position==='static') p.style.position='relative';
+   var mkb=function(dir){
+    var b=document.createElement('button'); b.type='button'; b.className='bp-catarr';
+    b.textContent=dir<0?'‹':'›'; b.title=dir<0?'Indietro · للخلف':'Avanti · للأمام';
+    b.addEventListener('click',function(e){ e.stopPropagation(); e.preventDefault(); bar.scrollBy({left:dir*Math.max(220,bar.clientWidth*0.6),behavior:'smooth'}); });
+    p.appendChild(b); return b;
+   };
+   bar.__l=mkb(-1); bar.__r=mkb(1);
+  }
+  var over=bar.scrollWidth>bar.clientWidth+4, vis=bar.offsetParent!==null;
+  var top=bar.offsetTop+2, h=Math.max(30,bar.offsetHeight-8);
+  var l=bar.__l, r=bar.__r;
+  [l,r].forEach(function(b){ b.style.top=top+'px'; b.style.height=h+'px'; });
+  l.style.left=(bar.offsetLeft+2)+'px';
+  r.style.left=(bar.offsetLeft+bar.offsetWidth-38)+'px';
+  l.style.display=(over&&vis&&bar.scrollLeft>4)?'block':'none';
+  r.style.display=(over&&vis&&bar.scrollLeft<bar.scrollWidth-bar.clientWidth-4)?'block':'none';
+ }
+
+ /* ---------- colonne ridimensionabili ---------- */
+ var dragging=null, splits=[];
+ function q(sel){ return document.querySelector(sel); }
+ function mkSplit(id,key,hostFn,contFn,leftFn,rightFn,minL,minR){
+  var h=document.createElement('div'); h.className='bp-split'; h.id=id;
+  h.title='Trascina per ridimensionare · doppio clic = reset · اسحب لتغيير الحجم';
+  var c={id:id,key:key,h:h,host:hostFn,cont:contFn,left:leftFn,right:rightFn,minL:minL,minR:minR};
+  function geom(){
+   var C=c.cont(); if(!C) return null;
+   var cs=getComputedStyle(C);
+   return {C:C,cs:cs,off:(parseFloat(cs.paddingLeft)||0)+(parseFloat(cs.borderLeftWidth)||0),gap:parseFloat(cs.columnGap)||0};
+  }
+  function setW(px){
+   var g=geom(); if(!g) return;
+   var tot=g.C.clientWidth; if(!tot) return;
+   px=Math.max(c.minL,Math.min(tot-c.minR-g.gap,px));
+   lsSet(c.key,px/tot);
+   g.C.style.setProperty('grid-template-columns',px+'px minmax(0,1fr)','important');
+  }
+  h.addEventListener('pointerdown',function(e){
+   e.preventDefault(); try{ h.setPointerCapture(e.pointerId); }catch(_){}
+   dragging=c; h.classList.add('drag'); document.documentElement.classList.add('bp-resizing');
+  });
+  h.addEventListener('pointermove',function(e){
+   if(dragging!==c) return; var g=geom(); if(!g) return;
+   var cr=g.C.getBoundingClientRect();
+   setW(e.clientX-cr.left-g.off-g.gap/2);
+   tick();
+  });
+  function end(){ if(dragging!==c) return; dragging=null; h.classList.remove('drag'); document.documentElement.classList.remove('bp-resizing'); }
+  h.addEventListener('pointerup',end); h.addEventListener('pointercancel',end);
+  h.addEventListener('dblclick',function(){ var C=c.cont(); lsDel(c.key); if(C) C.style.removeProperty('grid-template-columns'); tick(); });
+  c.geom=geom; c.setW=setW; splits.push(c); return c;
+ }
+ function gridEl(){ return q('#newTab > .grid'); }
+ mkSplit('bpSplit1','bp_split_main',gridEl,gridEl,
+  function(){ return q('#newTab > .grid > section.panel:nth-child(1)'); },
+  function(){ return q('#newTab > .grid > section.panel:nth-child(2)'); },260,300);
+ mkSplit('bpSplit2','bp_split_cart',gridEl,
+  function(){ return q('#newTab > .grid > section.panel:nth-child(2)'); },
+  function(){ return q('#newTab > .grid > section.panel:nth-child(2) .bp-col-mid'); },
+  function(){ return q('#newTab > .grid > section.panel:nth-child(2) .bp-col-cart'); },240,260);
+
+ function tick(){
+  try{ catArrows(); }catch(e){}
+  var host=gridEl();
+  splits.forEach(function(c){
+   var h=c.h, C=c.cont(), L=c.left(), R=c.right();
+   var ok=false;
+   if(host && C && L && R && window.innerWidth>=900){
+    var cs=getComputedStyle(C);
+    ok=cs.display==='grid' && cs.gridTemplateColumns.trim().split(/\s+/).length>=2 &&
+       getComputedStyle(L).display!=='none' && getComputedStyle(R).display!=='none' && L.offsetWidth>0 && R.offsetWidth>0;
+   }
+   if(!ok){ h.classList.remove('on'); if(C && window.innerWidth<900) C.style.removeProperty('grid-template-columns'); return; }
+   if(h.parentNode!==host){ if(getComputedStyle(host).position==='static') host.style.position='relative'; host.appendChild(h); }
+   var saved=lsGet(c.key);
+   if(dragging!==c && isFinite(saved) && saved>0.1 && saved<0.9){
+    var tot=C.clientWidth, g=c.geom();
+    var px=Math.max(c.minL,Math.min(tot-c.minR-g.gap,saved*tot));
+    var want=px+'px minmax(0,1fr)';
+    if(Math.abs((L.getBoundingClientRect().width)-px)>2 || C.style.getPropertyValue('grid-template-columns').indexOf(Math.round(px))<0){
+      C.style.setProperty('grid-template-columns',want,'important');
+    }
+   }
+   var hr=host.getBoundingClientRect(), lr=L.getBoundingClientRect(), rr=R.getBoundingClientRect();
+   h.style.left=(((lr.right+rr.left)/2)-hr.left+host.scrollLeft)+'px';
+   h.classList.add('on');
+  });
+ }
+ window.addEventListener('resize',tick);
+ setInterval(tick,400);
+ document.addEventListener('DOMContentLoaded',tick);
+})();
+</script>
 </head>
  <body>
  <header class="no-print">
