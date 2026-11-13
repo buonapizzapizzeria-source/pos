@@ -4168,6 +4168,42 @@ body[data-role="driver"] header button:not(#pushBtn):not(#soundToggleBtn):not(#b
 body[data-role="driver"] #bpGqBadge{display:none!important}
 /* etichetta diagnostica nera in basso: mai visibile */
 #bpAccDbg{display:none!important}</style>
+<script>
+/* App Delivery: pagamento salvato come "Altro" (compatibile con ordini esistenti), mostrato come App Delivery */
+window.bpIsApp=function(o){ return String((o&&o.payment_method)||'').toLowerCase().indexOf('altro')>=0; };
+window.bpPayLabel=function(pm){ return /^altro$/i.test(String(pm||'').trim()) ? 'App Delivery' : String(pm==null?'':pm); };
+(function(){ var st=document.createElement('style'); st.textContent='.cassa-card.app{border-top-color:#f79009}'; document.head.appendChild(st); })();
+</script>
+<script>
+/* Barra categorie (.bpm-cats): trascinamento col mouse + rotellina su PC */
+(function(){
+ var drag=null, moved=false;
+ function bar(t){ return t && t.closest ? t.closest('.bpm-cats') : null; }
+ var st=document.createElement('style');
+ st.textContent='.bpm-cats{cursor:grab}.bpm-cats.bp-dragging{cursor:grabbing;user-select:none;-webkit-user-select:none}.bpm-cats.bp-dragging *{pointer-events:none}';
+ document.head.appendChild(st);
+ document.addEventListener('mousedown',function(e){
+ if(e.button!==0) return; var b=bar(e.target); if(!b) return;
+ drag={b:b,x:e.clientX,l:b.scrollLeft}; moved=false;
+ });
+ document.addEventListener('mousemove',function(e){
+ if(!drag) return; var dx=e.clientX-drag.x;
+ if(!moved && Math.abs(dx)<5) return;
+ moved=true; drag.b.classList.add('bp-dragging'); drag.b.scrollLeft=drag.l-dx; e.preventDefault();
+ });
+ function end(){ if(!drag) return; drag.b.classList.remove('bp-dragging'); drag=null; }
+ document.addEventListener('mouseup',end);
+ window.addEventListener('blur',end);
+ document.addEventListener('click',function(e){
+ if(moved && bar(e.target)){ e.stopPropagation(); e.preventDefault(); }
+ moved=false;
+ },true);
+ document.addEventListener('wheel',function(e){
+ var b=bar(e.target); if(!b || b.scrollWidth<=b.clientWidth) return;
+ if(Math.abs(e.deltaY)>Math.abs(e.deltaX)){ b.scrollLeft+=e.deltaY; e.preventDefault(); }
+ },{passive:false});
+})();
+</script>
 </head>
  <body>
  <header class="no-print">
@@ -4706,7 +4742,7 @@ body[data-role="driver"] #bpGqBadge{display:none!important}
  💳 Carta / POS
  </option>
  <option value="Altro">
- 💰 Altro / Già Pagato
+ 📲 App Delivery (Deliveroo · Glovo · Just Eat)
  </option>
  </select>
  </div>
@@ -10262,7 +10298,9 @@ function computeDayStats(dayOrders){
  let totalRevenue = valid.reduce((s,o)=>s+Number(o.total||0),0);
 
  let cashOrders = valid.filter(o=>String(o.payment_method||'').toLowerCase().includes('contanti'));
- let cardOrders = valid.filter(o=>!String(o.payment_method||'').toLowerCase().includes('contanti'));
+ let appOrders = valid.filter(o=>String(o.payment_method||'').toLowerCase().includes('altro'));
+ let cardOrders = valid.filter(o=>{ let pm=String(o.payment_method||'').toLowerCase(); return !pm.includes('contanti') && !pm.includes('altro'); });
+ let appTotal = appOrders.reduce((s,o)=>s+Number(o.total||0),0);
  let cashTotal = cashOrders.reduce((s,o)=>s+Number(o.total||0),0);
  let cardTotal = cardOrders.reduce((s,o)=>s+Number(o.total||0),0);
 
@@ -10279,6 +10317,8 @@ function computeDayStats(dayOrders){
  cashTotal,
  cardCount: cardOrders.length,
  cardTotal,
+ appCount: appOrders.length,
+ appTotal,
  delivCount: delivOrders.length,
  delivTotal,
  aspCount: aspOrders.length,
@@ -10324,7 +10364,12 @@ async function renderCassaReport(){
  <div class="cassa-card card">
  <div class="c-label">💳 INCASSO CARTA / POS</div>
  <div class="c-val" style="color:var(--blue)">${euro(st.cardTotal)}</div>
- <div class="c-sub">🧾 ${st.cardCount} ordini con Carta / Altro</div>
+ <div class="c-sub">🧾 ${st.cardCount} ordini con Carta</div>
+ </div>
+ <div class="cassa-card app">
+ <div class="c-label">📲 APP DELIVERY (Deliveroo · Glovo · Just Eat)</div>
+ <div class="c-val" style="color:#f79009">${euro(st.appTotal)}</div>
+ <div class="c-sub">🧾 ${st.appCount} ordini · da incassare dalle piattaforme</div>
  </div>
  <div class="cassa-card deliv">
  <div class="c-label">🛵 TOTALE CONSEGNE A DOMICILIO</div>
@@ -10385,7 +10430,8 @@ function printCassaSummary(){
  </div>
  <div class="rc-items-section">
  <div class="rc-item"><div class="rc-item-top"><span>💵 <strong>Contanti (${st.cashCount} ordini)</strong></span><strong>${euro(st.cashTotal)}</strong></div></div>
- <div class="rc-item"><div class="rc-item-top"><span>💳 <strong>Carta / Altro (${st.cardCount} ordini)</strong></span><strong>${euro(st.cardTotal)}</strong></div></div>
+ <div class="rc-item"><div class="rc-item-top"><span>💳 <strong>Carta (${st.cardCount} ordini)</strong></span><strong>${euro(st.cardTotal)}</strong></div></div>
+ <div class="rc-item"><div class="rc-item-top"><span>📲 <strong>App Delivery (${st.appCount} ordini)</strong></span><strong>${euro(st.appTotal)}</strong></div></div>
  <div class="rc-item"><div class="rc-item-top"><span>🛵 <strong>Consegne (${st.delivCount} ordini)</strong></span><strong>${euro(st.delivTotal)}</strong></div></div>
  <div class="rc-item"><div class="rc-item-top"><span>🛍️ <strong>Asporto (${st.aspCount} ordini)</strong></span><strong>${euro(st.aspTotal)}</strong></div></div>
  </div>
@@ -11032,7 +11078,7 @@ function renderOrderList(id, list, isOpenTab=false){
  <span class="pill ${u.badgeClass}">${esc(u.badgeText)}</span>
  ${parsedNotes.cashInfo ? `<span class="pill resto-pill">💶 ${esc(parsedNotes.cashInfo)}</span>` : ''}
  </h3>
- <p>🕒 Creato: ${when} · <strong>${esc(o.order_type)}</strong> · 💳 ${esc(o.payment_method)}${o.created_by_email ? ' · 👤 ' + esc(o.created_by_email) : ''}</p>${o.updated_by_email ? '<p>✏️ Ultima modifica: <strong>' + esc(o.updated_by_email) + '</strong>' + (o.updated_at ? ' · ' + new Date(o.updated_at).toLocaleTimeString('it-IT', {hour: '2-digit', minute: '2-digit'}) : '') + '</p>' : ''}
+ <p>🕒 Creato: ${when} · <strong>${esc(o.order_type)}</strong> · ${o.payment_method && /^altro$/i.test(o.payment_method) ? '📲' : '💳'} ${esc(bpPayLabel(o.payment_method))}${o.created_by_email ? ' · 👤 ' + esc(o.created_by_email) : ''}</p>${o.updated_by_email ? '<p>✏️ Ultima modifica: <strong>' + esc(o.updated_by_email) + '</strong>' + (o.updated_at ? ' · ' + new Date(o.updated_at).toLocaleTimeString('it-IT', {hour: '2-digit', minute: '2-digit'}) : '') + '</p>' : ''}
  ${contactLine?`<p>${contactLine}</p>`:''}
  ${itemsHtml}
  ${noteHtml}
@@ -11565,7 +11611,7 @@ function buildReceiptHtml(o, items){
  ${grandQty !== totalQty ? `<div class="rc-summary-row rc-tot-all"><span>Totale con fritti e bibite dei menu:</span><strong>${grandQty} pz</strong></div>` : ''}
  <div class="rc-summary-row">
  <span>Metodo di Pagamento:</span>
- <strong>💳 ${esc(payMethod.toUpperCase())}</strong>
+ <strong>${/^altro$/i.test(payMethod) ? '📲' : '💳'} ${esc(bpPayLabel(payMethod).toUpperCase())}</strong>
  </div>
  ${parsedNotes.cashInfo ? `<div class="rc-resto-highlight"><span>💶 CALCOLO RESTO:</span><span>${esc(parsedNotes.cashInfo)}</span></div>` : ''}
  </div>
@@ -12213,6 +12259,25 @@ try{
  bar.innerHTML='<div class="topline"><button type="button" class="secondary btn-sm" id="stPrev">◀</button><strong id="stTitle"></strong><button type="button" class="secondary btn-sm" id="stNext">▶</button></div><div class="sg" id="stGrid"></div>';
  document.querySelector('#allTab .topline').after(bar);
  var tot=document.createElement('div'); tot.id='storTotal'; bar.after(tot);
+var payF='all', dayList=[];
+ var pfBar=document.createElement('div'); pfBar.id='storPayFilter';
+ pfBar.style.cssText='display:flex;gap:8px;flex-wrap:wrap;margin:8px 0';
+ tot.after(pfBar);
+ function payKind(o){ var pm=String(o.payment_method||'').toLowerCase(); return pm.indexOf('contanti')>=0?'cash':(pm.indexOf('carta')>=0?'card':'other'); }
+ function drawPayF(){
+ var c={all:dayList.length,cash:0,card:0,other:0};
+ dayList.forEach(function(o){ var k=payKind(o); if(c[k]!=null) c[k]++; });
+ var defs=[['all','Tutti'],['cash','💵 Contanti'],['card','💳 Carta'],['other','📲 App Delivery']];
+ pfBar.innerHTML=defs.map(function(d){
+ var on=payF===d[0];
+ return '<button type=\"button\" data-pf=\"'+d[0]+'\" class=\"'+(on?'':'secondary ')+'btn-sm\" style=\"min-height:42px;padding:8px 16px;border-radius:99px;font-weight:800'+(on?';background:#b42318;color:#fff;border-color:#b42318':'')+'\">'+d[1]+' <small>('+c[d[0]]+')</small></button>';
+ }).join('');
+ }
+ function showList(){
+ var l=payF==='all'?dayList:dayList.filter(function(o){ return payKind(o)===payF; });
+ window.__stor=1; _rol('allOrders',l,false);
+ }
+ pfBar.onclick=function(e){ var b=e.target.closest('[data-pf]'); if(!b) return; payF=b.getAttribute('data-pf'); drawPayF(); showList(); };
 
  var _rol=renderOrderList;
  renderOrderList=function(id,l,o){ if(id==='allOrders') return; _rol(id,l,o); };
@@ -12252,9 +12317,9 @@ try{
  pay[b][0]+=Number(o.total||0); pay[b][1]+=1;
  });
  function pl(ic,nm,a){ return ic+' '+nm+': <b>'+euro(a[0])+'</b> <small>('+a[1]+')</small>'; }
- tot.innerHTML='📅 '+new Date(k+'T12:00:00').toLocaleDateString('it-IT',{weekday:'long',day:'2-digit',month:'long'})+'<br>🧾 Totale ordini: <span style="font-size:1.4em">'+list.length+'</span> · ❌ annullati: '+(list.length-valid.length)+'<br>'+pl('💵','Contanti',pay.cash)+' · '+pl('💳','Carta',pay.card)+(pay.other[1]?' · '+pl('🧾','Altro',pay.other):'');
+ tot.innerHTML='📅 '+new Date(k+'T12:00:00').toLocaleDateString('it-IT',{weekday:'long',day:'2-digit',month:'long'})+'<br>🧾 Totale ordini: <span style="font-size:1.4em">'+list.length+'</span> · ❌ annullati: '+(list.length-valid.length)+'<br>'+pl('💵','Contanti',pay.cash)+' · '+pl('💳','Carta',pay.card)+(pay.other[1]?' · '+pl('📲','App Delivery',pay.other):'');
  window.__storDayCount=list.length;
- window.__stor=1; _rol('allOrders',list,false);
+ dayList=list; drawPayF(); showList();
  }
  window.__storReload=function(){ if(!el('allTab').classList.contains('hidden')) loadDay(sel); };
  el('stPrev').onclick=function(){m--;if(m<0){m=11;y--;}loadMonth();};
@@ -12423,7 +12488,7 @@ try{
  "\n*" + (idx+1) + ") #" + o.id + " - " + (o.customer_name||"Cliente") + " (⏰ " + p.time + ")*" +
  "\n📍 " + (o.address||"") +
  (o.phone ? "\n📞 " + o.phone : "") +
- "\n💰 *" + euro(o.total) + "* (" + (o.payment_method||"Contanti") + ")" +
+ "\n💰 *" + euro(o.total) + "* (" + bpPayLabel(o.payment_method||"Contanti") + ")" +
  (p.cashInfo ? " · " + p.cashInfo : "") +
  (p.cleanNotes ? "\n📝 " + p.cleanNotes : "") +
  "\n🗺️ " + mapUrl
@@ -12759,7 +12824,7 @@ try{
  var m = pNotes.cashInfo.match(/Resto:\s*[^\d]*(\d+(?:[.,]\d+)?)/i);
  if(m) restoTotal += Number(m[1].replace(',','.'));
  }
- } else {
+ } else if(pay.includes('altro')){ /* App Delivery: nulla da incassare dal cliente */ } else {
  cardTotal += tot;
  cardCount += 1;
  }
@@ -13406,6 +13471,7 @@ try{
  var ordId = Number(sw.getAttribute('data-quick-pay-id'));
  var ord = (window.orders || []).find(function(x){ return x.id === ordId; });
  if(!ord) return;
+ if(bpIsApp(ord)) return; /* App Delivery: non si cambia con il tocco rapido */
  var nextPay = String(ord.payment_method || '').toLowerCase().includes('contanti') ? 'Carta' : 'Contanti';
  ord.payment_method = nextPay;
  sw.innerHTML = '💳 ' + nextPay + ' 🔁';
@@ -13979,6 +14045,7 @@ el('kitchenTab').addEventListener('click', function(e){
  card('tot', '💰 TOTALE INCASSO NETTO', euro(st.totalRevenue), '✅ ' + st.validCount + ' ordini validi') +
  card('cash', '💵 CONTANTI', euro(st.cashTotal), '🧾 ' + st.cashCount + ' ordini', 'var(--green)') +
  card('card', '💳 CARTA / POS', euro(st.cardTotal), '🧾 ' + st.cardCount + ' ordini', 'var(--blue)') +
+ card('app', '📲 APP DELIVERY', euro(st.appTotal), '🧾 ' + st.appCount + ' ordini', '#f79009') +
  card('deliv', '🛵 CONSEGNE', euro(st.delivTotal), st.delivCount + ' consegne', 'var(--purple)') +
  card('asp', '🛍️ ASPORTO / BANCO', euro(st.aspTotal), st.aspCount + ' ordini', 'var(--orange)') +
  card('', '🎯 SCONTRINO MEDIO', euro(avg), 'su ' + st.validCount + ' ordini') +
@@ -14139,7 +14206,7 @@ el('kitchenTab').addEventListener('click', function(e){
  };
  function snapshot(){
  var c = calc(), st = CS.st;
- return { rev: st.totalRevenue, cash: st.cashTotal, card: st.cardTotal, deliv: st.delivTotal, asp: st.aspTotal, n: st.validCount, canc: st.cancelledCount,
+ return { rev: st.totalRevenue, cash: st.cashTotal, card: st.cardTotal, app: st.appTotal, deliv: st.delivTotal, asp: st.aspTotal, n: st.validCount, canc: st.cancelledCount,
  float: c.fl, in: c.mv.in, out: r2(c.mv.spesa + c.mv.prel), spesa: c.mv.spesa, prel: c.mv.prel, expected: c.expected, counted: CS.D.counted, diff: c.diff,
  tomorrow: c.tom, deposit: c.deposit, pos: CS.D.pos, posDiff: c.posDiff };
  }
@@ -14201,7 +14268,7 @@ el('kitchenTab').addEventListener('click', function(e){
  '<div><strong>Stato:</strong> ' + (D.closed ? 'CHIUSA il ' + fmtTime(D.closed.at) + ' · ' + esc(D.closed.by) : 'PROVVISORIO (non chiusa)') + '</div>' +
  '<div><strong>Ordini validi:</strong> ' + st.validCount + ' (annullati: ' + st.cancelledCount + ')</div></div>' +
  '<div class="rc-items-section">' +
- H('INCASSI') + L('💵 Contanti (' + st.cashCount + ')', euro(st.cashTotal)) + L('💳 Carta / Altro (' + st.cardCount + ')', euro(st.cardTotal)) +
+ H('INCASSI') + L('💵 Contanti (' + st.cashCount + ')', euro(st.cashTotal)) + L('💳 Carta (' + st.cardCount + ')', euro(st.cardTotal)) + L('📲 App Delivery (' + st.appCount + ')', euro(st.appTotal)) +
  L('🛵 Consegne (' + st.delivCount + ')', euro(st.delivTotal)) + L('🛍️ Asporto (' + st.aspCount + ')', euro(st.aspTotal)) +
  H('CASSETTO CONTANTI') + L('Fondo iniziale', euro(c.fl)) + L('＋ Incassi contanti', euro(st.cashTotal)) + L('＋ Versamenti', euro(c.mv.in)) +
  L('－ Spese', euro(c.mv.spesa)) + L('－ Prelievi', euro(c.mv.prel)) + L('= Atteso nel cassetto', euro(c.expected), true) +
@@ -15359,22 +15426,22 @@ el('kitchenTab').addEventListener('click', function(e){
  var catOf = {};
  try{ (allMenu || []).forEach(function(m){ catOf[String(m.name || '').trim().toLowerCase()] = m.category || 'Altro'; }); }catch(e){}
  var S = { total: list.length, n: 0, canc: 0, cancV: 0, rev: 0,
- cash: { n: 0, v: 0 }, card: { n: 0, v: 0 }, deliv: { n: 0, v: 0 }, asp: { n: 0, v: 0 },
+ cash: { n: 0, v: 0 }, card: { n: 0, v: 0 }, app: { n: 0, v: 0 }, deliv: { n: 0, v: 0 }, asp: { n: 0, v: 0 },
  fees: 0, pieces: 0, types: {}, pays: {}, status: {}, hours: [], days: {}, prods: {}, cats: {}, sizes: {}, ops: {}, cust: {}, streets: {} };
  var h, d;
  for(h = 0; h < 24; h++) S.hours.push({ n: 0, v: 0 });
- for(d = new Date(range.start); d < range.end; d = addDays(d, 1)) S.days[toLocalDateStr(d)] = { n: 0, v: 0, cash: 0, card: 0, canc: 0 };
+ for(d = new Date(range.start); d < range.end; d = addDays(d, 1)) S.days[toLocalDateStr(d)] = { n: 0, v: 0, cash: 0, card: 0, app: 0, canc: 0 };
 
  list.forEach(function(o){
  var st = normStatus(o.status), tot = Number(o.total || 0), dt = new Date(bpEffTs(o)), key = toLocalDateStr(dt);
  bump(S.status, st, tot);
- var day = S.days[key] || (S.days[key] = { n: 0, v: 0, cash: 0, card: 0, canc: 0 });
+ var day = S.days[key] || (S.days[key] = { n: 0, v: 0, cash: 0, card: 0, app: 0, canc: 0 });
  if(st === 'Annullato'){ S.canc++; S.cancV += tot; day.canc++; return; }
 
  S.n++; S.rev += tot;
  day.n++; day.v += tot;
  var cash = isCash(o);
- if(cash){ S.cash.n++; S.cash.v += tot; day.cash += tot; } else { S.card.n++; S.card.v += tot; day.card += tot; }
+ if(cash){ S.cash.n++; S.cash.v += tot; day.cash += tot; } else if(bpIsApp(o)){ S.app.n++; S.app.v += tot; day.app += tot; } else { S.card.n++; S.card.v += tot; day.card += tot; }
  var dl = isDeliv(o);
  if(dl){ S.deliv.n++; S.deliv.v += tot; } else { S.asp.n++; S.asp.v += tot; }
  bump(S.types, o.order_type || 'Altro', tot);
@@ -15472,7 +15539,7 @@ el('kitchenTab').addEventListener('click', function(e){
  var tp = sortedKeys(S.prods, 'qty')[0];
  if(tp) out.push('🍕 Prodotto più venduto: <b>' + esc(tp) + '</b> (' + S.prods[tp].qty + ' pz · ' + euro(S.prods[tp].v) + ').');
  out.push('🛵 Le consegne valgono il <b>' + fmtPct(pct(S.deliv.v, S.rev)) + '</b> dell\'incasso (' + S.deliv.n + ' ordini), l\'asporto il <b>' + fmtPct(pct(S.asp.v, S.rev)) + '</b> (' + S.asp.n + ' ordini).');
- out.push('💳 Pagamenti: contanti <b>' + fmtPct(pct(S.cash.v, S.rev)) + '</b> · carta/altro <b>' + fmtPct(pct(S.card.v, S.rev)) + '</b>.');
+ out.push('💳 Pagamenti: contanti <b>' + fmtPct(pct(S.cash.v, S.rev)) + '</b> · carta <b>' + fmtPct(pct(S.card.v, S.rev)) + '</b>' + (S.app.n ? ' · app delivery <b>' + fmtPct(pct(S.app.v, S.rev)) + '</b>' : '') + '.');
  if(S.canc) out.push('❌ Ordini annullati: <b>' + S.canc + '</b> (' + fmtPct(S.cancRate) + ' del totale) per un valore di ' + euro(S.cancV) + '.');
  return out;
  }
@@ -15561,20 +15628,20 @@ el('kitchenTab').addEventListener('click', function(e){
  if(mode !== 'day'){
  var dkeys = Object.keys(S.days).sort(), bestK = null;
  dkeys.forEach(function(k){ if(S.days[k].v > 0 && (!bestK || S.days[k].v > S.days[bestK].v)) bestK = k; });
- var tc = 0, tcard = 0;
- dayTable = '<div class="rp-panel"><h3>🗓️ Dettaglio giorno per giorno</h3><div class="rp-tablewrap"><table class="rp-table"><thead><tr><th>Giorno</th><th class="num">Ordini</th><th class="num">Incasso</th><th class="num">Scontrino medio</th><th class="num">Contanti</th><th class="num">Carta/Altro</th><th class="num">Annullati</th></tr></thead><tbody>' +
+ var tc = 0, tcard = 0, tapp = 0;
+ dayTable = '<div class="rp-panel"><h3>🗓️ Dettaglio giorno per giorno</h3><div class="rp-tablewrap"><table class="rp-table"><thead><tr><th>Giorno</th><th class="num">Ordini</th><th class="num">Incasso</th><th class="num">Scontrino medio</th><th class="num">Contanti</th><th class="num">Carta</th><th class="num">App Delivery</th><th class="num">Annullati</th></tr></thead><tbody>' +
  dkeys.map(function(k){
- var g = S.days[k]; tc += g.cash; tcard += g.card;
- return '<tr class="' + (k === bestK ? 'best' : (g.n ? '' : 'zero')) + '"><td>' + (k === bestK ? '🏅 ' : '') + cap(d0(k).toLocaleDateString('it-IT', { weekday: 'short', day: 'numeric', month: 'short' })) + '</td><td class="num">' + g.n + '</td><td class="num">' + euro(g.v) + '</td><td class="num">' + (g.n ? euro(g.v / g.n) : '—') + '</td><td class="num">' + euro(g.cash) + '</td><td class="num">' + euro(g.card) + '</td><td class="num">' + g.canc + '</td></tr>';
+ var g = S.days[k]; tc += g.cash; tcard += g.card; tapp += g.app || 0;
+ return '<tr class="' + (k === bestK ? 'best' : (g.n ? '' : 'zero')) + '"><td>' + (k === bestK ? '🏅 ' : '') + cap(d0(k).toLocaleDateString('it-IT', { weekday: 'short', day: 'numeric', month: 'short' })) + '</td><td class="num">' + g.n + '</td><td class="num">' + euro(g.v) + '</td><td class="num">' + (g.n ? euro(g.v / g.n) : '—') + '</td><td class="num">' + euro(g.cash) + '</td><td class="num">' + euro(g.card) + '</td><td class="num">' + euro(g.app || 0) + '</td><td class="num">' + g.canc + '</td></tr>';
  }).join('') +
- '</tbody><tfoot><tr><td>TOTALE</td><td class="num">' + S.n + '</td><td class="num">' + euro(S.rev) + '</td><td class="num">' + euro(S.avg) + '</td><td class="num">' + euro(tc) + '</td><td class="num">' + euro(tcard) + '</td><td class="num">' + S.canc + '</td></tr></tfoot></table></div></div>';
+ '</tbody><tfoot><tr><td>TOTALE</td><td class="num">' + S.n + '</td><td class="num">' + euro(S.rev) + '</td><td class="num">' + euro(S.avg) + '</td><td class="num">' + euro(tc) + '</td><td class="num">' + euro(tcard) + '</td><td class="num">' + euro(tapp) + '</td><td class="num">' + S.canc + '</td></tr></tfoot></table></div></div>';
  }
 
  /* elenco ordini */
  var rows = v.orders.slice(0, 600).map(function(o){
  var st = normStatus(o.status), dt = new Date(bpEffTs(o));
  var when = mode === 'day' ? dt.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' }) : dt.toLocaleString('it-IT', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
- return '<tr class="' + (st === 'Annullato' ? 'cancelled' : '') + '"><td>' + when + '</td><td>#' + esc(o.id) + '</td><td>' + esc(o.customer_name || '—') + '</td><td>' + esc(o.order_type || '') + '</td><td>' + esc(o.payment_method || '') + '</td><td><span class="rp-pill" style="background:' + STATUS_COLOR[st] + '">' + esc(st) + '</span></td><td>' + esc(o.created_by_email || '') + '</td><td class="num"><b>' + euro(o.total) + '</b></td></tr>';
+ return '<tr class="' + (st === 'Annullato' ? 'cancelled' : '') + '"><td>' + when + '</td><td>#' + esc(o.id) + '</td><td>' + esc(o.customer_name || '—') + '</td><td>' + esc(o.order_type || '') + '</td><td>' + esc(bpPayLabel(o.payment_method || '')) + '</td><td><span class="rp-pill" style="background:' + STATUS_COLOR[st] + '">' + esc(st) + '</span></td><td>' + esc(o.created_by_email || '') + '</td><td class="num"><b>' + euro(o.total) + '</b></td></tr>';
  }).join('');
  var listHtml = '<div class="rp-panel"><details class="rp-details"' + (mode === 'day' ? ' open' : '') + '><summary>🧾 Elenco ordini del periodo (' + v.orders.length + ')</summary><div class="rp-tablewrap"><table class="rp-table"><thead><tr><th>' + (mode === 'day' ? 'Ora' : 'Data e ora') + '</th><th>N°</th><th>Cliente</th><th>Tipo</th><th>Pagamento</th><th>Stato</th><th>Operatore</th><th class="num">Totale</th></tr></thead><tbody>' + rows + '</tbody></table></div>' +
  (v.orders.length > 600 ? '<div class="rp-muted" style="margin-top:8px">Mostrati i primi 600 ordini. Usa «Esporta CSV» per l\'elenco completo.</div>' : '') + '</details></div>';
@@ -17464,7 +17531,7 @@ openCartIngModal = function(key){
  var tl = $('.topline', p); if(!tl) return false;
  var c = document.createElement('div'); c.id = 'bpOrder';
  c.innerHTML = '<div class="bpo-seg type-seg" data-sel="type"><button type="button" data-v="Consegna"><span>🛵</span><b>Domicilio</b></button><button type="button" data-v="Asporto"><span>🛍️</span><b>Ritiro</b></button><button type="button" data-v="Tavolo" style="background:#fef3c7;border-color:#f59e0b;color:#92400e"><span>🍽️</span><b>Tavolo</b></button></div>' +
- '<div class="bpo-seg three" data-sel="payment"><button type="button" data-v="Contanti"><span>💵</span><b>Contanti</b></button><button type="button" data-v="Carta"><span>💳</span><b>Carta</b></button><button type="button" data-v="Altro"><span>✅</span><b>Pagato</b></button></div>' +
+ '<div class="bpo-seg three" data-sel="payment"><button type="button" data-v="Contanti"><span>💵</span><b>Contanti</b></button><button type="button" data-v="Carta"><span>💳</span><b>Carta</b></button><button type="button" data-v="Altro"><span>📲</span><b>App</b></button></div>' +
  '<button type="button" id="bpoTime" class="bpo-time"></button><div id="bpoPills"></div>';
  tl.after(c);
  c.onclick = function(e){
@@ -25984,7 +26051,7 @@ function vsDoc(d, VS, title){
  SV.disc.forEach(function(x){ d.lr('Sconto' + (x.why ? ' (' + x.why + ')' : '') + ':', '- ' + eur(x.v), {b: 1}, 2); });
  d.lr('Totale articoli:', totalQty + ' pz', {});
  if(grandQty !== totalQty) d.lr('Tot. con fritti/bibite menu:', grandQty + ' pz', {f: 'B'});
- d.lr('Pagamento:', String(o.payment_method || 'Contanti').toUpperCase(), {b: 1});
+ d.lr('Pagamento:', bpPayLabel(o.payment_method || 'Contanti').toUpperCase(), {b: 1});
  if(parsedNotes.cashInfo) d.lr('Cassa:', parsedNotes.cashInfo, {b: 1});
  d.rule('=');
  var tl = 'TOTALE CLIENTE', tv = eur(o.total);
