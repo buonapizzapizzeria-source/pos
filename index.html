@@ -4323,6 +4323,20 @@ window.bpPayLabel=function(pm){ return /^altro$/i.test(String(pm||'').trim()) ? 
  document.addEventListener('DOMContentLoaded',tick);
 })();
 </script>
+<style id="bpOrdCols">
+/* v6: Storico + Ordini aperti su PC/tablet: schede in 2-3+ colonne che riempiono tutta la larghezza (anche con schermo ingrandito) */
+@media (min-width:600px){
+ html body #openOrders, html body #allOrders{display:grid!important;grid-template-columns:repeat(auto-fill,minmax(min(100%,300px),1fr))!important;justify-content:stretch!important;align-items:start!important;gap:12px!important;width:100%!important;max-width:none!important}
+ html body #openOrders>.panel.muted, html body #allOrders>.panel.muted{grid-column:1/-1!important}
+ html body #openOrders .order, html body #allOrders .order{grid-template-columns:minmax(0,1fr)!important;gap:10px!important;padding:12px 14px!important;margin:0!important;height:auto!important;min-width:0;box-sizing:border-box}
+ html body #openOrders .order .order-right, html body #allOrders .order .order-right{text-align:start!important;flex-direction:row!important;flex-wrap:wrap!important;align-items:center!important;justify-content:space-between!important;min-width:0!important;border-top:1px solid var(--bp-line,#e8eaf0);padding-top:10px;gap:8px!important}
+ html body #openOrders .order .order-right>*, html body #allOrders .order .order-right>*{flex:1 1 120px;min-width:0}
+ html body #openOrders .order .order-right>strong, html body #allOrders .order .order-right>strong{flex:0 0 auto}
+ html body #openOrders .order .order-right .bpi, html body #allOrders .order .order-right .bpi{flex:0 0 auto!important}
+ html body #openOrders .order .order-items-box, html body #allOrders .order .order-items-box{margin:6px 0!important}
+ html body #allTab .rd-acc, html body #ordersTab .rd-acc{max-width:none}
+}
+</style>
 </head>
  <body>
  <header class="no-print">
