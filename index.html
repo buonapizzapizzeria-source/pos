@@ -32219,5 +32219,44 @@ html body #openOrders,html body #allOrders{grid-template-columns:minmax(0,1fr)!i
  if(typeof _dl==='function'){window.doLogout=function(){var r=_dl.apply(this,arguments);setTimeout(function(){unlock(true)},0);setTimeout(function(){unlock(false)},300);return r;};}
 })();
 </script>
+
+<style id="bpTicketBoost">
+/* ===== bpTicketBoost · tablet/desktop: ticket (destra) piu' grande, finestra Note/Extra/Cliente a tutta altezza ===== */
+@media (min-width:900px){
+ /* 1) colonna ticket piu' larga (prima ~340px): il menu cede un po' di spazio; compensa lo zoom --bpz della griglia */
+ html.pos64 body #newTab>.grid{grid-template-columns:minmax(0,1fr) clamp(calc(440px / var(--bpz,1)),calc(45vw / var(--bpz,1)),calc(660px / var(--bpz,1)))!important}
+ /* 2) ticket scorrevole se lo schermo e' basso: niente viene tagliato, Totale+Salva restano sempre visibili in basso */
+ html.pos64 body #newTab>.grid>section.panel:nth-child(2){overflow-y:auto!important;overflow-x:hidden!important;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
+ html.pos64 body #newTab>.grid>section.panel:nth-child(2)>#p64Mid{flex:1 1 0!important;min-height:240px!important}
+ html.pos64 body #newTab>.grid>section.panel:nth-child(2)>#p64Foot{position:sticky;bottom:0;z-index:8;background:var(--bp-card,#fff);padding-top:6px;box-shadow:0 -8px 14px -10px rgba(16,24,40,.35)}
+ /* 3) banner "modifica ordine" su una riga sola (il testo lungo e' ridondante) */
+ html.pos64 body #editingOrderBanner .muted{display:none!important}
+ html.pos64 body #editingOrderBanner{padding:4px 10px!important}
+ /* 4) messaggio sotto al totale: max 2 righe piccole */
+ html.pos64 body #p64Foot #orderMsg{margin:0!important;font-size:12px;line-height:1.25;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+ html.pos64 body #p64Foot #orderMsg:empty{display:none}
+ /* 5) pulsanti Salva: una riga, testo leggibile, "Annulla Modifica" non duplicato (c'e' gia' nel banner in alto) */
+ html.pos64 body #p64Foot .actions{display:flex!important;flex-wrap:wrap;gap:6px}
+ html.pos64 body #p64Foot .actions>button{min-height:56px!important;font-size:14px!important;line-height:1.15;padding:6px 8px!important;white-space:normal;flex:1 1 150px}
+ html.pos64 body #p64Foot .actions>button.secondary{flex:0 0 56px}
+ html.pos64 body #newTab:has(#editingOrderBanner:not(.hidden)) #cancelEditBtn{display:none!important}
+ /* 6) barra Cliente/Orario/Note/Extra/Resto: piu' facile da toccare */
+ html.pos64 body #p64Bar button{padding:9px 2px!important}
+ html.pos64 body #p64Bar button span{font-size:22px}
+ html.pos64 body #p64Bar button b{font-size:12.5px}
+ /* 7) quando una finestra e' aperta (Note, Extra, Cliente, Resto) tutto lo spazio va a lei */
+ html.pos64:has(#p64Win[data-open]) #p64Head>#bpOrder{display:none!important}
+ html.pos64:has(#p64Win[data-open]) #p64Foot .subtotals-box{display:none!important}
+ html.pos64:has(#p64Win[data-open]) #p64Foot #orderMsg{display:none!important}
+ html.pos64:has(#p64Win[data-open]) #newTab>.grid>section.panel:nth-child(2)>#p64Mid{min-height:300px!important}
+ html.pos64 body #p64Win{padding:12px!important}
+ html.pos64 body #p64Win .p64w>.p64wt{font-size:18px}
+ html.pos64 body #p64Win .p64wt button{width:44px;height:44px;font-size:18px}
+ /* campi di testo grandi e comodi da scrivere (note, indirizzo, extra...) */
+ html.pos64 body #p64Win textarea,html.pos64 body #p64Win input:not([type=checkbox]):not([type=radio]),html.pos64 body #p64Win select{font-size:18px!important;min-height:52px}
+ html.pos64 body #p64Win textarea{min-height:110px!important;line-height:1.35}
+ html.pos64 body #p64Win button{min-height:44px}
+}
+</style>
 </body>
 </html>
