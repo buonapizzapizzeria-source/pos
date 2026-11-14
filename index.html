@@ -9789,7 +9789,7 @@ function showApp(user){
  }
  loadOrders();
  })
- .on('postgres_changes',{event:'*',schema:'public',table:'menu'},()=>loadMenu())
+ .on('postgres_changes',{event:'*',schema:'public',table:'menu'},()=>{ clearTimeout(window.__bpMenuT); window.__bpMenuT = setTimeout(function(){ loadMenu(); }, 1500); })
  .subscribe(function(status){ window.__bpRtStatus = status; });
  }catch(e){ bpWarn(e); }
 }
@@ -18153,7 +18153,7 @@ openCartIngModal = function(key){
  async function pull(){
  if(!hasSb()) return;
  try{
- var r = await sb.from('bp36_data').select('key,data');
+ var r = await sb.from('bp36_data').select('key,data').not('key','like','ph:%').not('key','like','pp:%');
  if(r.error){ remote = 'off'; paintStatus(); return; }
  remote = 'on';
  (r.data || []).forEach(function(row){
@@ -18176,7 +18176,7 @@ openCartIngModal = function(key){
  var ivSb = setInterval(function(){
  if(hasSb()){
  clearInterval(ivSb); pull();
- try{ sb.channel('bp36').on('postgres_changes', {event: '*', schema: 'public', table: 'bp36_data'}, function(){ clearTimeout(window.__bpPullT); window.__bpPullT = setTimeout(pull, 1500); }).subscribe(); }catch(e){}
+ try{ sb.channel('bp36').on('postgres_changes', {event: '*', schema: 'public', table: 'bp36_data'}, function(p){ var k = ''; try{ k = String((p && p.new && p.new.key) || (p && p.old && p.old.key) || ''); }catch(e){} if(/^(ph:|pp:|prt_)/.test(k)) return; clearTimeout(window.__bpPullT); window.__bpPullT = setTimeout(pull, 1500); }).subscribe(); }catch(e){}
  }
  }, 1000);
  document.addEventListener('visibilitychange', function(){ if(!document.hidden) pull(); });
@@ -24790,7 +24790,7 @@ try{
 /* ===== bpV93fee ===== */
 try{
 (function(){try{
- /* Domicilio (Lodi Vecchio): ordine fino a 10,00 € compresi = 2 € di servizio; oltre 10 € = consegna gratis. Solo domicilio. Fuori Lodi Vecchio restano le regole esistenti. */
+ /* Domicilio (Lodi Vecchio): ordine da 10,00 € in su (10 compresi) = consegna gratis; sotto 10 € = 2 € di spese di consegna (minimo). Solo domicilio. Fuori Lodi Vecchio restano le regole esistenti. */
  var FREE_FROM=10,FEE=2,manual=false,lastOuter=false;
  var OUTER=/tavazzano|salerano|borgo\s*san\s*giovanni|pieve|cornegliano|casalmaiocco|sordio|melegnano|mulazzano|cervignano|zelo|senna|ospedaletto|lodi\b(?!\s*vecchio)/i;
  var $=function(i){return document.getElementById(i)};
@@ -24806,10 +24806,10 @@ try{
  if(typeof editingOrderId!=='undefined'&&editingOrderId&&window.__bpEditBase!=null&&Math.abs(base()-window.__bpEditBase)<0.005&&window.__bpEditFee!=null){if(s.value!==window.__bpEditFee){s.value=window.__bpEditFee;try{refreshFeeSeg()}catch(e){}}say('','');return}
  if(OUTER.test(($('address')||{}).value||'')){say('','');return}
  if(manual){say('man','Supplemento impostato a mano <button type="button" class="secondary">↺ Automatico</button>');return}
- var b=base(),free=b>FREE_FROM,want=free?'0':String(FEE);
+ var b=base(),free=b>=FREE_FROM,want=free?'0':String(FEE);
  if(s.value!==want){s.value=want;try{refreshFeeSeg()}catch(e){}}
- if(free)say('free','✓ Consegna gratuita (oltre '+eur(FREE_FROM)+') · التوصيل مجاني');
- else say('pay','Servizio consegna '+eur(FEE)+' (ordini fino a '+eur(FREE_FROM)+') · serve più di '+eur(FREE_FROM)+' per la consegna gratis')}
+ if(free)say('free','✓ Consegna gratuita (da '+eur(FREE_FROM)+' in su) · التوصيل مجاني');
+ else say('pay','Spese di consegna minime '+eur(FEE)+' (ordini sotto '+eur(FREE_FROM)+') · da '+eur(FREE_FROM)+' in su la consegna è gratis')}
  window.__bpFeeResetManual=function(){manual=false};
  /* scelta manuale dell'operatore = vince sulla regola automatica */
  document.addEventListener('change',function(e){if(e.isTrusted&&e.target&&e.target.id==='deliveryFeeSelect')manual=true},true);
