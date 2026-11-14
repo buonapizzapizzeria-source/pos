@@ -32187,5 +32187,39 @@ html:not(.bp-nt-on) #app,html:not(.bp-nt-on) .wrap{touch-action:auto}
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',start); else start();
 })();
 </script>
+<style id="bpV7Cols">
+/* v7: Storico max 3 colonne, Ordini aperti max 2 colonne (schede grandi) + login sempre scorrevole */
+html body #openOrders,html body #allOrders{grid-template-columns:minmax(0,1fr)!important}
+@media (min-width:700px){
+ html body #openOrders{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:16px!important}
+ html body #openOrders .order{padding:16px 18px!important;font-size:1.06em}
+ html body #allOrders{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important}
+}
+@media (min-width:1100px){
+ html body #allOrders{grid-template-columns:repeat(3,minmax(0,1fr))!important}
+}
+/* login: mai bloccare lo scroll quando la schermata di accesso e visibile */
+:root:root:root:has(#loginScreen:not(.hidden)),
+:root:root:root:has(#loginScreen:not(.hidden)) body{overflow-y:auto!important;overflow-x:hidden!important;height:auto!important;min-height:100%!important;position:static!important;touch-action:auto!important;-webkit-overflow-scrolling:touch}
+#loginScreen:not(.hidden){position:relative;z-index:30;margin:2vh auto 120px!important}
+</style>
+<script id="bpV7LoginFix">
+(function(){
+ function unlock(){
+  var h=document.documentElement,l=document.getElementById('loginScreen');
+  if(l&&!l.classList.contains('hidden')){
+   h.classList.remove('bp35-kds-on','p64-ticket','p64-voice');
+   document.body.style.overflow='';document.body.style.position='';
+   var k=document.getElementById('bp35KDS'); if(k) k.remove();
+   var a=document.getElementById('advancedLoginBox'); if(a&&a.classList.contains('hidden')) a.classList.remove('hidden');
+   try{window.scrollTo(0,0);}catch(e){}
+  }
+ }
+ var _dl=window.doLogout;
+ if(typeof _dl==='function'){window.doLogout=function(){var r=_dl.apply(this,arguments);setTimeout(unlock,0);setTimeout(unlock,300);return r;};}
+ new MutationObserver(unlock).observe(document.documentElement,{subtree:true,attributes:true,attributeFilter:['class']});
+ document.addEventListener('DOMContentLoaded',unlock);
+})();
+</script>
 </body>
 </html>
