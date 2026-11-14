@@ -32205,20 +32205,18 @@ html body #openOrders,html body #allOrders{grid-template-columns:minmax(0,1fr)!i
 </style>
 <script id="bpV7LoginFix">
 (function(){
- function unlock(){
-  var h=document.documentElement,l=document.getElementById('loginScreen');
-  if(l&&!l.classList.contains('hidden')){
-   h.classList.remove('bp35-kds-on','p64-ticket','p64-voice');
-   document.body.style.overflow='';document.body.style.position='';
+ function unlock(openAdv){
+  try{
+   var h=document.documentElement,l=document.getElementById('loginScreen');
+   if(!l||l.classList.contains('hidden')) return;
+   ['bp35-kds-on','p64-ticket','p64-voice'].forEach(function(c){ if(h.classList.contains(c)) h.classList.remove(c); });
    var k=document.getElementById('bp35KDS'); if(k) k.remove();
-   var a=document.getElementById('advancedLoginBox'); if(a&&a.classList.contains('hidden')) a.classList.remove('hidden');
-   try{window.scrollTo(0,0);}catch(e){}
-  }
+   if(openAdv){ var a=document.getElementById('advancedLoginBox'); if(a&&a.classList.contains('hidden')) a.classList.remove('hidden'); }
+   window.scrollTo(0,0);
+  }catch(e){}
  }
  var _dl=window.doLogout;
- if(typeof _dl==='function'){window.doLogout=function(){var r=_dl.apply(this,arguments);setTimeout(unlock,0);setTimeout(unlock,300);return r;};}
- new MutationObserver(unlock).observe(document.documentElement,{subtree:true,attributes:true,attributeFilter:['class']});
- document.addEventListener('DOMContentLoaded',unlock);
+ if(typeof _dl==='function'){window.doLogout=function(){var r=_dl.apply(this,arguments);setTimeout(function(){unlock(true)},0);setTimeout(function(){unlock(false)},300);return r;};}
 })();
 </script>
 </body>
