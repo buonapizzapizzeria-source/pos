@@ -9762,7 +9762,7 @@ function connect(){
  }
  try{
  if(!c.url || !c.key){ setMsg('loginMsg','أدخل رابط ومفتاح Supabase أولاً (الإعدادات ← قاعدة البيانات)','error'); return false; }
- sb = window.supabase.createClient(c.url, c.key);
+ sb = window.supabase.createClient(c.url, c.key, { realtime: { params: { eventsPerSecond: 40 }, heartbeatIntervalMs: 15000 } });
  return true;
  }catch(e){
  setMsg('loginMsg','Errore client Supabase: '+e.message,'error');
@@ -9847,9 +9847,10 @@ function showApp(user){
  var __vis = true; try{ if(window.BP_ROLE !== 'manager'){ var __l=[payload.new]; if(window.BP_ROLE==='driver') __l=__l.filter(function(o){ return /consegna|domicilio/i.test(String(o.order_type||'')); }); if(window.bpAccFilter) __l=window.bpAccFilter(__l); __vis = __l.length>0; } }catch(e){}
  if(__vis) triggerNewOrderNotification(payload.new);
  }
- loadOrders();
+ if(window.bpTurboOrder){ window.bpTurboOrder(payload); } else { loadOrders(); }
  })
- .on('postgres_changes',{event:'*',schema:'public',table:'menu'},()=>{ clearTimeout(window.__bpMenuT); window.__bpMenuT = setTimeout(function(){ loadMenu(); }, 1500); })
+ .on('postgres_changes',{event:'*',schema:'public',table:'order_items'},function(p){ if(window.bpTurboItems) window.bpTurboItems(p); })
+ .on('postgres_changes',{event:'*',schema:'public',table:'menu'},()=>{ clearTimeout(window.__bpMenuT); window.__bpMenuT = setTimeout(function(){ loadMenu(); }, 300); })
  .subscribe(function(status){ window.__bpRtStatus = status; });
  }catch(e){ bpWarn(e); }
 }
@@ -11074,7 +11075,7 @@ async function _loadOrdersNow(){
 
 /* loadOrders = _loadOrdersNow con raggruppamento delle chiamate ravvicinate (ex patch v25-debounce) */
 var __loWaiters = [], __loTimer = null, __loRunning = false, __loRerun = false;
-function __loSchedule(){ if(__loTimer) clearTimeout(__loTimer); __loTimer = setTimeout(__loFlush, 800); }
+function __loSchedule(){ if(__loTimer) clearTimeout(__loTimer); __loTimer = setTimeout(__loFlush, 150); }
 function __loFlush(){
  __loTimer = null;
  if(__loRunning){ __loRerun = true; return; }
@@ -34435,6 +34436,101 @@ html:not(.x) body #userBar button#bpStrRm{background:#1d1209!important;color:#ff
  };
  Object.keys(IT).forEach(function(k){if(G[k])G[k].it=IT[k];});
  R.it=IT;
+})();
+</script>
+
+<script id="v123js">
+/* ===== v123 · Turbo sync: sincronizzazione istantanea degli ordini (aggiorna solo l'ordine cambiato) ===== */
+(function(){
+ 'use strict';
+ if(window.__bpTurbo) return; window.__bpTurbo = true;
+ var qO = {}, qI = {}, tmr = null, tAt = 0, verT = null, repT = null, busy = false, again = false;
+ function appVisible(){ try{ var a = document.getElementById('app'); return !!a && !a.classList.contains('hidden'); }catch(e){ return false; } }
+ function roleFilter(list){
+  try{
+   if(window.BP_ROLE === 'driver'){ list = list.filter(function(o){ var tb = ''; try{ tb = bpTableNo(o); }catch(e){} return !tb && /consegna|domicilio/i.test(String(o.order_type || '')); }); }
+   if(window.bpAccFilter && window.BP_ROLE !== 'manager') list = window.bpAccFilter(list);
+  }catch(e){}
+  return list;
+ }
+ function inWindow(o){ var t = Date.parse(o.created_at); return !t || t >= Date.now() - 4*86400000; }
+ function fp(o){ return [o.updated_at, o.status, o.total, o.payment_method, o.notes, o.address, o.customer_name].join('|'); }
+ function repaint(){
+  if(repT) return;
+  repT = setTimeout(function(){
+   repT = null;
+   try{ rebuildCustomerDirectoryFromOrders(orders); }catch(e){}
+   try{ renderOrders(); }catch(e){}
+   try{ renderCassaReport(); }catch(e){}
+   try{ if(window.bpV38) window.bpV38.reconcile(); }catch(e){}
+   window.__bpLastSync = Date.now();
+  }, 30);
+ }
+ function schedule(delay){
+  var due = Date.now() + delay;
+  if(tmr && tAt <= due) return;
+  if(tmr) clearTimeout(tmr);
+  tAt = due; tmr = setTimeout(flush, delay);
+ }
+ function verifyLater(){
+  clearTimeout(verT);
+  verT = setTimeout(function(){ try{ if(appVisible() && typeof loadOrders === 'function') loadOrders(); }catch(e){} }, 4000);
+ }
+ async function flush(){
+  tmr = null; tAt = 0;
+  if(busy){ again = true; return; }
+  busy = true;
+  var ids = Object.keys(qO).concat(Object.keys(qI).filter(function(k){ return !(k in qO); }));
+  var itemOnly = {}; Object.keys(qI).forEach(function(k){ if(!(k in qO)) itemOnly[k] = 1; });
+  var idVals = ids.map(function(k){ return (qO[k] !== undefined ? qO[k] : qI[k]); });
+  qO = {}; qI = {};
+  try{
+   if(!sb || !appVisible() || !idVals.length) throw 0;
+   var r = await sb.from('orders').select('*').in('id', idVals);
+   if(r.error) throw r.error;
+   var rows = r.data || [];
+   var vis = roleFilter(rows.filter(inWindow));
+   var visMap = {}; vis.forEach(function(o){ visMap[String(o.id)] = o; });
+   var visIds = vis.map(function(o){ return o.id; });
+   var ver = window.__bpItemsVer || (window.__bpItemsVer = new Map());
+   if(visIds.length){
+    var it = await sb.from('order_items').select('*').in('order_id', visIds);
+    if(it.error) throw it.error;
+    visIds.forEach(function(id){ itemsByOrder.set(id, []); });
+    (it.data || []).forEach(function(x){ var a = itemsByOrder.get(x.order_id); if(a) a.push(x); });
+    vis.forEach(function(o){ ver.set(o.id, fp(o)); knownOrderIds.add(o.id); });
+   }
+   var map = new Map(); orders.forEach(function(o){ map.set(String(o.id), o); });
+   idVals.forEach(function(id){
+    var k = String(id);
+    if(visMap[k]) map.set(k, visMap[k]);
+    else { map.delete(k); itemsByOrder.delete(id); ver.delete(id); }
+   });
+   orders = Array.from(map.values()).sort(function(a, b){ return String(b.created_at || '').localeCompare(String(a.created_at || '')); }).slice(0, 250);
+   repaint();
+  }catch(e){
+   try{ if(typeof loadOrders === 'function') loadOrders(); }catch(_){}
+  }
+  busy = false;
+  if(again || Object.keys(qO).length || Object.keys(qI).length){ again = false; schedule(40); }
+  verifyLater();
+ }
+ window.bpTurboOrder = function(p){
+  try{
+   var rec = (p && (p.new && p.new.id !== undefined ? p.new : p.old)) || null;
+   if(!rec || rec.id === undefined){ if(typeof loadOrders === 'function') loadOrders(); return; }
+   qO[String(rec.id)] = rec.id;
+   schedule(p.eventType === 'INSERT' ? 250 : 40);
+  }catch(e){ try{ loadOrders(); }catch(_){} }
+ };
+ window.bpTurboItems = function(p){
+  try{
+   var rec = (p && (p.new && p.new.order_id !== undefined ? p.new : p.old)) || null;
+   if(!rec || rec.order_id === undefined) return;
+   if(!(String(rec.order_id) in qO)) qI[String(rec.order_id)] = rec.order_id;
+   schedule(90);
+  }catch(e){}
+ };
 })();
 </script>
 
