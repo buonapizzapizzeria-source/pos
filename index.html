@@ -4349,6 +4349,34 @@ window.bpTypeIcon=function(t){ var s=String(t||'').toLowerCase(), k=/consegna|do
  html body #allTab .rd-acc, html body #ordersTab .rd-acc{max-width:none}
 }
 </style>
+<style id="bpk-style">
+#bpmPad{flex:0 0 auto;display:flex;flex-direction:column;gap:5px;padding:8px;background:var(--bp-soft,#f1f3f8);border:1.5px solid var(--bp-line,#e8eaf0);border-radius:20px;user-select:none;-webkit-user-select:none;touch-action:manipulation}
+#bpmPad.bpk-off{display:none}
+.bpk-sug{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+.bpk-s{min-height:clamp(46px,6.5vh,60px)!important;padding:4px 9px!important;border-radius:14px;background:var(--bp-card,#fff)!important;color:var(--bp-ink,#111827)!important;border:1.5px solid var(--bp-line,#e8eaf0)!important;display:flex;flex-direction:column;align-items:flex-start;justify-content:center;text-align:start;line-height:1.15;overflow:hidden}
+.bpk-s b{font-size:14px;font-weight:850;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bpk-s i{font-style:normal;font-size:12px;color:var(--bp-mute,#6b7280);font-weight:750}
+.bpk-s mark{background:#fde68a;color:inherit;border-radius:4px;padding:0 1px}
+.bpk-s.best{border-color:var(--bp-ok,#16794b)!important;box-shadow:0 0 0 3px rgba(22,121,75,.18)}
+.bpk-s:active{transform:scale(.96)}
+.bpk-none{grid-column:1/-1;text-align:center;color:var(--bp-mute,#6b7280);padding:10px;font-weight:800}
+.bpk-r{display:flex;gap:5px}
+.bpk-r button{flex:1 1 0;min-width:0;min-height:clamp(38px,5.4vh,50px)!important;padding:0!important;border-radius:11px;font-size:19px!important;font-weight:800;background:var(--bp-card,#fff)!important;color:var(--bp-ink,#111827)!important;border:1px solid var(--bp-line,#e8eaf0)!important;box-shadow:0 2px 0 rgba(16,24,40,.08);transition:opacity .12s}
+.bpk-r button:active{background:#fee4e2!important;transform:translateY(1px);box-shadow:none}
+.bpk-r button.dim{opacity:.3}
+.bpk-n button{font-size:16px!important;min-height:clamp(32px,4.4vh,40px)!important}
+.bpk-n button.on{background:var(--bp-brand,#d92d20)!important;color:#fff!important}
+.bpk-r .fn{flex:1.4 1 0;background:var(--bp-soft,#f1f3f8)!important;font-size:15px!important}
+.bpk-r .sp{flex:4 1 0}
+.bpk-r .ok{flex:2 1 0;background:var(--bp-ok,#16794b)!important;color:#fff!important;border-color:transparent!important}
+#bpmPadBtn.on{background:var(--bp-ok,#16794b)!important;color:#fff!important}
+</style>
+<style id="bpc-style">
+.auto-item{min-height:50px;justify-content:center}
+.auto-item.best{background:#ecfdf3;border-inline-start:4px solid #16794b}
+.auto-item.new{background:#fffaeb;border-inline-start:4px solid #f79009}
+.auto-tag.warn{background:#fef0c7;color:#b54708}
+</style>
 </head>
  <body>
  <header class="no-print">
@@ -17507,9 +17535,21 @@ openCartIngModal = function(key){
  function menu(){ return typeof getActiveMenu === 'function' ? getActiveMenu() : []; }
  function catsList(){ var c = []; menu().forEach(function(p){ var k = p.category || 'Menu'; if(c.indexOf(k) < 0) c.push(k); }); return c.sort(function(a, b){ return catRank(a) - catRank(b) || a.localeCompare(b, 'it'); }); }
  function topList(){
- var freq = {};
- try{ itemsByOrder.forEach(function(arr){ (arr || []).forEach(function(it){ var b = splitProductAndMods(it.product_name).baseName.toLowerCase(); freq[b] = (freq[b] || 0) + Number(it.quantity || 1); }); }); }catch(e){}
- return menu().slice().sort(function(a, b){ return (freq[b.name.toLowerCase()] || 0) - (freq[a.name.toLowerCase()] || 0); }).slice(0, 12);
+ var m = menu(), by = {}, out = [], seen = {}, freq = {};
+ m.forEach(function(p){ by[p.name.toLowerCase().trim()] = p; });
+ try{
+  var os = (orders || []).slice().sort(function(a, b){ return new Date(b.created_at) - new Date(a.created_at); });
+  for(var i = 0; i < os.length && out.length < 30; i++){
+   var its = itemsByOrder.get(os[i].id) || [];
+   for(var j = 0; j < its.length && out.length < 30; j++){
+    var n = splitProductAndMods(its[j].product_name).baseName.toLowerCase().trim(), p = by[n];
+    freq[n] = (freq[n] || 0) + Number(its[j].quantity || 1);
+    if(p && !seen[p.id]){ seen[p.id] = 1; out.push(p); }
+   }
+  }
+ }catch(e){}
+ if(out.length < 30) m.filter(function(p){ return !seen[p.id]; }).sort(function(a, b){ return (freq[b.name.toLowerCase()] || 0) - (freq[a.name.toLowerCase()] || 0); }).slice(0, 30 - out.length).forEach(function(p){ out.push(p); });
+ return out;
  }
  function tile(p){
  var n = qtyInCart(p), maxi = p.price_maxi != null && Number(p.price_maxi) > 0, id = String(p.id);
@@ -17524,7 +17564,7 @@ openCartIngModal = function(key){
  var box = $('#bpMenu'); if(!box) return;
  var all = menu(), cats = catsList();
  if(M.cat !== '__top' && M.cat !== '__all' && cats.indexOf(M.cat) < 0) M.cat = '__top';
- var chips = [['__top', '⭐', 'Top', Math.min(12, all.length)], ['__all', '🍽️', 'Tutti', all.length]].concat(cats.map(function(c){ return [c, catIcon(c), c, all.filter(function(p){ return (p.category || 'Menu') === c; }).length]; }));
+ var chips = [['__top', '⭐', 'Top', Math.min(30, all.length)], ['__all', '🍽️', 'Tutti', all.length]].concat(cats.map(function(c){ return [c, catIcon(c), c, all.filter(function(p){ return (p.category || 'Menu') === c; }).length]; }));
  $('#bpmCats').innerHTML = chips.map(function(c){ return '<button type="button" class="bpm-chip' + (!M.q && M.cat === c[0] ? ' on' : '') + '" data-cat="' + esc(c[0]) + '"><span class="e">' + c[1] + '</span>' + (c[0] === '__top' ? '' : esc(c[2])) + '<i>' + c[3] + '</i></button>'; }).join('');
  var list;
  if(M.q) list = ssSearch(all, M.q);
@@ -17663,6 +17703,70 @@ openCartIngModal = function(key){
  if(zv) zv.onclick = function(){ if(window.bpZoom) window.bpZoom.reset(); };
  if(window.bpZoom) window.bpZoom.sync();
  }
+ /* ---------- v110 · Quick Pad: كيبورد حروف باللمس + اقتراحات + كمية/XL ---------- */
+ var PAD = {on: false, lang: 'it', qty: 1, xl: false, ck: '', cr: []}, PW = {sig: '', words: []};
+ var PAD_L = {it: ['qwertyuiop', 'asdfghjkl', 'zxcvbnm'], ar: ['ضصثقفغعهخحج', 'شسيبلاتنمكط', 'ئءؤرىةوزظدذ']};
+ function padNorm(s){ return String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, ''); }
+ function padRes(){ var k = M.q + '|' + M.sig; if(PAD.ck !== k){ PAD.ck = k; PAD.cr = M.q.trim() ? ssSearch(menu(), M.q.trim()) : topList(); } return PAD.cr; }
+ function padNext(){
+ if(PAD.lang !== 'it') return null;
+ var m = menu(), sg = m.length + '|' + (m[0] && m[0].id);
+ if(PW.sig !== sg){ var w = {}; m.forEach(function(p){ padNorm(p.name + ' ' + (p.description || '')).split(/[^a-z0-9]+/).forEach(function(x){ if(x.length > 1) w[x] = 1; }); }); PW.sig = sg; PW.words = Object.keys(w); }
+ var t = padNorm(M.q).split(/\s+/).pop(); if(!t) return null;
+ var n = {}, c = 0; PW.words.forEach(function(x){ if(x.length > t.length && x.indexOf(t) === 0){ n[x.charAt(t.length)] = 1; c++; } });
+ return c ? n : null;
+ }
+ function padHl(n){ var q = M.q.trim(); if(!q) return esc(n); var i = padNorm(n).indexOf(padNorm(q)); return i < 0 ? esc(n) : esc(n.slice(0, i)) + '<mark>' + esc(n.slice(i, i + q.length)) + '</mark>' + esc(n.slice(i + q.length)); }
+ function padDraw(){
+ var pad = $('#bpmPad'), sg = $('#bpmSug'); if(!pad || !sg || !PAD.on) return;
+ var q = M.q.trim(), res = padRes().slice(0, q ? 6 : 9), nx = padNext();
+ sg.innerHTML = res.length ? res.map(function(p, i){ var n = qtyInCart(p); return '<button type="button" class="bpk-s' + (i === 0 && q ? ' best' : '') + '" data-id="' + esc(String(p.id)) + '"><b>' + padHl(p.name) + '</b><i>' + euro(p.price_normal) + (n ? ' · 🛒' + n : '') + '</i></button>'; }).join('') : '<span class="bpk-none">🔎 ✗</span>';
+ $$('#bpmPad [data-k]').forEach(function(b){ var k = b.getAttribute('data-k'); b.classList.toggle('dim', !!nx && k !== ' ' && !nx[k]); });
+ $$('#bpmPad [data-q]').forEach(function(b){ b.classList.toggle('on', Number(b.getAttribute('data-q')) === PAD.qty && PAD.qty > 1); });
+ var x = $('#bpmPad [data-xl]'); if(x) x.classList.toggle('on', PAD.xl);
+ }
+ function padKeys(){
+ var h = '<div id="bpmSug" class="bpk-sug"></div><div class="bpk-r bpk-n">';
+ for(var i = 1; i <= 9; i++) h += '<button type="button" data-q="' + i + '">×' + i + '</button>';
+ h += '<button type="button" data-xl>XL</button></div>';
+ PAD_L[PAD.lang].forEach(function(r, ri){ h += '<div class="bpk-r">' + r.split('').map(function(c){ return '<button type="button" data-k="' + c + '">' + c + '</button>'; }).join('') + (ri === 2 ? '<button type="button" data-bs class="fn">⌫</button>' : '') + '</div>'; });
+ return h + '<div class="bpk-r"><button type="button" data-lang class="fn">' + (PAD.lang === 'it' ? 'عربي' : 'ABC') + '</button><button type="button" data-clr class="fn">🧹</button><button type="button" data-k=" " class="sp">␣</button><button type="button" data-add class="ok">✓ +</button></div>';
+ }
+ function padSet(v){ v = String(v).replace(/^\s+/, '').replace(/\s{2,}/g, ' '); M.q = v; var i = $('#bpmQ'); if(i) i.value = v; if(M.edit) setEdit(false); renderMenu(); }
+ function padAdd(p){
+ var n = PAD.qty, sz = (PAD.xl && p.price_maxi != null && Number(p.price_maxi) > 0) ? 'Maxi' : 'Normale';
+ for(var i = 0; i < n; i++) addQuick(p, sz);
+ PAD.qty = 1; PAD.xl = false; try{ bpFlash('✅ ' + n + '× ' + p.name + (sz === 'Maxi' ? ' XL' : '')); }catch(e){}
+ padSet('');
+ }
+ function padToggle(on){
+ PAD.on = on; try{ localStorage.setItem('bp_pad_on', on ? '1' : '0'); }catch(e){}
+ var pad = $('#bpmPad'), q = $('#bpmQ'), b = $('#bpmPadBtn');
+ if(pad) pad.classList.toggle('bpk-off', !on); if(q) q.setAttribute('inputmode', on ? 'none' : 'search'); if(b) b.classList.toggle('on', on);
+ padDraw();
+ }
+ function padInit(){
+ var box = $('#bpMenu'), lab = $('#bpMenu .bpm-search'); if(!box || !lab || $('#bpmPad')) return;
+ var pad = document.createElement('div'); pad.id = 'bpmPad'; pad.innerHTML = padKeys(); box.appendChild(pad);
+ var b = document.createElement('button'); b.type = 'button'; b.id = 'bpmPadBtn'; b.className = 'bpm-x'; b.title = 'Tastiera rapida · كيبورد سريع'; b.textContent = '⌨️'; lab.appendChild(b);
+ b.onclick = function(e){ e.preventDefault(); padToggle(!PAD.on); };
+ pad.addEventListener('pointerdown', function(e){
+  var b = e.target.closest('button'); if(!b) return; e.preventDefault(); vib();
+  var id = b.getAttribute('data-id');
+  if(id != null){ var p = menu().filter(function(x){ return String(x.id) === id; })[0]; if(p) padAdd(p); return; }
+  if(b.hasAttribute('data-k')) padSet(M.q + b.getAttribute('data-k'));
+  else if(b.hasAttribute('data-bs')) padSet(M.q.slice(0, -1));
+  else if(b.hasAttribute('data-clr')){ PAD.qty = 1; PAD.xl = false; padSet(''); }
+  else if(b.hasAttribute('data-q')){ var n = Number(b.getAttribute('data-q')); PAD.qty = PAD.qty === n ? 1 : n; padDraw(); }
+  else if(b.hasAttribute('data-xl')){ PAD.xl = !PAD.xl; padDraw(); }
+  else if(b.hasAttribute('data-lang')){ PAD.lang = PAD.lang === 'it' ? 'ar' : 'it'; pad.innerHTML = padKeys(); padDraw(); }
+  else if(b.hasAttribute('data-add')){ var t = M.q.trim() && padRes()[0]; if(t) padAdd(t); else { try{ bpFlash('❌ اكتب حروف الأول · Scrivi prima', true); }catch(e){} } }
+ });
+ $('#bpmQ').addEventListener('keydown', function(e){ if(e.key === 'Enter'){ var t = M.q.trim() && padRes()[0]; if(t){ e.preventDefault(); padAdd(t); } } });
+ var st = null; try{ st = localStorage.getItem('bp_pad_on'); }catch(e){}
+ padToggle(st == null ? !!(window.matchMedia && matchMedia('(pointer:coarse)').matches) : st === '1');
+ }
+ var _rm0 = renderMenu; renderMenu = function(){ var r = _rm0.apply(this, arguments); safe(padDraw); return r; };
  function buildMenu(){
  var panel = $('#newTab .grid > section.panel'); if(!panel || $('#bpMenu')) return !!$('#bpMenu');
  var box = document.createElement('div'); box.id = 'bpMenu';
@@ -17689,7 +17793,7 @@ openCartIngModal = function(key){
  M.pop = id; vib(); addQuick(p, 'Normale');
  }
  };
- initSortUI();
+ initSortUI(); safe(padInit);
  renderMenu(); return true;
  }
  var _rc = renderCart; renderCart = function(){ var r = _rc.apply(this, arguments); sched(); return r; };
@@ -32528,6 +32632,428 @@ html #newTab #bpmGrid .bpm-tile.pa .bpm-main i{position:absolute!important;top:-
 /* bottoni sulla targa */
 html #newTab #bpmGrid .bpm-tile.pa .bpm-act{padding:2px 5px 6px!important;gap:4px!important}
 html #newTab #bpmGrid .bpm-tile.pa .bpm-act button{height:34px!important;min-height:34px!important}
+/* ===== uxQuick · scheda rapida ===== */
+#qsRoot{position:fixed;inset:0;z-index:99999;display:flex;align-items:flex-end;justify-content:center}
+#qsRoot.qs-hide{display:none}
+body.qs-lock{overflow:hidden}
+#qsRoot .qs-bd{position:absolute;inset:0;background:rgba(20,10,3,.6)}
+#qsRoot .qs-sh{position:relative;width:min(100%,560px);max-height:92vh;overflow-y:auto;background:#fffaf3;border-radius:26px 26px 0 0;box-shadow:0 -10px 36px rgba(0,0,0,.4);animation:qsUp .18s ease-out;padding-bottom:env(safe-area-inset-bottom,0)}
+@keyframes qsUp{from{transform:translateY(40px);opacity:.4}to{transform:none;opacity:1}}
+.qs-ph{position:relative;height:clamp(130px,26vh,210px);background:#e9d8c4;border-radius:26px 26px 0 0;overflow:hidden}
+.qs-ph img{width:100%;height:100%;object-fit:cover;display:block}
+.qs-ph>span{display:flex;height:100%;align-items:center;justify-content:center;font-size:64px}
+.qs-x{position:absolute;top:10px;right:10px;width:40px;height:40px;border-radius:50%;border:0;background:rgba(255,255,255,.95);font-size:18px;font-weight:900;color:#1d1209;box-shadow:0 2px 8px rgba(0,0,0,.35)}
+.qs-hd{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;padding:10px 14px 4px}
+.qs-hd>b{font-size:22px;font-weight:900;color:#1d1209}
+.qs-sz{display:flex;gap:6px}
+.qs-fm{display:flex;gap:8px;overflow-x:auto;padding:6px 14px 4px;-webkit-overflow-scrolling:touch}
+.qs-f{flex:0 0 auto;width:74px;border:2px solid transparent;border-radius:14px;background:#fff;padding:3px;display:flex;flex-direction:column;align-items:center;gap:2px;box-shadow:0 1px 4px rgba(0,0,0,.15)}
+.qs-f.on{border-color:#d92d20;background:#fff1ee}
+.qs-f img{width:100%;height:46px;object-fit:cover;border-radius:10px}
+.qs-f i{height:46px;display:flex;align-items:center;font-style:normal;font-size:26px}
+.qs-f small{font-size:11px;font-weight:800;line-height:1.1;color:#1d1209;text-align:center;max-height:2.3em;overflow:hidden}
+.qs-t{padding:10px 14px 2px;font-size:14px;font-weight:900;color:#7a3b12}
+.qs-t small{font-weight:600;opacity:.7;margin-inline-start:6px}
+.qs-g{display:flex;flex-wrap:wrap;gap:7px;padding:4px 14px 6px}
+.qs-c{border:2px solid #e2cdb4;background:#fff;color:#1d1209;border-radius:99px;padding:8px 13px;font-size:15px;font-weight:800;min-height:40px}
+.qs-c.on{background:#16a34a;border-color:#16a34a;color:#fff}
+.qs-c.off{background:#fee4e2;border-color:#f04438;color:#b42318;text-decoration:line-through}
+.qs-c.ex:not(.on){background:#fff3e0;border-color:#f59e0b}
+.qs-c small{font-size:11px;opacity:.85;margin-inline-start:2px}
+.qs-ft{position:sticky;bottom:0;display:flex;gap:10px;align-items:center;padding:10px 14px 12px;background:linear-gradient(180deg,rgba(255,250,243,0),#fffaf3 30%)}
+.qs-st{display:flex;align-items:center;gap:4px;background:#fff;border:2px solid #e2cdb4;border-radius:99px;padding:3px}
+.qs-st button{width:40px;height:40px;border-radius:50%;border:0;background:#f3e6d3;font-size:22px;font-weight:900;color:#1d1209}
+.qs-st b{min-width:28px;text-align:center;font-size:20px;font-weight:900}
+.qs-ok{flex:1;min-height:52px;border:0;border-radius:16px;background:linear-gradient(135deg,#22c55e,#15803d);color:#fff;font-size:19px;font-weight:900;box-shadow:0 6px 16px rgba(21,128,61,.4)}
+/* ===== uxQuick · rifinitura: tasti tondi e chip più compatti ===== */
+#qsRoot button{box-sizing:border-box;min-width:0!important;max-width:none}
+#qsRoot .qs-x{width:38px!important;height:38px!important;min-height:0!important;padding:0!important;border-radius:50%!important;font-size:17px!important;display:flex;align-items:center;justify-content:center;line-height:1}
+#qsRoot .qs-st button{width:38px!important;height:38px!important;min-height:0!important;padding:0!important;border-radius:50%!important;font-size:21px!important;display:flex;align-items:center;justify-content:center;line-height:1;flex:0 0 38px}
+#qsRoot .qs-c{font-size:14px!important;padding:5px 11px!important;min-height:36px!important;height:auto!important;line-height:1.15;flex:0 0 auto}
+#qsRoot .qs-c small{font-size:11px!important}
+#qsRoot .qs-hd>b{font-size:20px!important}
+#qsRoot .qs-f{width:68px;min-height:0!important;padding:3px!important;border-radius:12px!important}
+#qsRoot .qs-f small{font-size:10.5px!important}
+#qsRoot .qs-t{font-size:13px!important}
+#qsRoot .qs-ok{font-size:17px!important;min-height:48px!important;padding:0 10px!important}
+#qsRoot .qs-g{gap:6px}
+
+/* ===== uxQuick · extra: categorie + popup ===== */
+#qsRoot .qs-cats,#qsXRoot .qs-tabs{display:flex;gap:7px;overflow-x:auto;padding:4px 14px 6px;-webkit-overflow-scrolling:touch}
+#qsRoot .qs-cat,#qsXRoot .qs-cat{flex:0 0 auto;position:relative;border:2px solid #f0b774;background:linear-gradient(180deg,#fff7ea,#ffe7c4);color:#5a2d00;border-radius:14px;padding:6px 12px!important;font-size:14px!important;font-weight:900;min-height:38px!important;height:auto!important;min-width:0!important}
+#qsRoot .qs-cat.on,#qsXRoot .qs-cat.on{background:#16a34a;border-color:#16a34a;color:#fff}
+#qsXRoot .qs-cat.cur{outline:3px solid #d92d20;outline-offset:1px}
+.qs-cat em{font-style:normal;margin-inline-start:6px;background:#fff;color:#15803d;border-radius:99px;padding:0 7px;font-size:12px}
+#qsXRoot{position:fixed;inset:0;z-index:100000;display:flex;align-items:flex-end;justify-content:center}
+#qsXRoot.qs-hide{display:none}
+#qsXRoot .qs-bd{position:absolute;inset:0;background:rgba(20,10,3,.55)}
+#qsXRoot .qs-xs{display:flex;flex-direction:column;height:min(86vh,720px);overflow:hidden;padding-bottom:0;width:min(100%,560px);position:relative;background:#fffaf3;border-radius:26px 26px 0 0;animation:qsUp .16s ease-out}
+.qs-xh{display:flex;align-items:center;gap:8px;padding:12px 12px 4px}
+.qs-xh b{font-size:17px;font-weight:900;color:#1d1209;max-width:34%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#qsXRoot #qsXq{flex:1;min-width:0;height:40px!important;border-radius:99px!important;border:2px solid #e2cdb4!important;padding:0 14px!important;font-size:15px!important;background:#fff!important}
+#qsXRoot .qs-x2{flex:0 0 38px;width:38px!important;height:38px!important;min-height:0!important;padding:0!important;border-radius:50%!important;border:0;background:#f3e6d3;font-size:17px!important;font-weight:900;display:flex;align-items:center;justify-content:center}
+.qs-sel{display:flex;gap:6px;overflow-x:auto;padding:2px 14px 4px;min-height:34px;align-items:center}
+.qs-sel small{color:#9a6a3a;font-weight:700}
+#qsXRoot .qs-sel .qs-c{font-size:13px!important;padding:3px 10px!important;min-height:30px!important}
+.qs-xg{flex:1 1 auto;min-height:0;overflow-y:auto;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;padding:6px 14px 10px;align-content:start;-webkit-overflow-scrolling:touch}
+#qsXRoot .qs-xc{position:relative;display:flex;flex-direction:column;align-items:center;gap:3px;border:2.5px solid #eadbc6;background:#fff;border-radius:16px;padding:8px 4px 6px!important;min-height:96px!important;height:auto!important;color:#1d1209}
+#qsXRoot .qs-xc.on{border-color:#16a34a;background:#ecfdf3;box-shadow:0 0 0 2px #16a34a33}
+.qs-xi{display:flex;width:44px;height:44px;align-items:center;justify-content:center;font-size:34px;line-height:1}
+.qs-xi img{width:100%;height:100%;object-fit:contain}
+#qsXRoot .qs-xc b{font-size:13px!important;font-weight:850;line-height:1.1;text-align:center;overflow-wrap:anywhere}
+#qsXRoot .qs-xc small{font-size:11px!important;color:#b54708;font-weight:800}
+#qsXRoot .qs-xc i{position:absolute;top:4px;right:4px;width:22px;height:22px;border-radius:50%;background:#16a34a;color:#fff;font-style:normal;font-size:13px;display:flex;align-items:center;justify-content:center}
+#qsXRoot .qs-ft{padding:8px 12px calc(10px + env(safe-area-inset-bottom,0));background:#fffaf3;border-top:1px solid #eadbc6}
+#qsXRoot .qs-back{flex:0 0 auto;min-height:48px!important;padding:0 16px!important;border-radius:16px!important;border:2px solid #e2cdb4;background:#fff;color:#1d1209;font-size:16px!important;font-weight:900}
+.qs-em{grid-column:1/-1;text-align:center;opacity:.5;font-size:30px}
+
+.qs-xi{width:54px!important;height:54px!important;border-radius:50%;background:radial-gradient(circle,#fffdf8 0,#f3e4cc 100%);padding:3px}
+.qs-xi svg{width:100%;height:100%;display:block}
+
+#qsRoot .qs-c.sg{background:#f3eeff;border-color:#8b5cf6;color:#4c1d95}
+#qsRoot .qs-c.sg.on{background:#16a34a;border-color:#16a34a;color:#fff}
+#qsUndo{position:fixed;left:10px;bottom:calc(112px + env(safe-area-inset-bottom,0px));z-index:9000;display:none;align-items:center;gap:6px;height:44px;padding:0 16px!important;border-radius:99px!important;border:0;background:#1d1209;color:#fff;font-size:15px!important;font-weight:900;box-shadow:0 6px 16px rgba(0,0,0,.35)}
 </style>
+<script>
+/* ===== uxQuick · icone uniche per ogni ingrediente (SVG disegnate, una per ingrediente) ===== */
+(function(){
+ var SH='<ellipse cx="32" cy="58" rx="20" ry="3" fill="#000" opacity=".16"/>';
+ function W(b){return '<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">'+SH+b+'</svg>';}
+ function HL(x,y,r){return '<ellipse cx="'+x+'" cy="'+y+'" rx="'+(r||7)+'" ry="'+((r||7)/2.3)+'" fill="#fff" opacity=".5" transform="rotate(-30 '+x+' '+y+')"/>';}
+ function D(c,pts,r){return pts.map(function(p){return '<circle cx="'+p[0]+'" cy="'+p[1]+'" r="'+(p[2]||r||2)+'" fill="'+c+'"/>';}).join('');}
+ function disc(c1,c2,r,x){return '<circle cx="32" cy="34" r="'+r+'" fill="'+c2+'"/><circle cx="32" cy="34" r="'+(r-3)+'" fill="'+c1+'"/>'+(x||'');}
+ function wedge(a,b,x){return '<path d="M6 42 L52 16 Q60 14 60 24 L60 46 Q60 54 52 54 L12 54 Q4 54 6 42Z" fill="'+a+'"/><path d="M6 42 L60 42 L60 46 Q60 54 52 54 L12 54 Q4 54 6 42Z" fill="'+b+'"/>'+(x||'');}
+ function leaf(x,y,rot,c1,c2,s){s=s||1;return '<g transform="translate('+x+' '+y+') rotate('+rot+') scale('+s+')"><path d="M0 0 Q14 -8 26 0 Q14 8 0 0Z" fill="'+c1+'"/><path d="M2 0 L24 0" stroke="'+c2+'" stroke-width="1.6"/></g>';}
+ function bottle(body,cap,glyph){return '<rect x="21" y="22" width="22" height="34" rx="8" fill="'+body+'"/><rect x="26" y="12" width="12" height="12" rx="3" fill="'+cap+'"/><rect x="29" y="6" width="6" height="8" rx="2" fill="'+cap+'"/><rect x="24" y="32" width="16" height="16" rx="4" fill="#fff" opacity=".92"/>'+glyph+'<rect x="24" y="24" width="4" height="26" rx="2" fill="#fff" opacity=".3"/>';}
+ function bowl(c,top,x){return '<path d="M8 36 Q8 56 32 56 Q56 56 56 36Z" fill="#e8eef4"/><path d="M8 36 L56 36" stroke="#c3ccd6" stroke-width="2"/><path d="M12 36 Q14 20 32 20 Q50 20 52 36Z" fill="'+c+'"/>'+(x||'')+HL(22,28,6);}
+ var R=[];
+ function r(rx,f){R.push([rx,f]);}
+ /* formaggi */
+ r(/bufala/,function(){return '<path d="M18 20 Q8 8 17 5 M46 20 Q56 8 47 5" stroke="#6b4a1e" stroke-width="3.2" fill="none" stroke-linecap="round"/>'+disc('#fffdf4','#e8dfc4',21)+'<path d="M32 26 q-6 9 0 12 q6-3 0-12z" fill="#a9d8ff"/>'+HL(22,24);});
+ r(/burrata|stracciatella/,function(){return disc('#fff','#e1e6ec',21)+'<path d="M24 14 Q32 4 40 14 Q32 20 24 14Z" fill="#fff" stroke="#e1e6ec" stroke-width="2"/><path d="M26 42 Q32 48 38 42" stroke="#e9d9a8" stroke-width="3" fill="none"/>'+HL(22,26);});
+ r(/^mozz|mozzarella|fiordilatte|fior di latte/,function(){return disc('#ffffff','#dde3ea',21)+leaf(26,30,-30,'#4caf50','#2e7d32',.9)+HL(22,24);});
+ r(/gorgonzola|erborinat|blu\b/,function(){return wedge('#fff0c4','#e6d094','<path d="M20 38 q8 -6 14 -2 M30 28 q8 2 12 8 M42 40 q6 -4 12 -2" stroke="#3b82a0" stroke-width="3" fill="none" stroke-linecap="round"/><path d="M24 46 q6 -3 12 0" stroke="#4f9d86" stroke-width="2.4" fill="none"/>');});
+ r(/grana|parmigian|pecorino|grattugi/,function(){return '<path d="M6 54 L26 18 L42 54Z" fill="#f5d35a"/><path d="M26 54 L44 24 L60 54Z" fill="#fbe48a"/><path d="M26 18 L42 54 L26 54Z" fill="#e9bf3c" opacity=".6"/>'+D('#fff',[[24,40,1.8],[34,46,1.6],[46,42,1.8],[40,34,1.4],[18,48,1.5]]);});
+ r(/emmental|groviera|gruyere|svizzer|gouda|edam/,function(){return wedge('#ffe27a','#e3a800',D('#e0a400',[[30,30,5],[44,34,4],[22,46,3.5],[38,46,3],[50,26,2.5]]));});
+ r(/brie|camembert/,function(){return '<ellipse cx="32" cy="40" rx="26" ry="14" fill="#e9ddb5"/><ellipse cx="32" cy="35" rx="26" ry="14" fill="#f7efd6"/><path d="M32 35 L58 30 A26 14 0 0 1 56 40Z" fill="#f2cf6a"/><ellipse cx="32" cy="35" rx="26" ry="14" fill="none" stroke="#e1d3a1" stroke-width="2"/>'+HL(20,30,6);});
+ r(/scamorza|provol|caciocavallo|affumicat/,function(){return '<circle cx="32" cy="40" r="17" fill="#e0a64f"/><circle cx="32" cy="18" r="9" fill="#e0a64f"/><rect x="24" y="22" width="16" height="10" fill="#e0a64f"/><path d="M26 24 Q32 30 38 24" stroke="#8a5a1b" stroke-width="2.4" fill="none"/><path d="M32 8 Q38 2 42 8" stroke="#8a5a1b" stroke-width="2" fill="none"/>'+HL(24,36,6);});
+ r(/ricotta|mascarpone|philadelphia|stracchino|caprino|spalmabile/,function(){return bowl('#ffffff','','<path d="M24 28 Q32 14 40 28" fill="#fff" stroke="#e1e6ec" stroke-width="2"/>');});
+ r(/cheddar/,function(){return wedge('#ffa733','#e07a10',D('#e58a1a',[[32,30,3],[44,36,2.5]]));});
+ r(/fontina|taleggio|asiago|montasio|cacio|formagg|brie/,function(){return wedge('#ffe9a8','#d9822b');});
+ /* salumi */
+ r(/piccante.*salame|salame.*piccante|spianata|diavol/,function(){return disc('#c62d22','#7e1810',21,D('#ffd6d0',[[24,26,2.6],[40,28,2.2],[30,38,2.6],[42,42,2.4],[22,42,2],[34,24,1.8]])+'<path d="M44 12 q8 2 8 10 q-6 -2 -8 -10z" fill="#e53935"/>');});
+ r(/salame|salamino|soppressata|salami/,function(){return disc('#d9786c','#9a3a2f',21,D('#f7c7bf',[[24,26,2.6],[40,28,2.2],[30,38,2.6],[42,42,2.4],[22,42,2],[34,24,1.8]]));});
+ r(/crudo|parma|san daniele/,function(){return '<path d="M8 22 Q32 10 56 22 L52 46 Q32 56 12 46Z" fill="#b83a30"/><path d="M8 22 Q32 10 56 22 L55 28 Q32 18 9 28Z" fill="#f6dcd4"/><path d="M18 34 Q32 40 46 34" stroke="#f0a9a0" stroke-width="2.4" fill="none"/>';});
+ r(/speck/,function(){return '<path d="M8 20 Q32 8 56 20 L52 48 Q32 58 12 48Z" fill="#7a2c20"/><path d="M8 20 Q32 8 56 20 L55 27 Q32 16 9 27Z" fill="#3f2a22"/>'+D('#e9b0a3',[[22,36,2],[34,40,2],[44,34,2]]);});
+ r(/prosciutto|cotto|\bham\b/,function(){return '<path d="M8 26 Q20 12 36 18 Q56 20 56 38 Q52 54 30 52 Q8 52 8 26Z" fill="#f4a6a0"/><path d="M16 32 Q28 24 40 32 M18 42 Q30 36 46 44" stroke="#ffd9d4" stroke-width="3" fill="none" stroke-linecap="round"/>'+HL(24,24,6);});
+ r(/pancetta|bacon|guanciale/,function(){return '<path d="M8 20 Q20 12 32 20 T56 20 L56 44 Q44 52 32 44 T8 44Z" fill="#d6453a"/><path d="M8 30 Q20 22 32 30 T56 30" stroke="#ffe3dc" stroke-width="5" fill="none"/><path d="M8 38 Q20 30 32 38 T56 38" stroke="#ffe3dc" stroke-width="3" fill="none"/>';});
+ r(/wurstel|wuerstel|hot ?dog|frankfurt/,function(){return '<g transform="rotate(-25 32 34)"><rect x="6" y="24" width="52" height="20" rx="10" fill="#e0603f"/><path d="M16 24 v20 M28 24 v20 M40 24 v20" stroke="#a63a22" stroke-width="2.4"/><rect x="10" y="27" width="40" height="4" rx="2" fill="#fff" opacity=".35"/></g>';});
+ r(/salsiccia|porchetta|cotechino/,function(){return '<path d="M8 40 Q8 20 28 20 Q40 20 40 30 Q56 30 56 44 Q56 54 44 54 Q34 54 34 46 Q8 56 8 40Z" fill="#a8532e"/><path d="M14 38 q6 -10 16 -12" stroke="#d98a5f" stroke-width="3" fill="none" stroke-linecap="round"/>'+D('#f0d0a8',[[44,46,1.8],[20,44,1.6]]);});
+ r(/mortadella/,function(){return disc('#f7b6b0','#e58e87',21,D('#fff4ee',[[22,26,3.2],[38,24,3.4],[30,38,3.2],[44,40,3],[24,44,2.6]])+D('#6aa84f',[[30,28,1.8],[40,34,1.8],[22,36,1.8]]));});
+ r(/nduja/,function(){return '<path d="M10 40 Q8 20 30 20 Q54 20 54 40 Q54 54 32 54 Q12 54 10 40Z" fill="#d1361c"/><path d="M18 34 Q30 26 44 34" stroke="#ff8f6b" stroke-width="3" fill="none"/>'+D('#7c1a0c',[[24,44,2],[40,46,2]])+HL(22,28);});
+ /* carne */
+ r(/kebab|kebap|doner/,function(){return '<rect x="30" y="2" width="4" height="58" rx="2" fill="#9aa3ad"/><path d="M14 18 H50 L44 30 H20Z" fill="#c98a4b"/><path d="M20 30 H44 L40 42 H24Z" fill="#a8652c"/><path d="M24 42 H40 L37 54 H27Z" fill="#8a4c1c"/><path d="M16 22 H48 M22 34 H42" stroke="#e8b878" stroke-width="2"/>';});
+ r(/pollo|chicken|tacchino/,function(){return '<rect x="34" y="34" width="8" height="20" rx="4" fill="#f7efe1" transform="rotate(-40 38 44)"/><circle cx="50" cy="54" r="4" fill="#f7efe1"/><circle cx="26" cy="26" r="19" fill="#c9792f"/><circle cx="26" cy="26" r="16" fill="#e7a24f"/>'+HL(19,18,6);});
+ r(/hamburger|burger|polpett|macinato/,function(){return '<ellipse cx="32" cy="40" rx="26" ry="12" fill="#5a2e17"/><ellipse cx="32" cy="36" rx="26" ry="12" fill="#7a4120"/><path d="M14 34 L26 42 M26 30 L38 40 M38 28 L50 38" stroke="#3a1c0c" stroke-width="3"/>'+HL(20,30,6);});
+ r(/tagliata|manzo|vitello|carne|cotoletta|arrosto|fesa|agnello|bistecca/,function(){return '<path d="M8 36 Q10 16 32 18 Q56 18 56 38 Q52 54 30 52 Q10 52 8 36Z" fill="#8c3b24"/><path d="M14 36 Q16 24 32 26 Q48 26 48 38 Q44 46 30 45 Q16 46 14 36Z" fill="#d46a5a"/><path d="M20 36 H40" stroke="#f0b4aa" stroke-width="3"/>';});
+ /* pesce */
+ r(/tonno/,function(){return '<ellipse cx="32" cy="46" rx="22" ry="8" fill="#8b95a1"/><rect x="10" y="26" width="44" height="20" fill="#aeb7c1"/><ellipse cx="32" cy="26" rx="22" ry="8" fill="#d7dde3"/><path d="M18 26 Q32 18 46 26 Q32 32 18 26Z" fill="#f08a6a"/><path d="M24 26 H40" stroke="#ffc4b0" stroke-width="2"/>';});
+ r(/acciug|alici|sardin/,function(){return '<path d="M4 32 Q22 18 48 32 Q22 46 4 32Z" fill="#8fa7bd"/><path d="M48 32 L60 22 L60 42Z" fill="#6c88a3"/><path d="M8 32 Q26 36 46 32" stroke="#dbe6ef" stroke-width="2.4" fill="none"/><circle cx="14" cy="30" r="2.2" fill="#fff"/><circle cx="14" cy="30" r="1" fill="#111"/>';});
+ r(/gamber|scampi/,function(){return '<path d="M46 8 Q62 22 50 42 Q40 56 16 54 Q8 54 12 48 Q30 46 36 34 Q42 22 34 14 Q38 6 46 8Z" fill="#f0764f"/><path d="M40 20 L50 22 M38 28 L48 32 M32 38 L40 44" stroke="#ffd2c2" stroke-width="2.4" stroke-linecap="round"/><path d="M42 8 Q50 0 60 4" stroke="#f0764f" stroke-width="2" fill="none"/><circle cx="40" cy="14" r="2" fill="#111"/>';});
+ r(/salmone/,function(){return '<path d="M6 30 Q16 14 36 18 Q58 22 58 36 Q50 52 28 50 Q8 48 6 30Z" fill="#ff8a6a"/><path d="M14 30 Q30 22 50 32 M14 38 Q30 32 48 40" stroke="#ffd7c8" stroke-width="3" fill="none" stroke-linecap="round"/>';});
+ r(/frutti di mare|cozze|vongol|molluschi|calamar|polpo|conchigl/,function(){return '<path d="M32 54 L8 30 Q10 8 32 8 Q54 8 56 30Z" fill="#f2b28a"/><path d="M32 54 L20 12 M32 54 L32 8 M32 54 L44 12 M32 54 L12 24 M32 54 L52 24" stroke="#d98a5e" stroke-width="2"/><path d="M26 54 H38 L34 58 H30Z" fill="#d98a5e"/>';});
+ r(/pesce|surimi|merluzzo|baccal/,function(){return '<path d="M6 32 Q22 12 46 32 Q22 52 6 32Z" fill="#5aa7e0"/><path d="M46 32 L60 20 L60 44Z" fill="#2f6fb0"/><circle cx="16" cy="29" r="3" fill="#fff"/><circle cx="16" cy="29" r="1.4" fill="#111"/>';});
+ /* verdure */
+ r(/porcini/,function(){return '<path d="M22 34 H42 L44 54 Q32 58 20 54Z" fill="#f1e2c6"/><path d="M6 36 Q6 10 32 10 Q58 10 58 36Z" fill="#8a4b2a"/>'+D('#c58b61',[[20,24,3],[34,18,2.6],[44,28,2.6]])+HL(20,20,7);});
+ r(/funghi|fungo|champignon/,function(){return '<path d="M24 34 H40 L42 54 Q32 58 22 54Z" fill="#f7efe1"/><path d="M6 36 Q6 10 32 10 Q58 10 58 36Z" fill="#d8c3a5"/><path d="M6 36 H58" stroke="#b79d7a" stroke-width="2.4"/>'+D('#fff',[[22,22,2.6],[38,18,2.2],[46,28,2.2]]);});
+ r(/oliv.*ner|nere/,function(){return '<ellipse cx="22" cy="36" rx="14" ry="17" fill="#2b2230" transform="rotate(-20 22 36)"/><ellipse cx="44" cy="34" rx="12" ry="15" fill="#3b3040" transform="rotate(15 44 34)"/>'+HL(18,28,5)+HL(41,26,4);});
+ r(/oliv/,function(){return '<ellipse cx="32" cy="36" rx="21" ry="18" fill="#6f8f2c"/><ellipse cx="32" cy="36" rx="7" ry="6" fill="#d8453a"/>'+HL(22,26,7);});
+ r(/cipoll/,function(){return '<path d="M32 4 Q36 14 34 18" stroke="#8cc152" stroke-width="4" fill="none" stroke-linecap="round"/><path d="M32 16 Q58 22 54 40 Q50 56 32 56 Q14 56 10 40 Q6 22 32 16Z" fill="#b45c9e"/><path d="M32 18 Q22 38 32 56 M32 18 Q42 38 32 56" stroke="#f6d9ec" stroke-width="1.8" fill="none"/>';});
+ r(/^(?!.*salsa).*(peperoncino|chili|jalape)/,function(){return '<path d="M40 14 Q46 8 52 8" stroke="#3b8f3b" stroke-width="5" fill="none" stroke-linecap="round"/><path d="M36 14 Q56 20 50 38 Q44 54 14 58 Q8 58 14 52 Q30 42 28 28 Q28 14 36 14Z" fill="#d12a1c"/>'+HL(36,24,5);});
+ r(/peperon|paprika/,function(){return '<path d="M32 14 Q40 6 46 8" stroke="#3b8f3b" stroke-width="4" fill="none" stroke-linecap="round"/><path d="M32 16 Q22 10 14 22 Q6 36 16 50 Q24 58 32 52 Q40 58 48 50 Q58 36 50 22 Q42 10 32 16Z" fill="#f2b705"/><path d="M24 22 Q18 36 24 50" stroke="#fff" stroke-width="3" fill="none" opacity=".5"/>';});
+ r(/melanzan/,function(){return '<path d="M20 20 Q50 14 54 34 Q56 52 38 56 Q18 58 12 44 Q8 30 20 20Z" fill="#6a2f8f"/><path d="M14 18 Q22 10 32 16 L28 26 Q18 24 14 18Z" fill="#4caf50"/>'+HL(26,34,6);});
+ r(/zucchin|cetriol/,function(){return '<circle cx="22" cy="24" r="14" fill="#3e8f3a"/><circle cx="22" cy="24" r="11" fill="#cfeeb0"/><circle cx="42" cy="40" r="14" fill="#3e8f3a"/><circle cx="42" cy="40" r="11" fill="#cfeeb0"/>'+D('#9ed07a',[[19,22,1.6],[25,26,1.6],[39,38,1.6],[45,42,1.6]]);});
+ r(/radicchio/,function(){return '<path d="M32 8 Q58 14 54 38 Q48 56 32 56 Q16 56 10 38 Q6 14 32 8Z" fill="#8e1f3a"/><path d="M32 10 L32 56 M32 30 L18 20 M32 34 L46 24" stroke="#f3d6dd" stroke-width="2.4" fill="none"/>';});
+ r(/spinaci|friarielli|cime di|broccol|asparag/,function(){return leaf(8,36,-40,'#2e7d32','#a5d6a7',1.2)+leaf(14,48,-10,'#388e3c','#a5d6a7',1.3)+leaf(24,24,-60,'#43a047','#c8e6c9',1.1);});
+ r(/rucola|insalata|lattuga|iceberg/,function(){return '<path d="M32 56 Q4 48 8 26 Q14 8 32 12 Q50 8 56 26 Q60 48 32 56Z" fill="#8bcf4f"/><path d="M32 54 L32 18 M32 40 L20 28 M32 34 L44 24 M32 46 L22 40 M32 46 L44 38" stroke="#e1f5c4" stroke-width="2.2" fill="none" stroke-linecap="round"/>';});
+ r(/pomodorin|datterini|pachino|ciliegin/,function(){return '<circle cx="22" cy="40" r="14" fill="#e5392b"/><circle cx="43" cy="38" r="13" fill="#d12a1c"/><circle cx="33" cy="22" r="11" fill="#f0523f"/><path d="M33 12 L29 8 M33 12 L37 8 M33 12 L26 14 M33 12 L40 14" stroke="#3b9a3b" stroke-width="3" stroke-linecap="round"/>'+HL(18,34,5)+HL(40,32,4);});
+ r(/pomodor|^pom$|pomo|pelati|passata/,function(){return '<circle cx="32" cy="36" r="22" fill="#d92d20"/><path d="M32 14 L24 8 M32 14 L40 8 M32 14 L18 16 M32 14 L46 16 M32 14 L24 22 M32 14 L40 22" stroke="#3b9a3b" stroke-width="4" stroke-linecap="round"/>'+HL(22,28,7);});
+ r(/\bmais\b/,function(){return '<path d="M32 6 Q50 10 48 34 Q46 52 32 54 Q18 52 16 34 Q14 10 32 6Z" fill="#ffd83a"/>'+D('#f2b400',[[26,18,3],[36,18,3],[24,28,3],[32,28,3],[40,28,3],[26,38,3],[36,38,3],[32,47,3]])+'<path d="M32 58 Q8 50 12 24 Q20 42 32 44 Q44 42 52 24 Q56 50 32 58Z" fill="#6bbf59"/>';});
+ r(/carciof/,function(){return '<path d="M32 8 Q52 16 52 36 Q50 54 32 56 Q14 54 12 36 Q12 16 32 8Z" fill="#7a9b4a"/><path d="M32 10 Q22 30 32 56 M32 10 Q42 30 32 56 M14 30 Q32 38 50 30 M16 42 Q32 48 48 42" stroke="#c5d9a0" stroke-width="2" fill="none"/>';});
+ r(/patatine|fritt|chips/,function(){return '<g fill="#ffd54f" stroke="#e0a800"><rect x="14" y="8" width="7" height="28" rx="2" transform="rotate(-12 17 22)"/><rect x="23" y="4" width="7" height="32" rx="2"/><rect x="32" y="6" width="7" height="30" rx="2" transform="rotate(5 35 21)"/><rect x="41" y="9" width="7" height="27" rx="2" transform="rotate(14 44 22)"/></g><path d="M12 32 L52 32 L47 56 L17 56Z" fill="#d92d20"/><path d="M12 32 L52 32 L51 38 L13 38Z" fill="#fff" opacity=".4"/>';});
+ r(/patat/,function(){return '<ellipse cx="32" cy="36" rx="24" ry="18" fill="#c99a52"/><ellipse cx="32" cy="36" rx="19" ry="13" fill="#f6e3a8"/>'+D('#c99a52',[[24,32,1.6],[38,40,1.6],[34,30,1.4],[26,42,1.4]]);});
+ r(/basilic/,function(){return leaf(6,40,-35,'#2f9e44','#b2f2bb',1.3)+leaf(20,50,-70,'#37b24d','#b2f2bb',1.2)+leaf(18,30,-5,'#2b8a3e','#b2f2bb',1.2);});
+ r(/origano|rosmarin|prezzemol|erbe|timo/,function(){return '<path d="M32 58 L32 8" stroke="#5c7f2d" stroke-width="3" stroke-linecap="round"/>'+[14,22,30,38,46].map(function(y,i){return '<ellipse cx="'+(i%2?40:24)+'" cy="'+y+'" rx="8" ry="3.4" fill="#7cb342" transform="rotate('+(i%2?-30:30)+' '+(i%2?40:24)+' '+y+')"/>';}).join('');});
+ r(/^aglio|\baglio\b/,function(){return '<path d="M32 4 Q34 12 32 18" stroke="#c8b89a" stroke-width="4" fill="none" stroke-linecap="round"/><path d="M32 16 Q56 24 54 42 Q50 58 32 58 Q14 58 10 42 Q8 24 32 16Z" fill="#fbf7ff"/><path d="M32 18 Q22 38 32 58 M32 18 Q42 38 32 58" stroke="#d3c8de" stroke-width="2" fill="none"/>';});
+ r(/capperi/,function(){return D('#6a8f2d',[[22,26,8],[42,24,7],[32,42,9],[16,46,6],[48,44,6]])+D('#a3c35a',[[19,23,2.2],[39,21,2],[29,38,2.4]]);});
+ r(/zucca|carote|carota/,function(){return '<path d="M32 10 Q40 8 42 16 Q44 36 34 56 Q32 60 30 56 Q20 36 22 16 Q24 8 32 10Z" fill="#f4812a"/><path d="M26 22 H34 M26 32 H36 M28 42 H34" stroke="#c5601a" stroke-width="2"/><path d="M32 10 Q26 2 22 6 M32 10 Q38 2 42 6" stroke="#4caf50" stroke-width="3" fill="none"/>';});
+ /* salse */
+ r(/ketchup|ketch/,function(){return bottle('#d92d20','#b42318','<circle cx="32" cy="40" r="5" fill="#d92d20"/>');});
+ r(/maionese|mayo/,function(){return bottle('#fff4c2','#f2c200','<path d="M26 40 q3 -5 6 0 t6 0" stroke="#f2c200" stroke-width="3" fill="none"/>');});
+ r(/senape|mustard/,function(){return bottle('#f2c200','#8a5a00','<path d="M26 44 L32 34 L38 44Z" fill="#8a5a00"/>');});
+ r(/bbq|barbecue/,function(){return bottle('#7a3a1a','#3d1c0a','<path d="M32 34 q6 6 0 12 q-6 -6 0 -12z" fill="#e8590c"/>');});
+ r(/harissa|piccante|tabasco|sriracha|diavolo/,function(){return bottle('#ee5a24','#b3250d','<path d="M28 46 Q26 36 34 34 Q34 40 38 42 Q38 48 32 48Z" fill="#c0160c"/>');});
+ r(/yogurt|tzatziki|kefir/,function(){return bowl('#fffef7','','<circle cx="32" cy="24" r="6" fill="#bfe3a8"/><circle cx="32" cy="24" r="3.6" fill="#e8f7d8"/>');});
+ r(/besciamella|panna|bianca|crema di latte|salsa bianca/,function(){return '<path d="M32 6 Q52 30 52 42 Q52 58 32 58 Q12 58 12 42 Q12 30 32 6Z" fill="#fff"/><path d="M32 6 Q52 30 52 42 Q52 58 32 58 Q12 58 12 42 Q12 30 32 6Z" fill="none" stroke="#d6dde6" stroke-width="2.4"/><path d="M22 46 Q32 54 42 46" stroke="#cfd8e3" stroke-width="3" fill="none"/>'+HL(24,34,6);});
+ r(/pesto/,function(){return '<rect x="14" y="22" width="36" height="34" rx="8" fill="#5da84b"/><rect x="16" y="12" width="32" height="12" rx="4" fill="#2f6f2a"/><rect x="20" y="30" width="24" height="16" rx="4" fill="#fff" opacity=".9"/>'+leaf(24,41,-20,'#2f9e44','#b2f2bb',.6);});
+ r(/tahin|sesamo/,function(){return '<rect x="14" y="22" width="36" height="34" rx="8" fill="#d9b98a"/><rect x="16" y="12" width="32" height="12" rx="4" fill="#8a6a3a"/>'+D('#fff',[[26,38,2],[34,42,2],[40,36,2],[30,48,2]]);});
+ r(/curry|tikka/,function(){return bottle('#f08a00','#8a4b00','<path d="M26 44 Q32 30 38 44Z" fill="#f08a00"/>');});
+ r(/olio|evo/,function(){return bottle('#c9a227','#4b6b1f','<path d="M32 34 q5 7 0 11 q-5 -4 0 -11z" fill="#f2c200"/>');});
+ r(/aioli/,function(){return bowl('#fffbe8','','<path d="M26 26 q6 -8 12 0" stroke="#e7d9a0" stroke-width="3" fill="none"/>');});
+ r(/salsa|crema di|sugo|ragu/,function(){return bottle('#c4572f','#7c2d12','<circle cx="32" cy="40" r="4" fill="#c4572f"/>');});
+ /* altro */
+ r(/uov|egg/,function(){return '<path d="M8 34 Q6 16 24 14 Q36 8 48 16 Q60 22 54 40 Q48 56 30 54 Q10 54 8 34Z" fill="#fff"/><path d="M8 34 Q6 16 24 14 Q36 8 48 16 Q60 22 54 40 Q48 56 30 54 Q10 54 8 34Z" fill="none" stroke="#e3e8ee" stroke-width="2"/><circle cx="30" cy="34" r="11" fill="#ffb300"/>'+HL(26,30,5);});
+ r(/nutella|cioccolat/,function(){return '<rect x="14" y="20" width="36" height="36" rx="8" fill="#6b3a1e"/><rect x="14" y="12" width="36" height="12" rx="4" fill="#d92d20"/><rect x="20" y="30" width="24" height="16" rx="4" fill="#fff"/><path d="M26 38 h12" stroke="#6b3a1e" stroke-width="3" stroke-linecap="round"/>';});
+ function hue(s){var h=0;for(var i=0;i<s.length;i++)h=(h*31+s.charCodeAt(i))%360;return h;}
+ window.bpQIcon=function(name){
+  var n=String(name||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim();
+  for(var i=0;i<R.length;i++){if(R[i][0].test(n)){try{return W(R[i][1](n));}catch(e){}}}
+  var h=hue(n),t=(n.replace(/[^a-z]/g,'').slice(0,2)||'?').toUpperCase();
+  return W('<circle cx="32" cy="34" r="22" fill="hsl('+h+',60%,42%)"/><circle cx="32" cy="34" r="18" fill="hsl('+h+',70%,60%)"/><text x="32" y="41" text-anchor="middle" font-size="20" font-weight="900" font-family="sans-serif" fill="#fff">'+t+'</text>');
+ };
+})();
+</script>
+<script>
+/* ===== uxQuick · scheda rapida: tocchi sulla piastrella → foto + ingredienti + extra veloci ===== */
+(function(){
+ var S=null,root=null;
+ function $(s,r){return (r||document).querySelector(s);}
+ function menuAll(){try{return getActiveMenu()||[];}catch(e){return [];}}
+ function pic(p){var t=$('#bpmGrid .bpm-tile[data-id="'+p.id+'"] .bpm-bg img');if(t&&t.src)return t.src;var n=String(p.name||'').toLowerCase().replace(/\s+/g,' ').trim();var u=window.BP_EMB&&window.BP_EMB[n];return u||p.image_url||'';}
+ function ings(p){try{return parseIngredients(p.description)||[];}catch(e){return [];}}
+ function quick(p){try{return bpNoteList(bpQkind(p.name,getProductKind(p)))||[];}catch(e){return [];}}
+ var KEB=/kebab|kebap|d[oö]ner|berlinese|bidone/i;
+ function recent(){var r=[];try{var os=(orders||[]).slice().sort(function(a,b){return new Date(b.created_at)-new Date(a.created_at);});for(var i=0;i<os.length&&r.length<600;i++){var its=itemsByOrder.get(os[i].id)||[];for(var j=0;j<its.length;j++){var n=splitProductAndMods(its[j].product_name).baseName.toLowerCase().trim();if(r.indexOf(n)<0)r.push(n);}}}catch(e){}return r;}
+ function fam(p){var all=menuAll(),L=KEB.test(p.name+' '+(p.category||''))?all.filter(function(x){return KEB.test(x.name+' '+(x.category||''));}):all.filter(function(x){return x.category===p.category;});
+  var rec=recent(),top=[],used={};
+  for(var i=0;i<rec.length&&top.length<20;i++){for(var k=0;k<L.length;k++){if(!used[L[k].id]&&String(L[k].name).toLowerCase().trim()===rec[i]){used[L[k].id]=1;top.push(L[k]);break;}}}
+  var rest=L.filter(function(x){return !used[x.id];}).sort(function(a,b){return String(a.name).localeCompare(String(b.name),'it');});
+  return top.concat(rest);}
+ function price(){var b=pkSizePrice(S.p,S.size),x=0;S.add.forEach(function(a){x+=ingPrice(a);});return Math.round((b+x)*100)/100;}
+ function build(){
+  if(root)return;root=document.createElement('div');root.id='qsRoot';root.className='qs-hide';
+  root.innerHTML='<div class="qs-bd"></div><div class="qs-sh"><div id="qsBody"></div></div>';document.body.appendChild(root);
+  $('.qs-bd',root).onclick=close;
+  root.addEventListener('click',function(e){
+   var t;
+   if(e.target.closest('[data-x]'))return close();
+   if(t=e.target.closest('[data-f]')){var p=menuAll().filter(function(x){return String(x.id)===t.getAttribute('data-f');})[0];if(p)open(p);return;}
+   if(t=e.target.closest('[data-sz]')){S.size=t.getAttribute('data-sz');return draw();}
+   if(t=e.target.closest('[data-i]')){var v=t.getAttribute('data-i');S.rem.has(v)?S.rem.delete(v):S.rem.add(v);return draw();}
+   if(t=e.target.closest('[data-q]')){var q=t.getAttribute('data-q');S.add.has(q)?S.add.delete(q):S.add.add(q);return draw();}
+   if(e.target.closest('[data-n]')){S.qty=Math.max(1,S.qty+Number(e.target.closest('[data-n]').getAttribute('data-n')));return draw();}
+   if(t=e.target.closest('[data-ap]')){var cc=(S.sug||[])[Number(t.getAttribute('data-ap'))];if(cc){S.rem=new Set(cc.rem);S.add=new Set(cc.add);draw();}return;}
+   if(t=e.target.closest('[data-xo]'))return openX(t.getAttribute('data-xo'));
+   if(e.target.closest('[data-more]')){var id=S.p.id;close();var b=$('#bpmGrid .bpm-tile[data-id="'+id+'"] [data-c]');if(b)b.click();return;}
+   if(e.target.closest('[data-ok]'))return addNow();
+  });
+ }
+ function chip(a,txt,on,extra){return '<button type="button" '+a+' class="qs-c'+(on?' on':'')+(extra||'')+'">'+txt+'</button>';}
+ function draw(first){
+  var os=$('#qsBody .qs-fm'),sl=os?os.scrollLeft:0;
+  var p=S.p,im=pic(p),fm=fam(p),bs=ings(p),qk=quick(p),mx=p.price_maxi!=null&&Number(p.price_maxi)>0;
+  var h='<div class="qs-ph">'+(im?'<img src="'+im+'" alt="">':'<span>🍽️</span>')+'<button type="button" data-x class="qs-x">✕</button></div>';
+  h+='<div class="qs-hd"><b>'+esc(p.name)+'</b>'+(mx?'<span class="qs-sz">'+chip('data-sz="Normale"','Normale '+euro(p.price_normal),S.size==='Normale')+chip('data-sz="Maxi"','XL '+euro(p.price_maxi),S.size==='Maxi')+'</span>':'')+'</div>';
+  if(fm.length>1)h+='<div class="qs-fm">'+fm.map(function(x){var i2=pic(x);return '<button type="button" data-f="'+esc(String(x.id))+'" class="qs-f'+(x.id===p.id?' on':'')+'">'+(i2?'<img src="'+i2+'" alt="">':'<i>🍽️</i>')+'<small>'+esc(x.name)+'</small></button>';}).join('')+'</div>';
+  var sg=suggest(p);S.sug=sg.combos;
+  if(sg.combos.length||sg.ex.length)h+='<div class="qs-t">🔁 Spesso ordinato <small>impara da solo</small></div><div class="qs-g">'+sg.combos.map(function(c,i){return chip('data-ap="'+i+'"',esc(c.label)+' <small>×'+c.c+'</small>',false,' sg');}).join('')+sg.ex.map(function(n){return chip('data-q="'+esc(n)+'"','⭐ '+esc(n),S.add.has(n),' sg');}).join('')+'</div>';
+  if(bs.length)h+='<div class="qs-t">Ingredienti · المكونات <small>tocca per togliere</small></div><div class="qs-g">'+bs.map(function(g){return chip('data-i="'+esc(g)+'"',esc(g),!S.rem.has(g),S.rem.has(g)?' off':'');}).join('')+'</div>';
+  var names=qk.map(function(q){return q[0];}),qm={};qk.forEach(function(q){qm[q[0]]=q;});S.add.forEach(function(a){if(names.indexOf(a)<0)names.push(a);});
+  h+='<div class="qs-t">Extra · إضافات <small>scegli la categoria</small></div><div class="qs-cats">'+S.secs.map(function(sc){var n=cnt(sc.key);return '<button type="button" data-xo="'+esc(sc.key)+'" class="qs-cat'+(n?' on':'')+'">'+esc(sc.short)+(n?'<em>'+n+'</em>':'')+'</button>';}).join('')+'<button type="button" data-xo="pop" class="qs-cat">⭐ Top</button></div>';
+  h+='<div class="qs-g">'+names.map(function(n){var q=qm[n],pr=q?Number(q[2]!=null?q[2]:ingPrice(n))||0:ingPrice(n);return chip('data-q="'+esc(n)+'"',(q?(q[1]||'➕'):'✓')+' '+esc(n)+(pr?' <small>+'+euro(pr)+'</small>':''),S.add.has(n),' ex');}).join('')+'<button type="button" data-more class="qs-c ex">⚙️ Altro…</button></div>';
+  h+='<div class="qs-ft"><span class="qs-st"><button type="button" data-n="-1">−</button><b>'+S.qty+'</b><button type="button" data-n="1">＋</button></span><button type="button" data-ok class="qs-ok">Aggiungi · '+euro(Math.round(price()*S.qty*100)/100)+'</button></div>';
+  $('#qsBody').innerHTML=h;
+  var ns=$('#qsBody .qs-fm');if(ns){var on=$('.qs-f.on',ns);ns.scrollLeft=(first&&on)?Math.max(0,on.offsetLeft-ns.clientWidth/2+on.offsetWidth/2):sl;}
+ }
+
+
+ /* apprendimento: ricorda le combinazioni scelte per ogni prodotto */
+ var LK='bp_qs_learn_v1';
+ function lget(){try{return JSON.parse(localStorage.getItem(LK)||'{}')||{};}catch(e){return {};}}
+ function learn(p,rem,add){
+  if(!rem.length&&!add.length)return;
+  var L=lget(),k=String(p.id),o=L[k]=L[k]||{c:{},e:{}},sg=rem.slice().sort().join('|')+'#'+add.slice().sort().join('|');
+  var c=o.c[sg]=o.c[sg]||{n:0,rem:rem.slice(),add:add.slice()};c.n++;
+  add.forEach(function(x){o.e[x]=(o.e[x]||0)+1;});
+  var ks=Object.keys(o.c);if(ks.length>14){ks.sort(function(x,y){return o.c[x].n-o.c[y].n;});delete o.c[ks[0]];}
+  try{localStorage.setItem(LK,JSON.stringify(L));}catch(e){}
+ }
+ function suggest(p){
+  var o=lget()[String(p.id)]||{c:{},e:{}};
+  var cb=Object.keys(o.c).map(function(k){return o.c[k];}).sort(function(x,y){return y.n-x.n;}).slice(0,3).map(function(c){return {c:c.n,rem:c.rem,add:c.add,label:c.rem.map(function(x){return '−'+x;}).concat(c.add.map(function(x){return '+'+x;})).join(' ')};});
+  var ex=Object.keys(o.e).filter(function(n){return o.e[n]>=2;}).sort(function(x,y){return o.e[y]-o.e[x];}).slice(0,4);
+  return {combos:cb,ex:ex};
+ }
+ function getSecs(){try{return ingSections(getProductKind(S.p),ingUnique(getAllKnownIngredients()))||[];}catch(e){return [];}}
+ function cnt(k){var n=0;S.add.forEach(function(a){if(ingGroup(a)===k)n++;});return n;}
+ function addNow(){
+  try{learn(S.p,Array.from(S.rem),Array.from(S.add));}catch(er){}
+  try{ssCartAdd(S.p,S.size,S.qty,Array.from(S.rem),Array.from(S.add));renderCart();}catch(er){console.warn(er);}
+  try{navigator.vibrate&&navigator.vibrate(14);}catch(er){}
+  try{bpFlash('✅ '+S.p.name+(S.qty>1?' ×'+S.qty:''));}catch(er){}
+  closeX();close();
+ }
+ var xr=null;
+ function xItems(){
+  var q=S.xq,secs=S.secs,out=[];
+  if(q){secs.forEach(function(sc){sc.items.forEach(function(i){if(ssIngQMatch(i,q))out.push(i);});});return out;}
+  if(S.xt==='pop'){var pop=(PKG_POP[getProductKind(S.p)]||PKG_POP.altro).map(ingNorm);secs.forEach(function(sc){sc.items.forEach(function(i){if(pop.indexOf(ingNorm(i))>=0)out.push(i);});});return out.sort(function(a,b){return pop.indexOf(ingNorm(a))-pop.indexOf(ingNorm(b));});}
+  var sc=secs.filter(function(x){return x.key===S.xt;})[0];return sc?sc.items:[];
+ }
+ function drawX(){
+  var tabs='<button type="button" data-xt="pop" class="qs-cat'+(!S.xq&&S.xt==='pop'?' cur':'')+'">⭐ Top</button>'+S.secs.map(function(sc){var n=cnt(sc.key);return '<button type="button" data-xt="'+esc(sc.key)+'" class="qs-cat'+(!S.xq&&S.xt===sc.key?' cur':'')+(n?' on':'')+'">'+esc(sc.short)+(n?'<em>'+n+'</em>':'')+'</button>';}).join('');
+  $('#qsXtabs').innerHTML=tabs;
+  var sel=Array.from(S.add),tot=0;sel.forEach(function(a){tot+=ingPrice(a);});
+  $('#qsXsel').innerHTML=sel.length?sel.map(function(a){return '<button type="button" data-xrm="'+esc(a)+'" class="qs-c on">'+esc(a)+' ✕</button>';}).join(''):'<small>Tocca per aggiungere · اضغط للإضافة</small>';
+  var g=$('#qsXgrid'),st=g.scrollTop;
+  g.innerHTML=xItems().map(function(n){var pr=ingPrice(n),on=S.add.has(n);return '<button type="button" data-xi="'+esc(n)+'" class="qs-xc'+(on?' on':'')+'"><span class="qs-xi">'+(window.bpQIcon?bpQIcon(n):ingIcon(n))+'</span><b>'+esc(n)+'</b>'+(pr?'<small>+'+euro(pr)+'</small>':'')+(on?'<i>✓</i>':'')+'</button>';}).join('')||'<p class="qs-em">—</p>';
+  g.scrollTop=st;
+  $('#qsXft').innerHTML='<button type="button" data-xdone class="qs-back">↩ Fatto'+(sel.length?' · '+sel.length:'')+'</button><button type="button" data-xadd class="qs-ok">Aggiungi · '+euro(Math.round(price()*S.qty*100)/100)+'</button>';
+ }
+ function buildX(){
+  if(xr)return;xr=document.createElement('div');xr.id='qsXRoot';xr.className='qs-hide';
+  xr.innerHTML='<div class="qs-bd"></div><div class="qs-sh qs-xs"><div class="qs-xh"><b id="qsXT"></b><input id="qsXq" type="search" placeholder="Cerca extra · ابحث" autocomplete="off"><button type="button" data-xclose class="qs-x2">✕</button></div><div id="qsXtabs" class="qs-tabs"></div><div id="qsXsel" class="qs-sel"></div><div id="qsXgrid" class="qs-xg"></div><div id="qsXft" class="qs-ft"></div></div>';
+  document.body.appendChild(xr);
+  $('.qs-bd',xr).onclick=closeX;
+  $('#qsXq').oninput=function(){S.xq=this.value.trim();drawX();};
+  xr.addEventListener('click',function(e){var t;
+   if(e.target.closest('[data-xclose]')||e.target.closest('[data-xdone]'))return closeX();
+   if(e.target.closest('[data-xadd]'))return addNow();
+   if(t=e.target.closest('[data-xt]')){S.xt=t.getAttribute('data-xt');S.xq='';$('#qsXq').value='';return drawX();}
+   if(t=e.target.closest('[data-xrm]')){S.add.delete(t.getAttribute('data-xrm'));return drawX();}
+   if(t=e.target.closest('[data-xi]')){var n=t.getAttribute('data-xi');S.add.has(n)?S.add.delete(n):S.add.add(n);try{navigator.vibrate&&navigator.vibrate(8);}catch(er){}return drawX();}
+  });
+ }
+ function openX(tab){buildX();S.xt=tab||'pop';S.xq='';$('#qsXq').value='';$('#qsXT').textContent='➕ '+S.p.name;drawX();xr.className='';}
+ function closeX(){if(xr)xr.className='qs-hide';if(root&&!root.classList.contains('qs-hide'))draw();}
+ function open(p){build();S={p:p,size:'Normale',qty:1,rem:new Set(),add:new Set(),xt:'pop',xq:''};S.secs=getSecs();draw(true);root.className='';document.body.classList.add('qs-lock');}
+ function close(){if(root)root.className='qs-hide';if(xr)xr.className='qs-hide';document.body.classList.remove('qs-lock');}
+ document.addEventListener('click',function(e){
+  var t=e.target.closest&&e.target.closest('#bpmGrid .bpm-tile');if(!t||document.documentElement.classList.contains('bp-sorting'))return;
+  if(e.target.closest('.bpm-act')||e.target.closest('.bpm-grip')||!e.target.closest('.bpm-main'))return;
+  var p=menuAll().filter(function(x){return String(x.id)===t.getAttribute('data-id');})[0];if(!p)return;
+  if(!ings(p).length&&!quick(p).length)return; /* bibite ecc.: aggiunta diretta come prima */
+  e.stopPropagation();e.preventDefault();open(p);
+ },true);
+})();
+</script>
+<script>
+/* ===== uxQuick · annulla: torna indietro di un passo nel carrello ===== */
+(function(){
+ var st=[],last=null,ls='',busy=false,btn=null;
+ function snap(){var a=[];try{cart.forEach(function(v,k){a.push([k,JSON.parse(JSON.stringify(v))]);});}catch(e){}return a;}
+ function sig(a){try{return JSON.stringify(a);}catch(e){return '';}}
+ function ui(){if(!btn){btn=document.createElement('button');btn.id='qsUndo';btn.type='button';btn.innerHTML='↶ <span>Annulla · تراجع</span>';btn.onclick=undo;document.body.appendChild(btn);}var m=document.getElementById('bpMenu');btn.style.display=(st.length&&m&&m.offsetParent)?'flex':'none';}
+ function undo(){if(!st.length)return;var a=st.pop();busy=true;try{cart.clear();a.forEach(function(e){cart.set(e[0],e[1]);});renderCart();}catch(e){console.warn(e);}busy=false;last=snap();ls=sig(last);ui();try{bpFlash('↶ Annullato');}catch(e){}}
+ last=snap();ls=sig(last);
+ var _r=renderCart;renderCart=function(){var r=_r.apply(this,arguments);if(!busy){var cur=snap(),cs=sig(cur);if(cs!==ls){if(!cur.length)st=[];else st.push(last);if(st.length>25)st.shift();last=cur;ls=cs;}}ui();return r;};
+ setInterval(ui,1200);
+})();
+</script>
+<script id="bpc-js">
+/* ===== v111 · Rubrica intelligente: ricerca per nome/telefono/via + sistemazione automatica ===== */
+(function(){
+ 'use strict';
+ var E = function(id){ return document.getElementById(id); };
+ function fold(s){ return String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9\u0600-\u06ff]+/g, ' ').trim(); }
+ function lev(a, b){ if(a === b) return 0; if(Math.abs(a.length - b.length) > 2) return 3; var p = [], i, j; for(j = 0; j <= b.length; j++) p[j] = j; for(i = 1; i <= a.length; i++){ var c = [i]; for(j = 1; j <= b.length; j++) c[j] = Math.min(p[j] + 1, c[j - 1] + 1, p[j - 1] + (a.charAt(i - 1) === b.charAt(j - 1) ? 0 : 1)); p = c; } return p[b.length]; }
+ var RX_T = /^(via|viale|piazza|corso|strada|vicolo|vle)\s+/;
+ var AB = [[/^(?:viale|v\.?\s?le|vle)\b\.?\s*/i, 'Viale '], [/^(?:via|v)\b\.?\s*/i, 'Via '], [/^(?:piazza|p\.?\s?(?:zza|za)|pza)\b\.?\s*/i, 'Piazza '], [/^(?:corso|c\.?\s?so|cso)\b\.?\s*/i, 'Corso '], [/^(?:strada|str)\b\.?\s*/i, 'Strada '], [/^(?:vicolo|vic)\b\.?\s*/i, 'Vicolo ']];
+ function expandTok(s){ return s.replace(/\bv\b/g, 'via').replace(/\bvle\b/g, 'viale').replace(/\b(pza|pzza)\b/g, 'piazza').replace(/\bcso\b/g, 'corso'); }
+ function cap(s){ return /[\u0600-\u06ff]/.test(s) ? s : s.replace(/[A-Za-z\u00c0-\u00ff]+/g, function(w){ return w.charAt(0).toUpperCase() + w.slice(1).toLowerCase(); }); }
+ function tidyName(v){ return cap(String(v || '').trim().replace(/\s+/g, ' ')); }
+ function tidyPhone(v){
+  var raw = String(v || '').trim(); if(!raw) return {v: '', warn: ''};
+  if(/^\+/.test(raw) && !/^\+39/.test(raw)) return {v: raw.replace(/\s+/g, ' '), warn: ''};
+  var d = raw.replace(/\D+/g, '').replace(/^00/, '').replace(/^39(?=\d{9,10}$)/, '');
+  return {v: d, warn: (/^3\d{8,9}$/.test(d) || /^0\d{5,10}$/.test(d)) ? '' : '⚠️ الرقم شكله ناقص أو غلط · Numero strano'};
+ }
+ var SB = {n: -1, l: []};
+ function streetBases(){
+  if(SB.n === knownStreets.size) return SB.l;
+  var seen = {}, out = []; knownStreets.forEach(function(st){ var b = extractStreetBaseName(st) || String(st).split(',')[0].trim(), k = fold(b); if(k.length > 3 && !seen[k]){ seen[k] = 1; out.push({b: b, k: k.replace(RX_T, '')}); } });
+  SB = {n: knownStreets.size, l: out}; return out;
+ }
+ function splitAddr(s){ var m = String(s).match(/^([^\d,]*?)\s*((?:\d.*|,.*)?)$/); return m ? [m[1].trim(), m[2].trim()] : [String(s).trim(), '']; }
+ function bestStreet(part){
+  var k = fold(part).replace(RX_T, ''); if(k.length < 4) return null;
+  var ex = null, near = []; streetBases().forEach(function(x){ if(x.k === k) ex = x; else if(k.length >= 5 && lev(k, x.k) <= 1) near.push(x); });
+  return ex || (near.length === 1 ? near[0] : null);
+ }
+ function suggestStreets(part){
+  var k = fold(part).replace(RX_T, ''); if(k.length < 2) return [];
+  var r = []; streetBases().forEach(function(x){ var d = x.k.indexOf(k) === 0 ? 0 : (x.k.indexOf(k) > 0 ? 1 : (k.length >= 5 ? lev(k, x.k) : 9)); if(d <= 2) r.push({b: x.b, d: d}); });
+  r.sort(function(a, b){ return a.d - b.d || a.b.localeCompare(b.b, 'it'); }); return r.slice(0, 4);
+ }
+ function tidyAddr(v){
+  var s = String(v || '').trim().replace(/\s+/g, ' '); if(!s) return s;
+  for(var i = 0; i < AB.length; i++){ if(AB[i][0].test(s)){ s = s.replace(AB[i][0], AB[i][1]); break; } }
+  var sp = splitAddr(s), c = bestStreet(sp[0]), rest = sp[1];
+  return cap(c ? c.b : sp[0]) + (rest ? (rest.charAt(0) === ',' ? '' : ' ') + cap(rest) : '');
+ }
+ var CACHE = new WeakMap();
+ function cf(c){ var k = c.name + '|' + c.phone + '|' + c.address, o = CACHE.get(c); if(!o || o.k !== k){ o = {k: k, n: fold(c.name).split(' ').filter(Boolean), a: expandTok(fold(c.address)).split(' ').filter(Boolean), p: normalizePhoneKey(c.phone)}; CACHE.set(c, o); } return o; }
+ function tokScore(qt, ct){ if(!qt.length || !ct.length) return 0; if(qt.every(function(q){ return ct.some(function(t){ return t.indexOf(q) === 0; }); })) return 30; return qt.every(function(q){ return ct.some(function(t){ return t.indexOf(q) >= 0; }); }) ? 14 : 0; }
+ function rank(f, q){
+  var qn = fold(q).split(' ').filter(Boolean), qa = expandTok(fold(q)).split(' ').filter(Boolean), qp = normalizePhoneKey(q), out = [];
+  customerDirectory.forEach(function(c){
+   var o = cf(c), sn = tokScore(qn, o.n), sa = tokScore(qa, o.a), sp = 0;
+   if(qp.length >= 2 && o.p) sp = o.p.slice(-qp.length) === qp ? 40 : (o.p.indexOf(qp) >= 0 ? 25 : 0);
+   var prim = f === 'name' ? sn : (f === 'phone' ? sp : sa), oth = Math.max(f === 'name' ? 0 : sn, f === 'phone' ? 0 : sp, f === 'address' ? 0 : sa);
+   if(!prim && !oth) return;
+   out.push({c: c, s: prim * 2 + oth * .4 + Math.min(10, c.ordersCount || 0) + (c.lastSeen || 0) / 1e14});
+  });
+  out.sort(function(a, b){ return b.s - a.s; }); return out.slice(0, 6).map(function(x){ return x.c; });
+ }
+ function toast(m, bad){ try{ if(typeof bpFlash === 'function') return bpFlash(m, bad); }catch(e){} try{ setMsg('orderMsg', m, bad ? 'error' : 'success'); }catch(e){} }
+ function tidyField(id){
+  var e = E(id); if(!e) return; var v = e.value, t;
+  if(id === 'customer') t = tidyName(v); else if(id === 'phone'){ var r = tidyPhone(v); t = r.v; if(r.warn && t) toast(r.warn, true); } else t = tidyAddr(v);
+  if(t !== v) e.value = t;
+ }
+ function tidyAll(){
+  ['customer', 'phone', 'address'].forEach(tidyField);
+  var a = E('address'); if(a && a.value && !/\d/.test(a.value)) toast('📍 ضيف رقم المبنى · Aggiungi il civico', true); else toast('✨ اتظبط · Dati sistemati');
+  if(a && a.value){ try{ E('type').value = 'Consegna'; toggleAddress(); }catch(e){} }
+  hideAllAutoSuggest(); try{ checkAndShowLastOrderBanner(); }catch(e){}
+ }
+ function render(f){
+  hideAllAutoSuggest(); try{ checkAndShowLastOrderBanner(); }catch(e){}
+  var box = E(f === 'name' ? 'suggestCustomer' : (f === 'phone' ? 'suggestPhone' : 'suggestAddress')), inp = E(f === 'name' ? 'customer' : f), v = inp ? inp.value.trim() : '';
+  if(!box || !v) return;
+  if(f === 'phone'){
+   var qp = normalizePhoneKey(v), ex = qp.length >= 9 ? customerDirectory.filter(function(c){ return normalizePhoneKey(c.phone) === qp; }) : [];
+   if(ex.length === 1){
+    var p = ex[0], n = E('customer'), a = E('address');
+    if(!n.value.trim() && p.name) n.value = p.name;
+    if(!a.value.trim() && p.address){ a.value = p.address; try{ E('type').value = 'Consegna'; toggleAddress(); }catch(e){} }
+    try{ checkAndShowLastOrderBanner(); }catch(e){} toast('✅ عميل معروف · ' + (p.name || p.phone)); return;
+   }
+  }
+  var res = rank(f, v), sts = f === 'address' ? suggestStreets(splitAddr(v)[0]) : [], civ = f === 'address' ? splitAddr(v)[1] : '', h = '';
+  res.forEach(function(c, i){
+   var lo = null; try{ lo = findLastOrderForCustomer(c.name, c.phone, c.address); }catch(e){}
+   var li = lo ? lo.items.slice(0, 3).map(function(x){ return x.quantity + '× ' + splitProductAndMods(x.product_name).baseName; }).join(', ') : '';
+   h += '<div class="auto-item' + (i === 0 ? ' best' : '') + '" data-p="' + i + '"><div class="auto-item-top"><span>👤 ' + esc(c.name || 'Cliente salvato') + (c.phone ? ' <span class="muted">· 📞 ' + esc(c.phone) + '</span>' : '') + '</span><span class="auto-tag">' + ((c.ordersCount || 0) > 1 ? '🔁 ' + c.ordersCount + ' · ' : '') + '✓ Compila Tutto</span></div><div class="auto-item-sub">' + (c.address ? '<span>📍 <strong>' + esc(c.address) + '</strong></span>' : '<span class="muted">Nessun indirizzo</span>') + (li ? '<span style="color:#5925dc">· 🍕 Ultimo: ' + esc(li) + '</span>' : '') + '</div></div>';
+  });
+  sts.forEach(function(x, i){ var full = x.b + (civ ? (civ.charAt(0) === ',' ? '' : ' ') + civ : ' '); h += '<div class="auto-item" data-s="' + i + '"><div class="auto-item-top"><span>🛣️ ' + esc(x.b) + '</span><span class="auto-tag street">📍 Usa Via</span></div></div>'; sts[i].full = full; });
+  if(!res.length){
+   var nm = tidyName(E('customer').value), ph = tidyPhone(E('phone').value), ad = tidyAddr(E('address').value);
+   h += '<div class="auto-item new" data-new="1"><div class="auto-item-top"><span>🆕 عميل جديد · Nuovo cliente</span><span class="auto-tag warn">✨ رتّب</span></div><div class="auto-item-sub"><span>' + [nm && '👤 ' + esc(nm), ph.v && '📞 ' + esc(ph.v), ad && '📍 ' + esc(ad)].filter(Boolean).join(' · ') + '</span>' + (ph.warn && ph.v ? '<span style="color:#b54708">' + ph.warn + '</span>' : '') + '</div></div>';
+  }
+  box.innerHTML = h; box.classList.remove('hidden');
+  box.querySelectorAll('[data-p]').forEach(function(n){ n.onmousedown = function(e){ e.preventDefault(); var c = res[Number(n.getAttribute('data-p'))]; if(c) applyCustomerSuggestion(c); }; });
+  box.querySelectorAll('[data-s]').forEach(function(n){ n.onmousedown = function(e){ e.preventDefault(); var x = sts[Number(n.getAttribute('data-s'))]; if(x) applyStreetOnlySuggestion(x.full); }; });
+  box.querySelectorAll('[data-new]').forEach(function(n){ n.onmousedown = function(e){ e.preventDefault(); tidyAll(); }; });
+ }
+ window.onCustomerFieldInput = function(f){ render(f); };
+ document.addEventListener('focusout', function(e){
+  var id = e.target && e.target.id; if(id !== 'customer' && id !== 'phone' && id !== 'address') return;
+  if(typeof editingOrderId !== 'undefined' && editingOrderId) return;
+  setTimeout(function(){ tidyField(id); try{ enrichFieldsFromCustomerDirectory(); }catch(_){} }, 150);
+ });
+ window.__bpc = {tidyName: tidyName, tidyPhone: tidyPhone, tidyAddr: tidyAddr, rank: rank, suggestStreets: suggestStreets};
+})();
+</script>
 </body>
 </html>
