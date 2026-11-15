@@ -33352,5 +33352,236 @@ body.qs-lock{overflow:hidden}
  var w=setInterval(function(){if(document.getElementById('qsBody')){clearInterval(w);hook();}},500);
 })();
 </script>
+
+<style id="v117css">
+/* ===== v117 · Fase 3: sicurezza e velocità ordine (annulla/ripristina, sospendi, conferma grande, doppione) ===== */
+#qsUndo{display:none!important}
+#bpUR{position:fixed;left:10px;bottom:calc(112px + env(safe-area-inset-bottom,0px));z-index:9000;display:none;gap:8px;align-items:center}
+#bpUR button{position:relative;width:48px!important;height:48px!important;min-width:0!important;min-height:0!important;padding:0!important;border:0;border-radius:50%!important;background:#1d1209;color:#fff;font-size:22px;font-weight:900;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 12px rgba(0,0,0,.4);line-height:1}
+#bpUR button[disabled]{opacity:.35;box-shadow:none}
+#bpUR button.hd{background:#b54708}
+#bpUR button.ls{background:#175cd3}
+#bpUR button i{position:absolute;top:-4px;inset-inline-end:-4px;min-width:20px;height:20px;border-radius:99px;background:#d92d20;color:#fff;font-style:normal;font-size:12px;font-weight:900;display:flex;align-items:center;justify-content:center;padding:0 5px}
+/* schermata di conferma (testo grande) */
+#bpCf{position:fixed;inset:0;z-index:2147483200;background:#fffaf3;display:flex;flex-direction:column;font-family:inherit;color:#1d1209}
+#bpCf.hide{display:none}
+#bpCf .cf-top{flex:0 0 auto;padding:calc(12px + env(safe-area-inset-top,0px)) 16px 10px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;color:#fff;background:#175cd3}
+#bpCf .cf-top.Consegna{background:#b42318}#bpCf .cf-top.Asporto{background:#175cd3}#bpCf .cf-top.Tavolo{background:#16794b}
+#bpCf .cf-ty{font-size:clamp(26px,6vw,40px);font-weight:900;letter-spacing:.5px}
+#bpCf .cf-tm{margin-inline-start:auto;font-size:clamp(22px,5vw,34px);font-weight:900;background:rgba(255,255,255,.2);border-radius:14px;padding:2px 14px}
+#bpCf .cf-bd{flex:1 1 0;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:12px 16px}
+#bpCf .cf-cu{font-size:clamp(20px,4.6vw,30px);font-weight:900;line-height:1.25;margin-bottom:8px;word-break:break-word}
+#bpCf .cf-cu small{display:block;font-size:.72em;font-weight:800;opacity:.8}
+#bpCf .cf-it{display:flex;gap:12px;align-items:flex-start;padding:10px 0;border-top:2px dashed #e2cdb4}
+#bpCf .cf-q{flex:0 0 auto;min-width:2.2em;text-align:center;font-size:clamp(24px,5.6vw,36px);font-weight:900;background:#1d1209;color:#fff;border-radius:12px;padding:0 8px}
+#bpCf .cf-nm{flex:1;min-width:0;font-size:clamp(22px,5.2vw,34px);font-weight:900;line-height:1.15;word-break:break-word}
+#bpCf .cf-nm .tg{display:inline-block;font-size:.6em;background:#f59e0b;color:#1d1209;border-radius:8px;padding:0 8px;margin-inline-start:6px;vertical-align:middle}
+#bpCf .cf-md{display:block;font-size:clamp(18px,4.2vw,28px);font-weight:800;margin-top:2px}
+#bpCf .cf-md.r{color:#b42318}#bpCf .cf-md.a{color:#15803d}#bpCf .cf-md.n{color:#7a3b12;font-style:italic}
+#bpCf .cf-pr{flex:0 0 auto;font-size:clamp(18px,4.2vw,28px);font-weight:900;white-space:nowrap}
+#bpCf .cf-dup{background:#fee4e2;border:3px solid #d92d20;color:#7a1109;border-radius:16px;padding:10px 14px;margin-bottom:10px;font-size:clamp(18px,4.2vw,26px);font-weight:900;line-height:1.25}
+#bpCf .cf-ft{flex:0 0 auto;border-top:3px solid #e2cdb4;background:#fff;padding:10px 16px calc(12px + env(safe-area-inset-bottom,0px))}
+#bpCf .cf-tt{display:flex;align-items:baseline;justify-content:space-between;gap:10px;flex-wrap:wrap}
+#bpCf .cf-tt b{font-size:clamp(34px,9vw,56px);font-weight:900;color:#b42318}
+#bpCf .cf-tt span{font-size:clamp(18px,4.4vw,28px);font-weight:900}
+#bpCf .cf-bt{display:flex;gap:10px;margin-top:8px}
+#bpCf .cf-bt button{height:clamp(58px,9vh,76px)!important;min-height:0!important;border:0;border-radius:18px!important;font-size:clamp(20px,5vw,28px);font-weight:900;padding:0 14px!important}
+#bpCf .cf-no{flex:0 0 34%;background:#e4e7ec;color:#1d1209}
+#bpCf .cf-ok{flex:1;background:linear-gradient(135deg,#22c55e,#15803d);color:#fff;box-shadow:0 6px 16px rgba(21,128,61,.4)}
+#bpCf .cf-ok.warn{background:linear-gradient(135deg,#f97316,#c2410c)}
+#bpCf .cf-sk{margin-top:6px;font-size:13px;font-weight:700;opacity:.75;display:flex;gap:6px;align-items:center}
+/* ordini sospesi */
+#bpHd{position:fixed;inset:0;z-index:2147483100;display:flex;align-items:flex-end;justify-content:center}
+#bpHd.hide{display:none}
+#bpHd .hd-bd{position:absolute;inset:0;background:rgba(20,10,3,.6)}
+#bpHd .hd-sh{position:relative;width:min(100%,560px);max-height:88vh;overflow-y:auto;background:#fffaf3;border-radius:24px 24px 0 0;padding:14px 14px calc(14px + env(safe-area-inset-bottom,0px));box-shadow:0 -10px 36px rgba(0,0,0,.4)}
+@media (min-width:700px){#bpHd{align-items:center}#bpHd .hd-sh{border-radius:24px}}
+#bpHd h3{margin:0 0 8px;font-size:20px;font-weight:900}
+#bpHd .hd-r{display:flex;align-items:center;gap:8px;background:#fff;border:2px solid #e2cdb4;border-radius:16px;padding:8px 10px;margin-bottom:8px}
+#bpHd .hd-i{flex:1;min-width:0}
+#bpHd .hd-i b{display:block;font-size:17px;font-weight:900;word-break:break-word}
+#bpHd .hd-i small{display:block;font-size:13px;font-weight:700;opacity:.75;line-height:1.3}
+#bpHd button{height:46px!important;min-height:0!important;border:0;border-radius:14px!important;font-weight:900;font-size:15px;padding:0 14px!important}
+#bpHd .hd-go{background:#16a34a;color:#fff}#bpHd .hd-rm{background:#fee4e2;color:#b42318;width:46px;padding:0!important}
+#bpHd .hd-ft{display:flex;gap:8px;margin-top:6px;flex-wrap:wrap}
+#bpHd .hd-ft button{flex:1;background:#f3e6d3;color:#1d1209}
+#bpHd .hd-em{text-align:center;padding:18px;opacity:.65;font-weight:800}
+</style>
+
+<script id="v117js">
+/* ===== v117 · Fase 3: annulla/ripristina, ordine sospeso, schermata di conferma grande, avviso doppione ===== */
+(function(){
+ 'use strict';
+ function $(s,r){return (r||document).querySelector(s);}
+ function E(id){return document.getElementById(id);}
+ function fold(s){return String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,' ').trim();}
+ function clone(v){try{return structuredClone(v);}catch(e){return JSON.parse(JSON.stringify(v));}}
+ function flash(m,bad){try{bpFlash(m,bad);}catch(e){}}
+ function vib(n){try{navigator.vibrate&&navigator.vibrate(n||12);}catch(e){}}
+ function lsGet(k,d){try{var v=localStorage.getItem(k);return v==null?d:JSON.parse(v);}catch(e){return d;}}
+ function lsSet(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}}
+
+ /* ---------- 1) ANNULLA / RIPRISTINA (carrello) ---------- */
+ var st=[],rd=[],last=snap(),ls=sig(last),busy=false;
+ function snap(){var a=[];try{cart.forEach(function(v,k){a.push([k,clone(v)]);});}catch(e){}return a;}
+ function sig(a){try{return JSON.stringify(a);}catch(e){return '';}}
+ function applySnap(a){busy=true;try{cart.clear();a.forEach(function(e){cart.set(e[0],clone(e[1]));});renderCart();}catch(e){console.warn(e);}busy=false;last=snap();ls=sig(last);ui();}
+ function undo(){if(!st.length)return;rd.push(last);applySnap(st.pop());vib(10);flash('↶ Annullato · تراجع');}
+ function redo(){if(!rd.length)return;st.push(last);applySnap(rd.pop());vib(10);flash('↷ Ripristinato · إعادة');}
+ var _rc=renderCart;
+ renderCart=function(){var r=_rc.apply(this,arguments);
+  if(!busy){var cur=snap(),cs=sig(cur);if(cs!==ls){if(!cur.length){st=[];rd=[];}else{st.push(last);if(st.length>30)st.shift();rd=[];}last=cur;ls=cs;}}
+  ui();return r;};
+ document.addEventListener('keydown',function(e){
+  var t=e.target&&e.target.tagName;if(t==='INPUT'||t==='TEXTAREA'||t==='SELECT'||(e.target&&e.target.isContentEditable))return;
+  if(!(e.ctrlKey||e.metaKey))return;var k=String(e.key).toLowerCase();
+  if(k==='z'&&!e.shiftKey){e.preventDefault();undo();}else if(k==='y'||(k==='z'&&e.shiftKey)){e.preventDefault();redo();}
+ });
+
+ /* ---------- 2) ORDINI SOSPESI ---------- */
+ var HK='bp_held_v2',FIELDS=['customer','phone','address','notes','type','payment','cashGivenInput','deliveryHour','deliveryMinute','tableNo','extraAmountInput','discountAmountInput'];
+ function held(){var a=lsGet(HK,[]);if(!Array.isArray(a))a=[];var lim=Date.now()-24*3600*1000;return a.filter(function(h){return h&&h.id>lim;});}
+ function curHasContent(){try{if(cart.size)return true;}catch(e){}return !!(E('customer')&&E('customer').value.trim())||!!(E('phone')&&E('phone').value.trim());}
+ function capture(){var f={};FIELDS.forEach(function(id){var x=E(id);if(x)f[id]=x.value;});var c=[];cart.forEach(function(v,k){c.push([k,clone(v)]);});
+  var tot=0,n=0;try{tot=getGrandTotal();}catch(e){}try{cart.forEach(function(v){n+=Number(v.qty||0);});}catch(e){}
+  return {id:Date.now()+Math.floor(Math.random()*1000),t:Date.now(),f:f,c:c,tot:tot,n:n,label:(f.customer||'').trim()||(f.phone||'').trim()||''};}
+ function resetForm(){
+  try{cart.clear();}catch(e){}
+  ['customer','phone','address','notes','voiceSmartInput','cashGivenInput','extraAmountInput','discountAmountInput'].forEach(function(id){var x=E(id);if(x)x.value='';});
+  try{var b=E('customerLastOrderBanner');if(b)b.classList.add('hidden');}catch(e){}
+  try{var d=E('deliveryHour');if(d)d.value='Prima possibile';onTimeHourChange();}catch(e){}
+  try{bpResetSchedule();}catch(e){}
+  try{renderCart();}catch(e){console.warn(e);}
+ }
+ function restore(h){
+  FIELDS.forEach(function(id){var x=E(id);if(x&&id in h.f&&id!=='deliveryMinute')x.value=h.f[id];});
+  try{toggleAddress();}catch(e){}try{onPaymentMethodChange();}catch(e){}
+  try{onTimeHourChange();var m=E('deliveryMinute');if(m&&h.f.deliveryMinute)m.value=h.f.deliveryMinute;}catch(e){}
+  try{cart.clear();h.c.forEach(function(e){cart.set(e[0],clone(e[1]));});}catch(e){}
+  try{renderCart();}catch(e){console.warn(e);}
+ }
+ function hold(){
+  try{if(editingOrderId){flash('⚠️ Finisci prima la modifica · خلّص التعديل الأول',true);return;}}catch(e){}
+  if(!curHasContent()){flash('Niente da sospendere · مفيش حاجة للتعليق',true);return;}
+  var a=held();a.unshift(capture());lsSet(HK,a.slice(0,15));resetForm();vib(20);flash('⏸ Ordine sospeso · الأوردر اتعلّق ('+a.length+')');ui();
+ }
+ function resume(id){
+  var a=held(),h=a.filter(function(x){return x.id===id;})[0];if(!h)return;
+  try{if(editingOrderId){flash('⚠️ Finisci prima la modifica · خلّص التعديل الأول',true);return;}}catch(e){}
+  var rest=a.filter(function(x){return x.id!==id;});
+  if(curHasContent())rest.unshift(capture()); /* l'ordine in corso non si perde: va tra i sospesi */
+  lsSet(HK,rest.slice(0,15));restore(h);closeHd();vib(20);flash('▶ Ripreso · '+(h.label||'#'+h.n));ui();
+ }
+ function rmHeld(id){if(!confirm('Eliminare questo ordine sospeso? · تحذف الأوردر المعلّق؟'))return;lsSet(HK,held().filter(function(x){return x.id!==id;}));drawHd();ui();}
+ var hdRoot=null;
+ function ago(t){var m=Math.max(0,Math.round((Date.now()-t)/60000));return m<1?'ora · دلوقتي':m<60?m+' min':Math.floor(m/60)+' h '+(m%60)+' min';}
+ function cfOn(){return lsGet('bp_cf_on',1)!==0&&lsGet('bp_cf_on',1)!=='0';}
+ function drawHd(){
+  if(!hdRoot)return;var a=held();
+  hdRoot.querySelector('.hd-sh').innerHTML='<h3>⏸ Ordini sospesi · الأوردرات المعلّقة</h3>'+(a.length?a.map(function(h){
+   return '<div class="hd-r"><div class="hd-i"><b>'+esc(h.label||'Senza nome · من غير اسم')+'</b><small>'+h.n+' pz · '+euro(h.tot)+' · '+esc(h.f.type||'')+' · '+ago(h.t)+'</small></div><button type="button" class="hd-go" data-go="'+h.id+'">▶ Riprendi</button><button type="button" class="hd-rm" data-rm="'+h.id+'">✕</button></div>';}).join(''):'<div class="hd-em">Nessun ordine sospeso · مفيش أوردرات معلّقة</div>')
+   +'<div class="hd-ft"><button type="button" data-cf>'+(cfOn()?'✅ Schermata conferma: ATTIVA':'⬜ Schermata conferma: SPENTA')+'</button><button type="button" data-cl>✕ Chiudi</button></div>';
+ }
+ function openHd(){
+  if(!hdRoot){hdRoot=document.createElement('div');hdRoot.id='bpHd';hdRoot.className='hide';hdRoot.innerHTML='<div class="hd-bd"></div><div class="hd-sh"></div>';document.body.appendChild(hdRoot);
+   hdRoot.addEventListener('click',function(e){var t;
+    if(e.target.classList.contains('hd-bd')||e.target.closest('[data-cl]'))return closeHd();
+    if(t=e.target.closest('[data-go]'))return resume(Number(t.getAttribute('data-go')));
+    if(t=e.target.closest('[data-rm]'))return rmHeld(Number(t.getAttribute('data-rm')));
+    if(e.target.closest('[data-cf]')){lsSet('bp_cf_on',cfOn()?0:1);drawHd();}
+   });}
+  drawHd();hdRoot.className='';
+ }
+ function closeHd(){if(hdRoot)hdRoot.className='hide';}
+
+ /* ---------- barra flottante ---------- */
+ var bar=null;
+ function ui(){
+  if(!bar){bar=document.createElement('div');bar.id='bpUR';
+   bar.innerHTML='<button type="button" data-u title="Annulla · تراجع">↶</button><button type="button" data-r title="Ripristina · إعادة">↷</button><button type="button" data-h class="hd" title="Sospendi ordine · تعليق">⏸</button><button type="button" data-l class="ls" title="Ordini sospesi · المعلّقة">📋<i></i></button>';
+   bar.addEventListener('click',function(e){if(e.target.closest('[data-u]'))undo();else if(e.target.closest('[data-r]'))redo();else if(e.target.closest('[data-h]'))hold();else if(e.target.closest('[data-l]'))openHd();});
+   document.body.appendChild(bar);}
+  var m=E('bpMenu'),vis=!!(m&&m.offsetParent);bar.style.display=vis?'flex':'none';if(!vis)return;
+  var u=bar.querySelector('[data-u]'),r=bar.querySelector('[data-r]'),h=bar.querySelector('[data-h]'),l=bar.querySelector('[data-l]'),n=held().length;
+  u.disabled=!st.length;r.disabled=!rd.length;r.style.display=rd.length?'flex':'none';
+  h.disabled=!curHasContent();l.style.display=n?'flex':'none';var b=l.querySelector('i');if(b)b.textContent=n;
+ }
+ setInterval(ui,1000);
+
+ /* ---------- 3) SCHERMATA DI CONFERMA + DOPPIONE ---------- */
+ function aggFromCart(){var m={};try{cart.forEach(function(v){var k=fold(v.name)+'|'+(v.size==='Maxi'?'M':'N');m[k]=(m[k]||0)+Number(v.qty||0);});}catch(e){}return m;}
+ function aggFromItems(items){var m={};(items||[]).forEach(function(i){try{if(bpIsSvc(i.product_name))return;var b=splitProductAndMods(i.product_name).baseName;var k=fold(b)+'|'+(String(i.size||'')==='Maxi'?'M':'N');m[k]=(m[k]||0)+Number(i.quantity||1);}catch(e){}});return m;}
+ function same(a,b){var ka=Object.keys(a),kb=Object.keys(b);if(!ka.length||ka.length!==kb.length)return false;return ka.every(function(k){return a[k]===b[k];});}
+ var lastSaved=null;
+ function findDup(){
+  try{if(editingOrderId)return null;}catch(e){}
+  var now=Date.now(),mine=aggFromCart(),ph='',nm='';
+  try{ph=normalizePhoneKey(E('phone').value);}catch(e){}nm=fold(E('customer')&&E('customer').value);
+  var hasWho=(ph&&ph.length>=6)||nm.length>=3,best=null;
+  try{(orders||[]).forEach(function(o){
+   if(best)return;var s=normStatus(o.status);if(s==='Annullato')return;
+   var mins=(now-new Date(o.created_at).getTime())/60000;
+   var oph='';try{oph=normalizePhoneKey(o.phone);}catch(e){}var onm=fold(o.customer_name);
+   var who=(ph&&ph.length>=6&&oph===ph)||(nm.length>=3&&onm===nm);
+   var itemsSame=same(mine,aggFromItems(itemsByOrder.get(o.id)||[]));
+   if(itemsSame&&((hasWho&&who&&mins<=180)||(!hasWho&&mins<=3)))best={o:o,kind:'same',mins:mins};
+   else if(who&&mins<=45&&['Completato','Annullato'].indexOf(s)<0)best={o:o,kind:'open',mins:mins};
+  });}catch(e){}
+  if(!best&&lastSaved&&now-lastSaved.ts<=180000&&lastSaved.sig===JSON.stringify(mine))best={o:{id:lastSaved.id||'?'},kind:'same',mins:(now-lastSaved.ts)/60000};
+  return best;
+ }
+ function modsHtml(v){
+  var h='';(v.removedIngs||[]).forEach(function(x){h+='<span class="cf-md r">− SENZA '+esc(x)+'</span>';});
+  (v.addedIngs||[]).forEach(function(x){h+='<span class="cf-md a">+ '+esc(x)+'</span>';});
+  if(v.itemNote)h+='<span class="cf-md n">📝 '+esc(v.itemNote)+'</span>';return h;
+ }
+ var root=null,resolver=null;
+ function confirmUI(dup){
+  return new Promise(function(res){
+   if(!root){root=document.createElement('div');root.id='bpCf';root.className='hide';document.body.appendChild(root);
+    root.addEventListener('click',function(e){
+     if(e.target.closest('[data-no]'))return done(false);
+     if(e.target.closest('[data-ok]'))return done(true);
+    });}
+   resolver=res;
+   var ty='Asporto',tm='',nm='',ph='',ad='',pay='',tbl='',tot=0,fee=0;
+   try{ty=E('type').value;}catch(e){}try{tm=getSelectedDeliveryTime();}catch(e){}
+   nm=(E('customer')&&E('customer').value.trim())||'';ph=(E('phone')&&E('phone').value.trim())||'';ad=(E('address')&&E('address').value.trim())||'';
+   pay=(E('payment')&&E('payment').value)||'';tbl=(E('tableNo')&&E('tableNo').value)||'';
+   try{tot=getGrandTotal();}catch(e){}try{fee=ty==='Consegna'?getActiveDeliveryFee():0;}catch(e){}
+   var icon=ty==='Consegna'?'🛵':ty==='Tavolo'?'🍽️':'🛍️';
+   var ed=false;try{ed=!!editingOrderId;}catch(e){}
+   var items='';cart.forEach(function(v){
+    var isM=!!v.menu,sz=v.size==='Maxi'?'<span class="tg">XL</span>':'';
+    items+='<div class="cf-it"><div class="cf-q">'+v.qty+'×</div><div class="cf-nm">'+esc(v.name)+(isM?'<span class="tg">MENU</span>':'')+sz+modsHtml(v)+'</div><div class="cf-pr">'+euro(Math.round(v.price*v.qty*100)/100)+'</div></div>';});
+   var dupH='';
+   if(dup){dupH='<div class="cf-dup">⚠️ '+(dup.kind==='same'?'ORDINE IDENTICO già inserito':'Questo cliente ha già un ordine aperto')+' (#'+esc(String(dup.o.id))+', '+Math.max(1,Math.round(dup.mins))+' min fa) · '+(dup.kind==='same'?'الأوردر ده متسجّل قبل كده':'العميل عنده أوردر مفتوح')+'</div>';}
+   root.innerHTML='<div class="cf-top '+esc(ty)+'"><span class="cf-ty">'+icon+' '+esc(String(ty).toUpperCase())+(ty==='Tavolo'&&tbl?' '+esc(tbl):'')+(ed?' · MODIFICA':'')+'</span><span class="cf-tm">⏰ '+esc(tm||'Subito')+'</span></div>'
+    +'<div class="cf-bd">'+dupH+((nm||ph||ad)?'<div class="cf-cu">'+(nm?'👤 '+esc(nm):'')+(ph?'<small>📞 '+esc(ph)+'</small>':'')+(ad&&ty==='Consegna'?'<small>📍 '+esc(ad)+'</small>':'')+'</div>':'')+items+'</div>'
+    +'<div class="cf-ft"><div class="cf-tt"><span>'+esc(pay)+(fee?' · 🛵 '+euro(fee):'')+'</span><b>'+euro(tot)+'</b></div><div class="cf-bt"><button type="button" class="cf-no" data-no>✎ Modifica</button><button type="button" class="cf-ok'+(dup?' warn':'')+'" data-ok>'+(dup?'⚠️ SALVA COMUNQUE':'✔ CONFERMA')+'</button></div></div>';
+   root.className='';document.body.classList.add('qs-lock');
+  });
+ }
+ function done(ok){if(root)root.className='hide';document.body.classList.remove('qs-lock');var r=resolver;resolver=null;if(r)r(ok);}
+ /* il vecchio avviso (confirm nativo) non deve comparire dopo la mia schermata */
+ var _bd=window.bpConfirmDuplicateOrder;
+ if(typeof _bd==='function'){bpConfirmDuplicateOrder=function(){if(window.__cfOk)return true;return _bd.apply(this,arguments);};}
+ var _ds=doSaveOrder;
+ doSaveOrder=async function(){
+  var args=arguments,self=this;
+  if(typeof cart==='undefined'||!cart.size||window.__cfBusy)return _ds.apply(self,args);
+  var dup=findDup(),sigNow=JSON.stringify(aggFromCart()),wasEdit=false;try{wasEdit=!!editingOrderId;}catch(e){}
+  if(cfOn()||dup){
+   window.__cfBusy=true;var ok=false;try{ok=await confirmUI(dup);}finally{window.__cfBusy=false;}
+   if(!ok){flash('✎ Torna all\'ordine · كمّل الأوردر');return null;}
+   window.__cfOk=true;
+  }
+  var r;try{r=await _ds.apply(self,args);}finally{window.__cfOk=false;}
+  try{if(!wasEdit&&cart.size===0&&r)lastSaved={sig:sigNow,ts:Date.now(),id:r};}catch(e){}
+  return r;
+ };
+ ui();
+})();
+</script>
 </body>
 </html>
