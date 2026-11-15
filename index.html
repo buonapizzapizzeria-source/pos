@@ -4172,6 +4172,18 @@ body[data-role="driver"] #bpGqBadge{display:none!important}
 /* App Delivery: pagamento salvato come "Altro" (compatibile con ordini esistenti), mostrato come App Delivery */
 window.bpIsApp=function(o){ return String((o&&o.payment_method)||'').toLowerCase().indexOf('altro')>=0; };
 window.bpPayLabel=function(pm){ return /^altro$/i.test(String(pm||'').trim()) ? 'App Delivery' : String(pm==null?'':pm); };
+/* UXI: icone SVG colorate e distinte (pagamento + tipo ordine) */
+window.UXI={
+ cash:'<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2" y="6" width="20" height="12" rx="2.5" fill="currentColor"/><circle cx="12" cy="12" r="3" class="d"/><circle cx="5.8" cy="12" r="1" class="d"/><circle cx="18.2" cy="12" r="1" class="d"/></svg>',
+ card:'<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2" y="5" width="20" height="14" rx="2.5" fill="currentColor"/><rect x="2" y="8.8" width="20" height="3.2" class="d"/><rect x="5" y="14.4" width="6" height="2" rx="1" class="d"/></svg>',
+ app:'<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6.5" y="2" width="11" height="20" rx="3" fill="currentColor"/><rect x="8.5" y="5" width="7" height="11" rx="1" class="d"/><circle cx="12" cy="19" r="1" class="d"/></svg>',
+ dom:'<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5.5" cy="17.5" r="3" fill="currentColor"/><circle cx="18.5" cy="17.5" r="3" fill="currentColor"/><path d="M8.5 17.5h6l-2.4-7.5H9" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M14 10l1.6-3.2h3" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><rect x="2" y="8" width="6.5" height="4.5" rx="1.4" fill="currentColor"/></svg>',
+ rit:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 9V7a3 3 0 0 1 6 0v2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M4.5 9h15l-1 11a1.6 1.6 0 0 1-1.6 1.5H7.1A1.6 1.6 0 0 1 5.5 20z" fill="currentColor"/><path d="M9 12.8a3 3 0 0 0 6 0" fill="none" class="ds" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/></svg>',
+ tav:'<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="5.6" fill="currentColor"/><circle cx="12" cy="12" r="3" class="d"/><path d="M3.2 3.5v4.2a1.6 1.6 0 0 0 3.2 0V3.5M4.8 3.5V21" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><path d="M20.8 21V3.5c-2 1.3-3 3.6-3 6.5h3" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+};
+window.bpPayKind=function(pm){ var s=String(pm==null?'':pm).trim().toLowerCase(); return s==='altro'||s.indexOf('altro')>=0?'app':(s.indexOf('carta')>=0?'card':'cash'); };
+window.bpPayIcon=function(pm){ var k=bpPayKind(pm); return '<span class="uxi uxi-'+k+'" data-pay="'+(k==='app'?'Altro':k==='card'?'Carta':'Contanti')+'">'+window.UXI[k]+'</span>'; };
+window.bpTypeIcon=function(t){ var s=String(t||'').toLowerCase(), k=/consegna|domicilio/.test(s)?'dom':(/tavolo/.test(s)?'tav':'rit'); return '<span class="uxi uxi-'+k+'">'+window.UXI[k]+'</span>'; };
 (function(){ var st=document.createElement('style'); st.textContent='.cassa-card.app{border-top-color:#f79009}'; document.head.appendChild(st); })();
 </script>
 <script>
@@ -11211,7 +11223,7 @@ function renderOrderList(id, list, isOpenTab=false){
  <span class="pill ${u.badgeClass}">${esc(u.badgeText)}</span>
  ${parsedNotes.cashInfo ? `<span class="pill resto-pill">💶 ${esc(parsedNotes.cashInfo)}</span>` : ''}
  </h3>
- <p>🕒 Creato: ${when} · <strong>${esc(o.order_type)}</strong> · ${o.payment_method && /^altro$/i.test(o.payment_method) ? '📲' : '💳'} ${esc(bpPayLabel(o.payment_method))}${o.created_by_email ? ' · 👤 ' + esc(o.created_by_email) : ''}</p>${o.updated_by_email ? '<p>✏️ Ultima modifica: <strong>' + esc(o.updated_by_email) + '</strong>' + (o.updated_at ? ' · ' + new Date(o.updated_at).toLocaleTimeString('it-IT', {hour: '2-digit', minute: '2-digit'}) : '') + '</p>' : ''}
+ <p>🕒 Creato: ${when} · ${bpTypeIcon(o.order_type)} <strong>${esc(o.order_type)}</strong> · ${bpPayIcon(o.payment_method)} ${esc(bpPayLabel(o.payment_method))}${o.created_by_email ? ' · 👤 ' + esc(o.created_by_email) : ''}</p>${o.updated_by_email ? '<p>✏️ Ultima modifica: <strong>' + esc(o.updated_by_email) + '</strong>' + (o.updated_at ? ' · ' + new Date(o.updated_at).toLocaleTimeString('it-IT', {hour: '2-digit', minute: '2-digit'}) : '') + '</p>' : ''}
  ${contactLine?`<p>${contactLine}</p>`:''}
  ${itemsHtml}
  ${noteHtml}
@@ -11744,7 +11756,7 @@ function buildReceiptHtml(o, items){
  ${grandQty !== totalQty ? `<div class="rc-summary-row rc-tot-all"><span>Totale con fritti e bibite dei menu:</span><strong>${grandQty} pz</strong></div>` : ''}
  <div class="rc-summary-row">
  <span>Metodo di Pagamento:</span>
- <strong>${/^altro$/i.test(payMethod) ? '📲' : '💳'} ${esc(bpPayLabel(payMethod).toUpperCase())}</strong>
+ <strong>${bpPayIcon(payMethod)} ${esc(bpPayLabel(payMethod).toUpperCase())}</strong>
  </div>
  ${parsedNotes.cashInfo ? `<div class="rc-resto-highlight"><span>💶 CALCOLO RESTO:</span><span>${esc(parsedNotes.cashInfo)}</span></div>` : ''}
  </div>
@@ -13607,7 +13619,7 @@ try{
  if(bpIsApp(ord)) return; /* App Delivery: non si cambia con il tocco rapido */
  var nextPay = String(ord.payment_method || '').toLowerCase().includes('contanti') ? 'Carta' : 'Contanti';
  ord.payment_method = nextPay;
- sw.innerHTML = '💳 ' + nextPay + ' 🔁';
+ sw.innerHTML = bpPayIcon(nextPay) + ' ' + nextPay + ' 🔁';
  await sb.from('orders').update({payment_method: nextPay}).eq('id', ordId);
  if(typeof renderCassaReport === 'function') renderCassaReport();
  });
@@ -13621,7 +13633,7 @@ try{
  if(!m) return;
  var pLine = card.querySelector('p');
  if(!pLine || pLine.querySelector('[data-quick-pay-id]')) return;
- pLine.innerHTML = pLine.innerHTML.replace(/💳\s*([^<·]+)/, '<span class="bp27-pay-switch" data-quick-pay-id="' + m[1] + '" title="Tocca per cambiare Contanti / Carta">💳 $1 🔁</span>');
+ pLine.innerHTML = pLine.innerHTML.replace(/(<span class="uxi [^"]*" data-pay="(?:Contanti|Carta)">[\s\S]*?<\/span>)\s*([^<·]+)/, '<span class="bp27-pay-switch" data-quick-pay-id="' + m[1] + '" title="Tocca per cambiare Contanti / Carta">$1 $2 🔁</span>');
  });
  }
 
@@ -17663,8 +17675,8 @@ openCartIngModal = function(key){
  var panels = $$('#newTab .grid > section.panel'), p = panels[1]; if(!p || $('#bpOrder')) return !!$('#bpOrder');
  var tl = $('.topline', p); if(!tl) return false;
  var c = document.createElement('div'); c.id = 'bpOrder';
- c.innerHTML = '<div class="bpo-seg type-seg" data-sel="type"><button type="button" data-v="Consegna"><span>🛵</span><b>Domicilio</b></button><button type="button" data-v="Asporto"><span>🛍️</span><b>Ritiro</b></button><button type="button" data-v="Tavolo" style="background:#fef3c7;border-color:#f59e0b;color:#92400e"><span>🍽️</span><b>Tavolo</b></button></div>' +
- '<div class="bpo-seg three" data-sel="payment"><button type="button" data-v="Contanti"><span>💵</span><b>Contanti</b></button><button type="button" data-v="Carta"><span>💳</span><b>Carta</b></button><button type="button" data-v="Altro"><span>📲</span><b>App</b></button></div>' +
+ c.innerHTML = '<div class="bpo-seg type-seg" data-sel="type"><button type="button" data-v="Consegna"><span class="uxi uxi-dom">'+window.UXI.dom+'</span><b>Domicilio</b></button><button type="button" data-v="Asporto"><span class="uxi uxi-rit">'+window.UXI.rit+'</span><b>Ritiro</b></button><button type="button" data-v="Tavolo"><span class="uxi uxi-tav">'+window.UXI.tav+'</span><b>Tavolo</b></button></div>' +
+ '<div class="bpo-seg three" data-sel="payment"><button type="button" data-v="Contanti"><span class="uxi uxi-cash">'+window.UXI.cash+'</span><b>Contanti</b></button><button type="button" data-v="Carta"><span class="uxi uxi-card">'+window.UXI.card+'</span><b>Carta</b></button><button type="button" data-v="Altro"><span class="uxi uxi-app">'+window.UXI.app+'</span><b>App</b></button></div>' +
  '<button type="button" id="bpoTime" class="bpo-time"></button><div id="bpoPills"></div>';
  tl.after(c);
  c.onclick = function(e){
@@ -30355,7 +30367,7 @@ function matchIn(q, names, aliases){
   storico: {tab:'allTab',     box:'allOrders',   card:'.order', key:'storico', street:false},
   cucina:  {tab:'kitchenTab', box:'kitchenCols', card:'.k35-t', key:'cucina',  street:false}
  };
- var CHIPS = [['all','Tutti',''],['domicilio','Domicilio','🛵'],['ritiro','Ritiro','🛍️'],['tavolo','Tavolo','🍽️']];
+ var CHIPS = [['all','Tutti',''],['domicilio','Domicilio','<i class="uxi uxi-dom">'+window.UXI.dom+'</i>'],['ritiro','Ritiro','<i class="uxi uxi-rit">'+window.UXI.rit+'</i>'],['tavolo','Tavolo','<i class="uxi uxi-tav">'+window.UXI.tav+'</i>']];
 
  function buildBar(name){
   var c = CFG[name], tab = $(c.tab), box = $(c.box);
@@ -32256,6 +32268,105 @@ html body #openOrders,html body #allOrders{grid-template-columns:minmax(0,1fr)!i
  html.pos64 body #p64Win textarea,html.pos64 body #p64Win input:not([type=checkbox]):not([type=radio]),html.pos64 body #p64Win select{font-size:18px!important;min-height:52px}
  html.pos64 body #p64Win textarea{min-height:110px!important;line-height:1.35}
  html.pos64 body #p64Win button{min-height:44px}
+}
+</style>
+
+<style id="uxFinal">
+/* ===== uxFinal · icone distinte + layout orizzontale compatto (tablet) · LTR/RTL ===== */
+.uxi{display:inline-flex;align-items:center;justify-content:center;width:1.2em;height:1.2em;vertical-align:-.26em;flex:0 0 auto;font-style:normal}
+.uxi svg{width:100%;height:100%;display:block}
+.uxi .d{fill:#fff}.uxi .ds{stroke:#fff}
+.uxi-cash{color:#16a34a}.uxi-card{color:#2563eb}.uxi-app{color:#7c3aed}.uxi-dom{color:#0891b2}.uxi-rit{color:#db2777}.uxi-tav{color:#d97706}
+.order p .uxi,.order-left p .uxi{width:1.25em;height:1.25em}
+/* chip filtro ordini */
+.bpf-chip .uxi{width:18px;height:18px;vertical-align:middle}
+.bpf-chip[data-f="domicilio"]{border-color:#0891b2!important}.bpf-chip[data-f="ritiro"]{border-color:#db2777!important}.bpf-chip[data-f="tavolo"]{border-color:#d97706!important}
+.bpf-chip[data-f="domicilio"].on{background:#0891b2!important}.bpf-chip[data-f="ritiro"].on{background:#db2777!important}.bpf-chip[data-f="tavolo"].on{background:#d97706!important}
+.bpf-chip.on .uxi{color:#fff}.bpf-chip[data-f="domicilio"].on .uxi .d{fill:#0891b2}.bpf-chip[data-f="ritiro"].on .uxi .ds{stroke:#db2777}.bpf-chip[data-f="tavolo"].on .uxi .d{fill:#d97706}
+.bp27-pay-switch .uxi{vertical-align:-.3em}
+
+/* ---------- scheda ordine (destra) ---------- */
+html.pos64 body #newTab>.grid>section.panel:nth-child(2){padding:6px 8px!important}
+html.pos64 body #p64Head{gap:5px}
+html.pos64 body #p64Head>.topline h2{font-size:15px!important}
+html.pos64 body #p64Head>.topline{min-height:0!important}
+html.pos64 body #bpOrder{display:grid;grid-template-columns:minmax(0,1fr);gap:5px;margin:0}
+html.pos64 body #bpOrder .bpo-seg{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px;background:transparent;padding:0;border-radius:0}
+html.pos64 body #newTab #bpOrder .bpo-seg button{--uxc:#667085;display:flex;flex-direction:row;align-items:center;justify-content:center;gap:6px;min-height:0!important;height:36px;padding:0 6px!important;border-radius:11px;font-size:13px;font-weight:800;line-height:1;background:color-mix(in srgb,var(--uxc) 11%,#fff)!important;color:var(--bp-ink,#101828)!important;border:1.5px solid color-mix(in srgb,var(--uxc) 34%,transparent)!important;box-shadow:none}
+html.pos64 body #newTab #bpOrder .bpo-seg button[data-v="Consegna"]{--uxc:#0891b2}
+html.pos64 body #newTab #bpOrder .bpo-seg button[data-v="Asporto"]{--uxc:#db2777}
+html.pos64 body #newTab #bpOrder .bpo-seg button[data-v="Tavolo"]{--uxc:#d97706}
+html.pos64 body #newTab #bpOrder .bpo-seg button[data-v="Contanti"]{--uxc:#16a34a}
+html.pos64 body #newTab #bpOrder .bpo-seg button[data-v="Carta"]{--uxc:#2563eb}
+html.pos64 body #newTab #bpOrder .bpo-seg button[data-v="Altro"]{--uxc:#7c3aed}
+html.pos64 body #bpOrder .bpo-seg button .uxi{width:20px;height:20px;font-size:inherit;vertical-align:middle}
+html.pos64 body #bpOrder .bpo-seg button b{font-size:13px;color:inherit!important;white-space:nowrap}
+html.pos64 body #newTab #bpOrder .bpo-seg button.on{background:var(--uxc)!important;color:#fff!important;border-color:var(--uxc)!important;box-shadow:0 3px 9px color-mix(in srgb,var(--uxc) 45%,transparent)}
+html.pos64 body #newTab #bpOrder .bpo-seg button.on b{color:#fff!important}
+html.pos64 body #newTab #bpOrder .bpo-seg button.on .uxi{color:#fff}
+html.pos64 body #newTab #bpOrder .bpo-seg button.on .uxi .d{fill:var(--uxc)}
+html.pos64 body #newTab #bpOrder .bpo-seg button.on .uxi .ds{stroke:var(--uxc)}
+@media(min-width:900px){
+ /* tipo ordine + pagamento sulla stessa riga: piu' compatto, tutto piu' in alto */
+ html.pos64 body #bpOrder{grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px}
+ html.pos64 body #bpOrder>#bpoPills,html.pos64 body #bpOrder>#bpoQuick{grid-column:1/-1}
+}
+/* barra Cliente / Orario / Note / Extra / Resto */
+html.pos64 body #p64Bar{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:5px}
+html.pos64 body #p64Bar button{flex-direction:row;justify-content:center;gap:5px;height:34px;padding:0 4px!important;border-radius:10px;background:var(--bp-soft,#f2f4f7)!important;border:1.5px solid transparent!important;box-shadow:none}
+html.pos64 body #p64Bar button span{font-size:16px;line-height:1}
+html.pos64 body #p64Bar button b{font-size:12px;font-weight:800;max-width:calc(100% - 20px)}
+html.pos64 body #p64Bar button.on{background:var(--bp-brand,#d92d20)!important;color:#fff!important;box-shadow:0 3px 9px rgba(217,45,32,.3)}
+html.pos64 body #p64Bar button.dot::after{right:auto;inset-inline-end:5px;top:3px;width:7px;height:7px}
+
+/* ---------- menu a piastrelle (sinistra): piu' elementi in orizzontale ---------- */
+html.pos64 body #bpmGrid{grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:6px}
+html.pos64 body .bpm-tile,html.pos64 body .bpm-tile[style*="--cc"]{border-radius:16px!important}
+html.pos64 body .bpm-ico{font-size:26px}
+html.pos64 body #newTab .bpm-main{padding:7px 4px 4px;gap:3px}
+html.pos64 body .bpm-main b{font-size:12px;line-height:1.12;height:2.3em;min-height:2.3em}
+html.pos64 body .bpm-main i,html.pos64 body .bpm-tile[style*="--cc"] .bpm-main i{font-size:12px;padding:2px 10px}
+html.pos64 body .bpm-n{left:auto;right:auto;inset-inline-start:5px;top:5px;min-width:22px;height:22px;font-size:12px}
+html.pos64 body #newTab .bpm-act{padding:0 5px 5px;gap:4px}
+html.pos64 body #newTab .bpm-act button{height:30px;font-size:12px!important;border-radius:10px;padding:0 6px!important}
+html.pos64 body .bpm-ib{width:42px;height:42px;border-radius:13px}
+html.pos64 body .bpm-chip{min-height:38px!important;padding:4px 12px!important;font-size:13px}
+html.pos64 body .bpm-chip .e{font-size:16px}
+html.pos64 body #bpMenu{gap:6px}
+
+/* ---------- pulsanti in basso: una riga, allineati ---------- */
+html.pos64 body #p64Foot{gap:5px}
+html.pos64 body #p64Foot .total.rd-total{padding:5px 12px!important}
+html.pos64 body #p64Foot .total.rd-total span:last-child{font-size:24px!important}
+html.pos64 body #newTab #p64Foot .actions{display:flex!important;flex-wrap:nowrap!important;gap:6px;align-items:stretch}
+html.pos64 body #newTab #p64Foot .actions>button{min-height:44px!important;height:44px;font-size:13px!important;line-height:1.1;padding:2px 8px!important;white-space:normal;overflow:hidden;flex:1 1 0;min-width:0;border-radius:12px}
+html.pos64 body #newTab #p64Foot .actions>#saveOrder{flex:1.5 1 0}
+html.pos64 body #newTab #p64Foot .actions>#savePrintOrderBtn{flex:1.2 1 0}
+html.pos64 body #newTab #p64Foot .actions>button.secondary{flex:0 0 58px;font-size:11px!important;padding:2px!important}
+html.pos64 body #newTab #p64Foot .actions>#cancelEditBtn{flex:0 1 auto}
+
+/* ===== uxFinal · telefono in orizzontale (schermo basso): tutta la schermata scorre ===== */
+@media (min-width:900px) and (orientation:landscape) and (max-height:600px){
+ html.pos64:has(#newTab:not(.hidden)),html.pos64:has(#newTab:not(.hidden)) body{overflow:hidden!important}
+ /* l'intera schermata "Nuovo ordine" diventa un'unica area scorrevole (banner + menu + ordine) */
+ html.pos64 body #newTab:not(.hidden){display:block!important;overflow-y:auto!important;overflow-x:hidden!important;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;padding:4px 8px calc(10px + env(safe-area-inset-bottom,0px))!important}
+ html.pos64 body #newTab>.grid{display:grid!important;align-items:start;flex:none!important;height:auto!important;min-height:0!important}
+ html.pos64 body #newTab>.grid>section.panel{height:auto!important;max-height:none!important;overflow:visible!important}
+ /* sinistra: il menu occupa tutta la sua altezza e scorre con la pagina */
+ html.pos64 body #bpMenu{flex:none!important;min-height:0}
+ html.pos64 body #bpmGrid{flex:none!important;overflow:visible!important;max-height:none!important}
+ /* destra: pannello ordine alto quanto lo schermo, scorre da solo (Domicilio/Contanti/Cliente... salgono insieme al resto) */
+ html.pos64 body #newTab>.grid>section.panel:nth-child(2){position:sticky!important;top:0!important;max-height:calc((100dvh - var(--p64-top,56px) - 10px) / var(--bpz,1))!important;overflow-y:auto!important;overflow-x:hidden!important;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
+ html.pos64 body #newTab>.grid>section.panel:nth-child(2)>#p64Head{flex:0 0 auto}
+ html.pos64 body #newTab>.grid>section.panel:nth-child(2)>#p64Mid{flex:0 0 auto!important;min-height:170px!important}
+ html.pos64 body #p64Mid>#bpAccCart{height:auto!important;max-height:none!important;overflow:visible!important}
+ html.pos64:has(#p64Win[data-open]) body #newTab>.grid>section.panel:nth-child(2)>#p64Mid{min-height:260px!important}
+ /* banner "modifica ordine" compatto su una riga */
+ html.pos64 body #editingOrderBanner{display:flex!important;flex-wrap:wrap;align-items:center;gap:6px 10px;padding:3px 8px!important;margin:0 0 4px!important;font-size:12px!important;line-height:1.2}
+ html.pos64 body #editingOrderBanner *{font-size:inherit!important;margin:0!important}
+ html.pos64 body #editingOrderBanner .muted{display:none!important}
+ html.pos64 body #editingOrderBanner button{min-height:0!important;height:28px;padding:0 10px!important;border-radius:9px}
+ html.pos64 body #newTab:has(#editingOrderBanner:not(.hidden)) #cancelEditBtn{display:none!important}
 }
 </style>
 </body>
