@@ -32971,6 +32971,7 @@ body.qs-lock{overflow:hidden}
   if(!ings(p).length&&!quick(p).length)return; /* bibite ecc.: aggiunta diretta come prima */
   e.stopPropagation();e.preventDefault();open(p);
  },true);
+ window.bpQS={open:open,close:close,state:function(){return S;},price:function(){return S?price():0;},tog:function(n){if(!S)return;S.add.has(n)?S.add.delete(n):S.add.add(n);draw();}};
 })();
 </script>
 <script>
@@ -33107,7 +33108,8 @@ body.qs-lock{overflow:hidden}
   var pr = splitProductAndMods(i.product_name), base = [], rem = [], add = [], pd = null;
   try{ pd = bpRcFindProd(pr.baseName); }catch(e){}
   if(pd) base = parseIngredients(pd.description || '');
-  pr.mods.forEach(function(m){ m = String(m).trim(); if(/^nota:/i.test(m)) return; if(/^senza\s+/i.test(m)) rem.push(fold(m.replace(/^senza\s+/i, ''))); else add.push(m.replace(/^\+\s*/, '')); });
+  var isM = false; try{ isM = !!(window.bpIsMenu && bpIsMenu(pr)); }catch(e){} var skipP = isM ? 1 : 0; /* Menu: la Patatine del menu va nel cestino a parte, NON dopo forno; solo una 2a Patatine (aggiunta sulla pizza) conta */
+  pr.mods.forEach(function(m){ m = String(m).trim(); if(/^nota:/i.test(m)) return; if(skipP > 0 && fold(m.replace(/^\+\s*/, '')) === 'patatine'){ skipP--; return; } if(/^senza\s+/i.test(m)) rem.push(fold(m.replace(/^senza\s+/i, ''))); else add.push(m.replace(/^\+\s*/, '')); });
   return uniq(base.filter(function(x){ return rem.indexOf(fold(x)) < 0; }).concat(add).filter(is));
  }
  function badge(p){ try{ var l = parseIngredients(p.description || '').filter(is); return l.length ? '<span class="pb-b" title="Dopo forno: ' + esc(l.join(', ')) + '">🌿</span>' : ''; }catch(e){ return ''; } }
@@ -33156,6 +33158,198 @@ body.qs-lock{overflow:hidden}
   return '<div class="pb-rc"><div class="pb-rc-h">🌿 DOPO FORNO · بعد الفرن</div>' + G.map(function(g){ return '<div class="pb-rc-r">' + g.n.map(function(x){ return '<b>' + x.q + '×</b> ' + esc(x.n); }).join(', ') + '<span>＋ ' + esc(g.l.join(' · ')) + '</span></div>'; }).join('') + '</div>';
  }
  window.bpPB = {groups: groups, receipt: receipt, is: is, list: list, badge: badge, ticket: ticket, ofCart: ofCart, ofOrderItem: ofOrderItem, edit: edit};
+})();
+</script>
+
+<style id="v114css">
+/* ===== v114 · Fase 2: finestra Famiglie + pannello ingredienti (pressione lunga, prezzo live, suggerimenti con foto) ===== */
+
+/* ---- finestra Famiglie: stessa grafica delle piastrelle (foto sopra, targa colore categoria sotto, sigillo prezzo) ---- */
+#fwRoot{position:fixed;inset:0;z-index:99990;display:flex;align-items:flex-end;justify-content:center}
+#fwRoot.fw-hide{display:none}
+#fwRoot .fw-bd{position:absolute;inset:0;background:rgba(20,10,3,.6)}
+#fwRoot .fw-sh{position:relative;width:100%;height:92vh;height:92dvh;display:flex;flex-direction:column;background:#fffaf3;border-radius:24px 24px 0 0;box-shadow:0 -10px 36px rgba(0,0,0,.4);animation:fwUp .18s ease-out;overflow:hidden}
+@keyframes fwUp{from{transform:translateY(40px);opacity:.4}to{transform:none;opacity:1}}
+/* telefono in orizzontale (schermo basso): tutto lo schermo */
+@media (orientation:landscape) and (max-height:540px){#fwRoot{align-items:stretch}#fwRoot .fw-sh{height:100vh;height:100dvh;width:min(100%,1100px);border-radius:0}}
+/* tablet e PC: finestra centrata */
+@media (min-width:700px) and (min-height:541px){#fwRoot{align-items:center}#fwRoot .fw-sh{width:min(94vw,1180px);height:min(88vh,880px);border-radius:24px}}
+#fwRoot button{box-sizing:border-box;min-width:0!important;font-family:inherit}
+#fwRoot .fw-hd{flex:0 0 auto;display:flex;align-items:center;gap:8px;padding:10px 12px 4px}
+#fwRoot .fw-hd input{flex:1;min-width:0;height:46px;border:2px solid #e2cdb4;border-radius:99px;padding:0 16px;font-size:16px;background:#fff;box-sizing:border-box}
+#fwRoot .fw-x{flex:0 0 44px;width:44px!important;height:44px!important;min-height:0!important;padding:0!important;border-radius:50%!important;border:0;background:#f3e6d3;font-size:18px;font-weight:900;display:flex;align-items:center;justify-content:center}
+#fwRoot .fw-tabs{flex:0 0 auto;display:flex;gap:8px;overflow-x:auto;padding:6px 12px 8px;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+#fwRoot .fw-tabs::-webkit-scrollbar{display:none}
+#fwRoot .fw-tab{flex:0 0 auto;border:2px solid #f0b774;background:linear-gradient(180deg,#fff7ea,#ffe7c4);color:#5a2d00;border-radius:16px;padding:0 14px!important;font-size:16px;font-weight:900;height:44px!important;min-height:0!important;white-space:nowrap;display:flex;align-items:center;gap:6px}
+#fwRoot .fw-tab.on{background:#d92d20;border-color:#d92d20;color:#fff}
+#fwRoot .fw-tab small{opacity:.75;font-weight:800;font-size:13px}
+#fwRoot .fw-gw{flex:1 1 0;min-height:0;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;padding:14px 12px 16px}
+/* colonne: seguono lo zoom del menu (--bpz) come le piastrelle, 2 colonne minimo */
+#fwRoot .fw-g{display:grid;grid-template-columns:repeat(auto-fill,minmax(max(104px,calc(var(--bpz,.7) * 200px)),1fr));grid-auto-rows:max-content;align-content:start;gap:16px 10px}
+#fwRoot .fw-c{--pl:color-mix(in srgb,var(--cc,#7a4a2a) 62%,#1b0f07 38%);position:relative;display:block;container-type:inline-size;border-radius:18px;background:var(--pl);overflow:visible;box-shadow:0 3px 10px rgba(0,0,0,.22);-webkit-user-select:none;user-select:none;touch-action:manipulation;transition:transform .1s}
+#fwRoot .fw-c:active{transform:scale(.97)}
+#fwRoot .fw-c.has{box-shadow:0 0 0 3px #16a34a,0 6px 16px rgba(22,163,74,.3);--pl:#15803d}
+#fwRoot .fw-ph{position:relative;display:block;width:100%;aspect-ratio:1/.8;border-radius:18px 18px 0 0;overflow:hidden;background:linear-gradient(135deg,color-mix(in srgb,var(--cc,#c2410c) 35%,#fff),color-mix(in srgb,var(--cc,#c2410c) 60%,#fff))}
+#fwRoot .fw-ph img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;pointer-events:none}
+#fwRoot .fw-ph>span{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:clamp(30px,38cqi,56px)}
+#fwRoot .fw-pl{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;min-height:calc(2.3em + 24px);padding:14px 6px 8px;border-radius:0 0 18px 18px;background:var(--pl);font-size:clamp(12px,12.5cqi,17px)}
+#fwRoot .fw-pl::before{content:"";position:absolute;left:0;right:0;top:-7px;height:8px;background:radial-gradient(circle at 7px 0,transparent 6px,var(--pl) 6.5px) 0 0/14px 8px repeat-x;pointer-events:none}
+#fwRoot .fw-nm{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;width:100%;text-align:center;font-weight:900;line-height:1.14;color:#fff;letter-spacing:.2px;word-break:break-word}
+#fwRoot .fw-pr{position:absolute;top:-17px;inset-inline-end:6px;z-index:2;background:#fff;color:#b42318;border:2.5px solid var(--pl);border-radius:99px;padding:2px 9px;font-size:clamp(11px,11.5cqi,15px);font-weight:900;box-shadow:0 2px 5px rgba(0,0,0,.3);transform:rotate(-3deg);white-space:nowrap}
+#fwRoot .fw-xl{border:0;border-radius:99px;background:#fff3e0;color:#7a3b12;font-size:.8em;font-weight:900;padding:4px 12px!important;min-height:30px!important;height:auto!important;line-height:1.1;box-shadow:0 1px 4px rgba(0,0,0,.35);white-space:nowrap}
+#fwRoot .fw-n{position:absolute;top:6px;inset-inline-start:6px;z-index:3;min-width:28px;height:28px;border-radius:99px;background:#16a34a;color:#fff;font-weight:900;font-size:15px;display:flex;align-items:center;justify-content:center;padding:0 7px;box-shadow:0 2px 6px #0005}
+#fwRoot .fw-m{position:absolute;top:6px;inset-inline-end:6px;z-index:3;width:34px!important;height:34px!important;min-height:0!important;padding:0!important;border-radius:50%!important;border:0;background:rgba(255,255,255,.95);font-size:20px;font-weight:900;color:#b42318;box-shadow:0 2px 6px #0005;display:flex;align-items:center;justify-content:center;line-height:1}
+#fwRoot .fw-ft{flex:0 0 auto;display:flex;gap:10px;align-items:center;padding:8px 12px calc(10px + env(safe-area-inset-bottom,0px));border-top:1px solid #ecdcc6;background:#fffaf3}
+#fwRoot .fw-tot{flex:1;min-width:0;font-size:17px;font-weight:900;color:#1d1209}
+#fwRoot .fw-tot small{display:block;font-weight:700;opacity:.65;font-size:11px;line-height:1.25}
+#fwRoot .fw-ok{flex:0 0 auto;height:50px!important;min-height:0!important;border:0;border-radius:16px;background:linear-gradient(135deg,#22c55e,#15803d);color:#fff;font-size:18px;font-weight:900;padding:0 26px!important;box-shadow:0 6px 16px rgba(21,128,61,.4)}
+#fwRoot .fw-em{grid-column:1/-1;text-align:center;padding:30px;opacity:.6;font-size:26px}
+#bpmFamBtn{font-size:18px!important}
+
+/* pannello ingredienti: prezzo live + suggerimenti con foto + ripristina */
+.qs-live{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:2px 14px 4px;padding:7px 12px;border-radius:14px;background:#fff;border:2px solid #e2cdb4;font-size:13px;font-weight:800;color:#5a2d00;flex-wrap:wrap}
+.qs-live .tt{font-size:20px;font-weight:900;color:#b42318}
+.qs-live .tt.pulse{animation:qsPulse .35s ease-out}
+@keyframes qsPulse{0%{transform:scale(1.25);color:#16a34a}100%{transform:none}}
+.qs-live .mi{color:#b42318}.qs-live .pl{color:#15803d}
+.qs-sgp{display:flex;gap:8px;overflow-x:auto;padding:4px 14px 6px;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+.qs-sgp::-webkit-scrollbar{display:none}
+.qs-sp{flex:0 0 auto;width:72px;border:2px solid #e2cdb4;border-radius:14px;background:#fff;padding:4px 2px;display:flex;flex-direction:column;align-items:center;gap:2px;position:relative}
+.qs-sp.on{border-color:#16a34a;background:#e8f7ee}
+.qs-sp .ic{width:44px;height:44px;display:flex;align-items:center;justify-content:center}
+.qs-sp .ic>*{max-width:100%;max-height:100%}
+.qs-sp .ic img{width:44px;height:44px;object-fit:cover;border-radius:10px}
+.qs-sp b{font-size:11px;line-height:1.1;text-align:center;font-weight:800;color:#1d1209;max-height:2.3em;overflow:hidden}
+.qs-sp small{font-size:11px;font-weight:900;color:#b42318}
+.qs-sp i{position:absolute;top:2px;inset-inline-end:4px;font-style:normal;font-weight:900;color:#16a34a;font-size:14px}
+#qsRoot .qs-c.off::before{content:"↩ ";text-decoration:none;display:inline-block}
+</style>
+
+<script id="v114js">
+/* ===== v114 · Fase 2: finestra Famiglie (foto + prezzi, un tocco aggiunge) + pannello ingredienti ===== */
+(function(){
+ var root=null,F={cat:null,q:''};
+ function $(s,r){return (r||document).querySelector(s);}
+ function menuAll(){try{return getActiveMenu()||[];}catch(e){return [];}}
+ function catOf(p){return p.category||'Menu';}
+ var CR=[[/pizz/,'#d92d20'],[/panin|kebab|burger/,'#f79009'],[/piadin|wrap/,'#ca8504'],[/bibit|bevand|drink|acqua|cola|pepsi|birr|vino/,'#1570ef'],[/dolc|dessert|gelat|tiramis/,'#d444a0'],[/insal/,'#16b364'],[/frit|antipast|stuzz|contorn/,'#7a5af8'],[/calzon|focacc/,'#b54708']];
+ function colorOf(cat){var c=(cat||'').toLowerCase();for(var i=0;i<CR.length;i++)if(CR[i][0].test(c))return CR[i][1];var h=0;for(var j=0;j<c.length;j++)h=(h*31+c.charCodeAt(j))%360;return 'hsl('+h+',60%,42%)';}
+ function fams(){var seen=[],all=menuAll();all.forEach(function(p){var c=catOf(p);if(seen.indexOf(c)<0)seen.push(c);});
+  try{seen.sort(function(a,b){return catRank(a)-catRank(b)||a.localeCompare(b,'it');});}catch(e){}return seen;}
+ function pic(p){var t=$('#bpmGrid .bpm-tile[data-id="'+p.id+'"] .bpm-bg img');if(t&&t.src)return t.src;
+  var n=String(p.name||'').toLowerCase().replace(/\s+/g,' ').trim();var u=window.BP_EMB&&window.BP_EMB[n];return u||p.image_url||'';}
+ function icon(c){try{return catIcon(c);}catch(e){return '🍽️';}}
+ function plainKey(p,sz){return p.id+'-'+sz+'-base';}
+ function qty(p){try{return qtyInCart(p);}catch(e){return 0;}}
+ function cartTot(){var n=0,t=0;try{cart.forEach(function(it){n+=it.qty;t+=it.price*it.qty;});}catch(e){}return {n:n,t:Math.round(t*100)/100};}
+ function build(){
+  if(root)return;root=document.createElement('div');root.id='fwRoot';root.className='fw-hide';
+  root.innerHTML='<div class="fw-bd"></div><div class="fw-sh"><div class="fw-hd"><input id="fwQ" type="search" placeholder="Cerca · ابحث" autocomplete="off"><button type="button" class="fw-x" data-fx>✕</button></div><div class="fw-tabs" id="fwTabs"></div><div class="fw-gw" id="fwGW"><div class="fw-g" id="fwG"></div></div><div class="fw-ft" id="fwFt"></div></div>';
+  document.body.appendChild(root);
+  $('.fw-bd',root).onclick=close;
+  $('#fwQ').oninput=function(){F.q=this.value.trim().toLowerCase();draw();};
+  var lp=null,fired=false,sx=0,sy=0;
+  root.addEventListener('pointerdown',function(e){var c=e.target.closest('.fw-c');if(!c||e.target.closest('button'))return;fired=false;sx=e.clientX;sy=e.clientY;
+   clearTimeout(lp);lp=setTimeout(function(){fired=true;var p=find(c.getAttribute('data-id'));if(p&&window.bpQS){try{navigator.vibrate&&navigator.vibrate(20);}catch(_){}bpQS.open(p);}},480);});
+  ['pointerup','pointercancel','pointerleave'].forEach(function(t){root.addEventListener(t,function(){clearTimeout(lp);});});
+  root.addEventListener('pointermove',function(e){if(Math.abs(e.clientX-sx)>10||Math.abs(e.clientY-sy)>10)clearTimeout(lp);});
+  root.addEventListener('contextmenu',function(e){if(e.target.closest('.fw-c'))e.preventDefault();});
+  root.addEventListener('click',function(e){var t;
+   if(e.target.closest('[data-fx]')||e.target.closest('[data-done]'))return close();
+   if(t=e.target.closest('[data-tab]')){F.cat=t.getAttribute('data-tab');F.q='';$('#fwQ').value='';return draw();}
+   if(t=e.target.closest('[data-minus]')){e.stopPropagation();return minus(find(t.getAttribute('data-minus')));}
+   if(t=e.target.closest('[data-xl]')){e.stopPropagation();return add(find(t.getAttribute('data-xl')),'Maxi');}
+   if(t=e.target.closest('.fw-c')){if(fired){fired=false;return;}return add(find(t.getAttribute('data-id')),'Normale');}
+  });
+ }
+ function find(id){return menuAll().filter(function(x){return String(x.id)===String(id);})[0];}
+ function add(p,sz){if(!p)return;
+  try{ssCartAdd(p,sz,1,[],[]);renderCart();}catch(e){console.warn(e);}
+  try{navigator.vibrate&&navigator.vibrate(12);}catch(_){}
+  draw();
+ }
+ function minus(p){if(!p)return;var hit=null;
+  try{cart.forEach(function(it,k){if(!hit&&String(it.menu_id)===String(p.id)&&!(it.removedIngs&&it.removedIngs.length)&&!(it.addedIngs&&it.addedIngs.length))hit=k;});
+   if(!hit)cart.forEach(function(it,k){if(!hit&&String(it.menu_id)===String(p.id))hit=k;});
+   if(hit){var it=cart.get(hit);it.qty--;if(it.qty<=0)cart.delete(hit);renderCart();}}catch(e){console.warn(e);}
+  draw();
+ }
+ function draw(){
+  if(!root||root.classList.contains('fw-hide'))return;
+  var all=menuAll(),fs=fams();if(!F.cat||fs.indexOf(F.cat)<0)F.cat=fs[0];
+  $('#fwTabs').innerHTML=fs.map(function(c){var n=all.filter(function(p){return catOf(p)===c;}).length;return '<button type="button" data-tab="'+esc(c)+'" class="fw-tab'+(!F.q&&F.cat===c?' on':'')+'">'+icon(c)+' '+esc(c)+'<small>'+n+'</small></button>';}).join('');
+  var list=F.q?all.filter(function(p){return (String(p.name)+' '+String(p.description||'')).toLowerCase().indexOf(F.q)>=0;}):all.filter(function(p){return catOf(p)===F.cat;});
+  var g=$('#fwG'),gw=$('#fwGW'),st=gw.scrollTop;
+  g.innerHTML=list.length?list.map(function(p){var im=pic(p),n=qty(p),mx=p.price_maxi!=null&&Number(p.price_maxi)>0,id=esc(String(p.id));
+   return '<div class="fw-c'+(n?' has':'')+'" data-id="'+id+'" style="--cc:'+colorOf(catOf(p))+'"><div class="fw-ph">'+(im?'<img src="'+im+'" alt="" loading="lazy" decoding="async">':'<span>'+icon(catOf(p))+'</span>')+'</div>'+(n?'<span class="fw-n">'+n+'</span><button type="button" class="fw-m" data-minus="'+id+'">−</button>':'')+'<div class="fw-pl"><span class="fw-pr">'+euro(p.price_normal)+'</span><div class="fw-nm">'+esc(p.name)+'</div>'+(mx?'<button type="button" class="fw-xl" data-xl="'+id+'">XL '+euro(p.price_maxi)+'</button>':'')+'</div></div>';}).join(''):'<div class="fw-em">🔎</div>';
+  gw.scrollTop=st;
+  var T=cartTot();
+  $('#fwFt').innerHTML='<div class="fw-tot">🛒 '+T.n+' · '+euro(T.t)+'<small>Tocca = aggiungi · tieni premuto = ingredienti · اضغط = إضافة · مطوّلاً = مكونات</small></div><button type="button" class="fw-ok" data-done>✔ Fatto</button>';
+ }
+ function open(cat){build();if(cat&&fams().indexOf(cat)>=0)F.cat=cat;F.q='';$('#fwQ').value='';root.className='';document.body.classList.add('qs-lock');draw();}
+ function close(){if(root)root.className='fw-hide';document.body.classList.remove('qs-lock');}
+ window.bpFam={open:open,close:close};
+
+ /* aggiorna la finestra quando cambia il carrello */
+ var _r=renderCart;renderCart=function(){var r=_r.apply(this,arguments);try{draw();}catch(e){}return r;};
+
+ /* bottone 🗂️ accanto alla ricerca + pressione lunga su una categoria */
+ setInterval(function(){
+  var top=$('#bpMenu .bpm-top');
+  if(top&&!document.getElementById('bpmFamBtn')){var b=document.createElement('button');b.type='button';b.id='bpmFamBtn';b.className='bpm-ib';b.title='Famiglie · العائلات';b.textContent='🗂️';
+   b.onclick=function(e){e.preventDefault();var on=$('#bpmCats .bpm-chip.on');var c=on?on.getAttribute('data-cat'):null;open(c&&c.indexOf('__')!==0?c:null);};
+   var s=top.querySelector('.bpm-search');if(s&&s.nextSibling)top.insertBefore(b,s.nextSibling);else top.appendChild(b);}
+ },900);
+ (function(){var lp=null,hit=false;
+  document.addEventListener('pointerdown',function(e){var c=e.target.closest&&e.target.closest('#bpmCats .bpm-chip');if(!c)return;hit=false;clearTimeout(lp);
+   lp=setTimeout(function(){hit=true;var k=c.getAttribute('data-cat');try{navigator.vibrate&&navigator.vibrate(20);}catch(_){}open(k&&k.indexOf('__')!==0?k:null);},520);},true);
+  ['pointerup','pointercancel','pointermove'].forEach(function(t){document.addEventListener(t,function(){clearTimeout(lp);},true);});
+  document.addEventListener('click',function(e){if(hit&&e.target.closest&&e.target.closest('#bpmCats .bpm-chip')){hit=false;e.stopPropagation();e.preventDefault();}},true);
+ })();
+
+ /* pressione lunga su una piastrella del menu = apre il pannello ingredienti (anche per prodotti senza ingredienti) */
+ (function(){var lp=null,fired=false,sx=0,sy=0;
+  document.addEventListener('pointerdown',function(e){var t=e.target.closest&&e.target.closest('#bpmGrid .bpm-tile');if(!t||e.target.closest('.bpm-act')||e.target.closest('.bpm-grip'))return;
+   if(document.documentElement.classList.contains('bp-sorting'))return;fired=false;sx=e.clientX;sy=e.clientY;clearTimeout(lp);
+   lp=setTimeout(function(){var p=find(t.getAttribute('data-id'));if(p&&window.bpQS){fired=true;try{navigator.vibrate&&navigator.vibrate(20);}catch(_){}bpQS.open(p);}},480);},true);
+  document.addEventListener('pointermove',function(e){if(Math.abs(e.clientX-sx)>10||Math.abs(e.clientY-sy)>10)clearTimeout(lp);},true);
+  ['pointerup','pointercancel'].forEach(function(t){document.addEventListener(t,function(){clearTimeout(lp);},true);});
+  document.addEventListener('click',function(e){if(fired&&e.target.closest&&e.target.closest('#bpmGrid .bpm-tile')){fired=false;e.stopPropagation();e.preventDefault();}},true);
+ })();
+
+ /* pannello ingredienti: riga prezzo live + suggerimenti con foto */
+ var lastTot=null;
+ function decorate(){
+  var body=document.getElementById('qsBody');if(!body||!window.bpQS)return;var S=bpQS.state();if(!S||!S.p)return;
+  var hd=body.querySelector('.qs-hd');if(!hd||body.querySelector('.qs-live'))return;
+  var p=S.p,base=pkSizePrice(p,S.size),ex=0;S.add.forEach(function(a){ex+=ingPrice(a);});ex=Math.round(ex*100)/100;
+  var tot=Math.round((base+ex)*100)/100,tt=Math.round(tot*S.qty*100)/100;
+  var live=document.createElement('div');live.className='qs-live';
+  live.innerHTML='<span>'+euro(base)+(ex?' <span class="pl">+ '+euro(ex)+'</span>':'')+(S.rem.size?' <span class="mi">− '+S.rem.size+' ingr.</span>':'')+(S.qty>1?' × '+S.qty:'')+'</span><span class="tt'+(lastTot!==null&&lastTot!==tt?' pulse':'')+'">= '+euro(tt)+'</span>';
+  lastTot=tt;
+  var anchor=body.querySelector('.qs-fm')||hd;anchor.parentNode.insertBefore(live,anchor.nextSibling);
+  /* suggerimenti con foto */
+  var kind='altro';try{kind=getProductKind(p);}catch(e){}
+  var names=[];try{var sg=JSON.parse(localStorage.getItem('bp_qs_learn_v1')||'{}')[String(p.id)];if(sg&&sg.e)Object.keys(sg.e).sort(function(a,b){return sg.e[b]-sg.e[a];}).forEach(function(n){if(names.indexOf(n)<0)names.push(n);});}catch(e){}
+  try{(PKG_POP[kind]||[]).forEach(function(n){if(names.indexOf(n)<0)names.push(n);});}catch(e){}
+  S.add.forEach(function(a){if(names.indexOf(a)<0)names.unshift(a);});
+  var base0=[];try{base0=parseIngredients(p.description).map(function(x){return ingNorm(x);});}catch(e){}
+  names=names.filter(function(n){return base0.indexOf(ingNorm(n))<0||S.add.has(n);}).slice(0,10);
+  if(!names.length)return;
+  var strip=document.createElement('div');strip.innerHTML='<div class="qs-t">⭐ Suggeriti · مقترحات <small>tocca per aggiungere</small></div><div class="qs-sgp">'+names.map(function(n){var pr=0;try{pr=ingPrice(n);}catch(e){}var on=S.add.has(n);var ic='';try{ic=window.bpPh?bpPh(n,window.bpQIcon?bpQIcon(n):ingIcon(n)):(window.bpQIcon?bpQIcon(n):ingIcon(n));}catch(e){ic='➕';}
+   return '<button type="button" class="qs-sp'+(on?' on':'')+'" data-sgp="'+esc(n)+'"><span class="ic">'+ic+'</span><b>'+esc(n)+'</b>'+(pr?'<small>+'+euro(pr)+'</small>':'')+(on?'<i>✓</i>':'')+'</button>';}).join('')+'</div>';
+  live.parentNode.insertBefore(strip,live.nextSibling);
+  try{if(window.bpPhHydrate)bpPhHydrate(strip);}catch(e){}
+ }
+ function hook(){
+  var b=document.getElementById('qsBody');if(!b){setTimeout(hook,700);return;}
+  new MutationObserver(function(){decorate();}).observe(b,{childList:true});
+  document.addEventListener('click',function(e){var t=e.target.closest&&e.target.closest('#qsRoot .qs-sp');if(!t)return;e.stopPropagation();bpQS.tog(t.getAttribute('data-sgp'));try{navigator.vibrate&&navigator.vibrate(8);}catch(_){}},true);
+  var qr=document.getElementById('qsRoot');if(qr)new MutationObserver(function(){if(qr.classList.contains('qs-hide'))lastTot=null;}).observe(qr,{attributes:true,attributeFilter:['class']});
+  decorate();
+ }
+ /* #qsBody viene creato al primo open(): aspetta che compaia */
+ var w=setInterval(function(){if(document.getElementById('qsBody')){clearInterval(w);hook();}},500);
 })();
 </script>
 </body>
