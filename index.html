@@ -34076,7 +34076,365 @@ body.bp-peak #bpCash button{min-height:60px!important}
   };
  }catch(e){console.warn('[v119] renderCart non agganciato',e);}
  setTimeout(paintAll,1200);
+
+ /* ---------- scheda in Impostazioni: personalizza orario smart e picco ---------- */
+ var FLD=[['base','Minuti base di preparazione','min','1'],['perPiece','Minuti in più per ogni pezzo in coda','min','0.1'],['cap','Max ordini per quarto d\'ora (oltre = 🔴)','ordini','1'],['peakAt','Picco da N ordini in coda','ordini','1'],['peakEta','Picco da attesa di N minuti','min','1']];
+ var DEF={cap:4,base:15,perPiece:1.2,peakAt:8,peakEta:40};
+ function mountSet(){
+  var grid=document.querySelector('#settingsTab .bp-set-grid');if(!grid||E('bpP5Card'))return;
+  var c=document.createElement('div');c.className='bp-set-card';c.id='bpP5Card';c.style.borderTopColor='#d92d20';
+  var C=cfg(),h='<div class="bp-set-head"><span class="bp-set-ico" style="background:#fef3f2;color:#b42318">🔥</span><h3>Orario smart &amp; Modalità picco · الوقت الذكي ووضع الذروة</h3></div><p class="bp-set-desc">Regola i tempi di preparazione e quando scatta il picco. Vale su questo dispositivo.</p><div class="bp-set-rows" style="display:flex;flex-direction:column;gap:8px">';
+  FLD.forEach(function(f){h+='<label style="font-weight:800;font-size:12px">'+f[1]+' ('+f[2]+')<input id="bpP5_'+f[0]+'" type="number" min="0.1" step="'+f[3]+'" value="'+C[f[0]]+'" style="width:100%;margin-top:3px"></label>';});
+  h+='<label style="font-weight:800;font-size:12px">Modalità picco<select id="bpP5_mode" style="width:100%;margin-top:3px"><option value="auto">Automatica</option><option value="on">Sempre accesa</option><option value="off">Spenta</option></select></label>';
+  h+='<div style="display:flex;gap:8px"><button type="button" id="bpP5_save" style="flex:2;min-height:44px;font-weight:900">💾 Salva</button><button type="button" id="bpP5_reset" class="secondary" style="flex:1;min-height:44px;font-weight:800">↺ Predefiniti</button></div></div>';
+  c.innerHTML=h;grid.appendChild(c);E('bpP5_mode').value=peakMode();
+  E('bpP5_save').onclick=function(){
+   var o={};FLD.forEach(function(f){var v=parseFloat(String(E('bpP5_'+f[0]).value).replace(',','.'));if(v>0)o[f[0]]=v;});
+   try{localStorage.setItem(CK,JSON.stringify(Object.assign({},DEF,o)));}catch(e){}
+   setPeakMode(E('bpP5_mode').value);paintAll();flash('✅ Impostazioni salvate · تم الحفظ');};
+  E('bpP5_reset').onclick=function(){
+   try{localStorage.removeItem(CK);}catch(e){}
+   FLD.forEach(function(f){E('bpP5_'+f[0]).value=DEF[f[0]];});E('bpP5_mode').value='auto';setPeakMode('auto');paintAll();flash('↺ Valori predefiniti');};
+ }
+ setInterval(mountSet,1500);
  window.bpP5={cfg:cfg,set:function(o){try{localStorage.setItem(CK,JSON.stringify(Object.assign(cfg(),o)));}catch(e){}paintAll();},load:load,paint:paintAll};
+})();
+</script>
+
+<style id="v120css">
+/* ===== v120 · Readme per ogni sezione delle Impostazioni ===== */
+.bp-rm{float:inline-end;margin-inline-start:8px;margin-bottom:4px;border:0;border-radius:99px!important;min-height:34px!important;height:auto!important;padding:4px 14px!important;font-size:13px;font-weight:900;background:#1d1209;color:#fff;min-width:0!important;cursor:pointer;display:inline-flex;align-items:center;gap:5px}
+.bp-rm:hover{background:#7c3aed}
+#bpRm{position:fixed;inset:0;z-index:2147483300;display:flex;align-items:flex-end;justify-content:center;direction:rtl;font-family:inherit}
+#bpRm.hide{display:none}
+#bpRm .rm-bd{position:absolute;inset:0;background:rgba(20,10,3,.62)}
+#bpRm .rm-box{position:relative;width:min(100%,720px);max-height:92vh;display:flex;flex-direction:column;background:#fffaf3;border-radius:24px 24px 0 0;overflow:hidden;box-shadow:0 -10px 40px rgba(0,0,0,.45);color:#1d1209}
+@media (min-width:700px){#bpRm{align-items:center}#bpRm .rm-box{border-radius:24px}}
+#bpRm .rm-hd{padding:18px 18px 14px;color:#fff;display:flex;align-items:center;gap:12px}
+#bpRm .rm-ic{font-size:34px;line-height:1;background:rgba(255,255,255,.2);border-radius:16px;padding:8px 10px}
+#bpRm .rm-hd h2{margin:0;font-size:20px;font-weight:900;line-height:1.25;color:#fff!important;text-shadow:0 1px 3px rgba(0,0,0,.35)}
+#bpRm .rm-hd p{color:#fff!important}
+#bpRm .rm-hd p{margin:3px 0 0;font-size:13px;font-weight:700;opacity:.92}
+#bpRm .rm-bd2{flex:1 1 auto;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:12px}
+#bpRm .rm-s{border-radius:16px;padding:12px 14px;border:2px solid;background:#fff}
+#bpRm .rm-s h3{margin:0 0 8px;font-size:16px;font-weight:900;display:flex;align-items:center;gap:8px}
+#bpRm .rm-s p{margin:0;font-size:14.5px;line-height:1.7;font-weight:600}
+#bpRm .rm-s ul,#bpRm .rm-s ol{margin:0;padding:0 22px 0 0;display:flex;flex-direction:column;gap:7px;font-size:14.5px;line-height:1.65;font-weight:600}
+#bpRm .rm-s b{font-weight:900}
+#bpRm .rm-s code{background:#0000000d;border-radius:6px;padding:1px 6px;font-size:13px;direction:ltr;unicode-bidi:embed;font-weight:800}
+#bpRm .rm-what{border-color:#9ec5f0;background:#eef6ff}#bpRm .rm-what h3{color:#0b4a8f}
+#bpRm .rm-steps{border-color:#86d9a8;background:#effcf4}#bpRm .rm-steps h3{color:#166534}
+#bpRm .rm-tip{border-color:#f5c26b;background:#fff8e6}#bpRm .rm-tip h3{color:#7a3b12}
+#bpRm .rm-warn{border-color:#f1a5a0;background:#fef3f2}#bpRm .rm-warn h3{color:#b42318}
+#bpRm .rm-ft{padding:10px 14px calc(12px + env(safe-area-inset-bottom,0px));border-top:1px solid #ead9bf;background:#fffaf3}
+#bpRm .rm-ft button{width:100%;height:50px!important;border:0;border-radius:14px!important;font-size:17px;font-weight:900;color:#fff}
+#bpRm.it{direction:ltr}
+#bpRm .rm-hd>div:nth-child(2){flex:1 1 auto;min-width:0}
+#bpRm .rm-lg{display:inline-flex;flex:0 0 auto;border-radius:99px;background:rgba(0,0,0,.28);padding:3px;gap:2px;direction:ltr}
+#bpRm .rm-lg button{border:0;border-radius:99px!important;min-height:30px!important;height:auto!important;min-width:0!important;padding:3px 12px!important;font-size:13px;font-weight:900;background:transparent;color:#fff;cursor:pointer}
+#bpRm .rm-lg button.on{background:#fff;color:#1d1209}
+</style>
+<script id="v120js">
+/* ===== v120 · Readme per ogni sezione delle Impostazioni (guida dettagliata, colorata) ===== */
+(function(){
+ 'use strict';
+ function E(id){return document.getElementById(id);}
+ var G={
+ shop:{ic:'🏪',t:'بيانات المحل والإيصالات',sub:'Dati attività & Ricevute',
+  what:'القسم ده بيحدد اللي بيظهر على الفيشة والإيصال: اسم المحل وعنوانه وتليفونه والـ P.IVA واللوجو والجملة اللي في الآخر، وكمان شكل الخطوط. أي تعديل بيسري من أول طباعة بعد الحفظ.',
+  steps:['املا الخانات: <b>Nome</b> (اسم المحل)، <b>Indirizzo</b>، <b>Telefono</b>، <b>WhatsApp</b> (اختياري)، <b>P.IVA</b>، <b>Orari</b> (مواعيد الشغل).','<b>Testo finale</b> هو الجملة اللي بتتطبع في آخر الفيشة (مثلًا «Grazie e a presto!»).','الخطوط: اختار الخط والحجم لـ <b>Nome articolo</b> ولـ <b>Ingredienti</b> كل واحد لوحده. <code>Automatico</code> معناه نفس خط الطباعة الحرارية.','اللوجو: <b>📷 Carica logo</b> ترفع صورة. <b>◐ Inverti</b> تعكس الأبيض والأسود لو اللوجو طالع غامق أو مقلوب على الورق. <b>🗑️ Rimuovi</b> تمسحه. <b>↩️ Originale</b> ترجّع اللوجو الأصلي بعد أي تعديل.','اضغط <b>💾 Salva</b> في الآخر.','السطر اللي بيقول «Oggi: N ordini numerati · prossimo N°» بيوريك رقم الأوردر اليومي الجاي.'],
+  tip:'استخدم لوجو أبيض وأسود بسيط وحجمه صغير، الطابعة الحرارية بتطبعه أنضف. اعمل طباعة تجريبية بعد أي تغيير في الخطوط.',
+  warn:'لو ظهر «⚠️ Sincronizzazione NON attiva» يبقى الأرقام والإعدادات صالحة على الجهاز ده بس. اضغط <b>📋 Copia SQL di attivazione</b> وافتح Supabase ← SQL Editor ← الصق ← <b>Run</b> مرة واحدة، وبعدها هيظهر ✅. ولو ظهر «Memoria piena» يبقى اللوجو كبير، ارفع صورة أصغر.'},
+ receipt:{ic:'🧾',t:'خيارات الفيشة',sub:'Opzioni scontrino',
+  what:'بتختار إيه اللي يتطبع على الفيشة عشان توفر ورق ووقت في الزحمة.',
+  steps:['اختار وضع جاهز: <b>✨ Completo</b> (كل حاجة)، <b>📏 Compatto</b> (مختصر)، أو <b>⚡ Minimo</b> (أقل حاجة).','أو شغّل وقفل كل عنصر لوحده: <b>Logo</b> (الشعار)، <b>Dati negozio</b> (بيانات المحل)، <b>Operatore</b> (سطر المشغّل والتعديل)، <b>Ordine #</b> (رقم الأوردر العام مش اليومي)، <b>Piè di pagina</b> (الجملة الأخيرة).','شوف <b>Anteprima</b> (المعاينة) عشان تتأكد من الشكل قبل ما تطبع.'],
+  tip:'في وقت الذروة جرّب <b>Minimo</b>: الفيشة أقصر والطباعة أسرع.',
+  warn:'الرقم اليومي واسم العميل والأصناف والإجمالي بيتطبعوا دايمًا ومش ممكن تقفلهم.'},
+ fonts:{ic:'🔤',t:'الخطوط الحرارية والمكونات',sub:'Thermal Fonts & Ingredients',
+  what:'بتتحكم في شكل الإيصال الحراري: نوع الخط، حجمه، وطريقة عرض مكونات الصنف.',
+  steps:['<b>خط الطباعة الحرارية</b>: Roboto Mono (الافتراضي)، Courier New، Inconsolata، JetBrains Mono أو System Monospace.','<b>حجم الخط</b>: صغير 12px، متوسط 14px، كبير 16px.','<b>وضع عرض المكونات</b>: <b>مضغوط</b> يخفي المكونات الافتراضية ويطبع التعديلات بس. <b>مختصر</b> أيقونات فقط. <b>كامل</b> كل المكونات بالنص.'],
+  tip:'«مضغوط» هو الأنسب للزحمة: الفيشة أقصر والتعديلات (من غير / زيادة) واضحة للبيتزايولو.',
+  warn:'لو الحروف طالعة متقطعة أو صغيرة قوي، جرّب خط تاني أو حجم أكبر واعمل طباعة تجريبية.'},
+ radar:{ic:'🚨',t:'رادار الإلحاح',sub:'تنبيهات الطلبات المتأخرة',
+  what:'الشريط الأحمر بينبّهك على الطلبات المتأخرة أو اللي ميعادها قرب، عشان ماتنساش أوردر.',
+  steps:['<b>إظهار شريط التنبيه للطلبات المتأخرة</b>: شغّله عشان الشريط الأحمر يظهر لما يكون فيه أوردر متأخر.','<b>إخفاء الشريط الأحمر عند فتح الصفحة</b>: بيخلي الشريط يبدأ مقفول أول ما تفتح البرنامج وتفتحه إنت وقت ما تحب.','الرقم أو الكلمة اللي تحت الخيارين بتتحدّث لوحدها وبتوضح الحالة الحالية.'],
+  tip:'سيبه شغّال في وقت الشغل، وده أمان إنك تشوف المتأخر فورًا.'},
+ audio:{ic:'🔔',t:'الصوت والإشعارات',sub:'Audio & Notifiche',
+  what:'جرس الأوردر الجديد، الإشعارات على التليفون، ولغة المساعد الصوتي.',
+  steps:['<b>🔔 Audio ON/OFF</b>: تشغيل أو إيقاف صوت الأوردر الجديد.','<b>🔊 Test</b>: تجرّب الجرس وتظبط الصوت على الجهاز.','<b>📲 Notifiche</b>: تفعّل إشعارات الأوردرات على التليفون (المتصفح هيطلب إذن، وافق).','<b>🎤 عربي / Italiano</b>: بتبدّل لغة المساعد الصوتي اللي بيسمعك.'],
+  tip:'اعمل <b>Test</b> مرة في الأول من كل جهاز: بعض الأجهزة بتمنع الصوت لحد ما تلمس الشاشة.',
+  warn:'لو الإشعارات مش بتوصل، اتأكد إنك وافقت على الإذن في إعدادات المتصفح.'},
+ print:{ic:'🖨️',t:'الطباعة والطابعات',sub:'Stampa & Stampanti',
+  what:'بتحدد إزاي الإيصالات والكوماندا بتتطبع: حرارية 80mm، طباعة مباشرة، وطباعة المطبخ التلقائية.',
+  steps:['<b>🖨️ Auto (KDS)</b>: يشغّل أو يقفل الطباعة التلقائية لكوماندا المطبخ أول ما الأوردر يتسجل.','<b>🧾 RawBT</b>: الطباعة الحرارية عن طريق تطبيق RawBT على الأندرويد.','<b>🔌 Diretta (ESC/POS)</b>: طباعة مباشرة على الطابعة من غير تطبيق وسيط.'],
+  tip:'ابدأ بطريقة واحدة بس واعمل أوردر تجريبي، وبعدين غيّر لو احتجت.',
+  warn:'الطباعة التلقائية بتشتغل مع «دور هذا الجهاز». الجهاز المتصل بالطابعة بس يكون <b>طابعة</b>، وإلا الفاتورة هتتطبع مرتين.'},
+ transl:{ic:'🌐',t:'مدير الترجمة',sub:'Gestore Traduzioni',
+  what:'ترجمة فورية بين الإيطالي والعربي المصري في الاتجاهين، وتقدر تحفظ ترجماتك الخاصة. أسماء المنيو بتفضل بالإيطالي.',
+  steps:['اكتب النص في الخانة.','<b>⇄</b> يعكس اتجاه الترجمة (إيطالي ← عربي أو العكس).','<b>🌐 Traduci</b> يترجم، <b>✕ Pulisci</b> يمسح الخانتين، <b>📋 Copia</b> ينسخ الترجمة.','<b>💾 Salva nel dizionario</b> يحفظ ترجمتك المخصصة عشان تتستخدم بعد كده.','<b>💾 Salva</b> يحفظ التغييرات في القاموس.'],
+  tip:'احفظ الكلمات اللي بتتكرر معاك (أسماء مكونات، عبارات الزباين) مرة واحدة وهتتترجم صح كل مرة.',
+  warn:'<b>🗑️ Cancella Tutto</b> يمسح القاموس كله. استخدمه وإنت متأكد.'},
+ account:{ic:'👤',t:'الحساب والنظام',sub:'Account & Sistema',
+  what:'مزامنة الأوردرات اللي اتسجلت من غير إنترنت، وإعداد قاعدة البيانات، وتغيير المستخدم.',
+  steps:['<b>📡 Sincronizza</b>: يبعت الأوردرات المحفوظة على الجهاز لما النت كان واقع.','<b>🔄 Configura</b>: بيغيّر بيانات الاتصال بـ Supabase.','<b>🚪 Esci</b>: يطلّعك عشان تدخل بمستخدم تاني.'],
+  tip:'بعد ما النت يرجع اضغط <b>Sincronizza</b> عشان تتأكد إن مفيش أوردر ناقص.',
+  warn:'<b>Configura</b> بيغيّر قاعدة البيانات اللي البرنامج متصل بيها. ماتلمسهوش غير لو عارف بتعمل إيه.'},
+ quick:{ic:'🛠️',t:'الإدارة السريعة',sub:'Gestione Rapida',
+  what:'اختصارات لأكتر وظايف الإدارة استخدامًا من غير ما تدور عليها.',
+  steps:['<b>＋ Prodotto</b>: يفتح إضافة صنف جديد.','<b>📁 Categoria</b>: يضيف قسم جديد للمنيو.','<b>📦 Magazzino</b>: يفتح المخزن.','<b>🧾 Acquisti</b>: يفتح المشتريات.'],
+  tip:'استخدمها وقت الشغل لما تحتاج تعدّل صنف بسرعة.'},
+ template:{ic:'🧩',t:'إعدادات القالب',sub:'Template',
+  what:'بتخصص شكل وطريقة شغل البرنامج على الجهاز ده.',
+  steps:['<b>عدد الطاولات</b>: كام طاولة في الصالة.','<b>حجم البلاطات</b>: compact صغير، standard عادي، large كبير (للتابلت واللمس).','<b>تخطيط 3 أعمدة</b>: بيستفيد من الشاشات العريضة.','<b>اختصارات الكيبورد</b>: تشغيل أو إيقاف.','<b>عنوان الانطلاق</b>: نقطة بداية مسار التوصيل في الخرائط. يسري بعد إعادة تحميل الصفحة.','<b>رابط تقييم Google (QR)</b>: الرابط اللي يطلع منه الـ QR على الفيشة. يسري بعد إعادة التحميل.','<b>⬇ تصدير JSON / ⬆ استيراد JSON</b>: نسخة احتياطية من الإعدادات وتنقلها لجهاز تاني.','<b>📋 نسخ SQL التأسيسي</b>: كود لإنشاء الجداول في Supabase.','<b>🧭 إعادة تشغيل المعالج</b>: يشغّل معالج الإعداد من الأول.'],
+  tip:'اعمل <b>تصدير JSON</b> قبل أي تغيير كبير عشان ترجع له لو حبيت.'},
+ daycash:{ic:'💵',t:'تقفيل الدرج اليومي',sub:'Chiusura cassa',
+  what:'بتقارن الفلوس اللي المفروض تكون في الدرج بالفلوس اللي عديتها فعلًا في آخر اليوم.',
+  steps:['<b>الرصيد الافتتاحي</b>: الفكة اللي بدأت بيها اليوم.','<b>مبيعات نقدية اليوم</b>: اكتب مبيعات الكاش من الكاشير.','<b>+ مصروف</b>: سجّل أي مصروف خرج من الدرج.','<b>النقد المعدود فعليًا</b>: اكتب اللي عديته بإيدك في الدرج، والبرنامج يوريك الفرق.'],
+  tip:'اقفل الدرج كل يوم في نفس الوقت وهتكتشف أي فرق بدري.'},
+ role:{ic:'🖥️',t:'دور هذا الجهاز',sub:'Ruolo dispositivo',
+  what:'بتحدد إذا كان الجهاز ده هو اللي بيطبع ولا بيتابع بس.',
+  steps:['على الجهاز المتصل بالطابعة اختار <b>طابعة: يطبع تلقائيًا</b>.','على باقي الأجهزة (تليفونات، تابلت تاني) اختار <b>متابعة: بدون طباعة تلقائية</b>.'],
+  warn:'لو أكتر من جهاز على «طابعة» الفاتورة هتتطبع أكتر من مرة، ولو جهاز من غير طابعة على «طابعة» الطباعة مش هتطلع.'},
+ gq:{ic:'🗺️',t:'حصة Google Maps الشهرية',sub:'Quota mensile con riporto',
+  what:'بتتحكم في عدد طلبات Google Maps (Geocoding / Places / Routes) عشان ماتزيدش التكلفة.',
+  steps:['<b>Base giornaliera</b>: عدد الطلبات اللي بتتضاف كل يوم.','اللي مااستخدمتوش (أيام الأسبوع الهادية) بيتحوّل لباقي الأيام، وبيفيد في الجمعة والسبت والأحد.','كل طلب حقيقي بيتحسب. عند 80% بيظهر تحذير.','<b>💾 Salva</b> يحفظ القاعدة اليومية. <b>🔑 Chiave Google Maps</b> مكان مفتاح الخدمة.'],
+  warn:'لما المتاح يوصل 0 الطلبات لـ Google بتقف، والبرنامج يستخدم قاموس Lodi Vecchio المحلي بس. كل حاجة بتتصفّر أول كل شهر.'},
+ p5:{ic:'🔥',t:'الوقت الذكي ووضع الذروة',sub:'Orario smart & Modalità picco',
+  what:'بتظبط الأرقام اللي بيحسب بيها البرنامج وقت التجهيز المتوقع، ومتى يتحول لوضع الذروة.',
+  steps:['<b>Minuti base</b>: وقت التجهيز الأساسي لأوردر لوحده (الافتراضي 15).','<b>Minuti per pezzo</b>: الدقايق الزيادة لكل قطعة في الطابور (1.2).','<b>Max ordini per quarto d\'ora</b>: أقصى عدد أوردرات في الربع ساعة، وبعده الموعد يتلوّن 🔴 (4).','<b>Picco da N ordini</b> و <b>Picco da attesa</b>: عدد الأوردرات أو دقايق الانتظار اللي عندها الذروة تشتغل (8 و 40).','<b>Modalità picco</b>: تلقائية، شغّالة دايمًا، أو مقفولة.','اضغط <b>💾 Salva</b>، أو <b>↺ Predefiniti</b> لرجوع الأرقام الأصلية.'],
+  tip:'راقب الوقت المتوقع يوم أو اتنين، ولو بيطلع أقل من الحقيقي زوّد <b>Minuti base</b>.',
+  warn:'الإعدادات دي بتتحفظ على الجهاز اللي ظبطتها منه بس.'}
+ };
+ var MAP=[[/dati attivit|ricevute/i,'shop'],[/opzioni scontrino|خيارات الفيشة/i,'receipt'],[/الخطوط الحرارية|thermal/i,'fonts'],[/رادار|الإلحاح/i,'radar'],[/audio|notifiche/i,'audio'],[/stampa\s*&|stampanti/i,'print'],[/traduzion/i,'transl'],[/account\s*&|sistema/i,'account'],[/gestione rapida/i,'quick'],[/إعدادات القالب/i,'template'],[/تقفيل الدرج/i,'daycash'],[/دور هذا الجهاز/i,'role'],[/google maps|quota/i,'gq'],[/orario smart|picco/i,'p5']];
+ var BYID={bpTemplateCard:'template',bpDayCashCard:'daycash',bpDeviceRoleCard:'role',bpGqCard:'gq',bpP5Card:'p5'};
+ function keyOf(c){
+  if(c.id&&BYID[c.id])return BYID[c.id];
+  var h=c.querySelector('h3,h2,h4,.bp-set-head');var t=(h?h.textContent:c.textContent.slice(0,120));
+  for(var i=0;i<MAP.length;i++)if(MAP[i][0].test(t))return MAP[i][1];
+  return null;
+ }
+ function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;');}
+ function sec(cls,ico,title,body){return '<div class="rm-s '+cls+'"><h3><span>'+ico+'</span>'+title+'</h3>'+body+'</div>';}
+ function open(c){
+  var k=keyOf(c),g=G[k],col=c.style.borderTopColor||getComputedStyle(c).borderTopColor||'#7c3aed';
+  if(!g){var d=c.querySelector('.bp-set-desc'),h=c.querySelector('h3');g={ic:'📖',t:h?h.textContent.trim():'Readme',sub:'',what:d?esc(d.textContent.trim()):'قسم من الإعدادات.',steps:['اضبط الخيارات المتاحة في القسم، وبعدين اضغط زر الحفظ لو موجود.'],it:{t:h?h.textContent.trim():'Readme',sub:'',what:d?esc(d.textContent.trim()):'Una sezione delle Impostazioni.',steps:['Regola le opzioni disponibili nella sezione, poi premi il pulsante di salvataggio se presente.']}};}
+  show(g,col);
+ }
+ function lang(){try{return localStorage.getItem('bpRmLang')==='it'?'it':'ar';}catch(e){return 'ar';}}
+ function setLang(l){try{localStorage.setItem('bpRmLang',l);}catch(e){}}
+ var LB={ar:{what:'إيه فايدة القسم ده؟',steps:'إزاي تستخدمه خطوة بخطوة',tip:'نصيحة',warn:'انتبه',ok:'فهمت · Ho capito ✔'},it:{what:'A cosa serve questa sezione?',steps:'Come si usa, passo dopo passo',tip:'Consiglio',warn:'Attenzione',ok:'Ho capito ✔'}};
+ function show(g,col){
+  col=col||g.col||'#7c3aed';
+  var L=lang(),hasIt=!!g.it,useIt=(L==='it'&&hasIt),d=useIt?g.it:g,lb=useIt?LB.it:LB.ar;
+  var box=E('bpRm');if(!box){box=document.createElement('div');box.id='bpRm';box.innerHTML='<div class="rm-bd"></div><div class="rm-box"><div class="rm-hd"></div><div class="rm-bd2"></div><div class="rm-ft"><button type="button"></button></div></div>';document.body.appendChild(box);
+   box.querySelector('.rm-bd').onclick=box.querySelector('.rm-ft button').onclick=function(){box.classList.add('hide');};
+   document.addEventListener('keydown',function(e){if(e.key==='Escape')box.classList.add('hide');});}
+  box.classList.toggle('it',useIt);
+  var fb=box.querySelector('.rm-ft button');fb.textContent=lb.ok;fb.style.background=col;
+  var hd=box.querySelector('.rm-hd');hd.style.background='linear-gradient(135deg,'+col+',#1d1209 160%)';
+  var title=d.t||g.t,sub=(d.sub!==undefined?d.sub:g.sub);
+  hd.innerHTML='<div class="rm-ic">'+g.ic+'</div><div><h2>📖 '+esc(title)+'</h2>'+(sub?'<p>'+esc(sub)+'</p>':'')+'</div>'+(hasIt?'<div class="rm-lg"><button type="button" data-l="ar"'+(useIt?'':' class="on"')+'>عربي</button><button type="button" data-l="it"'+(useIt?' class="on"':'')+'>Italiano</button></div>':'');
+  if(hasIt){hd.querySelectorAll('.rm-lg button').forEach(function(bt){bt.onclick=function(e){e.stopPropagation();setLang(bt.getAttribute('data-l'));show(g,col);};});}
+  var h=sec('rm-what','🎯',lb.what,'<p>'+d.what+'</p>');
+  if(d.steps){var n=0;h+=sec('rm-steps','🛠️',lb.steps,'<ul style="list-style:none;padding:0">'+d.steps.map(function(s){if(s.indexOf('<b>▸')===0)return '<li style="margin-top:6px;padding:5px 10px;border-radius:10px;background:#16653422;color:#166534">'+s+'</li>';n++;return '<li style="display:flex;gap:8px"><span style="flex:0 0 24px;height:24px;border-radius:50%;background:#16a34a;color:#fff;font-weight:900;font-size:13px;display:inline-flex;align-items:center;justify-content:center;margin-top:2px">'+n+'</span><span>'+s+'</span></li>';}).join('')+'</ul>');}
+  if(d.tip)h+=sec('rm-tip','💡',lb.tip,'<p>'+d.tip+'</p>');
+  if(d.warn)h+=sec('rm-warn','⚠️',lb.warn,'<p>'+d.warn+'</p>');
+  var b=box.querySelector('.rm-bd2');b.innerHTML=h;b.scrollTop=0;box.classList.remove('hide');
+ }
+ function mount(){
+  document.querySelectorAll('#settingsTab .bp-set-card').forEach(function(c){
+   if(c.querySelector(':scope>.bp-rm'))return;
+   var b=document.createElement('button');b.type='button';b.className='bp-rm';b.innerHTML='📖 Readme';b.title='دليل استخدام القسم';
+   b.onclick=function(e){e.stopPropagation();open(c);};
+   c.insertBefore(b,c.firstChild);
+  });
+ }
+ setInterval(mount,1500);setTimeout(mount,800);
+ window.bpReadme={open:open,show:show,guides:G};
+})();
+</script>
+
+<style id="v121css">
+/* ===== v121 · Readme per la barra Strumenti e le sue finestre ===== */
+#bpStrRm::before{content:'📖'}
+html:not(.x) body #userBar button#bpStrRm{background:#1d1209!important;color:#fff!important}
+#resPanel .rp-h .bp-rm{float:none;margin:0;background:#1d1209;color:#fff;font-size:13px}
+#bpAccBox .bp-rm{float:none;background:rgba(255,255,255,.22);color:#fff;margin:0 8px}
+.au-box>.bp-rm{margin-top:2px}
+</style>
+<script id="v121js">
+/* ===== v121 · Readme per la barra Strumenti e le sue finestre ===== */
+(function(){
+ 'use strict';
+ function E(id){return document.getElementById(id);}
+ var R=window.bpReadme;if(!R||!R.show){console.warn('[v121] bpReadme assente');return;}
+ var G=R.guides;
+ G.strumenti={ic:'🧰',t:'قائمة Strumenti (الأدوات)',sub:'Guida alla barra Strumenti',col:'#1d1209',
+  what:'دي شريط الأدوات اللي فوق. بتفتحه بلمسة على كلمة <b>Strumenti</b>، وبيقفل لوحده بعد ما تختار أداة (أو اسحبه لفوق، أو المس اسم المحل). فيه أدوات بتشتغل بلمسة واحدة (تشغيل / إيقاف) وبتتشرح هنا، وأدوات بتفتح <b>نافذة</b> جواها إعدادات، وكل نافذة فيها زر <b>📖 Readme</b> بشرحها التفصيلي.',
+  steps:[
+  '<b>▸ الأدوات اللي بتشتغل بلمسة (بتتشرح هنا)</b>',
+  '<b>شريط التحديث (🟢 تحديث تلقائي)</b>: البرنامج بيحدّث الأوردرات لوحده. الدايرة الخضرا معناها إن التحديث التلقائي شغال، والمسه لو عايز تحدّث <b>دلوقتي</b>.',
+  '<b>🚨 / 🔕 إنذار التأخير</b>: لما أوردر يتأخر عن وقته بيظهر تنبيه ورنّة. 🚨 شغّال، 🔕 مقفول. المسه للتبديل.',
+  '<b>▦ تخطيط الشاشة</b>: بيبدّل بين الشكل الجديد (نوافذ وبلاط) والتخطيط القديم. الاختيار بيفضل متحفظ على الجهاز.',
+  '<b>A− / A+</b>: يصغّر أو يكبّر حجم الواجهة كلها خطوة بخطوة. مفيد للتابلت والتليفون.',
+  '<b>📲 الإشعارات</b>: يشغّل إشعارات الأوردرات الجديدة على التليفون (المتصفح هيطلب إذن، وافق).',
+  '<b>🔔 الصوت</b>: يشغّل أو يقفل رنّة الأوردر الجديد (Audio ON / OFF).',
+  '<b>Stampa automatica</b>: أخضر = طباعة كوماندا المطبخ تلقائيًا أول ما الأوردر يتسجل، أحمر = مقفولة.',
+  '<b>Stampa termica 80mm (RawBT)</b>: أخضر = الطباعة الحرارية عن طريق تطبيق RawBT، أحمر = مقفولة.',
+  '<b>Stampa diretta ESC/POS</b>: تشغيل / إيقاف الطباعة المباشرة على الطابعة من غير تطبيق وسيط.',
+  '<b>👥 Cambia utente</b>: يخرجك من الحساب الحالي عشان تدخل بمستخدم تاني.',
+  '<b>🚪 Esci dal programma</b>: يقفل البرنامج.',
+  '<b>🇪🇬 / 🇮🇹 اللغة</b>: يبدّل لغة الواجهة بين العربي والإيطالي.',
+  '<b>🌙 / ☀️ الوضع</b>: يبدّل بين الوضع الليلي (Notte) والنهاري (Giorno).',
+  '<b>▸ الأدوات اللي بتفتح نافذة (ليها Readme جواها)</b>',
+  '<b>⚙️ Automazioni</b>: رسائل واتساب التلقائية، الأوردرات أونلاين، التقييمات والعملاء الغايبين.',
+  '<b>🎁 Promo</b>: عرض نقاط الولاء للاستلام من المحل.',
+  '<b>🛡️ Accessi staff</b>: أيام وساعات عمل كل موظف.',
+  '<b>🍽️ Prenotazioni</b>: حجوزات الطاولات. الرقم الأحمر على الأيقونة هو عدد الحجوزات المنتظرة تأكيد.'],
+  tip:'إعدادات الطباعة والصوت والإشعارات ليها كمان كروت في ⚙️ Impostazioni، وفيها Readme أوسع.',
+  warn:'⚙️ Automazioni و 🎁 Promo بيظهروا للمدير (Responsabile) بس. 🛡️ Accessi staff بيطلب PIN المدير لو مش داخل كمدير.'};
+ G.automazioni={ic:'⚙️',t:'الأتمتة (Automazioni)',sub:'Automazioni · WhatsApp, ordini online, feedback',col:'#0b4a8f',
+  what:'رسائل واتساب جاهزة، وطلب أونلاين للزباين، ومتابعة التقييمات والزباين الغايبين. <b>كل حاجة مقفولة لحد ما تشغّلها إنت.</b> وضع «<b>1 tocco</b>»: واتساب بيفتح والرسالة مكتوبة، وإنت بس بتدوس إرسال.',
+  steps:[
+  '<b>⭐ Feedback clienti</b>: قائمة آخر 60 تقييم من الزباين مع المتوسط بالنجوم. التقييم أقل من 4 مابيروحش لجوجل، بيوصلك إنت بس. بيطلع بالأحمر لحد ما تضغط <b>✓ Gestito</b>. زر <b>💬 Scrivi al cliente</b> يفتح واتساب للعميل.',
+  '<b>💤 Clienti inattivi</b>: الزباين اللي مااطلبوش من فترة، الأكتر طلبات الأول. تغيّر المدة (21 / 30 / 45 / 60 / 90 يوم). الرسالة مابتتبعتش غير لما تضغط <b>Invia</b>.',
+  '<b>📲 رسالة للعميل لما تتغير حالة الأوردر</b>: المفتاح الرئيسي، وتحته 3 مفاتيح: <b>👨‍🍳 In preparazione</b> و <b>✅ Pronto</b> و <b>🛵 In consegna</b>. لما الحالة تتغير يطلع إشعار <b>📲 Invia</b>، تضغط فيفتح واتساب بالرسالة جاهزة (ومعاها لينك تتبع الأوردر).',
+  '<b>⭐ طلب تقييم بعد التوصيل</b>: بيبعت طلب تقييم بعد عدد دقايق تختاره (15 / 30 / 45 / 60 / 90 / 120).',
+  '<b>🌐 Ordini online</b>: يشغّل المنيو للزباين. جواه: <b>Supplemento consegna</b> (مجاني أو 1 إلى 3 €)، <b>Ordine minimo</b> (أقل مبلغ)، <b>📣</b> إضافة لينك «Ordina online» لرسائل واتساب، <b>Aperto dalle / alle</b> (مواعيد استقبال الطلب). وكمان QR مع <b>🔗 Copia link</b> و <b>🖨️ Stampa QR</b> تعلّقه في المحل. الأوردرات بتوصل «da confermare» وإنت تقرر <b>✅ Accetta</b> أو <b>❌ Rifiuta</b>.',
+  '<b>🌐 Cartella pubblica del sito</b>: رابط مجلد الموقع اللي بينتهي بـ <code>/pos/</code>. اكتب المجلد بس من غير order.html أو track.html، وماتستخدمش localhost.',
+  'السطر اللي في الآخر: ✅ «Salvato su Supabase» يعني الإعداد شغال على كل الأجهزة. ⚠️ «solo su questo dispositivo» يعني لازم تشغّل <code>02_automation.sql</code> في Supabase.'],
+  tip:'ابدأ بمفتاح واحد (مثلًا حالة «Pronto») وجرّبه على أوردر حقيقي، وبعدين شغّل الباقي.',
+  warn:'الأونلاين محتاج <code>03_online_orders.sql</code> والتقييمات محتاجة <code>04_feedback.sql</code>. ولو ظهر تحذير إن اللينك محلي، اكتب العنوان العام للموقع الأول.'};
+ G.feedback={ic:'⭐',t:'تقييمات الزباين',sub:'Feedback clienti',col:'#b54708',
+  what:'كل التقييمات اللي الزباين بعتوها من اللينك، مع المتوسط وعدد الأصوات.',
+  steps:['التقييمات الأقل من 4 نجوم ظاهرة بالأحمر وبتوصلك إنت بس (مابتروحش لجوجل).','<b>💬 Scrivi al cliente</b> يفتح واتساب برسالة جاهزة تعتذر وتسأل.','<b>✓ Gestito</b> بعد ما تتعامل مع الشكوى، والتقييم بيرجع للون العادي.'],
+  tip:'رد على التقييم المنخفض في نفس اليوم، فرصة تحافظ على العميل.',
+  warn:'لو ظهرت رسالة «Tabella feedback non trovata» شغّل <code>04_feedback.sql</code> في Supabase.'};
+ G.winback={ic:'💤',t:'الزباين الغايبين',sub:'Clienti inattivi',col:'#5925dc',
+  what:'قائمة الزباين اللي كانوا بيطلبوا وبطّلوا، عشان ترجّعهم برسالة واتساب.',
+  steps:['اختار المدة من <b>Senza ordini da almeno</b> (21 إلى 90 يوم).','القائمة مرتبة بالأكتر طلبات (الأوفى الأول)، لحد 60 عميل.','لكل عميل: اسمه وتليفونه وعدد أوردراته وأخر مرة. اضغط <b>Invia</b> لفتح واتساب بالرسالة، أو تجاهله.','العميل اللي بعتّله بيختفي من القائمة 30 يوم.'],
+  tip:'الرسالة فيها لينك الأوردر أونلاين لو الأونلاين شغّال، فشغّله الأول.',
+  warn:'مفيش رسالة بتتبعت لوحدها. كل رسالة بتتبعت بلمستك إنت.'};
+ G.promo={ic:'🎁',t:'عرض الولاء (Promo)',sub:'Promo fedeltà · Asporto',col:'#16794b',
+  what:'كل مبلغ معيّن من البيتزا (للاستلام من المحل بس) = نقطة، وكل عدد معيّن من النقاط = مارجريتا هدية (بسعر 0). النقاط بتتحسب من رقم تليفون العميل على إجمالي مدة العرض.',
+  steps:['<b>Promo attiva</b>: مفتاح تشغيل / إيقاف العرض.','<b>Dal</b> و <b>Al (incluso)</b>: أول يوم وآخر يوم للعرض (آخر يوم محسوب).','<b>€ di pizza per 1 punto</b>: كام يورو بيتزا بياخد العميل بيها نقطة.','<b>Punti per 1 premio</b>: كام نقطة تجيب مارجريتا هدية.','السطر اللي تحت بيقولك إذا كان العرض <b>شغّال النهارده</b> ولا لا (مقفول أو برا التواريخ).','التعديلات بتتحفظ أول ما تغيّر القيمة.'],
+  tip:'ممكن تشوف الخصومات والهدايا اللي اتصرفت في تقارير الفترة.',
+  warn:'العرض للاستلام من المحل بس، مش بيحسب التوصيل ولا الطاولة.'};
+ G.accessi={ic:'🛡️',t:'صلاحيات الموظفين',sub:'Accessi staff',col:'#b42318',
+  what:'بتحدد كل موظف يشوف الأوردرات في أنهي أيام وأنهي ساعات. الحساب بيشوف <b>بس</b> الأوردرات اللي اتعملت في الأيام والساعات المحددة. اليوم بيتغيّر الساعة <b>05:00</b> الصبح. والـ manager بيشوف كل حاجة دايمًا.',
+  steps:['<b>➕ إضافة موظف</b>: اكتب الإيميل أو اختاره من القايمة المقترحة، واضغط إضافة. أول مرة بياخد كل الأيام وكل الساعات.','<b>📅 أيام العمل</b>: علّم الأيام (الاثنين إلى الأحد). اليوم المعلّم ✅ والمقفول ⬜.','<b>🕐 ساعات العمل</b>: <b>من</b> و <b>إلى</b> لساعات الشغل.','زر الحذف على كارت الموظف يمسحه من القايمة فورًا.','<b>💾 حفظ · Salva</b>: لازم تضغطه بعد أي تعديل، وبتظهر رسالة ✅ اتحفظ.','لو ظهر خطأ، افتح <b>◀ SQL</b> في الآخر وانسخه ونفّذه مرة واحدة في Supabase.'],
+  tip:'وزّع الموظفين حسب ورديتهم عشان كل واحد يشوف أوردرات ورديته بس.',
+  warn:'الصلاحيات مابتنطبقش على الـ manager. وأي تعديل مايتحفظش لو ماضغطتش <b>Salva</b>.'};
+ G.prenotazioni={ic:'🍽️',t:'حجوزات الطاولات',sub:'Prenotazioni tavoli',col:'#0f766e',
+  what:'إدارة حجوزات الطاولات: اللي بتيجي أونلاين وتستنى تأكيدك، واللي بتسجلها إنت بالتليفون أو عند الكاشير.',
+  steps:['<b>الفلاتر</b>: <b>Oggi</b> النهارده، <b>Domani</b> بكره، <b>Prossimi</b> الـ 15 يوم الجايين، <b>⏳ Da confermare</b> المنتظرة تأكيدك، <b>🗑 Annullate</b> الملغية.','<b>➕ Nuova prenotazione</b>: اكتب <b>Tavolo</b> (1 إلى 99)، <b>Persone</b>، <b>Data</b>، <b>Ora</b> (الافتراضي 20:00)، وبعدين <b>Nome</b> و <b>Telefono</b> و <b>Note</b>. مدة الحجز ساعة (60 دقيقة).','لو الطاولة محجوزة في الوقت ده هيرفض ويقولك «Tavolo occupato».','أزرار كل حجز: <b>✅ Conferma</b> (للمنتظر)، <b>🔁 Tavolo</b> (تغيير الطاولة)، <b>❌ Rifiuta / Annulla</b>، <b>↩️ Ripristina</b> (للملغي)، <b>📞</b> اتصال، <b>💬 WhatsApp</b> مراسلة.','العلامات: <b>In attesa</b> منتظر، <b>Confermata</b> مؤكد، <b>Annullata</b> ملغي، وبجانبها المصدر (أونلاين / telefono).','الرقم الأحمر على أيقونة 🍽️ في Strumenti هو عدد الحجوزات المنتظرة.'],
+  tip:'ابدأ كل يوم بفلتر <b>⏳ Da confermare</b> عشان ماتسيبش حجز من غير رد.',
+  warn:'«Rifiuta» و «Annulla» بيلغوا الحجز، ولو غلطت اضغط <b>↩️ Ripristina</b> من فلتر الملغية.'};
+
+ var AU=[[/feedback/i,'feedback'],[/inattivi/i,'winback'],[/promo/i,'promo'],[/automazioni/i,'automazioni']];
+ function mkBtn(key){var b=document.createElement('button');b.type='button';b.className='bp-rm';b.innerHTML='📖 Readme';b.title='دليل استخدام النافذة';b.onclick=function(e){e.stopPropagation();R.show(G[key]);};return b;}
+ function mount(){
+  document.querySelectorAll('.au-box').forEach(function(bx){
+   if(bx.querySelector(':scope>.bp-rm'))return;var h=bx.querySelector('h2,h3');var t=h?h.textContent:'';var k=null;
+   for(var i=0;i<AU.length;i++)if(AU[i][0].test(t)){k=AU[i][1];break;}
+   if(k)bx.insertBefore(mkBtn(k),bx.firstChild);
+  });
+  var acc=E('bpAccBox');if(acc&&!acc.querySelector('.bp-rm')){var x=E('bpAccX');if(x&&x.parentNode)x.parentNode.insertBefore(mkBtn('accessi'),x);}
+  var rh=document.querySelector('#resPanel .rp-h');if(rh&&!rh.querySelector('.bp-rm')){var nb=E('rpNew');rh.insertBefore(mkBtn('prenotazioni'),nb||null);}
+  var ub=E('userBar');if(ub&&!E('bpStrRm')){var s=document.createElement('button');s.type='button';s.id='bpStrRm';s.className='secondary btn-sm';s.title='Readme · دليل قائمة Strumenti';s.onclick=function(e){e.stopPropagation();R.show(G.strumenti);};ub.insertBefore(s,ub.firstChild);}
+ }
+ setInterval(mount,800);setTimeout(mount,500);
+})();
+</script>
+
+<script id="v122js">
+/* ===== v122 · Readme bilingue: العربي ⇄ Italiano per ogni guida ===== */
+(function(){
+ 'use strict';
+ var R=window.bpReadme;if(!R||!R.guides){console.warn('[v122] bpReadme assente');return;}
+ var G=R.guides;
+ var IT={
+ shop:{t:'Dati attività e ricevute',what:'Questa sezione stabilisce che cosa compare sullo scontrino e sulla ricevuta: nome del locale, indirizzo, telefono, P.IVA, logo, frase finale e aspetto dei caratteri. Ogni modifica vale dalla prima stampa dopo il salvataggio.',
+  steps:['Compila i campi: <b>Nome</b> (nome del locale), <b>Indirizzo</b>, <b>Telefono</b>, <b>WhatsApp</b> (facoltativo), <b>P.IVA</b>, <b>Orari</b> (orari di lavoro).','<b>Testo finale</b> è la frase stampata in fondo allo scontrino (ad esempio «Grazie e a presto!»).','Caratteri: scegli font e dimensione per <b>Nome articolo</b> e per <b>Ingredienti</b>, ciascuno separatamente. <code>Automatico</code> significa lo stesso font della stampante termica.','Logo: <b>📷 Carica logo</b> carica un\'immagine. <b>◐ Inverti</b> scambia bianco e nero se il logo esce scuro o al contrario sulla carta. <b>🗑️ Rimuovi</b> lo elimina. <b>↩️ Originale</b> ripristina il logo originale dopo qualsiasi modifica.','Alla fine premi <b>💾 Salva</b>.','La riga «Oggi: N ordini numerati · prossimo N°» mostra il prossimo numero d\'ordine giornaliero.'],
+  tip:'Usa un logo semplice, in bianco e nero e di piccole dimensioni: la stampante termica lo stampa in modo più pulito. Dopo ogni cambio di font fai una stampa di prova.',
+  warn:'Se compare «⚠️ Sincronizzazione NON attiva», i numeri e le impostazioni valgono solo su questo dispositivo. Premi <b>📋 Copia SQL di attivazione</b>, apri Supabase ← SQL Editor ← incolla ← <b>Run</b> una sola volta: poi comparirà ✅. Se compare «Memoria piena», il logo è troppo grande: carica un\'immagine più piccola.'},
+ receipt:{t:'Opzioni scontrino',what:'Scegli che cosa stampare sullo scontrino, per risparmiare carta e tempo nei momenti di punta.',
+  steps:['Scegli una modalità pronta: <b>✨ Completo</b> (tutto), <b>📏 Compatto</b> (ridotto) oppure <b>⚡ Minimo</b> (lo stretto necessario).','Oppure attiva e disattiva ogni elemento singolarmente: <b>Logo</b>, <b>Dati negozio</b>, <b>Operatore</b> (riga dell\'operatore e delle modifiche), <b>Ordine #</b> (numero d\'ordine generale, non quello giornaliero), <b>Piè di pagina</b> (la frase finale).','Guarda l\'<b>Anteprima</b> per controllare l\'aspetto prima di stampare.'],
+  tip:'Nelle ore di punta prova <b>Minimo</b>: lo scontrino è più corto e la stampa più veloce.',
+  warn:'Il numero giornaliero, il nome del cliente, gli articoli e il totale vengono sempre stampati e non si possono disattivare.'},
+ fonts:{t:'Font termici e ingredienti',what:'Controlla l\'aspetto della ricevuta termica: tipo di carattere, dimensione e modo in cui vengono mostrati gli ingredienti dell\'articolo.',
+  steps:['<b>Font di stampa termica</b>: Roboto Mono (predefinito), Courier New, Inconsolata, JetBrains Mono oppure System Monospace.','<b>Dimensione del font</b>: piccolo 12px, medio 14px, grande 16px.','<b>Modalità ingredienti</b>: <b>Compatta</b> nasconde gli ingredienti di base e stampa solo le modifiche. <b>Breve</b> mostra solo le icone. <b>Completa</b> stampa tutti gli ingredienti per esteso.'],
+  tip:'«Compatta» è la più adatta nei momenti di affollamento: lo scontrino è più corto e le modifiche (senza / extra) risultano chiare al pizzaiolo.',
+  warn:'Se i caratteri escono spezzati o troppo piccoli, prova un altro font o una dimensione maggiore e fai una stampa di prova.'},
+ radar:{t:'Radar urgenza',sub:'Avvisi per gli ordini in ritardo',what:'La barra rossa ti avvisa degli ordini in ritardo o con orario ormai vicino, così non ti dimentichi nessun ordine.',
+  steps:['<b>Mostra la barra di avviso per gli ordini in ritardo</b>: attivala per far comparire la barra rossa quando c\'è un ordine in ritardo.','<b>Nascondi la barra rossa all\'apertura della pagina</b>: la barra parte chiusa appena apri il programma e la apri tu quando vuoi.','Il numero o la parola sotto le due opzioni si aggiorna da solo e indica lo stato attuale.'],
+  tip:'Tienilo attivo durante il servizio: così vedi subito ciò che è in ritardo.'},
+ audio:{t:'Audio e notifiche',what:'Suoneria del nuovo ordine, notifiche sul telefono e lingua dell\'assistente vocale.',
+  steps:['<b>🔔 Audio ON/OFF</b>: attiva o disattiva il suono del nuovo ordine.','<b>🔊 Test</b>: prova la suoneria e regola il volume sul dispositivo.','<b>📲 Notifiche</b>: attiva le notifiche degli ordini sul telefono (il browser chiederà il permesso: consentilo).','<b>🎤 عربي / Italiano</b>: cambia la lingua dell\'assistente vocale che ti ascolta.'],
+  tip:'Fai il <b>Test</b> una volta su ogni dispositivo: alcuni dispositivi bloccano l\'audio finché non tocchi lo schermo.',
+  warn:'Se le notifiche non arrivano, controlla di aver concesso il permesso nelle impostazioni del browser.'},
+ print:{t:'Stampa e stampanti',what:'Stabilisce come vengono stampati scontrini e comande: termica 80mm, stampa diretta e stampa automatica della cucina.',
+  steps:['<b>🖨️ Auto (KDS)</b>: attiva o disattiva la stampa automatica della comanda di cucina appena l\'ordine viene registrato.','<b>🧾 RawBT</b>: stampa termica tramite l\'app RawBT su Android.','<b>🔌 Diretta (ESC/POS)</b>: stampa direttamente sulla stampante, senza app intermedie.'],
+  tip:'Inizia con un solo metodo, fai un ordine di prova e poi cambia solo se serve.',
+  warn:'La stampa automatica funziona insieme al «Ruolo del dispositivo». Solo il dispositivo collegato alla stampante deve essere su <b>Stampante</b>, altrimenti la ricevuta verrà stampata due volte.'},
+ transl:{t:'Gestore traduzioni',what:'Traduzione immediata tra italiano e arabo egiziano, in entrambe le direzioni, con la possibilità di salvare le tue traduzioni personali. I nomi del menu restano in italiano.',
+  steps:['Scrivi il testo nel campo.','<b>⇄</b> inverte la direzione della traduzione (italiano ← arabo o viceversa).','<b>🌐 Traduci</b> traduce, <b>✕ Pulisci</b> svuota i due campi, <b>📋 Copia</b> copia la traduzione.','<b>💾 Salva nel dizionario</b> memorizza la tua traduzione personalizzata, che verrà usata in seguito.','<b>💾 Salva</b> salva le modifiche nel dizionario.'],
+  tip:'Salva una volta le parole che ti capitano spesso (nomi di ingredienti, frasi dei clienti) e verranno tradotte correttamente ogni volta.',
+  warn:'<b>🗑️ Cancella Tutto</b> elimina l\'intero dizionario. Usalo solo se ne sei sicuro.'},
+ account:{t:'Account e sistema',what:'Sincronizzazione degli ordini registrati senza internet, configurazione del database e cambio utente.',
+  steps:['<b>📡 Sincronizza</b>: invia gli ordini salvati sul dispositivo mentre la rete era assente.','<b>🔄 Configura</b>: cambia i dati di connessione a Supabase.','<b>🚪 Esci</b>: ti disconnette per entrare con un altro utente.'],
+  tip:'Quando la rete torna premi <b>Sincronizza</b> per essere certo che non manchi nessun ordine.',
+  warn:'<b>Configura</b> cambia il database a cui è collegato il programma. Non toccarlo se non sai bene cosa stai facendo.'},
+ quick:{t:'Gestione rapida',what:'Scorciatoie per le funzioni di gestione più usate, senza doverle cercare.',
+  steps:['<b>＋ Prodotto</b>: apre l\'aggiunta di un nuovo articolo.','<b>📁 Categoria</b>: aggiunge una nuova sezione al menu.','<b>📦 Magazzino</b>: apre il magazzino.','<b>🧾 Acquisti</b>: apre gli acquisti.'],
+  tip:'Usale durante il servizio quando devi modificare un articolo in fretta.'},
+ template:{t:'Impostazioni del template',sub:'Template',what:'Personalizza l\'aspetto e il funzionamento del programma su questo dispositivo.',
+  steps:['<b>Numero di tavoli</b>: quanti tavoli ci sono in sala.','<b>Dimensione dei riquadri</b>: compact piccolo, standard normale, large grande (per tablet e touch).','<b>Layout a 3 colonne</b>: sfrutta gli schermi larghi.','<b>Scorciatoie da tastiera</b>: attive o disattivate.','<b>Indirizzo di partenza</b>: punto di partenza del percorso di consegna sulle mappe. Ha effetto dopo il ricaricamento della pagina.','<b>Link recensione Google (QR)</b>: il link da cui nasce il QR sullo scontrino. Ha effetto dopo il ricaricamento.','<b>⬇ Esporta JSON / ⬆ Importa JSON</b>: copia di sicurezza delle impostazioni e trasferimento su un altro dispositivo.','<b>📋 Copia SQL iniziale</b>: codice per creare le tabelle su Supabase.','<b>🧭 Riavvia la procedura guidata</b>: rilancia da capo la configurazione guidata.'],
+  tip:'Fai <b>Esporta JSON</b> prima di qualsiasi modifica importante, così puoi tornare indietro.'},
+ daycash:{t:'Chiusura cassa giornaliera',sub:'Chiusura cassa',what:'Confronta i soldi che dovrebbero esserci nel cassetto con quelli che hai realmente contato a fine giornata.',
+  steps:['<b>Fondo cassa iniziale</b>: lo spicciolo con cui hai iniziato la giornata.','<b>Vendite in contanti di oggi</b>: inserisci le vendite in contanti segnate dal cassiere.','<b>+ Spesa</b>: registra ogni spesa uscita dal cassetto.','<b>Contanti realmente contati</b>: scrivi quanto hai contato a mano nel cassetto e il programma ti mostra la differenza.'],
+  tip:'Chiudi la cassa ogni giorno alla stessa ora e scoprirai subito qualsiasi differenza.'},
+ role:{t:'Ruolo di questo dispositivo',sub:'Ruolo dispositivo',what:'Stabilisce se questo dispositivo stampa oppure si limita a seguire gli ordini.',
+  steps:['Sul dispositivo collegato alla stampante scegli <b>Stampante: stampa automaticamente</b>.','Su tutti gli altri dispositivi (telefoni, altri tablet) scegli <b>Monitor: senza stampa automatica</b>.'],
+  warn:'Se più dispositivi sono su «Stampante», la ricevuta verrà stampata più volte; se un dispositivo senza stampante è su «Stampante», la stampa non uscirà.'},
+ gq:{t:'Quota mensile Google Maps',sub:'Quota mensile con riporto',what:'Controlla il numero di richieste a Google Maps (Geocoding / Places / Routes) per non far salire i costi.',
+  steps:['<b>Base giornaliera</b>: il numero di richieste che si aggiungono ogni giorno.','Ciò che non usi (nei giorni tranquilli della settimana) viene riportato sui giorni successivi, ed è utile per venerdì, sabato e domenica.','Ogni richiesta reale viene conteggiata. All\'80% compare un avviso.','<b>💾 Salva</b> memorizza la base giornaliera. <b>🔑 Chiave Google Maps</b> è il punto in cui inserire la chiave del servizio.'],
+  warn:'Quando il disponibile arriva a 0, le richieste a Google si fermano e il programma usa soltanto il dizionario locale di Lodi Vecchio. Tutto si azzera all\'inizio di ogni mese.'},
+ p5:{t:'Orario smart e modalità picco',sub:'Orario smart & Modalità picco',what:'Regola i numeri con cui il programma calcola il tempo di preparazione previsto e il momento in cui passare alla modalità picco.',
+  steps:['<b>Minuti base</b>: il tempo di preparazione base di un ordine singolo (predefinito 15).','<b>Minuti per pezzo</b>: i minuti in più per ogni pezzo in coda (1,2).','<b>Max ordini per quarto d\'ora</b>: il massimo di ordini in un quarto d\'ora, oltre il quale l\'orario diventa 🔴 (4).','<b>Picco da N ordini</b> e <b>Picco da attesa</b>: il numero di ordini o i minuti di attesa oltre i quali scatta il picco (8 e 40).','<b>Modalità picco</b>: automatica, sempre attiva oppure disattivata.','Premi <b>💾 Salva</b>, oppure <b>↺ Predefiniti</b> per tornare ai valori originali.'],
+  tip:'Osserva il tempo previsto per un giorno o due: se risulta inferiore a quello reale, aumenta <b>Minuti base</b>.',
+  warn:'Queste impostazioni vengono salvate solo sul dispositivo da cui le hai modificate.'},
+ strumenti:{t:'Menu Strumenti',sub:'Guida alla barra Strumenti',what:'È la barra degli strumenti in alto. Si apre con un tocco sulla parola <b>Strumenti</b> e si chiude da sola dopo che hai scelto uno strumento (oppure trascinala verso l\'alto, o tocca il nome del locale). Contiene strumenti a tocco singolo (attivo / disattivo), spiegati qui, e strumenti che aprono una <b>finestra</b> con le impostazioni: ogni finestra ha il proprio pulsante <b>📖 Readme</b> con la guida dettagliata.',
+  steps:['<b>▸ Strumenti a tocco singolo (spiegati qui)</b>','<b>Barra di aggiornamento (🟢 aggiornamento automatico)</b>: il programma aggiorna gli ordini da solo. Il cerchio verde indica che l\'aggiornamento automatico è attivo; toccalo se vuoi aggiornare <b>subito</b>.','<b>🚨 / 🔕 Allarme ritardo</b>: quando un ordine è in ritardo compaiono un avviso e un suono. 🚨 attivo, 🔕 disattivato. Toccalo per cambiare.','<b>▦ Layout dello schermo</b>: passa tra il nuovo aspetto (finestre e riquadri) e il vecchio layout. La scelta resta memorizzata sul dispositivo.','<b>A− / A+</b>: riduce o aumenta la dimensione di tutta l\'interfaccia, un passo alla volta. Utile per tablet e telefono.','<b>📲 Notifiche</b>: attiva le notifiche dei nuovi ordini sul telefono (il browser chiederà il permesso: consentilo).','<b>🔔 Audio</b>: attiva o disattiva la suoneria del nuovo ordine (Audio ON / OFF).','<b>Stampa automatica</b>: verde = la comanda di cucina viene stampata automaticamente appena l\'ordine è registrato, rosso = disattivata.','<b>Stampa termica 80mm (RawBT)</b>: verde = stampa termica tramite l\'app RawBT, rosso = disattivata.','<b>Stampa diretta ESC/POS</b>: attiva / disattiva la stampa diretta sulla stampante, senza app intermedie.','<b>👥 Cambia utente</b>: ti disconnette dall\'account attuale per entrare con un altro utente.','<b>🚪 Esci dal programma</b>: chiude il programma.','<b>🇪🇬 / 🇮🇹 Lingua</b>: cambia la lingua dell\'interfaccia tra arabo e italiano.','<b>🌙 / ☀️ Modalità</b>: passa dalla modalità notturna (Notte) a quella diurna (Giorno).','<b>▸ Strumenti che aprono una finestra (con Readme al loro interno)</b>','<b>⚙️ Automazioni</b>: messaggi WhatsApp automatici, ordini online, recensioni e clienti inattivi.','<b>🎁 Promo</b>: promozione a punti fedeltà per il ritiro al locale.','<b>🛡️ Accessi staff</b>: giorni e orari di lavoro di ogni dipendente.','<b>🍽️ Prenotazioni</b>: prenotazioni dei tavoli. Il numero rosso sull\'icona indica le prenotazioni in attesa di conferma.'],
+  tip:'Le impostazioni di stampa, audio e notifiche hanno anche delle schede in ⚙️ Impostazioni, con un Readme più ampio.',
+  warn:'⚙️ Automazioni e 🎁 Promo compaiono solo per il Responsabile. 🛡️ Accessi staff chiede il PIN del responsabile se non hai effettuato l\'accesso come tale.'},
+ automazioni:{t:'Automazioni',sub:'Automazioni · WhatsApp, ordini online, feedback',what:'Messaggi WhatsApp pronti, ordini online per i clienti e monitoraggio di recensioni e clienti inattivi. <b>Tutto resta disattivato finché non lo attivi tu.</b> Modalità «<b>1 tocco</b>»: WhatsApp si apre con il messaggio già scritto e a te basta premere invio.',
+  steps:['<b>⭐ Feedback clienti</b>: elenco delle ultime 60 recensioni dei clienti con la media a stelle. Una valutazione inferiore a 4 non va a Google, arriva solo a te. Resta in rosso finché non premi <b>✓ Gestito</b>. Il pulsante <b>💬 Scrivi al cliente</b> apre WhatsApp con il cliente.','<b>💤 Clienti inattivi</b>: i clienti che non ordinano da un po\', prima quelli con più ordini. Puoi cambiare il periodo (21 / 30 / 45 / 60 / 90 giorni). Il messaggio parte solo quando premi <b>Invia</b>.','<b>📲 Messaggio al cliente al cambio di stato dell\'ordine</b>: interruttore principale e, sotto, 3 interruttori: <b>👨‍🍳 In preparazione</b>, <b>✅ Pronto</b> e <b>🛵 In consegna</b>. Quando lo stato cambia compare la notifica <b>📲 Invia</b>: premila e WhatsApp si apre con il messaggio pronto (e con il link per seguire l\'ordine).','<b>⭐ Richiesta di recensione dopo la consegna</b>: invia la richiesta dopo il numero di minuti che scegli (15 / 30 / 45 / 60 / 90 / 120).','<b>🌐 Ordini online</b>: attiva il menu per i clienti. Al suo interno: <b>Supplemento consegna</b> (gratis oppure da 1 a 3 €), <b>Ordine minimo</b> (importo minimo), <b>📣</b> aggiunta del link «Ordina online» ai messaggi WhatsApp, <b>Aperto dalle / alle</b> (orari di ricezione degli ordini). Inoltre il QR con <b>🔗 Copia link</b> e <b>🖨️ Stampa QR</b> da esporre nel locale. Gli ordini arrivano «da confermare» e tu decidi se <b>✅ Accetta</b> o <b>❌ Rifiuta</b>.','<b>🌐 Cartella pubblica del sito</b>: il link della cartella del sito che termina con <code>/pos/</code>. Scrivi solo la cartella, senza order.html o track.html, e non usare localhost.','La riga in fondo: ✅ «Salvato su Supabase» significa che l\'impostazione funziona su tutti i dispositivi. ⚠️ «solo su questo dispositivo» significa che devi eseguire <code>02_automation.sql</code> su Supabase.'],
+  tip:'Comincia con un solo interruttore (ad esempio lo stato «Pronto»), provalo su un ordine reale e poi attiva gli altri.',
+  warn:'Gli ordini online richiedono <code>03_online_orders.sql</code> e le recensioni richiedono <code>04_feedback.sql</code>. Se compare l\'avviso che il link è locale, inserisci prima l\'indirizzo pubblico del sito.'},
+ feedback:{t:'Recensioni dei clienti',sub:'Feedback clienti',what:'Tutte le recensioni inviate dai clienti tramite il link, con la media e il numero di voti.',
+  steps:['Le recensioni sotto le 4 stelle compaiono in rosso e arrivano solo a te (non vanno a Google).','<b>💬 Scrivi al cliente</b> apre WhatsApp con un messaggio pronto che si scusa e chiede che cosa è successo.','<b>✓ Gestito</b> dopo aver risolto il reclamo: la recensione torna al colore normale.'],
+  tip:'Rispondi alla recensione negativa lo stesso giorno: è l\'occasione per non perdere il cliente.',
+  warn:'Se compare il messaggio «Tabella feedback non trovata», esegui <code>04_feedback.sql</code> su Supabase.'},
+ winback:{t:'Clienti inattivi',sub:'Clienti inattivi',what:'L\'elenco dei clienti che ordinavano e hanno smesso, per riportarli da te con un messaggio WhatsApp.',
+  steps:['Scegli il periodo da <b>Senza ordini da almeno</b> (da 21 a 90 giorni).','L\'elenco è ordinato per numero di ordini (prima i più fedeli), fino a 60 clienti.','Per ogni cliente: nome, telefono, numero di ordini e ultima volta. Premi <b>Invia</b> per aprire WhatsApp con il messaggio, oppure ignoralo.','Il cliente a cui hai scritto sparisce dall\'elenco per 30 giorni.'],
+  tip:'Il messaggio contiene il link per ordinare online se gli ordini online sono attivi: attivali prima.',
+  warn:'Nessun messaggio parte da solo. Ogni messaggio viene inviato con un tuo tocco.'},
+ promo:{t:'Promozione fedeltà (Promo)',sub:'Promo fedeltà · Asporto',what:'Ogni importo stabilito di pizza (solo per il ritiro al locale) vale 1 punto, e ogni numero stabilito di punti dà una margherita in omaggio (prezzo 0). I punti si calcolano dal numero di telefono del cliente sul totale del periodo della promozione.',
+  steps:['<b>Promo attiva</b>: interruttore per attivare / disattivare la promozione.','<b>Dal</b> e <b>Al (incluso)</b>: primo e ultimo giorno della promozione (l\'ultimo giorno è compreso).','<b>€ di pizza per 1 punto</b>: quanti euro di pizza servono al cliente per guadagnare un punto.','<b>Punti per 1 premio</b>: quanti punti servono per una margherita in omaggio.','La riga sotto ti dice se la promozione è <b>attiva oggi</b> oppure no (disattivata o fuori dalle date).','Le modifiche vengono salvate appena cambi il valore.'],
+  tip:'Puoi vedere gli sconti e gli omaggi erogati nei report del periodo.',
+  warn:'La promozione vale solo per il ritiro al locale: non conta la consegna né il tavolo.'},
+ accessi:{t:'Accessi staff',sub:'Accessi staff',what:'Stabilisce in quali giorni e in quali ore ogni dipendente può vedere gli ordini. L\'account vede <b>solo</b> gli ordini creati nei giorni e nelle ore impostati. Il giorno cambia alle <b>05:00</b> del mattino. Il manager vede sempre tutto.',
+  steps:['<b>➕ Aggiungi dipendente</b>: scrivi l\'email o sceglila dall\'elenco suggerito e premi Aggiungi. La prima volta ha tutti i giorni e tutte le ore.','<b>📅 Giorni di lavoro</b>: seleziona i giorni (da lunedì a domenica). Giorno attivo ✅, disattivato ⬜.','<b>🕐 Ore di lavoro</b>: <b>da</b> e <b>a</b> per l\'orario di servizio.','Il pulsante di eliminazione sulla scheda del dipendente lo rimuove subito dall\'elenco.','<b>💾 Salva</b>: devi premerlo dopo ogni modifica, e comparirà il messaggio ✅ salvato.','Se compare un errore, apri <b>◀ SQL</b> in fondo, copialo ed eseguilo una sola volta su Supabase.'],
+  tip:'Assegna i dipendenti in base al turno, così ognuno vede solo gli ordini del proprio turno.',
+  warn:'Le restrizioni non si applicano al manager. E nessuna modifica viene salvata se non premi <b>Salva</b>.'},
+ prenotazioni:{t:'Prenotazioni dei tavoli',sub:'Prenotazioni tavoli',what:'Gestione delle prenotazioni dei tavoli: quelle che arrivano online e attendono la tua conferma, e quelle che registri tu per telefono o alla cassa.',
+  steps:['<b>Filtri</b>: <b>Oggi</b>, <b>Domani</b>, <b>Prossimi</b> (i 15 giorni successivi), <b>⏳ Da confermare</b> (in attesa della tua conferma), <b>🗑 Annullate</b>.','<b>➕ Nuova prenotazione</b>: scrivi <b>Tavolo</b> (da 1 a 99), <b>Persone</b>, <b>Data</b>, <b>Ora</b> (predefinita 20:00), poi <b>Nome</b>, <b>Telefono</b> e <b>Note</b>. La durata della prenotazione è di un\'ora (60 minuti).','Se il tavolo è già prenotato a quell\'ora, il programma rifiuta e ti dice «Tavolo occupato».','Pulsanti di ogni prenotazione: <b>✅ Conferma</b> (per quelle in attesa), <b>🔁 Tavolo</b> (cambia tavolo), <b>❌ Rifiuta / Annulla</b>, <b>↩️ Ripristina</b> (per quelle annullate), <b>📞</b> chiamata, <b>💬 WhatsApp</b> messaggio.','Etichette: <b>In attesa</b>, <b>Confermata</b>, <b>Annullata</b>, e accanto la provenienza (online / telefono).','Il numero rosso sull\'icona 🍽️ in Strumenti indica le prenotazioni in attesa.'],
+  tip:'Comincia ogni giornata con il filtro <b>⏳ Da confermare</b>, così nessuna prenotazione resta senza risposta.',
+  warn:'«Rifiuta» e «Annulla» cancellano la prenotazione; se sbagli premi <b>↩️ Ripristina</b> dal filtro delle annullate.'}
+ };
+ Object.keys(IT).forEach(function(k){if(G[k])G[k].it=IT[k];});
+ R.it=IT;
 })();
 </script>
 
