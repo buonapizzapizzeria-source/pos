@@ -14090,56 +14090,64 @@ el('kitchenTab').addEventListener('click', function(e){
  </div>
  </div>
  <div id="csBanner"></div>
- <div id="cassaCards" class="cassa-grid"></div>
+ <div id="uxKpis" class="ux-kpis"></div>
 
- <div class="cs-grid">
- <section class="panel" id="csDrawer">
- <h2>💵 Cassetto contanti</h2>
- <div class="cs-line"><span>Fondo cassa iniziale<div class="cs-sub" id="csFloatHint"></div></span><input type="number" step="0.01" inputmode="decimal" id="csFloat" oninput="csRecalc()" placeholder="0,00"></div>
- <div class="cs-line"><span><span class="plus">＋</span> Incassi in contanti<div class="cs-sub" id="csCashSub"></div></span><b id="csCashSales">—</b></div>
- <div class="cs-line"><span><span class="plus">＋</span> Versamenti / entrate</span><b id="csIn">—</b></div>
- <div class="cs-line"><span><span class="minus">－</span> Spese pagate dalla cassa</span><b id="csSpesa">—</b></div>
- <div class="cs-line"><span><span class="minus">－</span> Prelievi</span><b id="csPrel">—</b></div>
- <div class="cs-line total"><span>= Contanti attesi nel cassetto</span><b id="csExpected">—</b></div>
- <div class="cs-line"><span>🪙 Contanti contati (reali)</span><input type="number" step="0.01" inputmode="decimal" id="csCounted" oninput="csRecalc()" placeholder="0,00"></div>
+ <div class="ux-steps">
+ <section class="panel ux-step s1" id="csDrawer">
+ <div class="ux-sh"><span class="ux-n">1</span><div><h2>Apertura e incassi</h2><small>Fondo iniziale e contanti incassati</small></div></div>
+ <div class="ux-row"><label for="csFloat">🏁 Fondo cassa iniziale<div class="cs-sub" id="csFloatHint"></div></label><input type="number" step="0.01" inputmode="decimal" id="csFloat" oninput="csRecalc()" placeholder="0,00"></div>
+ <div class="ux-row"><span>💵 Incassi in contanti<div class="cs-sub" id="csCashSub"></div></span><b class="ux-plus" id="csCashSales">—</b></div>
+ <div class="ux-row"><span>➕ Entrate registrate</span><b class="ux-plus" id="csIn">—</b></div>
+ </section>
+
+ <section class="panel ux-step s2" id="csMovesPanel" data-mt="spesa">
+ <div class="ux-sh"><span class="ux-n">2</span><div><h2>Entrate e uscite</h2><small>Tocca il tipo, scrivi l'importo, scegli il motivo</small></div></div>
+ <div class="ux-seg" id="uxMvSeg">
+ <button type="button" class="in" data-t="versamento" onclick="uxMvType('versamento')">➕ Entrata</button>
+ <button type="button" class="out on" data-t="spesa" onclick="uxMvType('spesa')">🧾 Spesa</button>
+ <button type="button" class="wd" data-t="prelievo" onclick="uxMvType('prelievo')">🏦 Prelievo</button>
+ </div>
+ <select id="csMvType" style="display:none">${Object.keys(MOVE).map(function(k){ return '<option value="' + k + '"' + (k === 'spesa' ? ' selected' : '') + '>' + MOVE[k].icon + ' ' + MOVE[k].label + '</option>'; }).join('')}</select>
+ <input class="ux-amt" type="number" step="0.01" min="0" inputmode="decimal" id="csMvAmt" autocomplete="off" placeholder="Importo €">
+ <div class="ux-chips" id="uxMvChips">
+ <button type="button" data-r="Fornitore" onclick="uxMvReason('Fornitore')">🚚 Fornitore</button>
+ <button type="button" data-r="Ingredienti / materie prime" onclick="uxMvReason('Ingredienti / materie prime')">🧀 Ingredienti</button>
+ <button type="button" data-r="Carburante" onclick="uxMvReason('Carburante')">⛽ Carburante</button>
+ <button type="button" data-r="Collaboratori / stipendi" onclick="uxMvReason('Collaboratori / stipendi')">👷 Stipendi</button>
+ <button type="button" data-r="Manutenzione" onclick="uxMvReason('Manutenzione')">🔧 Manutenzione</button>
+ <button type="button" data-r="Imballaggi" onclick="uxMvReason('Imballaggi')">📦 Imballaggi</button>
+ <button type="button" data-r="Versamento in banca" onclick="uxMvReason('Versamento in banca')">🏦 Banca</button>
+ <button type="button" data-r="Fondo aggiuntivo" onclick="uxMvReason('Fondo aggiuntivo')">💰 Fondo</button>
+ <button type="button" data-r="__other__" onclick="uxMvReason('__other__')">✏️ Altro</button>
+ </div>
+ <select id="csMvReasonSel" style="display:none"><option value="">—</option><option value="Fornitore">Fornitore</option><option value="Ingredienti / materie prime">Ingredienti / materie prime</option><option value="Carburante">Carburante</option><option value="Collaboratori / stipendi">Collaboratori / stipendi</option><option value="Manutenzione">Manutenzione</option><option value="Imballaggi">Imballaggi</option><option value="Versamento in banca">Versamento in banca</option><option value="Fondo aggiuntivo">Fondo aggiuntivo</option><option value="__other__">Altro</option></select>
+ <input class="ux-inp" type="text" id="csMvReason" autocomplete="off" placeholder="Scrivi il motivo…" style="display:none">
+ <input class="ux-inp" type="text" id="csMvNote" autocomplete="off" placeholder="Nota (facoltativa)">
+ <button type="button" class="ux-add" onclick="csAddMove()">✔ Registra</button>
+ <div class="ux-tot"><span class="o">🧾 Spese <b id="csSpesa">—</b></span><span class="w">🏦 Prelievi <b id="csPrel">—</b></span></div>
+ <div id="csMovesList" style="margin-top:8px"></div>
+ </section>
+
+ <section class="panel ux-step s3" id="csClosePanel">
+ <div class="ux-sh"><span class="ux-n">3</span><div><h2>Conteggio e chiusura</h2><small>Conta i contanti, controlla la differenza e chiudi</small></div></div>
+ <div class="ux-hero"><small>Contanti attesi nel cassetto</small><b id="csExpected">—</b></div>
+ <div class="ux-row"><label for="csCounted">🪙 Contanti contati (reali)</label><input type="number" step="0.01" inputmode="decimal" id="csCounted" oninput="csRecalc()" placeholder="0,00"></div>
  <div class="cs-result" id="csDiff">—</div>
- <div class="cs-line" style="margin-top:10px"><span>Fondo cassa per domani<div class="cs-sub">Resta nel cassetto per la prossima apertura</div></span><input type="number" step="0.01" inputmode="decimal" id="csTomorrow" oninput="csRecalc()" placeholder="0,00"></div>
- <div class="cs-line"><span>💼 Da versare in banca / cassaforte</span><b id="csDeposit">—</b></div>
- </section>
-
- <section class="panel" id="csMovesPanel">
- <h2>🔄 Movimenti di cassa</h2>
- <div class="cs-mvform">
- <select id="csMvType">${Object.keys(MOVE).map(function(k){ return '<option value="' + k + '">' + MOVE[k].icon + ' ' + MOVE[k].label + '</option>'; }).join('')}</select>
- <input type="number" step="0.01" min="0" inputmode="decimal" id="csMvAmt" autocomplete="off" placeholder="Importo €">
- <select class="full" id="csMvReasonSel"><option value="">— Scegli il motivo —</option><option value="Fornitore">Fornitore</option><option value="Ingredienti / materie prime">Ingredienti / materie prime</option><option value="Carburante">Carburante</option><option value="Collaboratori / stipendi">Collaboratori / stipendi</option><option value="Manutenzione">Manutenzione</option><option value="Imballaggi">Imballaggi</option><option value="Versamento in banca">Versamento in banca</option><option value="Fondo aggiuntivo">Fondo aggiuntivo</option><option value="__other__">✏️ Altro (scrivi)…</option></select><input class="full" type="text" id="csMvReason" autocomplete="off" placeholder="Scrivi il motivo…" style="display:none">
- <input class="full" type="text" id="csMvNote" autocomplete="off" placeholder="Nota (facoltativa)">
- </div>
- <button type="button" class="blue" style="width:100%" onclick="csAddMove()">＋ Registra movimento</button>
- <div id="csMovesList" style="margin-top:12px"></div>
- </section>
- </div>
-
- <div class="cs-grid">
- <section class="panel" id="csCountPanel">
- <h2>🧮 Conteggio banconote e monete</h2>
- <div class="muted" style="margin-bottom:6px">Inserisci quanti pezzi hai per taglio: il totale va in automatico in «Contanti contati».</div>
- <strong style="font-size:13px">Banconote</strong>${denomHtml(BANKNOTES)}
- <strong style="font-size:13px">Monete</strong>${denomHtml(COINS)}
- <div class="cs-line total"><span>Totale contato</span><b id="csCountTotal">0,00 €</b></div>
- </section>
-
- <section class="panel" id="csClosePanel">
- <h2>💳 Carta / POS &amp; chiusura</h2>
- <div class="cs-line"><span>Incassi carta attesi (sistema)</span><b id="csPosExp">—</b></div>
- <div class="cs-line"><span>Totale dal terminale POS<div class="cs-sub">Scontrino di chiusura del POS</div></span><input type="number" step="0.01" inputmode="decimal" id="csPos" oninput="csRecalc()" placeholder="0,00"></div>
+ <div class="ux-row"><label for="csTomorrow">📅 Fondo per domani<div class="cs-sub">Resta nel cassetto</div></label><input type="number" step="0.01" inputmode="decimal" id="csTomorrow" oninput="csRecalc()" placeholder="0,00"></div>
+ <div class="ux-row dep"><span>💼 Da versare in banca / cassaforte</span><b id="csDeposit">—</b></div>
+ <div class="ux-sep">💳 Carta / POS</div>
+ <div class="ux-row"><span>Carta attesa (sistema)</span><b id="csPosExp">—</b></div>
+ <div class="ux-row"><label for="csPos">Totale terminale POS<div class="cs-sub">Scontrino di chiusura del POS</div></label><input type="number" step="0.01" inputmode="decimal" id="csPos" oninput="csRecalc()" placeholder="0,00"></div>
  <div class="cs-result" id="csPosDiff">—</div>
- <div class="field" style="margin-top:12px"><label>📝 Note di chiusura</label><textarea id="csNotes" oninput="csRecalc()" placeholder="Es. ammanco dovuto a resto errato, spesa non registrata…"></textarea></div>
+ <div class="field" style="margin-top:10px"><label>📝 Note di chiusura</label><textarea id="csNotes" oninput="csRecalc()" placeholder="Es. ammanco per resto errato…"></textarea></div>
  <div class="cs-actions" id="csActions"></div>
- <div class="cs-sub" id="csLog" style="margin-top:10px"></div>
+ <div class="cs-sub" id="csLog" style="margin-top:8px"></div>
  </section>
  </div>
 
+ <details class="ux-more">
+ <summary>📊 Statistiche del giorno e storico chiusure</summary>
+ <div id="cassaCards" class="cassa-grid" style="margin:10px 0"></div>
  <div class="grid">
  <section class="panel"><h2>🏆 Prodotti più venduti nella giornata</h2><div id="cassaTopProducts"></div></section>
  <section class="panel"><h2>📊 Dettaglio per stato</h2><div id="cassaBreakdown"></div></section>
@@ -14152,6 +14160,7 @@ el('kitchenTab').addEventListener('click', function(e){
  <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px"><h2 style="margin:0">📚 Storico chiusure</h2><button type="button" class="secondary btn-sm" onclick="csHistoryCsv()">⬇️ Esporta CSV</button></div>
  <div id="csHistory"></div>
  </section>
+ </details>
  </div>`;
  }
 
@@ -14184,6 +14193,12 @@ el('kitchenTab').addEventListener('click', function(e){
  }
  function renderCards(){
  var st = CS.st, c = calc();
+ var kp = el('uxKpis');
+ if(kp) kp.innerHTML =
+ '<div class="ux-k tot"><small>💰 Incasso netto</small><b>' + euro(st.totalRevenue) + '</b><i>' + st.validCount + ' ordini</i></div>' +
+ '<div class="ux-k cash"><small>💵 Contanti</small><b>' + euro(st.cashTotal) + '</b><i>' + st.cashCount + ' ordini</i></div>' +
+ '<div class="ux-k card"><small>💳 Carta</small><b>' + euro(st.cardTotal) + '</b><i>' + st.cardCount + ' ordini</i></div>' +
+ '<div class="ux-k app"><small>📲 App</small><b>' + euro(st.appTotal) + '</b><i>' + st.appCount + ' ordini</i></div>';
  var avg = st.validCount ? st.totalRevenue / st.validCount : 0;
  var cancV = cassaDayOrders.filter(function(o){ return normStatus(o.status) === 'Annullato'; }).reduce(function(s, o){ return s + Number(o.total || 0); }, 0);
  el('cassaCards').innerHTML =
@@ -14279,6 +14294,7 @@ el('kitchenTab').addEventListener('click', function(e){
  }
 
  function countSubtotals(){
+ if(!el('csCountTotal')) return 0;
  var tot = 0;
  BANKNOTES.concat(COINS).forEach(function(d){
  var q = Math.max(0, Math.floor(num(el('csDen_' + d).value)));
@@ -14310,10 +14326,20 @@ el('kitchenTab').addEventListener('click', function(e){
  if(doSave && !D.closed) schedule();
  }
  window.csRecalc = function(){ recalc(true); };
+ /* ---- UX: tipo movimento + motivo a un tocco ---- */
+ function uxSync(){
+ var t = (el('csMvType') || {}).value, r = (el('csMvReasonSel') || {}).value, p = el('csMovesPanel');
+ if(p && t) p.setAttribute('data-mt', t);
+ Array.prototype.forEach.call(document.querySelectorAll('#uxMvSeg [data-t]'), function(b){ b.classList.toggle('on', b.getAttribute('data-t') === t); });
+ Array.prototype.forEach.call(document.querySelectorAll('#uxMvChips [data-r]'), function(b){ b.classList.toggle('on', !!r && b.getAttribute('data-r') === r); });
+ }
+ window.uxMvType = function(t){ var s = el('csMvType'); if(s) s.value = t; uxSync(); };
+ window.uxMvReason = function(v){ var s = el('csMvReasonSel'); if(!s) return; s.value = (s.value === v ? '' : v); s.dispatchEvent(new Event('change', { bubbles: true })); uxSync(); };
+ setInterval(function(){ try{ uxSync(); }catch(e){} }, 500);
 
  /* ---------- azioni ---------- */
  window.csCountChange = function(){
- if(CS.D.closed) return;
+ if(CS.D.closed || !el('csDen_500')) return;
  var counts = {};
  BANKNOTES.concat(COINS).forEach(function(d){ var q = Math.max(0, Math.floor(num(el('csDen_' + d).value))); if(q) counts[d] = q; });
  CS.D.counts = counts;
@@ -18856,6 +18882,7 @@ h += '<div class="bp36-chips"><button type="button" class="bp36-chip' + (P.view 
  h += '<div style="display:flex;gap:8px;flex-wrap:wrap;margin:4px 0"><select data-pcatsel style="flex:1 1 150px;min-width:0"><option value="all">📂 Tutte le categorie</option>' + C.pcats.map(function(c){ return '<option value="' + E(c.k) + '"' + (P.cat === c.k ? ' selected' : '') + '>' + c.e + ' ' + E(c.l) + '</option>'; }).join('') + '</select>' +
  '<input type="search" data-pq placeholder="🔍 Cerca fornitore o articolo..." value="' + E(P.q) + '" style="flex:2 1 170px;min-width:0"></div>';
  h += '<div class="bp36-kpis"><div class="bp36-k"><span>Totale spesa</span><b>' + eur(tot) + '</b></div><div class="bp36-k' + (due > 0 ? ' bad' : '') + '"><span>Da pagare</span><b>' + eur(due) + '</b></div><div class="bp36-k"><span>Acquisti</span><b>' + list.length + '</b></div><div class="bp36-k"><span>Media / giorno</span><b>' + eur(tot / days) + '</b></div></div>';
+ h += '<!--ST-->';
  var cats = Object.keys(byCat).sort(function(a, b){ return byCat[b] - byCat[a]; });
  if(cats.length){
  var mx = byCat[cats[0]] || 1;
@@ -18863,6 +18890,8 @@ h += '<div class="bp36-chips"><button type="button" class="bp36-chip' + (P.view 
  }
  var top = Object.keys(items).map(function(k){ return items[k]; }).filter(function(x){ return x.amt > 0; }).sort(function(a, b){ return b.amt - a.amt; }).slice(0, 8);
  if(top.length) h += '<div class="panel" style="margin-bottom:12px"><h2 style="font-size:15px">🏷️ Articoli più costosi</h2><div class="bp36-br">' + top.map(function(x){ return '<div style="margin-top:4px"><span>' + E(x.n) + ' <small class="muted">' + (Math.round(x.q * 100) / 100) + ' ' + E(x.u || '') + '</small></span><b>' + eur(x.amt) + '</b></div>'; }).join('') + '</div></div>';
+ h += '<!--/ST-->';
+ if(cats.length || top.length){ h = h.replace('<!--ST-->', '<details class="ux-more"><summary>📊 Statistiche: categorie e articoli più costosi</summary>').replace('<!--/ST-->', '</details>'); } else { h = h.replace('<!--ST-->', '').replace('<!--/ST-->', ''); }
  if(!list.length) h += '<div class="bp36-empty">🧾<br>Nessun acquisto in questo periodo.<br><small>Tocca «＋ Nuovo acquisto» per registrare la spesa di supermercato, verdura, mozzarella…</small></div>';
  var cutIdx = h.length, lastD = null;
  list.forEach(function(p){
@@ -28993,35 +29022,22 @@ html:not(.pos64) .voice-input-row textarea{min-height:min(68dvh,600px)!important
   addWage('Robert (' + h + 'h × ' + ROBERT_RATE + ')', Math.round(h * ROBERT_RATE * 100) / 100);
  }
  function build(){
-  var shell = g('csShell'); if(!shell || g('cashFocus')) return;
-  css();
-  var p = document.createElement('div'); p.id = 'cashFocus';
-  p.innerHTML = '<h2>💵 CASSA CONTANTI · الكاش</h2>' +
-   '<div class="cf-g"><div class="cf-b"><small>Atteso nel cassetto</small><b id="cfExp">—</b></div><div class="cf-b"><small>🪙 Contati (reali)</small><b id="cfCnt">—</b></div><div class="cf-b dep"><small>💼 DA VERSARE (banconote)</small><b id="cfDep">—</b></div></div>' +
-   '<div class="cf-d" id="cfDiff">—</div>' +
-   '<div class="cf-s" id="cfSub"></div>' +
-   '<b style="font-size:14px">⚡ Stipendi rapidi (Spesa)</b><div class="cf-w" id="cfW"></div>' +
-   '<div class="cf-t"><button type="button" id="cfCount">🧮 Conta banconote</button><button type="button" id="cfCards"></button></div>';
-  var anchor = g('csBanner'); if(anchor && anchor.parentNode) anchor.parentNode.insertBefore(p, anchor); else shell.insertBefore(p, shell.children[1] || null);
-  var w = g('cfW');
-  WAGES.forEach(function(x){ var b = document.createElement('button'); b.type = 'button'; b.textContent = x[0] + ' ' + x[1] + ' ' + eur(x[2]); b.onclick = function(){ addWage(x[1], x[2]); }; w.appendChild(b); });
-  var rb = document.createElement('button'); rb.type = 'button'; rb.textContent = '🧹 Robert (ore)'; rb.onclick = robert; w.appendChild(rb);
-  g('cfCount').onclick = function(){ var c = g('csCountPanel'); if(c) c.scrollIntoView({behavior: 'smooth', block: 'start'}); };
-  g('cfCards').onclick = function(){ var h = localStorage.getItem(HIDE_KEY) !== '0'; localStorage.setItem(HIDE_KEY, h ? '0' : '1'); upd(); };
- }
- function upd(){
-  var p = g('cashFocus'); if(!p) return;
-  g('cfExp').textContent = tx('csExpected'); g('cfCnt').textContent = inVal('csCounted'); g('cfDep').textContent = tx('csDeposit');
-  var d = g('csDiff'); var cd = g('cfDiff');
-  if(d){ cd.innerHTML = d.innerHTML; cd.className = 'cf-d ' + (d.className || '').replace('cs-result', '').trim(); }
-  g('cfSub').innerHTML = 'Fondo iniziale <b>' + inVal('csFloat') + '</b> + incassi contanti <b>' + tx('csCashSales') + '</b> + entrate <b>' + tx('csIn') + '</b> − spese <b>' + tx('csSpesa') + '</b> − prelievi <b>' + tx('csPrel') + '</b> · Fondo per domani <b>' + inVal('csTomorrow') + '</b>';
-  var closed = isClosed();
-  Array.prototype.forEach.call(g('cfW').querySelectorAll('button'), function(b){ b.disabled = closed; });
-  var cards = g('cassaCards'), hide = localStorage.getItem(HIDE_KEY) !== '0';
-  if(cards) cards.style.display = hide ? 'none' : '';
-  g('cfCards').textContent = hide ? '📊 Mostra carta, consegne e totali' : '📊 Nascondi carta e totali';
- }
- function tick(){ try{ build(); upd(); }catch(e){ try{ bpWarn(e); }catch(_){} } }
+ var shell = g('csShell'); if(!shell || g('cashFocus')) return;
+ css();
+ var host = g('csMovesList'); if(!host || !host.parentNode) return;
+ var p = document.createElement('details'); p.id = 'cashFocus'; p.className = 'ux-wages';
+ p.innerHTML = '<summary>⚡ Stipendi rapidi</summary><div class="cf-w" id="cfW"></div>';
+ host.parentNode.insertBefore(p, host);
+ var w = g('cfW');
+ WAGES.forEach(function(x){ var b = document.createElement('button'); b.type = 'button'; b.textContent = x[0] + ' ' + x[1] + ' ' + eur(x[2]); b.onclick = function(){ addWage(x[1], x[2]); }; w.appendChild(b); });
+ var rb = document.createElement('button'); rb.type = 'button'; rb.textContent = '🧹 Robert (ore)'; rb.onclick = robert; w.appendChild(rb);
+}
+function upd(){
+ var p = g('cashFocus'); if(!p) return;
+ var closed = isClosed();
+ Array.prototype.forEach.call(g('cfW').querySelectorAll('button'), function(b){ b.disabled = closed; });
+}
+function tick(){ try{ build(); upd(); }catch(e){ try{ bpWarn(e); }catch(_){} } }
  setInterval(tick, 600);
 })();
 </script>
@@ -32362,12 +32378,156 @@ html.pos64 body #newTab #p64Foot .actions>#cancelEditBtn{flex:0 1 auto}
  html.pos64 body #p64Mid>#bpAccCart{height:auto!important;max-height:none!important;overflow:visible!important}
  html.pos64:has(#p64Win[data-open]) body #newTab>.grid>section.panel:nth-child(2)>#p64Mid{min-height:260px!important}
  /* banner "modifica ordine" compatto su una riga */
- html.pos64 body #editingOrderBanner{display:flex!important;flex-wrap:wrap;align-items:center;gap:6px 10px;padding:3px 8px!important;margin:0 0 4px!important;font-size:12px!important;line-height:1.2}
+ html.pos64 body #editingOrderBanner:not(.hidden){display:flex!important;flex-wrap:wrap;align-items:center;gap:6px 10px;padding:3px 8px!important;margin:0 0 4px!important;font-size:12px!important;line-height:1.2}
+ html.pos64 body #editingOrderBanner.hidden{display:none!important}
  html.pos64 body #editingOrderBanner *{font-size:inherit!important;margin:0!important}
  html.pos64 body #editingOrderBanner .muted{display:none!important}
  html.pos64 body #editingOrderBanner button{min-height:0!important;height:28px;padding:0 10px!important;border-radius:9px}
  html.pos64 body #newTab:has(#editingOrderBanner:not(.hidden)) #cancelEditBtn{display:none!important}
 }
+
+/* ===== uxFinal · testo che si adatta alla larghezza della scheda ordine (container queries) ===== */
+html.pos64 body #newTab>.grid>section.panel:nth-child(2){container:tk/inline-size}
+html.pos64 body #bpOrder{grid-template-columns:minmax(0,1fr)!important}
+html.pos64 body #newTab #bpOrder .bpo-seg button{min-width:0;overflow:hidden;gap:clamp(2px,1.1cqi,6px);padding:0 clamp(2px,.8cqi,6px)!important;font-size:clamp(10px,2.7cqi,14px)}
+html.pos64 body #bpOrder .bpo-seg button b{font-size:inherit;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+html.pos64 body #bpOrder .bpo-seg button .uxi{width:clamp(14px,3.8cqi,22px);height:clamp(14px,3.8cqi,22px);flex:0 0 auto}
+html.pos64 body #p64Bar button{min-width:0;overflow:hidden;gap:clamp(2px,.8cqi,5px);padding:0 2px!important}
+html.pos64 body #p64Bar button span{font-size:clamp(13px,3.4cqi,18px)}
+html.pos64 body #p64Bar button b{font-size:clamp(9.5px,2.3cqi,12.5px);min-width:0;max-width:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+html.pos64 body #newTab #p64Foot .actions>button{font-size:clamp(10.5px,2.5cqi,14px)!important}
+html.pos64 body #p64Foot .total.rd-total span:last-child{font-size:clamp(18px,5cqi,26px)!important}
+/* scheda larga: tipo ordine + pagamento sulla stessa riga */
+@container tk (min-width:640px){
+ html.pos64 body #bpOrder{grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important}
+ html.pos64 body #bpOrder>#bpoPills,html.pos64 body #bpOrder>#bpoQuick{grid-column:1/-1}
+}
+/* scheda stretta: solo icone nei bottoni grandi, barra Cliente/Orario/... con icona sopra e testo sotto */
+@container tk (max-width:330px){
+ html.pos64 body #bpOrder .bpo-seg button b{display:none}
+}
+@container tk (max-width:460px){
+ html.pos64 body #p64Bar button{flex-direction:column;gap:0;height:42px;justify-content:center}
+ html.pos64 body #p64Bar button span{font-size:15px}
+ html.pos64 body #p64Bar button b{font-size:clamp(8.5px,2.5cqi,11px)}
+}
+/* testo delle piastrelle del menu proporzionale alla piastrella */
+html.pos64 body .bpm-tile{container-type:inline-size}
+html.pos64 body .bpm-main b{font-size:clamp(10px,11cqi,14px)}
+html.pos64 body .bpm-main i,html.pos64 body .bpm-tile[style*="--cc"] .bpm-main i{font-size:clamp(10px,10cqi,13px)}
+
+/* ===== uxFinal · foto piastrelle piu' luminose + nome leggibile (scelta visiva veloce nell'ora di punta) ===== */
+html #newTab #bpmGrid .bpm-tile.pa{background:#7a5f4a!important}
+html .bpm-tile.pa .bpm-bg img{filter:brightness(1.32) contrast(1.08) saturate(1.22)}
+/* velo scuro molto piu' leggero: solo una sfumatura sul fondo, la foto resta chiara */
+html .bpm-tile.pa .bpm-bg::after{background:linear-gradient(to top,rgba(20,10,3,.5) 0%,rgba(20,10,3,0) 34%)}
+/* nome su etichetta con il colore della categoria: leggibile su qualsiasi foto */
+html #newTab .bpm-tile.pa .bpm-main b{display:inline-block!important;width:auto!important;max-width:100%;box-sizing:border-box;padding:2px 7px 3px!important;border-radius:8px;background:color-mix(in srgb,var(--cc,#4a3526) 68%,#000 32%)!important;color:#fff!important;text-shadow:0 1px 2px rgba(0,0,0,.55)!important;box-shadow:0 2px 6px rgba(0,0,0,.28);-webkit-box-decoration-break:clone;box-decoration-break:clone;line-height:1.14;letter-spacing:.1px}
+html.pos64 body #newTab .bpm-tile.pa .bpm-main b{font-size:clamp(11px,11.5cqi,16px)!important;height:auto!important;min-height:0!important}
+/* prezzo piu' evidente */
+html #newTab .bpm-tile.pa .bpm-main i{background:#fff!important;color:#b42318!important;box-shadow:0 2px 6px rgba(0,0,0,.3)!important;font-weight:900}
+/* tasto taglia/extra: leggermente piu' contrastati sulla foto chiara */
+html #newTab .bpm-tile.pa .bpm-act button{box-shadow:0 1px 4px rgba(0,0,0,.35)!important}
+
+/* ===== uxFinal · CASSA: 3 passi chiari e colorati ===== */
+#csShell.ux-cassa,#csShell{--ux-g:#16a34a;--ux-r:#dc2626;--ux-o:#ea580c;--ux-b:#2563eb}
+#csShell .ux-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:0 0 12px}
+#csShell .ux-k{border-radius:16px;padding:10px 12px;color:#fff;min-width:0;display:flex;flex-direction:column;gap:1px}
+#csShell .ux-k small{font-size:12px;font-weight:800;opacity:.92}
+#csShell .ux-k b{font-size:clamp(18px,2.4vw,26px);font-weight:900;font-variant-numeric:tabular-nums;line-height:1.1;overflow-wrap:anywhere}
+#csShell .ux-k i{font-style:normal;font-size:11.5px;opacity:.85}
+#csShell .ux-k.tot{background:linear-gradient(135deg,#1e293b,#475569)}
+#csShell .ux-k.cash{background:linear-gradient(135deg,#15803d,#22c55e)}
+#csShell .ux-k.card{background:linear-gradient(135deg,#1d4ed8,#3b82f6)}
+#csShell .ux-k.app{background:linear-gradient(135deg,#6d28d9,#a78bfa)}
+#csShell .ux-steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,330px),1fr));gap:12px;align-items:start;margin-bottom:12px}
+#csShell .ux-step{margin:0;min-width:0;border-radius:20px;border:0;padding:14px;box-shadow:0 2px 10px rgba(16,24,40,.08);border-top:6px solid var(--st)}
+#csShell .ux-step.s1{--st:var(--ux-g)}#csShell .ux-step.s2{--st:var(--ux-o)}#csShell .ux-step.s3{--st:var(--ux-b)}
+#csShell .ux-sh{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+#csShell .ux-sh h2{margin:0;font-size:18px;font-weight:900}
+#csShell .ux-sh small{display:block;color:var(--bp-mute,#667085);font-size:12.5px;font-weight:600;line-height:1.25}
+#csShell .ux-n{flex:0 0 auto;width:34px;height:34px;border-radius:50%;background:var(--st);color:#fff;font-weight:900;font-size:18px;display:flex;align-items:center;justify-content:center}
+#csShell .ux-row{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:9px 0;border-bottom:1px dashed rgba(127,127,127,.3);font-size:15px;font-weight:700}
+#csShell .ux-row:last-of-type{border-bottom:0}
+#csShell .ux-row label{margin:0;font-size:15px;font-weight:700;color:inherit}
+#csShell .ux-row input{width:min(150px,42%);text-align:right;font-weight:900;font-size:19px;padding:9px 10px;border-radius:12px}
+#csShell .ux-row b{font-size:19px;font-weight:900;font-variant-numeric:tabular-nums}
+#csShell .ux-plus{color:var(--ux-g)}
+#csShell .ux-row.dep{background:#ecfdf3;border:2px solid #86efac;border-radius:14px;padding:10px 12px;margin-top:8px}
+#csShell .ux-row.dep b{color:#15803d;font-size:22px}
+#csShell .ux-hero{background:linear-gradient(135deg,#1d4ed8,#3b82f6);color:#fff;border-radius:16px;padding:12px 14px;margin-bottom:6px;text-align:center}
+#csShell .ux-hero small{display:block;font-weight:800;font-size:13px;opacity:.92}
+#csShell .ux-hero b{display:block;font-size:34px;font-weight:900;font-variant-numeric:tabular-nums;line-height:1.15}
+#csShell .ux-sep{margin:14px 0 2px;padding-top:10px;border-top:2px solid rgba(127,127,127,.25);font-weight:900;font-size:15px;color:var(--ux-b)}
+/* movimenti */
+#csShell .ux-seg{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-bottom:8px}
+#csShell .ux-seg button{min-height:46px!important;border-radius:13px;font-weight:900;font-size:15px!important;border:2px solid transparent!important;color:#fff!important;opacity:.45;transition:opacity .12s,transform .1s}
+#csShell .ux-seg button.in{background:var(--ux-g)!important}#csShell .ux-seg button.out{background:var(--ux-r)!important}#csShell .ux-seg button.wd{background:var(--ux-o)!important}
+#csShell .ux-seg button.on{opacity:1;box-shadow:0 4px 12px rgba(0,0,0,.25);transform:translateY(-1px)}
+#csShell .ux-amt{width:100%;box-sizing:border-box;font-size:28px!important;font-weight:900;text-align:center;padding:10px!important;border-radius:14px;margin-bottom:8px}
+#csShell .ux-inp{width:100%;box-sizing:border-box;margin-top:8px;border-radius:12px}
+#csShell .ux-chips{display:flex;flex-wrap:wrap;gap:6px}
+#csShell .ux-chips button{min-height:38px!important;padding:4px 11px!important;border-radius:99px;font-size:13.5px!important;font-weight:800;background:rgba(127,127,127,.14)!important;color:inherit!important;border:2px solid transparent!important}
+#csShell .ux-chips button.on{background:var(--ux-o)!important;color:#fff!important;border-color:var(--ux-o)!important}
+#csShell .ux-add{width:100%;min-height:50px!important;margin-top:10px;border-radius:14px;font-size:17px!important;font-weight:900;color:#fff!important;background:var(--ux-r)!important}
+#csMovesPanel[data-mt="versamento"] .ux-add{background:var(--ux-g)!important}
+#csMovesPanel[data-mt="prelievo"] .ux-add{background:var(--ux-o)!important}
+#csMovesPanel[data-mt="versamento"] .ux-chips button.on{background:var(--ux-g)!important;border-color:var(--ux-g)!important}
+#csMovesPanel[data-mt="spesa"] .ux-chips button.on{background:var(--ux-r)!important;border-color:var(--ux-r)!important}
+#csShell .ux-tot{display:flex;gap:8px;margin-top:10px}
+#csShell .ux-tot span{flex:1;border-radius:12px;padding:8px 10px;font-weight:800;font-size:13px;display:flex;justify-content:space-between;align-items:center;gap:6px}
+#csShell .ux-tot .o{background:#fef2f2;color:#b91c1c}#csShell .ux-tot .w{background:#fff7ed;color:#c2410c}
+#csShell .ux-tot b{font-size:16px}
+#csShell .ux-wages{margin-top:10px;border-radius:12px;background:rgba(127,127,127,.1);padding:6px 10px;border:0}
+#csShell .ux-wages summary{cursor:pointer;font-weight:800;font-size:14px;padding:4px 0}
+#csShell .ux-wages .cf-w{display:flex;flex-wrap:wrap;gap:6px;padding:6px 0}
+#csShell .ux-wages .cf-w button{border:0;border-radius:10px;padding:8px 11px;font-weight:800;font-size:13.5px;background:#e0e7ff;color:#1e2a78}
+#csShell .ux-more{margin:6px 0 14px}
+#csShell .ux-more>summary,#purchasesTab .ux-more>summary{cursor:pointer;font-weight:900;font-size:15px;padding:12px 14px;border-radius:14px;background:rgba(127,127,127,.12);list-style:none}
+#csShell .ux-more>summary::-webkit-details-marker,#purchasesTab .ux-more>summary::-webkit-details-marker{display:none}
+#csShell .ux-more[open]>summary,#purchasesTab .ux-more[open]>summary{margin-bottom:10px}
+#csShell .cs-result{font-size:16px;margin-top:8px}
+#csShell .cs-actions button{min-height:52px;font-size:16px;font-weight:900;border-radius:14px}
+@media(max-width:640px){#csShell .ux-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+/* ===== uxFinal · ACQUISTI: semplice e colorato ===== */
+#purchasesTab [data-pnew]{min-height:50px;padding:0 18px!important;border-radius:14px;font-size:16px!important;font-weight:900;background:linear-gradient(135deg,#15803d,#22c55e)!important;color:#fff!important;box-shadow:0 4px 12px rgba(22,163,74,.35)}
+#purchasesTab .bp36-kpis{grid-template-columns:repeat(4,minmax(0,1fr))!important}
+#purchasesTab .bp36-k{border:0!important;color:#fff;border-radius:16px!important}
+#purchasesTab .bp36-k span{color:rgba(255,255,255,.9)!important;text-transform:none!important;font-size:12px!important}
+#purchasesTab .bp36-k:nth-child(1){background:linear-gradient(135deg,#1d4ed8,#3b82f6)}
+#purchasesTab .bp36-k:nth-child(2){background:linear-gradient(135deg,#15803d,#22c55e)}
+#purchasesTab .bp36-k.bad,#purchasesTab .bp36-k:nth-child(2).bad{background:linear-gradient(135deg,#b91c1c,#ef4444)}
+#purchasesTab .bp36-k:nth-child(3){background:linear-gradient(135deg,#475569,#64748b)}
+#purchasesTab .bp36-k:nth-child(4){background:linear-gradient(135deg,#c2410c,#fb923c)}
+#purchasesTab .bp36-k b,#purchasesTab .bp36-k.bad b{color:#fff!important;font-size:clamp(17px,2.2vw,24px)!important}
+#purchasesTab .bp36-chip.on{background:var(--bp-brand,#d92d20)!important;color:#fff!important;border-color:var(--bp-brand,#d92d20)!important;box-shadow:none}
+#purchasesTab .bp36-pur{border:0;border-inline-start:7px solid #16a34a;box-shadow:0 2px 8px rgba(16,24,40,.08);padding:12px 14px}
+#purchasesTab .bp36-pur:has(.bp36-badge.due){border-inline-start-color:#ef4444;background:color-mix(in srgb,#fecaca 18%,var(--bp-card,#fff))}
+#purchasesTab .bp36-pur .tot{font-size:22px}
+#purchasesTab .bp36-pur .acts button{min-height:44px!important;font-size:15px!important;font-weight:800}
+#purchasesTab .bp36-day{font-size:14px;padding:6px 10px;border-radius:10px;background:rgba(127,127,127,.12);margin:14px 0 6px}
+#purchasesTab .ux-more{margin:6px 0 12px}
+#purchasesTab .ux-more .panel{margin-bottom:10px}
+@media(max-width:640px){#purchasesTab .bp36-kpis{grid-template-columns:repeat(2,minmax(0,1fr))!important}}
+
+/* ===== uxFoto · carta a due piani: foto pulita sopra, targa col nome sotto (tenda a festoni) ===== */
+html #newTab #bpmGrid .bpm-tile.pa{--pl:color-mix(in srgb,var(--cc,#7a4a2a) 62%,#1b0f07 38%);background:var(--pl)!important;min-height:0!important;border-radius:18px!important;overflow:hidden!important;display:flex!important;flex-direction:column!important;justify-content:flex-start!important}
+html #newTab #bpmGrid .bpm-tile.pa.has{--pl:#15803d}
+/* la foto: intera, senza velo e senza testo sopra */
+html #newTab #bpmGrid .bpm-tile.pa .bpm-bg{position:relative!important;inset:auto!important;flex:0 0 auto!important;width:100%!important;aspect-ratio:1/.8!important;border-radius:0!important;background:linear-gradient(135deg,color-mix(in srgb,var(--cc,#c2410c) 35%,#fff),color-mix(in srgb,var(--cc,#c2410c) 60%,#fff))!important}
+html #newTab #bpmGrid .bpm-tile.pa .bpm-bg::after{display:none!important}
+html #newTab #bpmGrid .bpm-tile.pa .bpm-bg img{position:absolute!important;inset:0!important;width:100%!important;height:100%!important;object-fit:cover!important}
+html #newTab #bpmGrid .bpm-tile.pa.has .bpm-bg::before{box-shadow:none!important}
+/* la targa: nome centrato su fondo pieno, bordo a festoni */
+html #newTab #bpmGrid .bpm-tile.pa .bpm-main{position:relative!important;flex:1 1 auto!important;align-items:center!important;justify-content:center!important;text-align:center!important;padding:14px 5px 3px!important;gap:0!important;background:transparent!important}
+html #newTab #bpmGrid .bpm-tile.pa .bpm-main::before{content:"";position:absolute;left:0;right:0;top:-7px;height:8px;background:radial-gradient(circle at 7px 0,transparent 6px,var(--pl) 6.5px) 0 0/14px 8px repeat-x;pointer-events:none}
+html #newTab #bpmGrid .bpm-tile.pa .bpm-main b,html.pos64 body #newTab #bpmGrid .bpm-tile.pa .bpm-main b{display:-webkit-box!important;width:100%!important;max-width:100%!important;height:auto!important;min-height:0!important;padding:0!important;border-radius:0!important;background:none!important;box-shadow:none!important;text-shadow:none!important;color:#fff!important;text-align:center!important;font-size:clamp(12px,12.5cqi,16px)!important;font-weight:900!important;line-height:1.14!important;letter-spacing:.2px}
+/* prezzo: sigillo a cavallo tra foto e targa */
+html #newTab #bpmGrid .bpm-tile.pa .bpm-main i{position:absolute!important;top:-17px!important;right:6px!important;left:auto!important;z-index:2;background:#fff!important;color:#b42318!important;border:2.5px solid var(--pl);border-radius:99px!important;padding:2px 8px!important;font-size:clamp(11px,11cqi,14px)!important;font-weight:900!important;box-shadow:0 2px 5px rgba(0,0,0,.3)!important;transform:rotate(-3deg)}
+/* bottoni sulla targa */
+html #newTab #bpmGrid .bpm-tile.pa .bpm-act{padding:2px 5px 6px!important;gap:4px!important}
+html #newTab #bpmGrid .bpm-tile.pa .bpm-act button{height:34px!important;min-height:34px!important}
 </style>
 </body>
 </html>
