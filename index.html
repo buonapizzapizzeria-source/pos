@@ -11,7 +11,8 @@ window.__bpSB=function(){return busy;};
 window.setInterval=function(fn,d){
  if(typeof fn!=='function'||!(d>=250))return si.apply(window,arguments);
  var a=[].slice.call(arguments,2),skipped=0;
- return si.call(window,function(){if(busy&&skipped<6){skipped++;return;}skipped=0;return fn.apply(this,a);},d);
+ if(d<1000)d=1000; /* v30.5: i timer di montaggio UI da 300-800ms passano a 1s: meno CPU, scorrimento piu' fluido */
+ return si.call(window,function(){if(document.hidden)return;if(busy&&skipped<6){skipped++;return;}skipped=0;return fn.apply(this,a);},d);
 };})();
 </script>
 
@@ -17554,7 +17555,7 @@ openCartIngModal = function(key){
  function vib(){ try{ if(navigator.vibrate) navigator.vibrate(12); }catch(e){} }
 
  /* ---------- 1) NAVIGAZIONE A ICONE ---------- */
- var NAV = [['new','🛒','Nuovo'],['orders','📋','Ordini'],['kitchen','👨‍🍳','Cucina'],['cassa','💰','Cassa'],['menu','🍕','Menu'],['all','🕒','Storico'],['purchases','🧾','Acquisti'],['inventory','📦','Scorte'],['loyalty','👑','Clienti'],['analytics','📊','Report'],['settings','⚙️','Impostazioni']];
+ var NAV = [['new','🛒','Nuovo'],['orders','📋','Ordini'],['kitchen','👨‍🍳','Cucina'],['cassa','💰','Cassa'],['menu','🍕','Menu'],['all','🕒','Storico'],['credit','💳','Da pagare'],['purchases','🧾','Acquisti'],['inventory','📦','Scorte'],['loyalty','👑','Clienti'],['analytics','📊','Report'],['settings','⚙️','Impostazioni']];
  var PRIMARY = {'new':1,'orders':1,'kitchen':1,'cassa':1};
  var nav = document.createElement('nav'); nav.id = 'bpNav'; nav.className = 'no-print hidden';
  var more = document.createElement('div'); more.id = 'bpMore'; more.className = 'hidden no-print';
@@ -32510,6 +32511,8 @@ html #newTab #bpmGrid .bpm-tile.pa:active{transform:scale(.97)}
 html #newTab #bpmGrid .bpm-tile.pa .bpm-act button{transition:none!important}
 .bpm-tile{content-visibility:auto;contain-intrinsic-size:auto 150px}
 #bpmGrid{contain:layout style;overscroll-behavior:contain}
+/* v30.5: le schede ordine fuori schermo non vengono disegnate -> scorrimento Ordini piu' veloce */
+.orders>.order{content-visibility:auto;contain-intrinsic-size:auto 430px}
 .bpm-tile.pa .bpm-bg img{content-visibility:auto}
 *,*::before,*::after{backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
 #bp36G.bp36-ov{background:rgba(2,3,10,.95)!important}
