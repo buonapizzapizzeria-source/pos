@@ -4396,6 +4396,24 @@ window.bpTypeIcon=function(t){ var s=String(t||'').toLowerCase(), k=/consegna|do
 #pbEd>div{background:#fff;border-radius:18px;padding:16px;width:min(420px,100%);display:flex;flex-direction:column;gap:10px}
 #pbEd textarea{min-height:170px;font-size:16px;border-radius:12px;padding:10px}
 #pbEd .r{display:flex;gap:8px}#pbEd .r button{flex:1;min-height:46px;border-radius:12px}
+.prefo-b{position:absolute;top:28px;left:7px;z-index:2;font-size:12px;background:#ea580c;color:#fff;border-radius:99px;padding:0 6px;line-height:19px;font-weight:900;pointer-events:none}
+.ss-ch.prefo{border:1.5px dashed #ea580c!important;background:#fff1e6!important}
+.ss-ch.prefo .nm::after{content:" 🍳"}
+.prefo-line{margin-top:5px;display:inline-flex;gap:6px;align-items:center;background:#c2410c;color:#fff;border-radius:8px;padding:3px 9px;font-size:12px;font-weight:850}
+.pill.prefo,.p-ing-pill.prefo{background:#ffe4cc!important;color:#9a3412!important;border:1px dashed #ea580c}
+.prefo-tk{margin:8px 0;border:3px solid #000;border-radius:8px;overflow:hidden;font-weight:900;color:#000;background:#fff}
+.prefo-tk h4{margin:0;padding:5px 8px;background:#000;color:#fff;font-size:1.05em;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.prefo-tk div{padding:4px 8px;border-top:1px dashed #000}
+.prefo-rc{margin:6px 0;border:2px solid #000;border-radius:6px;overflow:hidden;color:#000;background:#fff;break-inside:avoid;page-break-inside:avoid;line-height:1.15}
+.prefo-rc-h{background:#000;color:#fff;text-align:center;font-weight:900;letter-spacing:.04em;padding:3px 6px;font-size:1em;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.prefo-rc-r{padding:3px 8px;border-top:1px dashed #000;font-weight:900;font-size:1em}
+.prefo-rc-r b{margin-inline-end:2px}
+.prefo-rc-r span{margin-inline-start:6px;letter-spacing:.02em}
+.prefo-tk.sm{border:2px dashed #ea580c;background:#fff1e6}.prefo-tk.sm h4{background:#c2410c}.prefo-tk.sm div{border-color:#ea580c}
+#prefoEd{position:fixed;inset:0;z-index:99999;background:rgba(16,24,40,.55);display:flex;align-items:center;justify-content:center;padding:14px}
+#prefoEd>div{background:#fff;border-radius:18px;padding:16px;width:min(420px,100%);display:flex;flex-direction:column;gap:10px}
+#prefoEd textarea{min-height:170px;font-size:16px;border-radius:12px;padding:10px}
+#prefoEd .r{display:flex;gap:8px}#prefoEd .r button{flex:1;min-height:46px;border-radius:12px}
 </style>
 </head>
  <body>
@@ -11274,7 +11292,7 @@ function renderOrderList(id, list, isOpenTab=false){
  </h3>
  <p>🕒 Creato: ${when} · ${bpTypeIcon(o.order_type)} <strong>${esc(o.order_type)}</strong> · ${bpPayIcon(o.payment_method)} ${esc(bpPayLabel(o.payment_method))}${o.created_by_email ? ' · 👤 ' + esc(o.created_by_email) : ''}</p>${o.updated_by_email ? '<p>✏️ Ultima modifica: <strong>' + esc(o.updated_by_email) + '</strong>' + (o.updated_at ? ' · ' + new Date(o.updated_at).toLocaleTimeString('it-IT', {hour: '2-digit', minute: '2-digit'}) : '') + '</p>' : ''}
  ${contactLine?`<p>${contactLine}</p>`:''}
- ${itemsHtml}${window.bpPB ? bpPB.ticket(items, true) : ''}
+ ${window.bpPreFo ? bpPreFo.ticket(items, true) : ''}${itemsHtml}${window.bpPB ? bpPB.ticket(items, true) : ''}
  ${noteHtml}
  ${o.online_pending ? `<div class="notice" style="background:#f4ebff;border:2px solid #6941c6;color:#53389e;font-weight:800;display:flex;gap:8px;align-items:center;flex-wrap:wrap">🌐 Ordine online da confermare <button type="button" class="green btn-sm" data-oacc>✅ Accetta</button> <button type="button" class="secondary btn-sm" data-orej>❌ Rifiuta</button></div>` : ''}
  <div class="status-bar">${statusButtonsHtml}</div>
@@ -11784,6 +11802,7 @@ function buildReceiptHtml(o, items){
 
  ${idLineHtml}
  ${checkHtml}
+ ${window.bpPreFo ? bpPreFo.receipt(items) : ''}
  <div class="rc-items-section">
  <div class="rc-table-head">
  <span>Q.tà & Articolo</span>
@@ -12037,7 +12056,7 @@ function buildKitchenReceiptHtml(o, items){
 
  
 
- ${itemsHtml}${window.bpPB ? bpPB.ticket(foodItems) : ''}
+ ${window.bpPreFo ? bpPreFo.ticket(foodItems) : ''}${itemsHtml}${window.bpPB ? bpPB.ticket(foodItems) : ''}
 
  
 
@@ -17577,7 +17596,7 @@ openCartIngModal = function(key){
  var n = qtyInCart(p), maxi = p.price_maxi != null && Number(p.price_maxi) > 0, id = String(p.id);
  return '<div class="bpm-tile' + (n ? ' has' : '') + (M.pop === id ? ' pop' : '') + '" data-id="' + esc(id) + '" data-cat="' + esc(p.category || 'Menu') + '" title="' + esc(parseIngredients(p.description).join(', ')) + '">' +
  (n ? '<span class="bpm-n">' + n + '</span>' : '') +
- (window.bpPB ? bpPB.badge(p) : '') + '<span class="bpm-grip" title="Trascina · اسحب">⠿</span>' +
+ (window.bpPB ? bpPB.badge(p) : '') + (window.bpPreFo ? bpPreFo.badge(p) : '') + '<span class="bpm-grip" title="Trascina · اسحب">⠿</span>' +
  '<button type="button" class="bpm-main" data-a="Normale"><b>' + esc(p.name) + '</b><small class="bpm-desc">' + esc(parseIngredients(p.description).join(' · ')) + '</small><i>' + euro(p.price_normal) + '</i></button>' +
  '<div class="bpm-act">' + (n ? '<button type="button" data-m title="Togli uno">−</button>' : '') + (maxi ? '<button type="button" data-a="Maxi" title="Maxi">XL<small>' + euro(p.price_maxi) + '</small></button>' : '') + (/pizz/i.test(p.category || '') ? '<button type="button" data-mn title="Menu +3 € · patatine + bibita">🍟<small>+3</small></button>' : '') + '<button type="button" data-c title="Personalizza">⚙️</button></div></div>';
  }
@@ -26329,6 +26348,7 @@ function vsDoc(d, VS, title){
  var frPzNames = frPz.map(function(i){ var nm = ''; try{ nm = splitProductAndMods(i.product_name).baseName; }catch(e){ nm = i.product_name; } return (Number(i.quantity || 1) > 1 ? i.quantity + 'x ' : '') + nm + (String(i.size || '').toLowerCase() === 'maxi' ? ' MAXI' : ''); }).join(', ');
  var frPzCount = qtyOf(frPz);
  var BR = bpBreadCount(items);
+ prefoDoc(d, items);
  if(G.pizza.length || BR.pan || BR.pia) {
  var pzTm = parsedNotes.time ? d.c(parsedNotes.time) : '';
  var pzTt = pzTm ? (/^\d/.test(pzTm) ? 'ORE ' + pzTm : pzTm.toUpperCase()) : '';
@@ -26363,6 +26383,19 @@ function vsDoc(d, VS, title){
  return d;
  }
 
+/* Prima forno (testo ESC/POS) */
+function prefoDoc(d, items){
+try{
+ var G = window.bpPreFo ? bpPreFo.groups(items) : []; if(!G.length) return;
+ d.bar('PRIMA FORNO', '', {c: 1, b: 1, h: 2});
+ G.forEach(function(g){
+  var nm = g.n.map(function(x){ return x.q + 'x ' + x.n; }).join(', '), ig = g.l.join(', ');
+  if((nm + ': ' + ig).length <= 34) d.p(nm + ': ' + ig, {b: 1}, 3);
+  else { d.p(nm, {b: 1}, 3); d.p('+ ' + ig, {b: 1}, 5); }
+ });
+ d.rule('-');
+}catch(e){}
+}
  /* v113 · DOPO FORNO (testo ESC/POS) */
  function pbDoc(d, items){
  try{
@@ -26419,6 +26452,7 @@ function vsDoc(d, VS, title){
  /* v100: RIEPILOGO CUCINA rimosso */
 
  /* ---- stazioni (la sezione vuota non si stampa; nessun prezzo) ---- */
+ prefoDoc(d, foodItems);
  if(KS.panino.length) sec('PANINI & PIADINE', qtyOf(KS.panino), function(){ KS.panino.forEach(function(i){ kItem(i); }); });
  if(KS.kebabPz.length) sec('PIZZA KEBAB - DA COMPLETARE', qtyOf(KS.kebabPz), function(){
  KS.kebabPz.forEach(function(i){ var tf = 0; try{ tf = krTopFries(i); }catch(e){} kItem(i, tf > 0 ? 'PATATINE SU PIZZA x' + tf : ''); });
@@ -29127,8 +29161,11 @@ html:not(.pos64) .voice-input-row textarea{min-height:min(68dvh,600px)!important
 /* PANNELLO "CASSA CONTANTI" in cima alla Cassa: focus sul contante + stipendi rapidi */
 (function(){
  if(window.__bpCashFocus) return; window.__bpCashFocus = 1;
- var WAGES = [['👨‍💼', 'Abu Mahmoud', 60], ['🍕', 'Zio Ahmed', 60], ['🥙', 'Mahmoud', 40], ['🧑‍🍳', 'Khaled', 40]];
- var ROBERT_RATE = 7; /* €/ora */
+ /* v121 · stipendi rapidi MODIFICABILI: aggiungi / togli / cambia nome, emoji e importo (salvati su questo dispositivo). h=1 → a ore (importo = €/ora) */
+ var WKEY = 'bp_quick_wages_v1';
+ var WDEF = [{e: '👨‍💼', n: 'Abu Mahmoud', a: 60}, {e: '🍕', n: 'Zio Ahmed', a: 60}, {e: '🥙', n: 'Mahmoud', a: 40}, {e: '🧑‍🍳', n: 'Khaled', a: 40}, {e: '🧹', n: 'Robert', a: 7, h: 1}];
+ function wList(){ try{ var a = JSON.parse(localStorage.getItem(WKEY) || 'null'); if(Array.isArray(a)) return a.filter(function(x){ return x && x.n; }); }catch(e){} return JSON.parse(JSON.stringify(WDEF)); }
+ function wSave(a){ try{ localStorage.setItem(WKEY, JSON.stringify(a)); }catch(e){} }
  var HIDE_KEY = 'bp_cash_hide_cards';
  function g(id){ return document.getElementById(id); }
  function eur(n){ try{ return euro(n); }catch(e){ return Number(n).toFixed(2).replace('.', ',') + ' €'; } }
@@ -29157,10 +29194,81 @@ html:not(.pos64) .voice-input-row textarea{min-height:min(68dvh,600px)!important
   await window.csAddMove();
   try{ rdToast('✅ Stipendio registrato', name + ' · ' + eur(amt)); }catch(e){}
  }
- function robert(){
-  var h = prompt('Robert: quante ore ha lavorato? (' + eur(ROBERT_RATE) + ' all\'ora)', '2'); if(h === null) return;
+ function hourly(x){
+  var h = prompt(x.n + ': quante ore ha lavorato? (' + eur(x.a) + ' all\'ora)', '2'); if(h === null) return;
   h = parseFloat(String(h).replace(',', '.')); if(!(h > 0)) return alert('Ore non valide.');
-  addWage('Robert (' + h + 'h × ' + ROBERT_RATE + ')', Math.round(h * ROBERT_RATE * 100) / 100);
+  addWage(x.n + ' (' + h + 'h × ' + x.a + ')', Math.round(h * x.a * 100) / 100);
+ }
+ function fill(){
+  var w = g('cfW'); if(!w) return; cfCss(); w.innerHTML = '';
+  wList().forEach(function(x){
+   var b = document.createElement('button'); b.type = 'button';
+   b.className = x.h ? 'hh' : 'dd'; b.textContent = (x.e ? x.e + ' ' : '') + x.n + (x.h ? ' · ⏱ ' + eur(x.a) + '/h' : ' · ' + eur(x.a));
+   b.onclick = function(){ if(x.h) hourly(x); else addWage(x.n, x.a); }; w.appendChild(b);
+  });
+  var eb = document.createElement('button'); eb.type = 'button'; eb.className = 'cf-edit'; eb.textContent = '✏️ Modifica'; eb.onclick = editWages; w.appendChild(eb);
+  upd();
+ }
+ function cfCss(){
+  if(g('cfEdCss')) return;
+  var st = document.createElement('style'); st.id = 'cfEdCss';
+  st.textContent =
+   '#cfEd{position:fixed;inset:0;z-index:2147483600;background:rgba(15,23,60,.62);display:flex;align-items:flex-end;justify-content:center;backdrop-filter:blur(2px)}' +
+   '#cfEd .sh{background:#f6f7fd;width:100%;max-width:640px;max-height:92vh;display:flex;flex-direction:column;border-radius:26px 26px 0 0;overflow:hidden;box-shadow:0 -12px 40px rgba(0,0,0,.35);color:#1b2147;animation:cfUp .18s ease-out}' +
+   '@keyframes cfUp{from{transform:translateY(40px);opacity:.4}to{transform:none;opacity:1}}' +
+   '#cfEd .hd{background:linear-gradient(135deg,#3b4fd8,#6a3fd0 60%,#c2410c);color:#fff;padding:16px 18px 14px}' +
+   '#cfEd .hd b{font-size:20px;display:block}#cfEd .hd small{display:block;opacity:.88;font-size:12.5px;margin-top:3px;line-height:1.35}' +
+   '#cfEd .bd{overflow:auto;padding:12px;-webkit-overflow-scrolling:touch}' +
+   '#cfEd .pc{background:#fff;border-radius:18px;padding:11px;margin-bottom:10px;border:2px solid #dfe4fb;border-left:7px solid #3b4fd8;box-shadow:0 2px 8px rgba(40,50,120,.08)}' +
+   '#cfEd .pc.h{border-color:#fbe0c8;border-left-color:#ea6a12}' +
+   '#cfEd .r1,#cfEd .r2{display:flex;gap:8px;align-items:center}#cfEd .r2{margin-top:9px}' +
+   '#cfEd input[type=text],#cfEd input[type=number]{border:2px solid #dfe4fb;border-radius:12px;padding:10px;font-size:16px;font-weight:700;box-sizing:border-box;min-width:0;background:#fbfcff;color:#1b2147;outline:0}' +
+   '#cfEd input:focus{border-color:#6a3fd0;background:#fff}' +
+   '#cfEd .em{width:54px;text-align:center;font-size:22px!important;padding:6px!important}#cfEd .nm{flex:1}' +
+   '#cfEd .del{flex:0 0 auto;border:0;border-radius:12px;padding:11px 13px;font-size:16px;background:#fde8e6;color:#b42318}' +
+   '#cfEd .sg{display:flex;flex:1;background:#eef0fb;border-radius:12px;padding:3px;gap:3px}' +
+   '#cfEd .sg button{flex:1;border:0;border-radius:10px;padding:9px 4px;font-weight:800;font-size:13.5px;background:transparent;color:#5a638f;white-space:nowrap}' +
+   '#cfEd .pc:not(.h) .sg button[data-m=d]{background:#3b4fd8;color:#fff;box-shadow:0 2px 6px rgba(59,79,216,.4)}' +
+   '#cfEd .pc.h .sg button[data-m=h]{background:#ea6a12;color:#fff;box-shadow:0 2px 6px rgba(234,106,18,.4)}' +
+   '#cfEd .am{display:flex;align-items:center;gap:6px;flex:0 0 auto}#cfEd .am input{width:84px;text-align:center}#cfEd .am span{font-size:12.5px;font-weight:800;color:#5a638f;min-width:46px}' +
+   '#cfEd .ft{display:flex;gap:8px;padding:10px 12px calc(10px + env(safe-area-inset-bottom));background:#fff;border-top:1px solid #e3e7fb}' +
+   '#cfEd .ft button{border:0;border-radius:14px;padding:13px 12px;font-weight:800;font-size:15px}' +
+   '#cashFocus .cf-w button.dd{background:linear-gradient(135deg,#e0e7ff,#cdd7ff);color:#1e2a78;box-shadow:0 2px 0 #b3c0f5}' +
+   '#cashFocus .cf-w button.hh{background:linear-gradient(135deg,#ffedd5,#fed7aa);color:#9a3412;box-shadow:0 2px 0 #f5b97d}' +
+   '#cashFocus .cf-w button.cf-edit{background:#16794b;color:#fff;box-shadow:0 2px 0 #0f5a38}';
+  document.head.appendChild(st);
+ }
+ function editWages(){
+  cfCss();
+  var old = g('cfEd'); if(old) old.remove();
+  var o = document.createElement('div'); o.id = 'cfEd';
+  o.innerHTML = '<div class="sh"><div class="hd"><b>⚡ Stipendi rapidi</b><small>📅 Giornata = importo fisso al tocco · ⏱ Ore = importo per ora (chiede le ore al tocco)</small></div><div class="bd" id="cfEdRows"></div>' +
+   '<div class="ft"><button type="button" data-add style="flex:1;background:#e0e7ff;color:#1e2a78">➕ Aggiungi</button><button type="button" data-def style="background:#fef3c7;color:#92400e">↺</button><button type="button" data-x style="background:#eef0fb;color:#3a4270">✕</button><button type="button" data-s style="flex:1.2;background:linear-gradient(135deg,#16a34a,#15803d);color:#fff">✔ Salva</button></div></div>';
+  document.body.appendChild(o);
+  var rows = o.querySelector('#cfEdRows');
+  function addRow(x){
+   var r = document.createElement('div'); r.className = 'pc' + (x.h ? ' h' : ''); r.setAttribute('data-h', x.h ? '1' : '0');
+   r.innerHTML = '<div class="r1"><input type="text" class="em" data-e value="' + esc(x.e || '') + '" maxlength="4"><input type="text" class="nm" data-n placeholder="Nome" value="' + esc(x.n || '') + '"><button type="button" class="del" data-del>🗑</button></div>' +
+    '<div class="r2"><div class="sg"><button type="button" data-m="d">📅 Giornata</button><button type="button" data-m="h">⏱ Ore</button></div><div class="am"><input type="number" data-a inputmode="decimal" step="0.5" value="' + (x.a == null ? '' : x.a) + '"><span data-u>' + (x.h ? '€ / ora' : '€ / giorno') + '</span></div></div>';
+   rows.appendChild(r);
+  }
+  wList().forEach(addRow);
+  o.onclick = function(e){
+   var t = e.target, m = t.closest('[data-m]');
+   if(m){ var r = m.closest('.pc'), h = m.getAttribute('data-m') === 'h'; r.classList.toggle('h', h); r.setAttribute('data-h', h ? '1' : '0'); r.querySelector('[data-u]').textContent = h ? '€ / ora' : '€ / giorno'; return; }
+   if(t.closest('[data-del]')) t.closest('.pc').remove();
+   else if(t.closest('[data-add]')){ addRow({e: '💶', n: '', a: ''}); var n = rows.querySelectorAll('[data-n]'); n[n.length - 1].focus(); }
+   else if(t.closest('[data-def]')){ rows.innerHTML = ''; WDEF.forEach(addRow); }
+   else if(t.closest('[data-s]')){
+    var out = []; Array.prototype.forEach.call(rows.children, function(r){
+     var n = r.querySelector('[data-n]').value.trim(), a = parseFloat(String(r.querySelector('[data-a]').value).replace(',', '.'));
+     if(!n || !(a >= 0)) return;
+     var it = {e: r.querySelector('[data-e]').value.trim(), n: n, a: a}; if(r.getAttribute('data-h') === '1') it.h = 1; out.push(it);
+    });
+    wSave(out); o.remove(); fill(); try{ rdToast('✅ Stipendi rapidi salvati', out.length + ''); }catch(_){}
+   }
+   else if(t.closest('[data-x]') || t === o) o.remove();
+  };
  }
  function build(){
  var shell = g('csShell'); if(!shell || g('cashFocus')) return;
@@ -29169,14 +29277,12 @@ html:not(.pos64) .voice-input-row textarea{min-height:min(68dvh,600px)!important
  var p = document.createElement('details'); p.id = 'cashFocus'; p.className = 'ux-wages';
  p.innerHTML = '<summary>⚡ Stipendi rapidi</summary><div class="cf-w" id="cfW"></div>';
  host.parentNode.insertBefore(p, host);
- var w = g('cfW');
- WAGES.forEach(function(x){ var b = document.createElement('button'); b.type = 'button'; b.textContent = x[0] + ' ' + x[1] + ' ' + eur(x[2]); b.onclick = function(){ addWage(x[1], x[2]); }; w.appendChild(b); });
- var rb = document.createElement('button'); rb.type = 'button'; rb.textContent = '🧹 Robert (ore)'; rb.onclick = robert; w.appendChild(rb);
+ fill();
 }
 function upd(){
  var p = g('cashFocus'); if(!p) return;
  var closed = isClosed();
- Array.prototype.forEach.call(g('cfW').querySelectorAll('button'), function(b){ b.disabled = closed; });
+ Array.prototype.forEach.call(g('cfW').querySelectorAll('button:not(.cf-edit)'), function(b){ b.disabled = closed; });
 }
 function tick(){ try{ build(); upd(); }catch(e){ try{ bpWarn(e); }catch(_){} } }
  setInterval(tick, 600);
@@ -31220,6 +31326,20 @@ try{
 var MEALDB = "https://www.themealdb.com/images/ingredients/";
 /* [regex sul nome normalizzato, nomi MealDB separati da |, titolo Wikipedia] — dal più specifico al più generico */
 var MAP = [
+ [/bresaola/, "", "Bresaola"],
+ [/\bspeck\b/, "", "Speck"],
+ [/mortadella/, "", "Mortadella"],
+ [/nduja/, "", "%27Nduja"],
+ [/guanciale/, "", "Guanciale"],
+ [/porchetta/, "", "Porchetta"],
+ [/burrata|stracciatella/, "", "Burrata"],
+ [/\bbrie\b|camembert/, "", "Brie"],
+ [/emmental|groviera|gruyere/, "", "Emmental_cheese"],
+ [/fontina/, "", "Fontina"],
+ [/taleggio/, "", "Taleggio_cheese"],
+ [/mascarpone/, "", "Mascarpone"],
+ [/integrale/, "", "Whole_wheat_flour"],
+ [/glutine|gluten/, "", "Gluten-free_diet"],
  [/porcin/, "Porcini Mushrooms|Mushrooms", "Boletus_edulis"],
  [/funghi|champignon|fungo/, "Mushrooms|Chestnut Mushroom", "Agaricus_bisporus"],
  [/olive|olive nere|olive verdi/, "Black Olives|Green Olives|Olives", "Olive"],
@@ -31311,6 +31431,7 @@ function getBlob(url, json){
  });
 }
 function tryMeal(names){
+ if(!names) return Promise.resolve(null);
  var urls = []; names.split("|").forEach(function(n){ var e = encodeURIComponent(n); urls.push(MEALDB + e + "-Medium.png"); urls.push(MEALDB + e + ".png"); });
  var i = 0;
  function next(){
@@ -32750,6 +32871,35 @@ body.qs-lock{overflow:hidden}
 #qsRoot .qs-c.sg{background:#f3eeff;border-color:#8b5cf6;color:#4c1d95}
 #qsRoot .qs-c.sg.on{background:#16a34a;border-color:#16a34a;color:#fff}
 #qsUndo{position:fixed;left:10px;bottom:calc(112px + env(safe-area-inset-bottom,0px));z-index:9000;display:none;align-items:center;gap:6px;height:44px;padding:0 16px!important;border-radius:99px!important;border:0;background:#1d1209;color:#fff;font-size:15px!important;font-weight:900;box-shadow:0 6px 16px rgba(0,0,0,.35)}
+
+/* ===== extra v2 · tessere a tutta foto, uguali in ogni categoria ===== */
+#qsXRoot .qs-xc::before{content:"";display:block;width:100%;padding-top:100%}
+#qsXRoot .qs-xg{grid-auto-rows:auto!important;flex:1 1 0!important;min-height:0}
+#qsXRoot .qs-tabs{flex:0 0 auto!important;min-height:46px}
+#qsXRoot .qs-sel{flex:0 0 auto!important;min-height:0}
+#qsXRoot .qs-sel small{font-size:13px!important;line-height:1.3}
+#qsXRoot{--xc:2;--xg:10px;--xp:14px;--xw:calc((min(100vw,560px) - 2*var(--xp) - (var(--xc) - 1)*var(--xg))/var(--xc))}
+@media (min-width:480px){#qsXRoot{--xc:3}}
+@media (min-width:760px){#qsXRoot{--xc:4}}
+@media (orientation:landscape) and (max-height:520px){#qsXRoot{--xc:4}}
+#qsXRoot .qs-xg{display:grid!important;grid-template-columns:repeat(var(--xc),minmax(0,1fr))!important;gap:var(--xg)!important;padding:8px var(--xp) 16px!important;grid-auto-rows:var(--xw)!important;align-content:start;overflow-y:auto!important;-webkit-overflow-scrolling:touch;flex:1 1 0!important;min-height:0}
+#qsXRoot .qs-xc::before{display:none!important}
+#qsXRoot .qs-tabs{flex:0 0 auto!important;min-height:46px}
+#qsXRoot .qs-sel{flex:0 0 auto!important;min-height:0}
+#qsXRoot .qs-sel small{font-size:13px!important;line-height:1.3}
+#qsXRoot .qs-xc{display:block!important;width:100%;height:var(--xw)!important;min-height:0!important;max-height:none!important;padding:0!important;gap:0;overflow:hidden;contain:paint;border:3px solid #e9d9c0;border-radius:18px;background:radial-gradient(circle at 50% 38%,#fffdf8 0,#f4e5cc 100%);justify-content:flex-start;-webkit-tap-highlight-color:transparent}
+#qsXRoot .qs-xc:active{transform:scale(.96)}
+#qsXRoot .qs-xc .qs-xi{position:absolute;inset:0;width:100%!important;height:100%!important;border-radius:0!important;background:none!important;padding:0!important;display:block;font-size:64px;line-height:1}
+#qsXRoot .qs-xc .qs-xi .ph{display:block;position:absolute;inset:0;width:100%;height:100%}
+#qsXRoot .qs-xc .qs-xi .ph:not(.has){display:flex;align-items:center;justify-content:center;padding-bottom:16%;box-sizing:border-box}
+#qsXRoot .qs-xc .qs-xi>svg,#qsXRoot .qs-xc .qs-xi .ph>svg{width:88%!important;height:88%!important;display:block}
+#qsXRoot .qs-xc .qs-xi>svg{position:absolute;left:6%;top:2%}
+#qsXRoot .qs-xc .qs-xi img,#qsXRoot .qs-xc .qs-xi .phi{width:100%!important;height:100%!important;object-fit:cover;display:block}
+#qsXRoot .qs-xc b{position:absolute;left:0;right:0;bottom:0;z-index:2;padding:28px 6px 8px;font-size:16px!important;font-weight:900;line-height:1.05;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.8);background:linear-gradient(to top,rgba(24,12,2,.9) 0,rgba(24,12,2,.72) 55%,rgba(24,12,2,0) 100%)}
+#qsXRoot .qs-xc small{position:absolute;top:6px;left:6px;z-index:2;background:#fff;color:#b54708!important;border-radius:99px;padding:2px 8px;font-size:13px!important;font-weight:900;box-shadow:0 1px 4px rgba(0,0,0,.3)}
+#qsXRoot .qs-xc.on{border-color:#16a34a;border-width:4px;background:#ecfdf3;box-shadow:0 0 0 3px rgba(22,163,74,.35)}
+#qsXRoot .qs-xc.on::after{content:"";position:absolute;inset:0;background:rgba(22,163,74,.22);z-index:1;pointer-events:none}
+#qsXRoot .qs-xc i{top:6px;right:6px;width:30px;height:30px;font-size:18px;z-index:3;box-shadow:0 1px 4px rgba(0,0,0,.4)}
 </style>
 <script>
 /* ===== uxQuick · icone uniche per ogni ingrediente (SVG disegnate, una per ingrediente) ===== */
@@ -32943,8 +33093,8 @@ body.qs-lock{overflow:hidden}
   var sel=Array.from(S.add),tot=0;sel.forEach(function(a){tot+=ingPrice(a);});
   $('#qsXsel').innerHTML=sel.length?sel.map(function(a){return '<button type="button" data-xrm="'+esc(a)+'" class="qs-c on">'+esc(a)+' ✕</button>';}).join(''):'<small>Tocca per aggiungere · اضغط للإضافة</small>';
   var g=$('#qsXgrid'),st=g.scrollTop;
-  g.innerHTML=xItems().map(function(n){var pr=ingPrice(n),on=S.add.has(n);return '<button type="button" data-xi="'+esc(n)+'" class="qs-xc'+(on?' on':'')+'"><span class="qs-xi">'+(window.bpQIcon?bpQIcon(n):ingIcon(n))+'</span><b>'+esc(n)+'</b>'+(pr?'<small>+'+euro(pr)+'</small>':'')+(on?'<i>✓</i>':'')+'</button>';}).join('')||'<p class="qs-em">—</p>';
-  g.scrollTop=st;
+  g.innerHTML=xItems().map(function(n){var pr=ingPrice(n),on=S.add.has(n);return '<button type="button" data-xi="'+esc(n)+'" class="qs-xc'+(on?' on':'')+'"><span class="qs-xi">'+(window.bpPh?bpPh(n,window.bpQIcon?bpQIcon(n):ingIcon(n)):(window.bpQIcon?bpQIcon(n):ingIcon(n)))+'</span><b>'+esc(n)+'</b>'+(pr?'<small>+'+euro(pr)+'</small>':'')+(on?'<i>✓</i>':'')+'</button>';}).join('')||'<p class="qs-em">—</p>';
+  g.scrollTop=st;try{if(window.bpPhHydrate)bpPhHydrate(g);}catch(e){}
   $('#qsXft').innerHTML='<button type="button" data-xdone class="qs-back">↩ Fatto'+(sel.length?' · '+sel.length:'')+'</button><button type="button" data-xadd class="qs-ok">Aggiungi · '+euro(Math.round(price()*S.qty*100)/100)+'</button>';
  }
  function buildX(){
@@ -33104,18 +33254,45 @@ body.qs-lock{overflow:hidden}
  function rxs(){ var l = list(), k = l.join('|'); if(memo.k !== k){ memo = {k: k, rx: l.map(function(x){ var f = fold(x); if(f.length >= 7) f = f.slice(0, -1); return f ? new RegExp('(^| )' + f) : null; }).filter(Boolean)}; } return memo.rx; }
  function is(n){ var f = fold(n); return !!f && rxs().some(function(r){ return r.test(f); }); }
  function uniq(a){ var s = {}; return a.filter(function(x){ var k = fold(x); if(!k || s[k]) return false; return s[k] = 1; }); }
- function ofCart(it){ var rem = (it.removedIngs || []).map(fold); return uniq(parseIngredients(it.baseDesc || '').filter(function(x){ return rem.indexOf(fold(x)) < 0; }).concat(it.addedIngs || []).filter(is)); }
+
+
+ /* v120 · solo PIZZE (normale, maxi, a gusti/calzone): panini, piadine, kebab, fritti ecc. si preparano in cucina, non "prima/dopo forno" */
+ function isPz(name, prod, cat){
+  try{ if(bpGustiInfo(name)) return true; }catch(e){}
+  var p = prod || null; if(!p){ try{ p = bpRcFindProd(splitProductAndMods(name).baseName); }catch(e){} }
+  try{ if(p) return getProductKind(p) === 'pizza'; }catch(e){}
+  try{ return getProductKind({category: cat || '', name: String(name || '')}) === 'pizza'; }catch(e){ return false; }
+ }
+ /* v119 · pizza a gusti (metà metà / 2-3-4 gusti): ogni parte ha i suoi ingredienti, senza/extra per parte */
+ function gl(g, orem, oadd){
+  var R = (orem || []).map(fold), per = [];
+  g.parts.forEach(function(nm, i){
+   var pd = null; try{ pd = bpRcFindProd(nm); }catch(e){}
+   var base = pd ? parseIngredients(pd.description || '') : [], rem = R.slice(), add = (oadd || []).slice();
+   ((g.mods && g.mods[i]) || []).forEach(function(t){ t = String(t).trim(); if(/^senza\s+/i.test(t)) rem.push(fold(t.replace(/^senza\s+/i, ''))); else if(t.charAt(0) === '+') add.push(t.replace(/^\+\s*/, '')); });
+   per.push(uniq(base.filter(function(x){ return rem.indexOf(fold(x)) < 0; }).concat(add).filter(is)));
+  });
+  var out = [], seen = {}, u = (g.unit === 'METÀ') ? 'metà ' : 'gusto ';
+  per.forEach(function(l){ l.forEach(function(x){ var k = fold(x); if(seen[k]) return; seen[k] = 1;
+   var idx = []; per.forEach(function(p, j){ if(p.some(function(y){ return fold(y) === k; })) idx.push(j + 1); });
+   out.push(idx.length === per.length ? x : x + ' (' + u + idx.join('+') + ')'); }); });
+  return out;
+ }
+ function dn(baseName){ var g = null; try{ g = bpGustiInfo(baseName); }catch(e){} return g ? (g.label + ': ' + g.parts.join(' / ')) : baseName; }
+ function ofCart(it){ if(!isPz(it.name, null, it.category)) return []; var gI = null; try{ gI = bpGustiInfo(it.name); }catch(e){} if(gI) return gl(gI, it.removedIngs, it.addedIngs); var rem = (it.removedIngs || []).map(fold); return uniq(parseIngredients(it.baseDesc || '').filter(function(x){ return rem.indexOf(fold(x)) < 0; }).concat(it.addedIngs || []).filter(is)); }
  function ofOrderItem(i){
   var pr = splitProductAndMods(i.product_name), base = [], rem = [], add = [], pd = null;
   try{ pd = bpRcFindProd(pr.baseName); }catch(e){}
+  if(!isPz(i.product_name, pd)) return [];
   if(pd) base = parseIngredients(pd.description || '');
   var isM = false; try{ isM = !!(window.bpIsMenu && bpIsMenu(pr)); }catch(e){} var skipP = isM ? 1 : 0; /* Menu: la Patatine del menu va nel cestino a parte, NON dopo forno; solo una 2a Patatine (aggiunta sulla pizza) conta */
   pr.mods.forEach(function(m){ m = String(m).trim(); if(/^nota:/i.test(m)) return; if(skipP > 0 && fold(m.replace(/^\+\s*/, '')) === 'patatine'){ skipP--; return; } if(/^senza\s+/i.test(m)) rem.push(fold(m.replace(/^senza\s+/i, ''))); else add.push(m.replace(/^\+\s*/, '')); });
+  var gI = null; try{ gI = bpGustiInfo(pr.baseName); }catch(e){} if(gI) return gl(gI, rem, add);
   return uniq(base.filter(function(x){ return rem.indexOf(fold(x)) < 0; }).concat(add).filter(is));
  }
  function badge(p){ try{ var l = parseIngredients(p.description || '').filter(is); return l.length ? '<span class="pb-b" title="Dopo forno: ' + esc(l.join(', ')) + '">🌿</span>' : ''; }catch(e){ return ''; } }
  function ticket(items, small){
-  var rows = []; try{ (items || []).forEach(function(i){ if(bpIsSvc(i.product_name)) return; var l = ofOrderItem(i); if(l.length) rows.push('<div>' + i.quantity + '× ' + esc(splitProductAndMods(i.product_name).baseName) + ' ← ' + esc(l.join(' + ')) + '</div>'); }); }catch(e){}
+  var rows = []; try{ (items || []).forEach(function(i){ if(bpIsSvc(i.product_name)) return; var l = ofOrderItem(i); if(l.length) rows.push('<div>' + i.quantity + '× ' + esc(dn(splitProductAndMods(i.product_name).baseName)) + ' ← ' + esc(l.join(' + ')) + '</div>'); }); }catch(e){}
   return rows.length ? '<div class="pb-tk' + (small ? ' sm' : '') + '"><h4>🌿 DOPO FORNO · بعد الفرن</h4>' + rows.join('') + '</div>' : '';
  }
  function pbCart(){
@@ -33150,7 +33327,7 @@ body.qs-lock{overflow:hidden}
   (items || []).forEach(function(i){ try{
    if(bpIsSvc(i.product_name)) return; var l = ofOrderItem(i); if(!l.length) return;
    var k = l.map(fold).sort().join('|'); if(!g[k]){ g[k] = {l: l.map(short), n: {}, o: []}; order.push(k); }
-   var nm = splitProductAndMods(i.product_name).baseName; if(!g[k].n[nm]){ g[k].n[nm] = 0; g[k].o.push(nm); } g[k].n[nm] += Number(i.quantity || 1);
+   var nm = dn(splitProductAndMods(i.product_name).baseName); if(!g[k].n[nm]){ g[k].n[nm] = 0; g[k].o.push(nm); } g[k].n[nm] += Number(i.quantity || 1);
   }catch(e){} });
   return order.map(function(k){ var x = g[k]; return {l: x.l, n: x.o.map(function(nm){ return {q: x.n[nm], n: nm}; })}; });
  }
@@ -33159,6 +33336,101 @@ body.qs-lock{overflow:hidden}
   return '<div class="pb-rc"><div class="pb-rc-h">🌿 DOPO FORNO · بعد الفرن</div>' + G.map(function(g){ return '<div class="pb-rc-r">' + g.n.map(function(x){ return '<b>' + x.q + '×</b> ' + esc(x.n); }).join(', ') + '<span>＋ ' + esc(g.l.join(' · ')) + '</span></div>'; }).join('') + '</div>';
  }
  window.bpPB = {groups: groups, receipt: receipt, is: is, list: list, badge: badge, ticket: ticket, ofCart: ofCart, ofOrderItem: ofOrderItem, edit: edit};
+})();
+</script>
+<script id="bpb-js">
+/* ===== v118 · "Prima forno" 🍳: ingredienti aggiunti dopo la cottura ===== */
+(function(){
+ 'use strict';
+ var KEY = 'bp_prebake_v1', DEF = ['Gamberetti', 'Gamberi', 'Frutti di mare', 'Spinaci', 'Asparagi', 'Trevisana', 'Radicchio', 'Friarielli'];
+ function fold(s){ return String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, ' ').trim(); }
+ function list(){ try{ var a = JSON.parse(localStorage.getItem(KEY) || 'null'); if(Array.isArray(a) && a.length) return a; }catch(e){} return DEF.slice(); }
+ var memo = {k: '', rx: []};
+ function rxs(){ var l = list(), k = l.join('|'); if(memo.k !== k){ memo = {k: k, rx: l.map(function(x){ var f = fold(x); if(f.length >= 7) f = f.slice(0, -1); return f ? new RegExp('(^| )' + f) : null; }).filter(Boolean)}; } return memo.rx; }
+ function is(n){ var f = fold(n); return !!f && rxs().some(function(r){ return r.test(f); }); }
+ function uniq(a){ var s = {}; return a.filter(function(x){ var k = fold(x); if(!k || s[k]) return false; return s[k] = 1; }); }
+
+
+ /* v120 · solo PIZZE (normale, maxi, a gusti/calzone): panini, piadine, kebab, fritti ecc. si preparano in cucina, non "prima/dopo forno" */
+ function isPz(name, prod, cat){
+  try{ if(bpGustiInfo(name)) return true; }catch(e){}
+  var p = prod || null; if(!p){ try{ p = bpRcFindProd(splitProductAndMods(name).baseName); }catch(e){} }
+  try{ if(p) return getProductKind(p) === 'pizza'; }catch(e){}
+  try{ return getProductKind({category: cat || '', name: String(name || '')}) === 'pizza'; }catch(e){ return false; }
+ }
+ /* v119 · pizza a gusti (metà metà / 2-3-4 gusti): ogni parte ha i suoi ingredienti, senza/extra per parte */
+ function gl(g, orem, oadd){
+  var R = (orem || []).map(fold), per = [];
+  g.parts.forEach(function(nm, i){
+   var pd = null; try{ pd = bpRcFindProd(nm); }catch(e){}
+   var base = pd ? parseIngredients(pd.description || '') : [], rem = R.slice(), add = (oadd || []).slice();
+   ((g.mods && g.mods[i]) || []).forEach(function(t){ t = String(t).trim(); if(/^senza\s+/i.test(t)) rem.push(fold(t.replace(/^senza\s+/i, ''))); else if(t.charAt(0) === '+') add.push(t.replace(/^\+\s*/, '')); });
+   per.push(uniq(base.filter(function(x){ return rem.indexOf(fold(x)) < 0; }).concat(add).filter(is)));
+  });
+  var out = [], seen = {}, u = (g.unit === 'METÀ') ? 'metà ' : 'gusto ';
+  per.forEach(function(l){ l.forEach(function(x){ var k = fold(x); if(seen[k]) return; seen[k] = 1;
+   var idx = []; per.forEach(function(p, j){ if(p.some(function(y){ return fold(y) === k; })) idx.push(j + 1); });
+   out.push(idx.length === per.length ? x : x + ' (' + u + idx.join('+') + ')'); }); });
+  return out;
+ }
+ function dn(baseName){ var g = null; try{ g = bpGustiInfo(baseName); }catch(e){} return g ? (g.label + ': ' + g.parts.join(' / ')) : baseName; }
+ function ofCart(it){ if(!isPz(it.name, null, it.category)) return []; var gI = null; try{ gI = bpGustiInfo(it.name); }catch(e){} if(gI) return gl(gI, it.removedIngs, it.addedIngs); var rem = (it.removedIngs || []).map(fold); return uniq(parseIngredients(it.baseDesc || '').filter(function(x){ return rem.indexOf(fold(x)) < 0; }).concat(it.addedIngs || []).filter(is)); }
+ function ofOrderItem(i){
+  var pr = splitProductAndMods(i.product_name), base = [], rem = [], add = [], pd = null;
+  try{ pd = bpRcFindProd(pr.baseName); }catch(e){}
+  if(!isPz(i.product_name, pd)) return [];
+  if(pd) base = parseIngredients(pd.description || '');
+  var isM = false; try{ isM = !!(window.bpIsMenu && bpIsMenu(pr)); }catch(e){} var skipP = isM ? 1 : 0; /* Menu: la Patatine del menu va nel cestino a parte, NON dopo forno; solo una 2a Patatine (aggiunta sulla pizza) conta */
+  pr.mods.forEach(function(m){ m = String(m).trim(); if(/^nota:/i.test(m)) return; if(skipP > 0 && fold(m.replace(/^\+\s*/, '')) === 'patatine'){ skipP--; return; } if(/^senza\s+/i.test(m)) rem.push(fold(m.replace(/^senza\s+/i, ''))); else add.push(m.replace(/^\+\s*/, '')); });
+  var gI = null; try{ gI = bpGustiInfo(pr.baseName); }catch(e){} if(gI) return gl(gI, rem, add);
+  return uniq(base.filter(function(x){ return rem.indexOf(fold(x)) < 0; }).concat(add).filter(is));
+ }
+ function badge(p){ try{ var l = parseIngredients(p.description || '').filter(is); return l.length ? '<span class="prefo-b" title="Prima forno: ' + esc(l.join(', ')) + '">🍳</span>' : ''; }catch(e){ return ''; } }
+ function ticket(items, small){
+  var rows = []; try{ (items || []).forEach(function(i){ if(bpIsSvc(i.product_name)) return; var l = ofOrderItem(i); if(l.length) rows.push('<div>' + i.quantity + '× ' + esc(dn(splitProductAndMods(i.product_name).baseName)) + ' ← ' + esc(l.join(' + ')) + '</div>'); }); }catch(e){}
+  return rows.length ? '<div class="prefo-tk' + (small ? ' sm' : '') + '"><h4>🍳 PRIMA FORNO · قبل الفرن</h4>' + rows.join('') + '</div>' : '';
+ }
+ function pbCart(){
+  var rows = document.querySelectorAll('#cart .cartrow'), its = Array.from(cart.values());
+  rows.forEach(function(r, i){
+   var it = its[i]; if(!it) return;
+   r.querySelectorAll('.p-ing-pill,.pill.st-pronto').forEach(function(x){ if(is(x.textContent.replace('➕', ''))) x.classList.add('prefo'); });
+   var l = ofCart(it), host = r.firstElementChild; if(!l.length || !host) return;
+   var d = document.createElement('div'); d.className = 'prefo-line'; d.textContent = '🍳 PRIMA FORNO · ' + l.join(' + ');
+   var m = host.querySelector('.muted'); if(m) m.after(d); else host.appendChild(d);
+  });
+ }
+ var _rc = renderCart; renderCart = function(){ var r = _rc.apply(this, arguments); try{ pbCart(); }catch(e){} return r; };
+ setInterval(function(){ document.querySelectorAll('#ssRoot .ss-ch[data-e]:not([data-prefo]),#ssRoot .ss-ch[data-r]:not([data-prefo])').forEach(function(c){ c.setAttribute('data-prefo', '1'); if(is(c.getAttribute('data-e') || c.getAttribute('data-r'))) c.classList.add('prefo'); }); }, 400);
+ function edit(){
+  var mg = false; try{ mg = BP_ROLE === 'manager'; }catch(e){}
+  if(!mg){ try{ bpFlash('🍳 تعديل القائمة للمدير فقط · Solo responsabile', true); }catch(e){} return; }
+  var o = document.createElement('div'); o.id = 'prefoEd';
+  o.innerHTML = '<div><b>🍳 Prima forno · الأصناف اللي بتتضاف قبل الفرن</b><small>واحد في كل سطر · uno per riga</small><textarea>' + esc(list().join('\n')) + '</textarea><div class="r"><button type="button" data-d class="secondary">↺ Default</button><button type="button" data-x class="secondary">✕</button><button type="button" data-s class="green">✔ Salva</button></div></div>';
+  document.body.appendChild(o);
+  o.onclick = function(e){
+   var t = e.target, ta = o.querySelector('textarea');
+   if(t.closest('[data-d]')) ta.value = DEF.join('\n');
+   else if(t.closest('[data-s]')){ var a = ta.value.split('\n').map(function(x){ return x.trim(); }).filter(Boolean); try{ localStorage.setItem(KEY, JSON.stringify(a)); }catch(_){} o.remove(); try{ renderCart(); if(window.bpPreFoRefresh) bpPreFoRefresh(); }catch(_){} try{ bpFlash('🍳 اتحفظت · ' + a.length); }catch(_){} }
+   else if(t.closest('[data-x]') || t === o) o.remove();
+  };
+ }
+ setInterval(function(){ var lab = document.querySelector('#bpMenu .bpm-search'); if(lab && !document.getElementById('bpmPreFoBtn')){ var b = document.createElement('button'); b.type = 'button'; b.id = 'bpmPreFoBtn'; b.className = 'bpm-x'; b.title = 'Prima forno · قبل الفرن'; b.textContent = '🍳'; b.onclick = function(e){ e.preventDefault(); edit(); }; lab.appendChild(b); } }, 900);
+ function short(x){ return String(x).toUpperCase().replace(/^MOZZ(?:ARELLA)? DI /, '').replace(/^PROSCIUTTO /, '').trim(); }
+ function groups(items){
+  var g = {}, order = [];
+  (items || []).forEach(function(i){ try{
+   if(bpIsSvc(i.product_name)) return; var l = ofOrderItem(i); if(!l.length) return;
+   var k = l.map(fold).sort().join('|'); if(!g[k]){ g[k] = {l: l.map(short), n: {}, o: []}; order.push(k); }
+   var nm = dn(splitProductAndMods(i.product_name).baseName); if(!g[k].n[nm]){ g[k].n[nm] = 0; g[k].o.push(nm); } g[k].n[nm] += Number(i.quantity || 1);
+  }catch(e){} });
+  return order.map(function(k){ var x = g[k]; return {l: x.l, n: x.o.map(function(nm){ return {q: x.n[nm], n: nm}; })}; });
+ }
+ function receipt(items){
+  var G = groups(items); if(!G.length) return '';
+  return '<div class="prefo-rc"><div class="prefo-rc-h">🍳 PRIMA FORNO · قبل الفرن</div>' + G.map(function(g){ return '<div class="prefo-rc-r">' + g.n.map(function(x){ return '<b>' + x.q + '×</b> ' + esc(x.n); }).join(', ') + '<span>＋ ' + esc(g.l.join(' · ')) + '</span></div>'; }).join('') + '</div>';
+ }
+ window.bpPreFo = {groups: groups, receipt: receipt, is: is, list: list, badge: badge, ticket: ticket, ofCart: ofCart, ofOrderItem: ofOrderItem, edit: edit};
 })();
 </script>
 
@@ -34534,5 +34806,194 @@ html:not(.x) body #userBar button#bpStrRm{background:#1d1209!important;color:#ff
 })();
 </script>
 
+<!-- BP-GUIDE:START v1.1 -->
+<style id="bp-guide-css">
+#bpGuide,#bpGuideFab{--g-ink:var(--bp-ink,#111827);--g-mute:var(--bp-mute,#6b7280);--g-line:var(--bp-line,#e8eaf0);--g-soft:var(--bp-soft,#f1f3f8);--g-card:var(--bp-card,#fff);--g-brand:var(--bp-brand,#d92d20)}
+#bpGuide{position:fixed;inset:0;z-index:2147483300;background:rgba(16,24,40,.55);display:flex;align-items:flex-end;justify-content:center;font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif}
+#bpGuide[hidden]{display:none!important}
+#bpGuide .g-box{width:min(100%,880px);height:min(96vh,100%);background:var(--g-card);color:var(--g-ink);border-radius:18px 18px 0 0;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 -8px 30px rgba(0,0,0,.25)}
+@media(min-width:900px){#bpGuide{align-items:center}#bpGuide .g-box{height:90vh;border-radius:18px}}
+#bpGuide .g-top{display:flex;align-items:center;gap:8px;padding:12px 14px;border-bottom:1px solid var(--g-line)}
+#bpGuide .g-title{flex:1;font-size:18px;font-weight:900;min-width:0}
+#bpGuide .g-lang{display:flex;border:1px solid var(--g-line);border-radius:10px;overflow:hidden}
+#bpGuide .g-lang button{min-height:36px;padding:0 12px;border:0;background:var(--g-soft);color:var(--g-ink);font-weight:800;font-size:13px;cursor:pointer}
+#bpGuide .g-lang button.on{background:var(--g-brand);color:#fff}
+#bpGuide .g-x{min-height:36px;width:36px;padding:0;border:0;border-radius:10px;background:var(--g-soft);color:var(--g-ink);font-size:16px;cursor:pointer}
+#bpGuide .g-bar{padding:8px 14px 0}
+#bpGuide .g-q{width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid var(--g-line);border-radius:10px;font-size:15px;background:var(--g-card);color:var(--g-ink)}
+#bpGuide .g-nav{display:flex;gap:6px;overflow-x:auto;padding:8px 14px;border-bottom:1px solid var(--g-line);scrollbar-width:thin}
+#bpGuide .g-nav button{flex:0 0 auto;min-height:34px;padding:0 11px;border:1px solid var(--g-line);border-radius:99px;background:var(--g-soft);color:var(--g-ink);font-weight:800;font-size:13px;cursor:pointer;white-space:nowrap}
+#bpGuide .g-body{flex:1;overflow:auto;padding:12px 14px calc(24px + env(safe-area-inset-bottom,0px));display:grid;gap:14px;align-content:start;-webkit-overflow-scrolling:touch}
+#bpGuide .g-sec{border:1px solid var(--g-line);border-radius:16px;padding:14px;background:var(--g-card);scroll-margin-top:8px}
+#bpGuide .g-sh{display:flex;gap:12px;align-items:center;margin-bottom:10px}
+#bpGuide .g-ico{flex:0 0 auto;width:52px;height:52px;border-radius:16px;display:flex;align-items:center;justify-content:center;font-size:28px}
+#bpGuide .g-sh h2{margin:0;font-size:19px;line-height:1.25;color:var(--g-ink)}
+#bpGuide .g-sh p{margin:2px 0 0;font-size:13px;color:var(--g-mute)}
+#bpGuide .g-p{margin:8px 0;font-size:14.5px;line-height:1.7}
+#bpGuide .g-row{display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center;padding:8px 0;border-bottom:1px dashed var(--g-line)}
+#bpGuide .g-row:last-child{border-bottom:0}
+#bpGuide .g-btn{display:inline-flex;align-items:center;gap:6px;padding:7px 12px;border-radius:10px;background:var(--g-soft);border:1px solid var(--g-line);box-shadow:0 1px 0 rgba(0,0,0,.08);font-weight:800;font-size:14px;white-space:nowrap}
+#bpGuide .g-d{flex:1 1 200px;font-size:14px;line-height:1.55;color:var(--g-ink)}
+#bpGuide .g-steps{list-style:none;margin:8px 0;padding:0;counter-reset:s;display:grid;gap:8px}
+#bpGuide .g-steps li{counter-increment:s;position:relative;padding-inline-start:40px;min-height:30px;font-size:14.5px;line-height:1.65}
+#bpGuide .g-steps li::before{content:counter(s);position:absolute;inset-inline-start:0;top:0;width:28px;height:28px;border-radius:50%;background:var(--g-brand);color:#fff;font-weight:900;display:flex;align-items:center;justify-content:center;font-size:14px}
+#bpGuide .g-call{margin:10px 0;padding:10px 12px;border-radius:12px;font-size:14px;line-height:1.65;border-inline-start:5px solid}
+#bpGuide .g-tip{background:rgba(22,121,75,.1);border-color:#16794b}
+#bpGuide .g-warn{background:rgba(217,119,6,.12);border-color:#d97706}
+#bpGuide .g-tw{overflow-x:auto;margin:8px 0}
+#bpGuide table{border-collapse:collapse;width:100%;font-size:13.5px}
+#bpGuide th,#bpGuide td{border:1px solid var(--g-line);padding:7px 9px;text-align:start;vertical-align:top}
+#bpGuide th{background:var(--g-soft);font-weight:900}
+#bpGuide .g-formula{margin:10px 0;padding:12px;border-radius:12px;background:var(--g-soft);text-align:center}
+#bpGuide .g-formula code{display:block;direction:ltr;font:800 14px ui-monospace,Menlo,Consolas,monospace;margin-bottom:6px}
+#bpGuide .g-formula small{display:block;color:var(--g-mute);font-size:13px;line-height:1.5}
+#bpGuide .g-flow{display:flex;flex-wrap:wrap;gap:6px;align-items:center;justify-content:center;margin:10px 0}
+#bpGuide .g-node{display:flex;flex-direction:column;align-items:center;gap:4px;min-width:62px;font-size:12.5px;font-weight:800;text-align:center}
+#bpGuide .g-node i{font-style:normal;width:46px;height:46px;border-radius:50%;background:var(--g-soft);border:1px solid var(--g-line);display:flex;align-items:center;justify-content:center;font-size:24px}
+#bpGuide .g-arr{color:var(--g-mute);font-size:18px}
+#bpGuide[dir=rtl] .g-arr,#bpGuide .g-box[dir=rtl] .g-arr{transform:scaleX(-1)}
+#bpGuide .g-go{margin-top:10px;min-height:42px;padding:0 16px;border:0;border-radius:10px;background:var(--g-brand);color:#fff;font-weight:900;font-size:14px;cursor:pointer}
+#bpGuide .g-log{border-bottom:1px dashed var(--g-line);padding:8px 0;font-size:14px;line-height:1.6}
+#bpGuide .g-log b{display:block;font-size:12.5px;color:var(--g-mute)}
+#bpGuide .g-empty{text-align:center;color:var(--g-mute);padding:30px 10px}
+#bpGuideFab{position:fixed;inset-inline-end:14px;bottom:calc(92px + env(safe-area-inset-bottom,0px));z-index:2147483000;width:46px;height:46px;border-radius:50%;border:0;background:var(--g-brand);color:#fff;font-size:22px;font-weight:900;box-shadow:0 6px 18px rgba(0,0,0,.3);cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0}
+#bpGuideFab[hidden]{display:none!important}
+#bpGuideFab.new::after{content:"";position:absolute;top:2px;inset-inline-end:2px;width:12px;height:12px;border-radius:50%;background:#facc15;border:2px solid #fff}
+
+</style>
+<script id="bp-guide-data">window.BP_GUIDE_DATA={"version":"1.1","updated":"2026-11-16","sections":[{"id":"start","icon":"🧭","color":"#175cd3","tab":null,"title":{"ar":"البداية والصلاحيات","it":"Inizio e permessi"},"summary":{"ar":"إزاي البرنامج متقسّم ومين بيشوف إيه وبأي ترتيب تجهّزه","it":"Come è organizzato il programma, chi vede cosa e in che ordine configurarlo"},"blocks":[{"t":"p","ar":"الدليل ده بيشرح كل قسم. اضغط زرار ❓ في أي قسم عشان تفتح شرحه مباشرة.","it":"Questa guida spiega ogni sezione. Premi ❓ in una sezione per aprire subito la sua spiegazione."},{"t":"flow","items":[{"ico":"🍕","ar":"المنتجات","it":"Prodotti"},{"ico":"📦","ar":"المخزون","it":"Magazzino"},{"ico":"🧾","ar":"المشتريات","it":"Acquisti"},{"ico":"🍽️","ar":"الوصفات","it":"Ricette"},{"ico":"💰","ar":"الكاسا","it":"Cassa"},{"ico":"📊","ar":"التقارير","it":"Report"}]},{"t":"table","head":[{"ar":"الدور","it":"Ruolo"},{"ar":"التبويبات اللي بيشوفها","it":"Schede visibili"}],"rows":[["manager",{"ar":"كل حاجة (منيو، كاسا، مشتريات، تقارير، إعدادات…)","it":"Tutto (menu, cassa, acquisti, report, impostazioni…)"}],["cashier",{"ar":"أوردر جديد، أوردرات مفتوحة، مطبخ، سجل، مخزون، ولاء","it":"Nuovo ordine, ordini aperti, cucina, storico, magazzino, fedeltà"}],["kitchen",{"ar":"المطبخ والأوردرات المفتوحة","it":"Cucina e ordini aperti"}],["driver",{"ar":"الأوردرات المفتوحة فقط","it":"Solo ordini aperti"}],["viewer",{"ar":"قراءة فقط: أوردرات، مطبخ، سجل","it":"Sola lettura: ordini, cucina, storico"}]]},{"t":"warn","ar":"الكاسا والمشتريات والمنتجات والتقارير للمدير (manager) فقط. المخزون للمدير والكاشير.","it":"Cassa, Acquisti, Menu e Report sono solo per il manager. Il Magazzino è per manager e cassiere."},{"t":"table","head":[{"ar":"العلامة","it":"Segnale"},{"ar":"معناها","it":"Significato"}],"rows":[["☁️ Sincronizzato",{"ar":"متزامن مع كل الأجهزة ✅","it":"Sincronizzato con tutti i dispositivi ✅"}],["💾 Salvato solo su questo dispositivo",{"ar":"محفوظ على الجهاز ده بس ⚠️","it":"Salvato solo su questo dispositivo ⚠️"}],["⚠️ Modalità locale",{"ar":"جدول المخزون مش موجود في Supabase","it":"La tabella magazzino non esiste su Supabase"}]]},{"t":"p","ar":"ترتيب الإعداد الصح لأول مرة:","it":"Ordine corretto di configurazione la prima volta:"},{"t":"steps","items":[{"ar":"المنتجات: فئات ومنتجات ومكونات وأسعار.","it":"Menu: categorie, prodotti, ingredienti e prezzi."},{"ar":"المخزون: المواد الخام بوحدة صح وحد أدنى.","it":"Magazzino: materie prime con l'unità giusta e la soglia minima."},{"ar":"المشتريات: سجّل الشراء واربطه بالمخزون مع السعر.","it":"Acquisti: registra gli acquisti collegandoli al magazzino con il prezzo."},{"ar":"الحاويات: أنشئ الحاويات القياسية وظبط الاستهلاك.","it":"Contenitori: crea quelli standard e imposta il consumo."},{"ar":"الوصفات: وصفة لكل منتج (الأكتر مبيعاً الأول).","it":"Ricette: una ricetta per prodotto (prima i più venduti)."},{"ar":"فعّل الخصم التلقائي.","it":"Attiva lo scarico automatico."},{"ar":"الكاسا: سجّل الفكة وأقفل كل يوم.","it":"Cassa: registra il fondo e chiudi ogni giorno."},{"ar":"التقارير: بعد يومين شغل هتظهر الربحية.","it":"Report: dopo un paio di giorni compare la redditività."}]}]},{"id":"cassa","icon":"💰","color":"#16794b","tab":"cassa","title":{"ar":"الكاسا والإقفال اليومي","it":"Cassa e chiusura giornata"},"summary":{"ar":"من فكة الصبح لحد تقرير الإقفال Z","it":"Dal fondo cassa del mattino al Report Z di chiusura"},"blocks":[{"t":"btns","items":[{"ico":"👁️","lbl":"Mostra Cassa & Incassi","ar":"يظهر الإجماليات (مخفية للخصوصية)","it":"Mostra i totali (nascosti per privacy)"},{"ico":"🙈","lbl":"Nascondi","ar":"يخفيها تاني","it":"Li nasconde di nuovo"},{"ico":"📅","lbl":"Oggi","ar":"يرجع لليوم الحالي (‹ › للتنقل بين الأيام)","it":"Torna a oggi (‹ › per cambiare giorno)"},{"ico":"🖨️","lbl":"Report Z","ar":"طباعة تقرير الإقفال","it":"Stampa il report di chiusura"}]},{"t":"p","ar":"الكروت فوق بتتحسب أوتوماتيك من الأوردرات: صافي الدخل، كاش، كارت، تطبيقات، توصيل، تيك أواي، متوسط الفاتورة، الملغي، والدرج المتوقع.","it":"Le schede in alto si calcolano da sole dagli ordini: incasso netto, contanti, carta, app, consegne, asporto, scontrino medio, annullati e cassetto atteso."},{"t":"steps","items":[{"ar":"1) الفتح: اكتب «Fondo cassa iniziale» (الفكة اللي بدأت بيها).","it":"1) Apertura: scrivi il «Fondo cassa iniziale»."},{"ar":"2) الحركات: اختار نوع الحركة، اكتب المبلغ، اختار السبب بلمسة، ثم «Registra».","it":"2) Movimenti: scegli il tipo, importo e motivo con un tocco, poi «Registra»."},{"ar":"3) العدّ: اكتب عدد الأوراق والعملات من كل فئة والبرنامج يجمعها.","it":"3) Conteggio: inserisci il numero di banconote e monete, il programma somma."},{"ar":"4) قارن الفرق، اكتب إجمالي ماكينة الكارت (POS) وأي ملاحظة.","it":"4) Controlla la differenza, inserisci il totale POS ed eventuali note."},{"ar":"5) حدد «Fondo per domani» وشوف «Da versare»، ثم أقفل اليوم.","it":"5) Imposta il «Fondo per domani», guarda «Da versare» e chiudi la giornata."}]},{"t":"btns","items":[{"ico":"➕","lbl":"Entrata","ar":"إيداع: بيزوّد الدرج","it":"Versamento: aumenta il cassetto"},{"ico":"🧾","lbl":"Spesa","ar":"مصروف: بينقّص الدرج","it":"Spesa: diminuisce il cassetto"},{"ico":"🏦","lbl":"Prelievo","ar":"سحب (للبنك مثلاً): بينقّص الدرج","it":"Prelievo (es. in banca): diminuisce il cassetto"},{"ico":"✔","lbl":"Registra","ar":"تسجيل الحركة (لازم مبلغ + سبب)","it":"Registra il movimento (servono importo + motivo)"}]},{"t":"formula","text":"Fondo + Contanti + Entrate − Spese − Prelievi = Cassetto atteso","ar":"الدرج المتوقع = الفكة + كاش الأوردرات + الإيداعات − المصروفات − السحوبات","it":"Cassetto atteso = fondo + contanti degli ordini + entrate − spese − prelievi"},{"t":"table","head":[{"ar":"الفرق","it":"Differenza"},{"ar":"المعنى","it":"Significato"}],"rows":[["✅ Cassa perfetta",{"ar":"مظبوطة 0,00","it":"Quadra a 0,00"}],["📈 Eccedenza",{"ar":"زيادة","it":"Eccedenza"}],["📉 Ammanco",{"ar":"عجز","it":"Ammanco"}]]},{"t":"btns","items":[{"ico":"🔒","lbl":"Chiudi giornata","ar":"يقفل اليوم (بيحذّر لو في فرق أو أوردرات مش Completato)","it":"Chiude la giornata (avvisa se c'è differenza o ordini non completati)"},{"ico":"🔓","lbl":"Riapri giornata","ar":"يفتح اليوم المقفول لو احتجت تعدّل","it":"Riapre la giornata chiusa se serve modificare"},{"ico":"⬇️","lbl":"Esporta CSV","ar":"تصدير سجل الإقفالات","it":"Esporta lo storico delle chiusure"}]},{"t":"warn","ar":"لو عدّلت أوردر بعد الإقفال هيظهر تحذير «gli incassi sono cambiati». افتح اليوم تاني وأقفله عشان يتحدث.","it":"Se modifichi un ordine dopo la chiusura compare l'avviso «gli incassi sono cambiati». Riapri e richiudi la giornata."},{"t":"tip","ar":"أي مشترى بتدفعه «Cassa» في المشتريات بيتسجل هنا لوحده كمصروف. لو كاسا اليوم مقفولة هيتحفظ بس مش هيدخل الكاسا.","it":"Ogni acquisto pagato «Cassa» negli Acquisti diventa da solo una spesa qui. Se la cassa del giorno è chiusa viene salvato ma non entra in cassa."}]},{"id":"acquisti","icon":"🧾","color":"#b54708","tab":"purchases","title":{"ar":"المشتريات","it":"Acquisti"},"summary":{"ar":"تسجيل الشراء وربطه بالمخزون والكاسا","it":"Registrare gli acquisti e collegarli a magazzino e cassa"},"blocks":[{"t":"btns","items":[{"ico":"＋","lbl":"Nuovo acquisto","ar":"مشترى جديد","it":"Nuovo acquisto"},{"ico":"⬇️","lbl":"CSV","ar":"تصدير المعروض لـ Excel","it":"Esporta quanto visualizzato in Excel"},{"ico":"⚙️","lbl":"Categorie","ar":"إدارة فئات المشتريات (للمدير)","it":"Gestione categorie acquisti (manager)"},{"ico":"🗂️","lbl":"Schede","ar":"عرض كروت","it":"Vista a schede"},{"ico":"📒","lbl":"Registro contabile","ar":"عرض جدول محاسبي","it":"Vista registro contabile"},{"ico":"🏪","lbl":"Fornitori","ar":"كتالوج الأصناف والموردين","it":"Catalogo articoli e fornitori"},{"ico":"📦","lbl":"Contenitori","ar":"الحاويات والعلب","it":"Contenitori e scatole"}]},{"t":"steps","items":[{"ar":"اختار التاريخ والمورد/المحل (بيقترح من اللي كتبته قبل كده).","it":"Scegli data e fornitore/negozio (suggerisce quelli già usati)."},{"ar":"اختار الفئة: Supermercato، Verdura e frutta، Mozzarella e latticini، Salumi e carne، Bibite، Farina e impasto، Imballaggi، Altro.","it":"Scegli la categoria: Supermercato, Verdura e frutta, Mozzarella e latticini, Salumi e carne, Bibite, Farina e impasto, Imballaggi, Altro."},{"ar":"الأصناف اختيارية: اسم + كمية + وحدة (kg, g, pz, lt, cassa, conf., busta) + سعر الوحدة. زوّد سطر بـ «Aggiungi riga».","it":"Gli articoli sono facoltativi: nome + quantità + unità (kg, g, pz, lt, cassa, conf., busta) + prezzo. Aggiungi righe con «Aggiungi riga»."},{"ar":"اربط كل سطر بصنف المخزون (بيتربط أوتوماتيك بالاسم). لو الوحدة مختلفة اكتب كام وحدة بتدخل المخزون.","it":"Collega ogni riga a una voce di magazzino (automatico per nome). Se l'unità è diversa indica quante unità entrano in magazzino."},{"ar":"«Totale pagato»: لو سبته فاضي بيجمع الأسطر، ولو كتبت رقم يبقى هو المعتمد.","it":"«Totale pagato»: se vuoto somma le righe; se lo scrivi tu, vale quello."},{"ar":"اختار طريقة الدفع ثم «Salva acquisto».","it":"Scegli il pagamento e premi «Salva acquisto»."}]},{"t":"table","head":[{"ar":"الدفع","it":"Pagamento"},{"ar":"النتيجة","it":"Effetto"}],"rows":[["💵 Cassa",{"ar":"مصروف في كاسا اليوم وبيتخصم من الدرج","it":"Spesa nella cassa del giorno, scalata dal cassetto"}],["👤 Mia tasca",{"ar":"مدفوع من جيبك، مش بيأثر على الدرج","it":"Pagato di tasca tua, non tocca il cassetto"}],["💳 Carta/Banca",{"ar":"مدفوع بالكارت أو البنك","it":"Pagato con carta o banca"}],["🕓 Da pagare",{"ar":"آجل: يفضل مستحق لحد ما تعلّمه مدفوع بزرار 💵/💳/👤","it":"A credito: resta da pagare finché non lo segni pagato con 💵/💳/👤"}]]},{"t":"p","ar":"الأرقام فوق: Totale spesa، Da pagare، عدد المشتريات، متوسط المصروف اليومي. الكروت متجمعة باليوم.","it":"In alto: Totale spesa, Da pagare, numero acquisti e media al giorno. Le schede sono raggruppate per giorno."},{"t":"tip","ar":"تعديل المشترى بيلغي زيادة المخزون القديمة ويطبق الجديدة، وحذفه بيرجّع المخزون. مفيش تضاعف.","it":"Modificare un acquisto annulla il carico precedente e applica il nuovo; eliminarlo ripristina il magazzino. Nessun doppio carico."},{"t":"warn","ar":"المشترى لازم يكون إجماليه أكبر من صفر عشان يتحفظ.","it":"L'importo totale deve essere maggiore di zero per salvare."}]},{"id":"report","icon":"📊","color":"#5925dc","tab":"analytics","title":{"ar":"التقارير","it":"Report vendite"},"summary":{"ar":"مبيعات وأداء وربحية لليوم أو الأسبوع أو الشهر","it":"Vendite, prestazioni e redditività per giorno, settimana o mese"},"blocks":[{"t":"btns","items":[{"ico":"📆","lbl":"Giorno","ar":"تقرير يوم","it":"Report giornaliero"},{"ico":"🗓️","lbl":"Settimana","ar":"تقرير أسبوع (الاثنين→الأحد)","it":"Report settimanale (lun→dom)"},{"ico":"📅","lbl":"Mese","ar":"تقرير شهر","it":"Report mensile"},{"ico":"🖨️","lbl":"Stampa report","ar":"طباعة A4","it":"Stampa A4"},{"ico":"⬇️","lbl":"Esporta CSV","ar":"تصدير الأوردرات","it":"Esporta gli ordini"},{"ico":"🔄","lbl":"Aggiorna","ar":"تحديث","it":"Aggiorna"},{"ico":"⚡","lbl":"Cruscotto Pro","ar":"لوحة إضافية (تحتاج ملف bp_v35_setup.sql)","it":"Pannello extra (richiede bp_v35_setup.sql)"}]},{"t":"table","head":[{"ar":"البطاقة","it":"Scheda"},{"ar":"المعنى","it":"Significato"}],"rows":[["💰 Incasso netto",{"ar":"صافي الدخل بدون الملغي","it":"Incasso senza gli annullati"}],["🧾 Ordini validi",{"ar":"عدد الأوردرات الصحيحة","it":"Numero ordini validi"}],["🎯 Scontrino medio",{"ar":"متوسط الفاتورة","it":"Scontrino medio"}],["🍕 Pezzi venduti",{"ar":"عدد القطع","it":"Pezzi venduti"}],["🛵 Consegne",{"ar":"التوصيل ودخله ورسومه","it":"Consegne, incasso e supplementi"}],["❌ Annullati",{"ar":"عدد وقيمة الملغي","it":"Numero e valore degli annullati"}]]},{"t":"p","ar":"كل بطاقة معاها مقارنة بالفترة السابقة (▲/▼ نسبة %). تحتها: ملخص ذكي، رسم الساعات/الأيام، جدول يوم بيوم، ثم توزيع الدفع والنوع والحالة وأكتر 15 منتج والفئات والأحجام والموظفين وأفضل العملاء وأكتر الشوارع توصيلاً، وقايمة الأوردرات (أول 600).","it":"Ogni scheda mostra il confronto col periodo precedente (▲/▼ %). Sotto: riepilogo intelligente, grafico ore/giorni, tabella giorno per giorno, poi pagamenti, tipo, stato, top 15 prodotti, categorie, formati, operatori, migliori clienti, vie più servite ed elenco ordini (primi 600)."},{"t":"table","head":[{"ar":"Food cost","it":"Food cost"},{"ar":"التقييم","it":"Valutazione"}],"rows":[["≤ 30%",{"ar":"🟢 ممتاز","it":"🟢 Ottimo"}],["30–40%",{"ar":"🟠 راجعه","it":"🟠 Da controllare"}],["> 40%",{"ar":"🔴 عالي جداً","it":"🔴 Troppo alto"}]]},{"t":"p","ar":"«Redditività dei prodotti» و«Costo materie prime ÷ vendite» بيظهروا بس لو دخلت الوصفات وفيه مشتريات مربوطة بالمخزون بسعر.","it":"«Redditività dei prodotti» e «Costo materie prime ÷ vendite» compaiono solo se hai inserito le ricette e ci sono acquisti collegati al magazzino con prezzo."},{"t":"warn","ar":"الربح لكل منتج محسوب على سعر القائمة ومن غير تكلفة الإضافات، فهو أعلى شوية من الحقيقي. الدخل والكاسا بعد الخصم بالفعل.","it":"L'utile per prodotto usa il prezzo di listino e non conta gli extra: è leggermente sovrastimato. Incassi e cassa sono già al netto degli sconti."},{"t":"tip","ar":"لو غيّر المدير تاريخ أوردر، الدخل ينتقل لليوم الجديد في التقارير والكاسا. لو ظهر «Database non raggiungibile» الأرقام من الجهاز ده بس.","it":"Se il manager cambia la data di un ordine, l'incasso passa al nuovo giorno in report e cassa. Con «Database non raggiungibile» i dati sono solo di questo dispositivo."}]},{"id":"menu","icon":"🍕","color":"#d92d20","tab":"menu","title":{"ar":"المنتجات والمنيو","it":"Prodotti e Menu"},"summary":{"ar":"فئات ومنتجات ومكونات وأسعار وإضافات","it":"Categorie, prodotti, ingredienti, prezzi ed extra"},"blocks":[{"t":"btns","items":[{"ico":"➕","lbl":"Gestione Aggiunte","ar":"الإضافات (Extra) وأسعارها","it":"Extra e relativi prezzi"},{"ico":"↕️","lbl":"Ordina","ar":"ترتيب الفئات والمنتجات","it":"Ordina categorie e prodotti"},{"ico":"📁","lbl":"Nuova Categoria","ar":"فئة جديدة أو إعادة تسمية","it":"Nuova categoria o rinomina"},{"ico":"➕","lbl":"Nuovo Prodotto","ar":"منتج جديد","it":"Nuovo prodotto"},{"ico":"🔄","lbl":"Ricarica","ar":"إعادة تحميل المنيو","it":"Ricarica il menu"},{"ico":"🍕","lbl":"Ricette","ar":"الوصفات والخصم التلقائي","it":"Ricette e scarico automatico"}]},{"t":"table","head":[{"ar":"الحقل","it":"Campo"},{"ar":"الشرح","it":"Spiegazione"}],"rows":[["Nome Prodotto *",{"ar":"اسم المنتج (إجباري)","it":"Nome del prodotto (obbligatorio)"}],["Categoria *",{"ar":"اختار فئة أو اكتب جديدة (إجباري)","it":"Scegli o scrivi una nuova categoria (obbligatorio)"}],["Ingredienti",{"ar":"اختار أو اكتب واضغط Enter. دي اللي الكاشير بيشيلها (Senza) أو بيزوّد عليها (Extra)","it":"Scegli o scrivi e premi Invio. Sono quelli che il cassiere toglie (Senza) o aggiunge (Extra)"}],["Prezzo Normale *",{"ar":"السعر العادي (إجباري)","it":"Prezzo normale (obbligatorio)"}],["Prezzo Maxi",{"ar":"اتركه فاضي لو مفيش حجم كبير. وجوده بيخلّي المنتج بحجمين في الوصفات والتقارير","it":"Lascia vuoto se non c'è. Se presente il prodotto ha due formati in ricette e report"}],["Varianti",{"ar":"خيارات بفاصلة (Pollo, Manzo): كل خيار يبقى منتج منفصل بنفس المكونات","it":"Opzioni separate da virgola (Pollo, Manzo): ognuna diventa un prodotto con gli stessi ingredienti"}]]},{"t":"btns","items":[{"ico":"💾","lbl":"Salva Prodotto","ar":"حفظ","it":"Salva"},{"ico":"✅","lbl":"Attiva","ar":"تفعيل المحدد","it":"Attiva i selezionati"},{"ico":"🚫","lbl":"Nascondi","ar":"إخفاء (يفضل موجود)","it":"Nasconde (resta presente)"},{"ico":"📂","lbl":"Sposta","ar":"نقل لفئة تانية","it":"Sposta in un'altra categoria"},{"ico":"💶","lbl":"Prezzo ±","ar":"تعديل الأسعار (جرّب على منتج واحد الأول)","it":"Modifica i prezzi (prova prima su un prodotto)"},{"ico":"🗑️","lbl":"Elimina","ar":"حذف","it":"Elimina"}]},{"t":"p","ar":"الفلاتر: بحث بالمنتج أو المكوّن، الحالة (Tutti / Solo Attivi / Solo Nascosti)، والترتيب (بالفئة / A-Z / السعر). حدّد عدة منتجات للعمليات الجماعية.","it":"Filtri: ricerca per prodotto o ingrediente, stato (Tutti / Solo Attivi / Solo Nascosti) e ordine (categoria / A-Z / prezzo). Seleziona più prodotti per le azioni di gruppo."},{"t":"p","ar":"إدارة الإضافات: مجموعات بسعر موحد، وسعر خاص لإضافة واحدة (↺ للرجوع)، نقل بين المجموعات، وإعادة تسمية (لو الاسم موجود بيندمجوا). السعر في الأوردر بيتبع الإعدادات دي.","it":"Gestione Aggiunte: gruppi con prezzo unico, prezzo singolo per un extra (↺ per ripristinare), spostamento tra gruppi e rinomina (se il nome esiste si uniscono). Il prezzo nell'ordine segue queste impostazioni."}]},{"id":"magazzino","icon":"📦","color":"#0e9384","tab":"inventory","title":{"ar":"المخزون","it":"Magazzino"},"summary":{"ar":"المواد الخام والكميات وتنبيهات النقص","it":"Materie prime, quantità e avvisi di scorta bassa"},"blocks":[{"t":"btns","items":[{"ico":"＋","lbl":"Aggiungi materia prima","ar":"مادة خام جديدة: اسم، وحدة (Kg/Litri/Pz)، كمية، حد أدنى","it":"Nuova materia prima: nome, unità (Kg/Litri/Pz), quantità, soglia"},{"ico":"🔄","lbl":"Aggiorna","ar":"تحديث","it":"Aggiorna"},{"ico":"✏️","lbl":"Modifica","ar":"تعديل الاسم والوحدة والحد الأدنى","it":"Modifica nome, unità e soglia"},{"ico":"🗑️","lbl":"Elimina","ar":"حذف (المشتريات القديمة تفضل)","it":"Elimina (gli acquisti passati restano)"}]},{"t":"p","ar":"كل صنف بيعرض: الاسم، «Soglia di allarme»، و«Giacenza attuale» (حقل تعدّله مباشرة)، وأزرار سريعة ＋10 و −5. لو الكمية ≤ الحد الأدنى بيظهر ⚠️ «Scorta bassa» وبيتعدّ في العدّاد على التبويب.","it":"Ogni voce mostra nome, «Soglia di allarme» e «Giacenza attuale» (campo modificabile) con i tasti rapidi ＋10 e −5. Se la quantità ≤ soglia compare ⚠️ «Scorta bassa» e conta nel contatore della scheda."},{"t":"warn","ar":"اختار الوحدة صح من البداية: الوصفات والمشتريات بتعتمد عليها (Kg → g/kg، Litri → ml/cl/l، Pz → قطعة).","it":"Scegli subito l'unità giusta: ricette e acquisti dipendono da essa (Kg → g/kg, Litri → ml/cl/l, Pz → pezzi)."},{"t":"table","head":[{"ar":"الحدث","it":"Evento"},{"ar":"التأثير على المخزون","it":"Effetto sul magazzino"}],"rows":[[{"ar":"مشترى مربوط","it":"Acquisto collegato"},{"ar":"يزيد","it":"Aumenta"}],[{"ar":"تعديل المشترى","it":"Modifica acquisto"},{"ar":"يلغي القديم ويطبق الجديد","it":"Annulla il vecchio e applica il nuovo"}],[{"ar":"حذف المشترى","it":"Elimina acquisto"},{"ar":"يرجّع","it":"Ripristina"}],[{"ar":"بيع أوردر (والخصم شغال)","it":"Vendita ordine (scarico attivo)"},{"ar":"ينقص حسب الوصفة","it":"Diminuisce secondo la ricetta"}],[{"ar":"إلغاء الأوردر","it":"Ordine annullato"},{"ar":"يرجّع","it":"Ripristina"}]]},{"t":"tip","ar":"لو الجدول inventory_items موجود التعديلات تظهر فوراً على كل الأجهزة. لو لأ بيشتغل محلياً وبيظهر «Modalità locale».","it":"Se la tabella inventory_items esiste le modifiche appaiono subito su tutti i dispositivi. Altrimenti lavora in locale e mostra «Modalità locale»."},{"t":"p","ar":"الكتالوج («Catalogo articoli» من Fornitori) بيسمح للمدير يضيف تكلفة الوحدة والمورد والفئة. لو ظهرت «Esegui prima lo SQL v37» نفّذ SQL v37 في Supabase.","it":"Il «Catalogo articoli» (da Fornitori) permette al manager di aggiungere costo unitario, fornitore e categoria. Se compare «Esegui prima lo SQL v37» esegui lo SQL v37 su Supabase."}]},{"id":"ricette","icon":"🍽️","color":"#7a2e0e","tab":"inventory","title":{"ar":"الوصفات والخصم التلقائي","it":"Ricette e scarico automatico"},"summary":{"ar":"كل بيعة بتخصم من المخزون وتحسب التكلفة والربح","it":"Ogni vendita scala il magazzino e calcola costo e utile"},"blocks":[{"t":"p","ar":"الزرار «Ricette» موجود فوق في المخزون وفي إدارة المنيو.","it":"Il pulsante «Ricette» è in alto in Magazzino e in Gestione Menu."},{"t":"steps","items":[{"ar":"فعّل «Scarico automatico del magazzino» (ATTIVO). الأوردرات القديمة ما بتتأثرش.","it":"Attiva «Scarico automatico del magazzino» (ATTIVO). Gli ordini precedenti non vengono toccati."},{"ar":"افتح منتج: لو له Maxi هتلاقي تبويب Normale وتبويب Maxi لكل واحد وصفته.","it":"Apri un prodotto: se ha il Maxi trovi la scheda Normale e Maxi, ognuna con la sua ricetta."},{"ar":"«＋ Ingrediente»: اختار المكون من المخزون + الكمية + الوحدة. الحاويات والمشروبات تنفع مكونات.","it":"«＋ Ingrediente»: scegli la voce di magazzino + quantità + unità. Anche scatole e bibite possono essere ingredienti."},{"ar":"استخدم نسخ وصفة من منتج تاني، أو من Normale للـ Maxi بمعامل (مثلاً 1,5).","it":"Copia una ricetta da un altro prodotto, o dalla Normale alla Maxi con un moltiplicatore (es. 1,5)."},{"ar":"شوف التكلفة اللحظية و food cost والهامش ثم «Salva ricetta».","it":"Controlla costo, food cost e margine in tempo reale, poi «Salva ricetta»."}]},{"t":"p","ar":"القواعد: أوردر جديد يخصم، معدّل يعيد الحساب، ملغي يرجّع. بيتزا الأذواق بتتقسم بالتساوي. الخدمات والإضافات اليدوية مش بتخصم. الخصم بيشتغل للمدير والكاشير.","it":"Regole: ordine nuovo scala, modificato ricalcola, annullato ripristina. Le pizze a gusti si dividono in parti uguali. Servizi ed extra manuali non scalano. Lo scarico lavora per manager e cassiere."},{"t":"tip","ar":"عشان التكلفة تتحسب لازم المكون يكون اتشترى بسعر ومربوط بالمخزون.","it":"Per calcolare il costo l'ingrediente deve essere stato acquistato con un prezzo e collegato al magazzino."},{"t":"p","ar":"🌙 تنبيه «أوردر امبارح؟»: لو حفظت أوردر بعد منتصف الليل وكاسا امبارح لسه مفتوحة بيسألك تسجله بتاريخ امبارح (تقدر تظبط الساعة 02:00–10:00).","it":"🌙 Avviso «ordine di ieri?»: se salvi un ordine dopo mezzanotte e la cassa di ieri è ancora aperta, ti chiede se registrarlo con la data di ieri (orario regolabile 02:00–10:00)."},{"t":"warn","ar":"لو جدول stock_usage مش موجود الخصم بيشتغل على الجهاز اللي حفظ الأوردر بس. استخدم «Copia SQL» وطبّقه في Supabase.","it":"Se la tabella stock_usage non esiste lo scarico vale solo per il dispositivo che salva l'ordine. Usa «Copia SQL» e applicalo su Supabase."}]},{"id":"contenitori","icon":"🥡","color":"#475467","tab":"purchases","title":{"ar":"الحاويات والعلب","it":"Contenitori"},"summary":{"ar":"علب وكراتين وبتتخصم لوحدها مع كل أوردر","it":"Vaschette e scatole che si scalano da sole a ogni ordine"},"blocks":[{"t":"p","ar":"من المشتريات اضغط «Contenitori» (التعديل للمدير). المجموعات: 🥡 Vaschette، 📦 Le scatole، 📁 Altro.","it":"Dagli Acquisti premi «Contenitori» (modifica solo manager). Gruppi: 🥡 Vaschette, 📦 Le scatole, 📁 Altro."},{"t":"btns","items":[{"ico":"✨","lbl":"Crea i 7 contenitori standard","ar":"ينشئ الحاويات القياسية (كمية 0، حد أدنى 20)","it":"Crea i contenitori standard (quantità 0, soglia 20)"},{"ico":"＋","lbl":"Acquisto","ar":"يفتح مشترى جاهز بفئة Imballaggi","it":"Apre un acquisto già impostato su Imballaggi"},{"ico":"💾","lbl":"Salva e applica alle ricette","ar":"يحفظ قواعد الاستهلاك ويضيف الحاوية للوصفات","it":"Salva le regole di consumo e aggiunge il contenitore alle ricette"}]},{"t":"p","ar":"الاستهلاك التلقائي: لكل فئة منتج + حجم (Normale/Maxi) اختار الحاوية والكمية. الاقتراحات: Calzone → علبة calzone، Patatine/Kebab → Donner box، Pizza → كرتونة عادية مغطاة أو maxi.","it":"Consumo automatico: per ogni categoria + formato (Normale/Maxi) scegli contenitore e quantità. Suggeriti: Calzone → scatola calzone, Patatine/Kebab → Donner box, Pizza → scatola normale coperta o maxi."},{"t":"warn","ar":"المنتجات اللي ملهاش وصفة بيتم تخطيها: ادخل مكوناتها الأول.","it":"I prodotti senza ricetta vengono saltati: inserisci prima i loro ingredienti."}]},{"id":"esauriti","icon":"⛔","color":"#b42318","tab":"new","title":{"ar":"المكونات الخالصة","it":"Ingredienti esauriti"},"summary":{"ar":"علّم المكوّن إنه خلص والأوردرات تحذّرك","it":"Segna un ingrediente come finito: gli ordini ti avvisano"},"blocks":[{"t":"steps","items":[{"ar":"افتح «Esauriti» من شاشة الأوردر الجديد.","it":"Apri «Esauriti» dalla schermata Nuovo ordine."},{"ar":"اضغط على المكوّن لتعليمه ⛔ خالص، واضغط تاني عشان يرجع ✅ (بيظهر المنتجات اللي بتستخدمه).","it":"Tocca un ingrediente per segnarlo ⛔ finito, tocca ancora per ✅ (mostra i prodotti che lo usano)."},{"ar":"ابحث أو أضف مكوّن مش في القايمة. «Riattiva tutti» بيرجّعهم كلهم متاحين.","it":"Cerca o aggiungi un ingrediente non in lista. «Riattiva tutti» li rende tutti disponibili."}]},{"t":"p","ar":"أي أوردر فيه مكوّن خالص يظهر له تنبيه في السلة (القرار ليك). والطلبات الأونلاين بتحذّرك قبل القبول أو الرفض. الحالة بتتحفظ في Supabase أو على الجهاز ده فقط.","it":"Ogni ordine con un ingrediente finito mostra un avviso nel carrello (la decisione è tua). Gli ordini online avvisano prima di accettare o rifiutare. Lo stato è salvato su Supabase o solo su questo dispositivo."}]},{"id":"supabase","icon":"☁️","color":"#1d4ed8","tab":null,"title":{"ar":"متطلبات Supabase","it":"Requisiti Supabase"},"summary":{"ar":"إيه اللي بيحتاج جدول ولو ناقص بيحصل إيه","it":"Cosa richiede una tabella e cosa succede se manca"},"blocks":[{"t":"table","head":[{"ar":"الميزة","it":"Funzione"},{"ar":"المطلوب","it":"Richiesto"},{"ar":"لو ناقص","it":"Se manca"}],"rows":[[{"ar":"المخزون","it":"Magazzino"},"inventory_items + inventory_adjust",{"ar":"وضع محلي","it":"Modalità locale"}],[{"ar":"بيانات الأصناف","it":"Dati articoli"},"category, kind, unit_cost, supplier (SQL v37)",{"ar":"رسالة SQL v37","it":"Messaggio SQL v37"}],[{"ar":"الخصم التلقائي","it":"Scarico automatico"},"stock_usage",{"ar":"الخصم على الجهاز فقط","it":"Solo su questo dispositivo"}],[{"ar":"إقفال الكاسا","it":"Chiusura cassa"},"cash_days",{"ar":"محفوظ محلياً","it":"Salvato in locale"}],[{"ar":"الإعدادات والوصفات","it":"Impostazioni e ricette"},"bp36_data",{"ar":"محلي فقط","it":"Solo locale"}],[{"ar":"تغيير تاريخ أوردر","it":"Cambio data ordine"},"admin_change_order_date + order_date_audit",{"ar":"تحديث مباشر لو الصلاحيات تسمح","it":"Aggiornamento diretto se i permessi lo consentono"}],[{"ar":"الصلاحيات","it":"Permessi"},"staff_profiles",{"ar":"الكل cashier","it":"Tutti cassiere"}],["Cruscotto Pro","bp_v35_setup.sql",{"ar":"رسالة تطلب تشغيله","it":"Messaggio che chiede di eseguirlo"}]]},{"t":"tip","ar":"كل SQL يتنفذ من Supabase › SQL Editor.","it":"Ogni SQL si esegue da Supabase › SQL Editor."}]},{"id":"problemi","icon":"🛠️","color":"#667085","tab":null,"title":{"ar":"مشاكل شائعة وحلولها","it":"Problemi comuni e soluzioni"},"summary":{"ar":"لو حاجة مش شغالة، ابدأ من هنا","it":"Se qualcosa non funziona, parti da qui"},"blocks":[{"t":"table","head":[{"ar":"المشكلة","it":"Problema"},{"ar":"الحل","it":"Soluzione"}],"rows":[[{"ar":"مش شايف الكاسا/المشتريات/التقارير","it":"Non vedo Cassa/Acquisti/Report"},{"ar":"ادخل بحساب manager","it":"Entra con un account manager"}],[{"ar":"مشترى كاش مش ظاهر في الكاسا","it":"Acquisto in contanti non in cassa"},{"ar":"كاسا اليوم مقفولة: Riapri ثم احفظ المشترى تاني","it":"Cassa chiusa: Riapri e salva di nuovo l'acquisto"}],[{"ar":"المخزون ما زادش","it":"Il magazzino non è aumentato"},{"ar":"اربط الصنف واكتب كام وحدة بتدخل","it":"Collega la voce e indica quante unità entrano"}],[{"ar":"الربح مش ظاهر في التقرير","it":"Utile non visibile nel report"},{"ar":"اربط المشتريات بالمخزون بسعر وادخل الوصفات","it":"Collega gli acquisti al magazzino con prezzo e inserisci le ricette"}],[{"ar":"الخصم التلقائي مش شغال","it":"Scarico non attivo"},{"ar":"تأكد إنه ATTIVO والمنتج له وصفة والأوردر بعد التفعيل","it":"Controlla che sia ATTIVO, che il prodotto abbia ricetta e che l'ordine sia successivo"}],["⚠️ Modalità locale",{"ar":"أنشئ جدول inventory_items","it":"Crea la tabella inventory_items"}],["Esegui prima lo SQL v37",{"ar":"نفّذ SQL v37","it":"Esegui lo SQL v37"}],[{"ar":"التقرير ناقص 600 أوردر","it":"Report limitato a 600 ordini"},{"ar":"استخدم Esporta CSV","it":"Usa Esporta CSV"}]]}]}],"changelog":[{"date":"2026-11-16","ar":"أول إصدار للدليل: الكاسا، المشتريات، التقارير، المنتجات، المخزون، الوصفات، الحاويات، المكونات الخالصة، متطلبات Supabase، والمشاكل الشائعة. بالعربي والإيطالي.","it":"Prima versione della guida: Cassa, Acquisti, Report, Menu, Magazzino, Ricette, Contenitori, Ingredienti esauriti, requisiti Supabase e problemi comuni. In arabo e italiano.","sections":["start","cassa","acquisti","report","menu","magazzino","ricette","contenitori","esauriti","supabase","problemi"],"ver":"1.1"}]};</script>
+<script id="bp-guide-js">
+(function(){
+'use strict';
+if(window.__bpGuide) return; window.__bpGuide = true;
+var D = window.BP_GUIDE_DATA || {sections: [], changelog: []};
+var LK = 'bp_guide_lang', SK = 'bp_guide_seen';
+var lang = 'ar'; try{ var sv = localStorage.getItem(LK); if(sv === 'it' || sv === 'ar') lang = sv; }catch(e){}
+var UI = {
+  ar: {title: '📖 دليل الاستخدام', q: '🔍 ابحث في الدليل…', news: '🆕 الجديد', go: '🔗 افتح القسم ده', none: 'مفيش نتائج.', ver: 'إصدار الدليل', upd: 'آخر تحديث'},
+  it: {title: '📖 Guida all\'uso', q: '🔍 Cerca nella guida…', news: '🆕 Novità', go: '🔗 Apri questa sezione', none: 'Nessun risultato.', ver: 'Versione guida', upd: 'Aggiornata il'}
+};
+var TABMAP = {cassa: 'cassa', purchases: 'acquisti', analytics: 'report', menu: 'menu', inventory: 'magazzino', settings: 'start'};
+var q = '', ov = null;
+function T(o){ return (o && (o[lang] || o.ar || o.it)) || ''; }
+function esc(s){ return String(s == null ? '' : s).replace(/[&<>"]/g, function(c){ return {'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[c]; }); }
+function cell(c){ return typeof c === 'string' ? esc(c) : esc(T(c)); }
+function cellTxt(c){ return typeof c === 'string' ? c : T(c); }
+function txtOf(b){
+  var a = [];
+  if(b.ar || b.it) a.push(T(b));
+  if(b.text) a.push(b.text);
+  (b.items || []).forEach(function(i){ a.push(T(i)); if(i.lbl) a.push(i.lbl); });
+  (b.head || []).forEach(function(h){ a.push(cellTxt(h)); });
+  (b.rows || []).forEach(function(r){ r.forEach(function(c){ a.push(cellTxt(c)); }); });
+  return a.join(' ').toLowerCase();
+}
+function blockHtml(b){
+  var h = '';
+  switch(b.t){
+    case 'p': return '<p class="g-p">' + esc(T(b)) + '</p>';
+    case 'tip': return '<div class="g-call g-tip">💡 ' + esc(T(b)) + '</div>';
+    case 'warn': return '<div class="g-call g-warn">⚠️ ' + esc(T(b)) + '</div>';
+    case 'steps': return '<ol class="g-steps">' + b.items.map(function(i){ return '<li>' + esc(T(i).replace(/^\d+\)\s*/, '')) + '</li>'; }).join('') + '</ol>';
+    case 'btns': return '<div>' + b.items.map(function(i){ return '<div class="g-row"><span class="g-btn">' + esc(i.ico) + ' ' + esc(i.lbl) + '</span><span class="g-d">' + esc(T(i)) + '</span></div>'; }).join('') + '</div>';
+    case 'formula': return '<div class="g-formula"><code>' + esc(b.text) + '</code><small>' + esc(T(b)) + '</small></div>';
+    case 'flow': return '<div class="g-flow">' + b.items.map(function(i, k){ return (k ? '<span class="g-arr">➜</span>' : '') + '<div class="g-node"><i>' + esc(i.ico) + '</i>' + esc(T(i)) + '</div>'; }).join('') + '</div>';
+    case 'table':
+      h = '<div class="g-tw"><table><thead><tr>' + b.head.map(function(c){ return '<th>' + cell(c) + '</th>'; }).join('') + '</tr></thead><tbody>';
+      b.rows.forEach(function(r){ h += '<tr>' + r.map(function(c){ return '<td>' + cell(c) + '</td>'; }).join('') + '</tr>'; });
+      return h + '</tbody></table></div>';
+  }
+  return '';
+}
+function secHtml(s, blocks){
+  var h = '<section class="g-sec" id="gs-' + s.id + '"><div class="g-sh"><span class="g-ico" style="background:' + s.color + '22;color:' + s.color + '">' + s.icon + '</span><div><h2>' + esc(T(s.title)) + '</h2><p>' + esc(T(s.summary)) + '</p></div></div>';
+  h += blocks.map(blockHtml).join('');
+  if(s.tab) h += '<button type="button" class="g-go" data-gotab="' + esc(s.tab) + '">' + UI[lang].go + '</button>';
+  return h + '</section>';
+}
+function newsHtml(){
+  var L = (D.changelog || []).slice().reverse();
+  return '<section class="g-sec" id="gs-novita"><div class="g-sh"><span class="g-ico" style="background:#facc1544;color:#a16207">🆕</span><div><h2>' + UI[lang].news + '</h2><p>' + UI[lang].ver + ' ' + esc(D.version) + ' · ' + UI[lang].upd + ' ' + esc(D.updated) + '</p></div></div>' +
+    L.map(function(e){ return '<div class="g-log"><b>' + esc(e.date) + ' · v' + esc(e.ver) + '</b>' + esc(T(e)) + '</div>'; }).join('') + '</section>';
+}
+function render(){
+  if(!ov) return;
+  var box = ov.querySelector('.g-box'), body = ov.querySelector('.g-body'), nav = ov.querySelector('.g-nav'), ql = q.trim().toLowerCase();
+  box.setAttribute('dir', lang === 'ar' ? 'rtl' : 'ltr'); box.setAttribute('lang', lang);
+  ov.querySelector('.g-title').textContent = UI[lang].title;
+  ov.querySelector('.g-q').placeholder = UI[lang].q;
+  [].forEach.call(ov.querySelectorAll('.g-lang button'), function(b){ b.classList.toggle('on', b.getAttribute('data-l') === lang); });
+  nav.innerHTML = D.sections.map(function(s){ return '<button type="button" data-gs="' + s.id + '">' + s.icon + ' ' + esc(T(s.title)) + '</button>'; }).join('') + '<button type="button" data-gs="novita">' + UI[lang].news + '</button>';
+  var out = '', n = 0;
+  D.sections.forEach(function(s){
+    var blocks = s.blocks;
+    if(ql){
+      var head = (T(s.title) + ' ' + T(s.summary)).toLowerCase();
+      blocks = head.indexOf(ql) >= 0 ? s.blocks : s.blocks.filter(function(b){ return txtOf(b).indexOf(ql) >= 0; });
+      if(!blocks.length) return;
+    }
+    n++; out += secHtml(s, blocks);
+  });
+  if(!ql || UI[lang].news.toLowerCase().indexOf(ql) >= 0 || (D.changelog || []).some(function(e){ return T(e).toLowerCase().indexOf(ql) >= 0; })){ out += newsHtml(); n++; }
+  body.innerHTML = n ? out : '<div class="g-empty">' + UI[lang].none + '</div>';
+}
+function build(){
+  if(ov) return ov;
+  ov = document.createElement('div'); ov.id = 'bpGuide'; ov.setAttribute('data-noar', ''); ov.hidden = true;
+  ov.innerHTML = '<div class="g-box"><div class="g-top"><b class="g-title"></b><div class="g-lang"><button type="button" data-l="ar">العربية</button><button type="button" data-l="it">Italiano</button></div><button type="button" class="g-x" aria-label="Close">✕</button></div>' +
+    '<div class="g-bar"><input type="search" class="g-q" autocomplete="off"></div><nav class="g-nav"></nav><div class="g-body"></div></div>';
+  document.body.appendChild(ov);
+  ov.addEventListener('click', function(e){
+    var t = e.target;
+    if(t === ov || t.closest('.g-x')){ close(); return; }
+    var l = t.closest('[data-l]'); if(l){ lang = l.getAttribute('data-l'); try{ localStorage.setItem(LK, lang); }catch(x){} render(); return; }
+    var g = t.closest('[data-gs]'); if(g){ q = ''; ov.querySelector('.g-q').value = ''; render(); scrollTo(g.getAttribute('data-gs')); return; }
+    var go = t.closest('[data-gotab]'); if(go){ var tab = go.getAttribute('data-gotab'); close(); try{ if(typeof switchTab === 'function') switchTab(tab); }catch(x){} }
+  });
+  ov.querySelector('.g-q').addEventListener('input', function(){ q = this.value; render(); });
+  document.addEventListener('keydown', function(e){ if(e.key === 'Escape' && ov && !ov.hidden) close(); });
+  return ov;
+}
+function scrollTo(id){
+  var el = id && document.getElementById('gs-' + id), body = ov.querySelector('.g-body');
+  if(el) body.scrollTo({top: el.offsetTop - body.offsetTop - 6, behavior: 'smooth'}); else body.scrollTop = 0;
+}
+function open(id){
+  build(); q = ''; ov.querySelector('.g-q').value = ''; render(); ov.hidden = false; document.body.style.overflow = 'hidden';
+  try{ localStorage.setItem(SK, D.version); }catch(e){}
+  setTimeout(function(){ scrollTo(id); }, 30); fab();
+}
+function close(){ if(ov) ov.hidden = true; document.body.style.overflow = ''; fab(); }
+window.bpGuideOpen = open; window.bpGuideClose = close;
+
+/* ---- pulsante ❓ contestuale ---- */
+var fb = null;
+function curTab(){ var a = document.querySelector('.tabs [data-tab].active'); return a ? a.getAttribute('data-tab') : null; }
+function fab(){
+  var app = document.getElementById('app'), tab = curTab(), id = tab && TABMAP[tab];
+  var show = !!(app && !app.classList.contains('hidden') && id && !(ov && !ov.hidden));
+  if(show && !fb){
+    fb = document.createElement('button'); fb.type = 'button'; fb.id = 'bpGuideFab'; fb.setAttribute('data-noar', ''); fb.textContent = '❓';
+    fb.title = 'Guida · دليل'; fb.addEventListener('click', function(){ open(TABMAP[curTab()] || 'start'); });
+    document.body.appendChild(fb);
+  }
+  if(fb){ fb.hidden = !show; var seen = null; try{ seen = localStorage.getItem(SK); }catch(e){} fb.classList.toggle('new', seen !== D.version); }
+}
+/* ---- scheda in Impostazioni ---- */
+function settingsCard(){
+  var grid = document.querySelector('#settingsTab .bp-set-grid');
+  if(!grid || document.getElementById('bpGuideCard')) return;
+  var c = document.createElement('div'); c.id = 'bpGuideCard'; c.className = 'bp-set-card'; c.setAttribute('data-noar', ''); c.style.borderTopColor = '#175cd3';
+  c.innerHTML = '<div class="bp-set-head"><span class="bp-set-ico" style="background:#eff8ff;color:#175cd3">📖</span><h3>Guida · دليل الاستخدام</h3></div>' +
+    '<p class="bp-set-desc">Spiegazione completa di ogni sezione, in italiano e arabo. · شرح كامل لكل قسم بالعربي والإيطالي.</p>' +
+    '<button type="button" class="blue" id="bpGuideOpenBtn">📖 Apri la guida · افتح الدليل</button>';
+  grid.insertBefore(c, grid.firstChild);
+  c.querySelector('#bpGuideOpenBtn').addEventListener('click', function(){ open('start'); });
+}
+setInterval(function(){ try{ fab(); settingsCard(); }catch(e){} }, 800);
+})();
+
+</script>
+<!-- BP-GUIDE:END -->
 </body>
 </html>
