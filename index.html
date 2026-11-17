@@ -22797,6 +22797,7 @@ function apply(inp,alts){
  } else if(inp.type==='number'){var v=num1(alts[0]);if(v)fire(inp,v)}
  else fire(inp,alts[0].charAt(0).toUpperCase()+alts[0].slice(1))}
 function listen(inp,btn){
+ var SR=window.SpeechRecognition||window.webkitSpeechRecognition; /* FIX iPhone: letto al momento del tocco, cosi' usa il motore vocale con Gemini */
  if(!SR){alert('Il riconoscimento vocale non è supportato da questo browser (usa Chrome o Safari).');return}
  var r=new SR();r.lang='it-IT';r.interimResults=false;r.maxAlternatives=5;btn.classList.add('on');
  r.onresult=function(e){var a=[];for(var i=0;i<e.results[0].length;i++)a.push(e.results[0][i].transcript);try{apply(inp,a)}catch(x){console.error(x)}};
@@ -22930,7 +22931,7 @@ if(a&&!a.title){a.title='QR menu e automazioni';a.setAttribute('aria-label',a.ti
  var foot=document.createElement('div'); foot.id='p64Foot';
  var win=document.createElement('div'); win.id='p64Win';
  var tl=$('.topline',R);
- if(tl){ head.appendChild(tl); var back=document.createElement('button'); back.type='button'; back.id='p64Back'; back.textContent='‹ Menu'; tl.insertBefore(back,tl.firstChild); }
+ if(tl){ head.appendChild(tl); var back=document.createElement('button'); back.type='button'; back.id='p64Back'; back.textContent='‹ Torna al menu'; tl.insertBefore(back,tl.firstChild); }
  head.appendChild($('#bpOrder'));
  var bar=document.createElement('div'); bar.id='p64Bar';
  bar.innerHTML=Object.keys(WIN).map(function(k){return '<button type="button" data-w="'+k+'"><span>'+WIN[k][0]+'</span><b>'+WIN[k][1]+'</b></button>'}).join('');
@@ -24738,6 +24739,11 @@ try{
  };
 
  /* ---------- نسخة الاحتياط: تسجيل + Gemini (آيفون المثبّت / متصفحات بدون دعم) ---------- */
+ /* FIX iPhone: riuso del microfono (evita richiesta permesso + attesa ad ogni registrazione) */
+ function getMic(){
+ if(isIOS && window.__bpMic && window.__bpMic.getTracks().length && window.__bpMic.getTracks().every(function(t){ return t.readyState === 'live'; })){ clearTimeout(window.__bpMicT); return Promise.resolve(window.__bpMic); }
+ return navigator.mediaDevices.getUserMedia({audio: {channelCount: 1, echoCancellation: true, noiseSuppression: true, autoGainControl: true}}).then(function(st){ if(isIOS) window.__bpMic = st; return st; });
+ }
  function GemRec(){ Base.call(this); }
  GemRec.prototype = Object.create(Base.prototype); GemRec.prototype.constructor = GemRec;
  GemRec.prototype.start = function(){
@@ -24745,7 +24751,12 @@ try{
  if(CUR && CUR !== this){ try{ CUR.abort(); }catch(e){} }
  CUR = this; s.active = true; s.stopping = false; s.fin = []; s.chunks = []; s.heard = false; s.silentSince = 0; s.t0 = Date.now();
  UI.show(); wlOn();
- navigator.mediaDevices.getUserMedia({audio: {channelCount: 1, echoCancellation: true, noiseSuppression: true, autoGainControl: true}}).then(function(stream){
+ /* FIX iPhone: AudioContext va creato dentro il tocco (altrimenti resta 'suspended') + timeout se il microfono non risponde */
+ try{ var AC0 = window.AudioContext || window.webkitAudioContext; if(AC0){ s.ac = new AC0(); if(s.ac.state === 'suspended') s.ac.resume(); } }catch(e){}
+ var gumDone = false;
+ s.gumT = setTimeout(function(){ if(gumDone || !s.active) return; UI.note(isAr() ? 'الميكروفون ما ردّش — اقفل التطبيق وافتحه تاني · Microfono non risponde: chiudi e riapri l\'app' : 'Microfono non risponde: chiudi e riapri l\'app · الميكروفون ما ردّش', 4500); self._emit('error', {error: 'audio-capture'}); self._cleanup(); self._finish(); }, 9000);
+ getMic().then(function(stream){
+ gumDone = true; clearTimeout(s.gumT);
  if(!s.active){ stream.getTracks().forEach(function(t){ t.stop(); }); return; }
  s.stream = stream;
  var mimes = ['audio/mp4', 'audio/webm;codecs=opus', 'audio/webm', 'audio/ogg;codecs=opus'], mt = '';
@@ -24755,7 +24766,7 @@ try{
  s.mr.onstop = function(){ self._transcribe(mt || s.mr.mimeType || 'audio/webm'); };
  s.mr.start(250);
  try{
- var AC = window.AudioContext || window.webkitAudioContext; s.ac = new AC(); var src = s.ac.createMediaStreamSource(stream), an = s.ac.createAnalyser(); an.fftSize = 512; src.connect(an);
+ var AC = window.AudioContext || window.webkitAudioContext; if(!s.ac) s.ac = new AC(); try{ if(s.ac.state !== 'running') s.ac.resume(); }catch(e){} var src = s.ac.createMediaStreamSource(stream), an = s.ac.createAnalyser(); an.fftSize = 512; src.connect(an);
  var buf = new Uint8Array(an.fftSize);
  s.lv = setInterval(function(){
  an.getByteTimeDomainData(buf); var sum = 0; for(var k = 0; k < buf.length; k++){ var v = (buf[k] - 128) / 128; sum += v * v; }
@@ -24768,29 +24779,30 @@ try{
  }catch(e){}
  self._emit('start'); UI.set('listen', '', '');
  }).catch(function(err){
+ gumDone = true; clearTimeout(s.gumT);
  var c = (err && /denied|permission|notallowed/i.test(err.name + err.message)) ? 'not-allowed' : 'audio-capture';
  UI.note(MSG[c], 3600); self._emit('error', {error: c}); self._finish();
  });
  };
  GemRec.prototype._cleanup = function(){
  var s = this._s; clearInterval(s.lv);
- try{ if(s.ac) s.ac.close(); }catch(e){} try{ if(s.stream) s.stream.getTracks().forEach(function(t){ t.stop(); }); }catch(e){}
+ try{ if(s.ac) s.ac.close(); }catch(e){} try{ if(s.stream){ if(isIOS && s.stream === window.__bpMic){ clearTimeout(window.__bpMicT); window.__bpMicT = setTimeout(function(){ try{ window.__bpMic.getTracks().forEach(function(t){ t.stop(); }); }catch(e){} window.__bpMic = null; }, 40000); } else s.stream.getTracks().forEach(function(t){ t.stop(); }); } }catch(e){}
  };
  GemRec.prototype.stop = function(){
  var s = this._s; if(!s.active || s.stopping) return; s.stopping = true; UI.set('proc', '', '');
- try{ if(s.mr && s.mr.state !== 'inactive') s.mr.stop(); else this._finish(); }catch(e){ this._finish(); }
+ var selfS = this; try{ if(s.mr && s.mr.state !== 'inactive'){ try{ s.mr.requestData(); }catch(e){} s.mr.stop(); s.stopWd = setTimeout(function(){ if(s.active && !s.trStarted){ selfS._transcribe(s.mr.mimeType || 'audio/mp4'); } }, 2500); } else this._finish(); }catch(e){ this._finish(); }
  };
  GemRec.prototype.abort = function(){ var s = this._s; if(!s.active) return; s.aborted = true; s.stopping = true; this._cleanup(); try{ if(s.mr && s.mr.state !== 'inactive') s.mr.stop(); }catch(e){} this._finish(); };
  GemRec.prototype._abortGem = function(){ /* تبديل اللغة أثناء التسجيل: بنكمل التسجيل بس اللغة الجديدة بتتطبق على التفريغ */ };
  GemRec.prototype._switchLang = function(){ try{ bpVoiceToggle(); }catch(e){} this.lang = lang(); UI.lang(); };
  GemRec.prototype._transcribe = async function(mime){
- var self = this, s = this._s; this._cleanup();
+ var self = this, s = this._s; if(s.trStarted) return; s.trStarted = true; clearTimeout(s.stopWd); this._cleanup();
  if(s.aborted || !s.active) return;
  try{
- var blob = new Blob(s.chunks, {type: mime}); if(blob.size < 1200 || !s.heard){ UI.note(MSG['no-speech'], 1800); this._emit('error', {error: 'no-speech'}); return this._finish(); }
+ var blob = new Blob(s.chunks, {type: mime}); if(blob.size < 1200){ UI.note(MSG['no-speech'], 1800); this._emit('error', {error: 'no-speech'}); return this._finish(); }
  UI.set('proc', '', '');
  var b64 = await new Promise(function(res, rej){ var fr = new FileReader(); fr.onload = function(){ res(String(fr.result).split(',')[1]); }; fr.onerror = rej; fr.readAsDataURL(blob); });
- var text = await geminiTranscribe(b64, mime, this.lang);
+ var text = await Promise.race([geminiTranscribe(b64, mime, this.lang), new Promise(function(_, rej){ setTimeout(function(){ rej(new Error('Timeout trascrizione · انتهت المهلة')); }, 22000); })]);
  if(s.aborted) return;
  text = digits(text);
  if(text){ var alts = [{transcript: text, confidence: 0.9}]; this._pushFinal(alts); }
@@ -24803,18 +24815,19 @@ try{
  };
  async function geminiTranscribe(b64, mime, lg){
  var k = key(); if(!k) throw new Error('Gemini API key mancante · ⚙️ AI');
- var models = await getAvailableGeminiModels(k), mm = gemAudioMime(mime), last = '';
+ var good0 = ''; try{ good0 = localStorage.getItem('bp_gemini_model_ok') || ''; }catch(e){} var models = good0 ? [good0].concat(GEM_FALLBACK_MODELS.filter(function(x){ return x !== good0; })) : await getAvailableGeminiModels(k), mm = gemAudioMime(mime), last = '';
  var prompt = 'Transcribe this audio exactly as spoken. Speaker language hint: ' + (lg.indexOf('ar') === 0 ? 'Egyptian Arabic (may include Italian food names)' : 'Italian (may include Arabic words)') + '. It is a pizzeria phone/counter order: pizza names, extras, quantities, street names, phone numbers. Keep each word in the language it was spoken; write Italian dish names in Latin letters; write numbers and phone numbers as digits. Output ONLY the transcript text, nothing else.';
- for(var i = 0; i < Math.min(3, models.length); i++){
+ for(var i = 0; i < Math.min(2, models.length); i++){
  try{
  var r = await gemFetch('https://generativelanguage.googleapis.com/v1beta/models/' + models[i] + ':generateContent?key=' + encodeURIComponent(k),
- {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({contents: [{role: 'user', parts: [{text: prompt}, {inlineData: {mimeType: mm, data: b64}}]}], generationConfig: {maxOutputTokens: 2048, temperature: 0, thinkingConfig: {thinkingLevel: 'low'}}})}, 25000);
+ {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({contents: [{role: 'user', parts: [{text: prompt}, {inlineData: {mimeType: mm, data: b64}}]}], generationConfig: {maxOutputTokens: 2048, temperature: 0, thinkingConfig: {thinkingLevel: 'low'}}})}, 12000);
  var d = await r.json();
  if(d && d.error){ last = String(d.error.message || d.error); if(/api key/i.test(last)) throw new Error(last); continue; }
  var parts = (((d.candidates || [])[0] || {}).content || {}).parts || [], t = parts.map(function(p){ return p.text || ''; }).join(' ').trim();
  if(t){ try{ localStorage.setItem('bp_gemini_model_ok', models[i]); }catch(e){} return t.replace(/^["“”«»]+|["“”«»]+$/g, ''); }
  }catch(e){ last = e.message || String(e); if(/api key|chiave/i.test(last)) throw e; }
  }
+ if(!geminiTranscribe._retry && mm === 'audio/mp4' && /mime|unsupported|invalid/i.test(last)){ geminiTranscribe._retry = true; try{ return await geminiTranscribe(b64, 'audio/aac', lg); } finally { geminiTranscribe._retry = false; } }
  throw new Error(last || 'Trascrizione non riuscita');
  }
 
@@ -24828,7 +24841,7 @@ try{
  try{ Object.defineProperty(window, n, {configurable: true, get: pick, set: function(){}}); }catch(e){ try{ window[n] = pick(); }catch(x){} }
  });
  window.bpVoice = {native: nativeOK, ios: isIOS, standalone: standalone, fallback: function(){ return !nativeOK && canRec && !!key(); }, cancel: function(){ if(CUR) CUR.abort(); }};
- document.addEventListener('visibilitychange', function(){ if(document.hidden && CUR){ try{ CUR.stop(); }catch(e){} } });
+ document.addEventListener('visibilitychange', function(){ if(document.hidden && CUR){ try{ CUR.stop(); }catch(e){} } if(document.hidden && window.__bpMic){ try{ window.__bpMic.getTracks().forEach(function(t){ t.stop(); }); }catch(e){} window.__bpMic = null; } });
  /* لو بدّلت اللغة من برّه والكبسولة ظاهرة */
  var _t = window.bpVoiceToggle;
  if(typeof _t === 'function'){ window.bpVoiceToggle = function(){ var r = _t.apply(this, arguments); try{ if(UI.el) UI.lang(); }catch(e){} return r; }; }
@@ -35376,10 +35389,9 @@ setInterval(function(){ if(document.hidden&&window.BP_PERF&&BP_PERF.kitchen!==0)
  }
  async function getWake(){ try{ if(navigator.wakeLock && !wake){ wake=await navigator.wakeLock.request('screen'); wake.addEventListener('release',function(){ wake=null; }); } }catch(e){} }
  function relWake(){ try{ if(wake){ wake.release(); wake=null; } }catch(e){} }
- function start(){
-  if(sharing) return;
-  if(!navigator.geolocation){ setMsg('GPS non disponibile su questo dispositivo'); return; }
-  sharing=true; try{ localStorage.setItem(LKEY,'1'); }catch(e){}
+ /* (ri)avvia il watch GPS: dopo una pausa in background il browser puo' averlo sospeso */
+ function watchGps(){
+  if(watchId!=null){ try{ navigator.geolocation.clearWatch(watchId); }catch(e){} watchId=null; }
   watchId=navigator.geolocation.watchPosition(function(pos){
    lastPos=pos;
    if(Date.now()-lastSent<8000) return;
@@ -35388,6 +35400,12 @@ setInterval(function(){ if(document.hidden&&window.BP_PERF&&BP_PERF.kitchen!==0)
    if(err && err.code===1){ setMsg('⚠️ Permesso posizione negato: abilitalo nelle impostazioni del browser'); stop(true); }
    else setMsg('⚠️ Segnale GPS debole…');
   },{enableHighAccuracy:true,maximumAge:5000,timeout:25000});
+ }
+ function start(){
+  if(sharing) return;
+  if(!navigator.geolocation){ setMsg('GPS non disponibile su questo dispositivo'); return; }
+  sharing=true; try{ localStorage.setItem(LKEY,'1'); }catch(e){}
+  watchGps();
   /* se l'autista sta fermo il GPS non scatta: rinvio periodico dell'ultima posizione */
   hb=setInterval(function(){ if(sharing && lastPos && Date.now()-lastSent>20000) push(lastPos,true); },15000);
   getWake(); paint(); setMsg('Attivazione GPS…');
@@ -35408,7 +35426,24 @@ setInterval(function(){ if(document.hidden&&window.BP_PERF&&BP_PERF.kitchen!==0)
   btnEl.onclick=function(){ if(sharing){ stop(); } else { start(); } };
   box.appendChild(msgEl); box.appendChild(btnEl); document.body.appendChild(box); paint();
  }
- document.addEventListener('visibilitychange',function(){ if(!document.hidden && sharing) getWake(); });
+ var hiddenAt=0;
+ function resumeShare(){
+  if(!sharing) return;
+  var away = hiddenAt ? Date.now()-hiddenAt : 0; hiddenAt=0;
+  getWake(); watchGps();
+  try{
+   navigator.geolocation.getCurrentPosition(function(pos){ lastPos=pos; push(pos,true).then(function(ok){
+    if(ok) setMsg(away>30000 ? '✅ Posizione ripresa dopo '+ago(away)+' in background' : '📡 Posizione attiva'); }); },
+    function(){}, {enableHighAccuracy:true,maximumAge:0,timeout:15000});
+  }catch(e){}
+  if(lastPos) push(lastPos,true);
+ }
+ document.addEventListener('visibilitychange',function(){
+  if(document.hidden){ if(sharing && !hiddenAt) hiddenAt=Date.now(); }
+  else resumeShare();
+ });
+ window.addEventListener('pageshow',function(){ resumeShare(); });
+ window.addEventListener('focus',function(){ resumeShare(); });
  var resumed=false;
  function shareTick(){
   try{
@@ -35526,5 +35561,22 @@ setInterval(function(){ if(document.hidden&&window.BP_PERF&&BP_PERF.kitchen!==0)
 <!-- BP-DRIVERS:END -->
 
 
+<style id="bp-ios-cart-fix">
+/* FIX iPhone: pagina carrello (ticket) - parte SOTTO la striscia «Strumenti», pulsante Menu grande */
+html.pos64.p64-ticket.bp-shut #newTab>.grid>section.panel:nth-child(2){top:var(--bp-shut-h)!important}
+html.pos64.p64-ticket #newTab>.grid>section.panel:nth-child(2){padding-top:10px!important;padding-left:max(10px,env(safe-area-inset-left))!important;padding-right:max(10px,env(safe-area-inset-right))!important}
+html.pos64 #p64Back{flex:1 1 auto;justify-content:center;min-height:50px!important;font-size:17px!important;padding:10px 18px!important;border-radius:14px!important}
+html.pos64.p64-ticket #p64Head>.topline{display:flex;align-items:center;flex-wrap:nowrap;gap:8px}
+html.pos64.p64-ticket #p64Head>.topline h2{flex:0 0 auto;font-size:17px!important}
+</style>
+<script id="bp-ios-cart-fix-js">
+(function(){try{var r=document.documentElement;
+function fix(){try{var h=document.querySelector('header');if(!h)return;r.style.setProperty('--p64-top',Math.max(0,Math.round(h.getBoundingClientRect().bottom))+'px');}catch(e){}}
+var t;function later(){clearTimeout(t);t=setTimeout(fix,60);setTimeout(fix,420);}
+new MutationObserver(later).observe(r,{attributes:true,attributeFilter:['class']});
+var h=document.querySelector('header');if(h)h.addEventListener('transitionend',fix);
+window.addEventListener('resize',later);window.addEventListener('orientationchange',later);later();
+}catch(e){console.error('[bp] ios-cart-fix',e)}})();
+</script>
 </body>
 </html>
