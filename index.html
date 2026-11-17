@@ -25107,19 +25107,24 @@ try{
  });
  return out;
  }
+ function quickNow(){
+ var o = {};
+ try{ ['pizza', 'altro', 'kebab'].forEach(function(k){ o[k] = (window.bpQuickGet ? window.bpQuickGet(k) : []).map(function(x){ var pr = (k === 'kebab') ? (Number(ingPrice(x[0])) || 0) : (Number(x[2]) || 0); return [x[0], x[1] || '➕', Math.round(pr * 100) / 100]; }); }); }catch(e){}
+ return o;
+ }
  async function pub(force){
  if(busy || typeof BP_ROLE === 'undefined' || BP_ROLE !== 'manager' || !sb || !navigator.onLine) return;
  if(!allMenu || !allMenu.length) return;
  var d, h;
  try{ d = build(); }catch(e){ return; }
  if(!d.pizza.length && !d.altro.length) return;
- h = JSON.stringify(d);
+ var qn = quickNow(); h = JSON.stringify(d) + JSON.stringify(qn);
  try{ if(force !== true && h === localStorage.getItem(LK)) return; }catch(e){}
  busy = true;
  try{
  var r = await sb.from('extras_config').upsert({id: 2, data: d, updated_at: new Date().toISOString()});
  if(r.error){ console.warn('[bp] extra online non pubblicati:', r.error.message); }
- else{ try{ localStorage.setItem(LK, h); }catch(e){} try{ rdToast('🌐 Extra online aggiornati', 'Visibili subito ai clienti'); }catch(e){} }
+ else{ try{ await sb.from('extras_config').upsert({id: 4, data: {notes: qn, v: 1}, updated_at: new Date().toISOString()}); }catch(e){} try{ localStorage.setItem(LK, h); }catch(e){} try{ rdToast('🌐 Extra online aggiornati', 'Visibili subito ai clienti'); }catch(e){} }
  }catch(e){ console.warn('[bp] extra online', e); }
  busy = false;
  }
