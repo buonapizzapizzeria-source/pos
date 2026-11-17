@@ -550,7 +550,8 @@ function openSheet(){
    '<label>Nome '+(TV?'(facoltativo)':'')+'</label><input id="fn" autocomplete="name" value="'+esc(sv.n||'')+'">'+
    '<label>Telefono <span class="mut">(facoltativo)</span></label><input id="fp" type="tel" autocomplete="tel" value="'+esc(sv.p||'')+'">'+
    '<div class="fam">💛 Vuoi entrare nella <b>famiglia Buona Pizza</b>? Lascia il tuo numero: registreremo i tuoi dati come cliente e potrai avere vantaggi, promo e punti fedeltà. Se preferisci, puoi ordinare anche senza.</div>'+
-   '<label>Ritiro o consegna</label><select id="ft"><option value="Asporto">🛍️ Ritiro in pizzeria</option><option value="Consegna">🛵 Consegna a domicilio</option></select>'+
+   '<label>Ritiro o consegna</label><select id="ft"><option value="Asporto">🛍️ Ritiro in pizzeria</option><option value="Consegna">🛵 Consegna a domicilio</option><option value="Tavolo">🍽️ Mangio in pizzeria · scegli il tavolo</option></select>'+
+   '<div id="ftb" class="hide"><label>Numero del tavolo</label><select id="fx"></select><div id="fxn" class="mut" style="font-size:13px;margin-top:6px"></div></div>'+
    '<div id="fa" class="hide"><label>Indirizzo di consegna</label><input id="fd" autocomplete="street-address" value="'+esc(sv.a||'')+'" placeholder="Via, numero civico, citofono"></div>'+
    '<label>Orario</label><select id="fh">'+slots()+'</select>'+
    '<label>Note (facoltative)</label><textarea id="fo" rows="2"></textarea>'+
@@ -561,7 +562,8 @@ function openSheet(){
     $('ft').value='Asporto'; [$('ft'),$('ft').previousElementSibling,$('fh'),$('fh').previousElementSibling].forEach(function(e){e.classList.add('hide')});
   }
   $('ov').classList.remove('hide');
-  $('ft').onchange=function(){$('fa').classList.toggle('hide',$('ft').value!=='Consegna');upd()};
+  $('ft').onchange=function(){$('fa').classList.toggle('hide',$('ft').value!=='Consegna');$('ftb').classList.toggle('hide',$('ft').value!=='Tavolo');if($('ft').value==='Tavolo')loadTables();upd()};
+  $('fh').onchange=function(){if($('ft').value==='Tavolo')loadTables()};
   $('cl').onclick=function(){$('ov').classList.add('hide')};
   $('go').onclick=send; upd();
 }
@@ -583,11 +585,46 @@ function modNotes(){
     return '• '+l.qty+'× '+l.name+(l.size==='Maxi'?' (Maxi)':'')+': '+l.rem.map(function(x){return 'SENZA '+x}).concat(l.add.map(function(x){return 'EXTRA '+x})).join(', ');
   }).join(' | ');
 }
+/* ---- tavolo con l'ordine (1..ORD_TABLES) ---- */
+var ORD_TABLES=30, ORD_RES_MIN=60, tvReq=0, tvDone=null;
+function tvAt(){
+  var v=$('fh').value, d;
+  if(!v) d=new Date(Date.now()+20*60000);
+  else{var nwm=mins(M.now),m=mins(v); if(m<nwm-120)m+=1440; d=new Date(Date.now()+(m-nwm)*60000)}
+  d.setSeconds(0,0); return d;
+}
+async function loadTables(){
+  var sel=$('fx'),note=$('fxn'); if(!sel)return;
+  var my=++tvReq,cur=sel.value,busyNo={},ok=true;
+  note.textContent='Controllo i tavoli liberi…';
+  try{
+    var b=await sb.rpc('busy_tables',{p_at:tvAt().toISOString(),p_minutes:ORD_RES_MIN});
+    if(b.error)throw b.error;
+    (b.data||[]).forEach(function(x){busyNo[x.table_no]=1});
+  }catch(_){ok=false}
+  if(my!==tvReq||!$('fx'))return;
+  var o='<option value="">Scegli il tavolo…</option>',free=0;
+  for(var t=1;t<=ORD_TABLES;t++){
+    if(busyNo[t])o+='<option value="'+t+'" disabled>Tavolo '+t+' · occupato</option>';
+    else{free++;o+='<option value="'+t+'">Tavolo '+t+'</option>'}
+  }
+  sel.innerHTML=o;
+  if(cur&&!busyNo[cur])sel.value=cur;
+  note.textContent=!ok?'Non riesco a controllare i tavoli ora: riprova.':free?'Tavoli liberi: '+free+' su '+ORD_TABLES+' (prenotati per 1 ora). L’ordine sarà pronto quando arrivi.':'Nessun tavolo libero a quell’orario: scegli un altro orario.';
+}
 async function send(){
   if(busy)return; var er=$('er'); er.innerHTML='';
   var n=$('fn').value.trim(),ph=$('fp').value.trim(),ty=$('ft').value,ad=$('fd').value.trim(),n0=n,tm=$('fh').value,nt=$('fo').value.trim();
   if(TV){ty='Asporto';ad='';tm='';n='Tavolo '+TV+(n?' · '+n:'');nt='TAVOLO '+TV+(nt?' · '+nt:'')}
-  else if(n.length<2) n='Cliente online';
+  else if(n.length<2&&ty!=='Tavolo') n='Cliente online';
+  var tn=0;
+  if(!TV&&ty==='Tavolo'){
+    tn=Number($('fx').value)||0;
+    if(n.length<2) return er.innerHTML='<div class="err">Per prenotare il tavolo inserisci il tuo nome.</div>';
+    if(ph.replace(/\D/g,'').length<8) return er.innerHTML='<div class="err">Per prenotare il tavolo inserisci il tuo numero di telefono.</div>';
+    if(!tn) return er.innerHTML='<div class="err">Scegli il numero del tavolo.</div>';
+    ty='Asporto'; nt='TAVOLO '+tn+' (mangia in pizzeria)'+(nt?' · '+nt:'');
+  }
   if(ph&&ph.replace(/\D/g,'').length<8) return er.innerHTML='<div class="err">Numero di telefono non valido (oppure lascia il campo vuoto).</div>';
   if(ty==='Consegna'&&!TV&&!ph) return er.innerHTML='<div class="err">Per la consegna serve un numero di telefono, così il fattorino può chiamarti.</div>';
   if(ty==='Consegna'&&ad.length<5) return er.innerHTML='<div class="err">'+ERR.BAD_ADDRESS+'</div>';
@@ -595,12 +632,28 @@ async function send(){
   if(nx) nt=(nt?nt+' · ':'')+'NOTE: '+nx;
   busy=true; $('go').disabled=true; $('go').textContent='Invio in corso…';
   try{
+    var tAt=null;
+    if(tn){
+      tAt=tvAt().toISOString();
+      if(!(tvDone&&tvDone.t===tn&&tvDone.at===tAt&&tvDone.ph===ph)){
+        var rv=await sb.rpc('create_online_reservation',{p_table:tn,p_at:tAt,p_name:n,p_phone:ph,p_party:2,p_notes:'Ordine online: arriva e trova tutto pronto'});
+        if(rv.error){
+          if(String(rv.error.message||'').indexOf('TABLE_BUSY')>=0){
+            busy=false;$('go').disabled=false;$('go').textContent='✅ Invia ordine';loadTables();
+            return er.innerHTML='<div class="err">Il tavolo '+tn+' è già prenotato a quell’orario. Scegli un altro numero.</div>';
+          }
+          throw rv.error;
+        }
+        tvDone={t:tn,at:tAt,ph:ph};
+      }
+    }
     var r=await sb.rpc('create_online_order',{p_name:n,p_phone:ph,p_type:ty,p_address:ad,p_time:tm,p_notes:nt,
       p_items:lines().map(function(l){return{id:String(l.id),size:l.size,qty:l.qty,rem:l.hhd?[]:l.rem,add:l.hhd?[]:l.add,hh:l.hhd||undefined}})});
     if(r.error) throw r.error;
     if(ph){try{localStorage.setItem('bp_cust',JSON.stringify({n:n0,p:ph,a:ad}))}catch(_){}}
-    cart={}; paintBar();
-    $('box').innerHTML='<h2>✅ Ordine inviato!</h2><p>Il tuo ordine <b>#'+esc(r.data.id)+'</b>'+(TV?' per il <b>Tavolo '+TV+'</b>':'')+' è stato ricevuto. Il locale lo confermerà a breve.</p><p class="mut">'+(TV?'Pagamento al tavolo. Buon appetito! 🍕':'Pagamento in contanti alla consegna o al ritiro.')+'</p>'+(ph?'<div class="fam">💛 Benvenuto nella famiglia Buona Pizza!</div>':'')+'<a class="btn" href="track.html?t='+encodeURIComponent(r.data.token)+'">📍 Segui il tuo ordine</a>';
+    cart={}; paintBar(); var tOk=tn?tvDone:null; tvDone=null;
+    var tHm=tOk?(function(d){return hm(d.getHours()*60+d.getMinutes())})(new Date(tOk.at)):'';
+    $('box').innerHTML='<h2>✅ Ordine inviato!</h2><p>Il tuo ordine <b>#'+esc(r.data.id)+'</b>'+(TV?' per il <b>Tavolo '+TV+'</b>':'')+' è stato ricevuto. Il locale lo confermerà a breve.</p>'+(tOk?'<div class="fam">🍽️ Il <b>Tavolo '+tOk.t+'</b> è riservato per te alle <b>'+tHm+'</b>. Arriva, siediti e mangia: troverai l’ordine pronto!</div>':'')+'<p class="mut">'+(TV?'Pagamento al tavolo. Buon appetito! 🍕':'Pagamento in contanti alla consegna o al ritiro.')+'</p>'+(ph?'<div class="fam">💛 Benvenuto nella famiglia Buona Pizza!</div>':'')+'<a class="btn" href="track.html?t='+encodeURIComponent(r.data.token)+'">📍 Segui il tuo ordine</a>';
   }catch(e){
     var msg=String((e&&e.message)||e),code=Object.keys(ERR).filter(function(c){return msg.indexOf(c)>=0})[0];
     er.innerHTML='<div class="err">'+esc(code?ERR[code]:'Errore: '+msg)+'</div>';
