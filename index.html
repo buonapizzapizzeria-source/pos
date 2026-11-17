@@ -4592,7 +4592,10 @@ a,label,summary,[role="button"],[onclick],[data-tab],.tabs button,#bpNav *,#bpMo
  🕓 Da pagare
  <span class="badge-count" id="creditCountBadge">0</span>
  </button>
- <button data-tab="purchases" onclick="switchTab('purchases')" type="button">
+ <button data-tab="drivers" onclick="switchTab('drivers')" type="button" id="tabBtnDrivers">
+🛵 Autisti
+</button>
+<button data-tab="purchases" onclick="switchTab('purchases')" type="button">
  🧾 Acquisti
  </button>
  <button data-tab="settings" onclick="switchTab('settings')" type="button">
@@ -13826,7 +13829,7 @@ try{
 /* ---------- SEZIONE 24: ruoli, storia ordine, schermata cucina (v31) ---------- */
 try{
 var BP_ROLE = 'cashier';
-var BP_TABS = {manager:['new','orders','kitchen','menu','all','cassa','credit','purchases','settings'], cashier:['new','orders','kitchen','all','credit'], kitchen:['kitchen','orders'], driver:['orders'], viewer:['orders','kitchen','all']};
+var BP_TABS = {manager:['new','orders','kitchen','menu','all','cassa','credit','drivers','purchases','settings'], cashier:['new','orders','kitchen','all','credit','drivers'], kitchen:['kitchen','orders'], driver:['orders'], viewer:['orders','kitchen','all']};
 var BP_HOME = {manager:'new', cashier:'new', kitchen:'kitchen', driver:'orders', viewer:'orders'};
 function bpApplyRole(role){
  if(!BP_TABS[role]) role = 'cashier';
@@ -17555,7 +17558,7 @@ openCartIngModal = function(key){
  function vib(){ try{ if(navigator.vibrate) navigator.vibrate(12); }catch(e){} }
 
  /* ---------- 1) NAVIGAZIONE A ICONE ---------- */
- var NAV = [['new','🛒','Nuovo'],['orders','📋','Ordini'],['kitchen','👨‍🍳','Cucina'],['cassa','💰','Cassa'],['menu','🍕','Menu'],['all','🕒','Storico'],['credit','💳','Da pagare'],['purchases','🧾','Acquisti'],['inventory','📦','Scorte'],['loyalty','👑','Clienti'],['analytics','📊','Report'],['settings','⚙️','Impostazioni']];
+ var NAV = [['new','🛒','Nuovo'],['orders','📋','Ordini'],['kitchen','👨‍🍳','Cucina'],['cassa','💰','Cassa'],['menu','🍕','Menu'],['all','🕒','Storico'],['credit','💳','Da pagare'],['drivers','🛵','Autisti'],['purchases','🧾','Acquisti'],['inventory','📦','Scorte'],['loyalty','👑','Clienti'],['analytics','📊','Report'],['settings','⚙️','Impostazioni']];
  var PRIMARY = {'new':1,'orders':1,'kitchen':1,'cassa':1};
  var nav = document.createElement('nav'); nav.id = 'bpNav'; nav.className = 'no-print hidden';
  var more = document.createElement('div'); more.id = 'bpMore'; more.className = 'hidden no-print';
@@ -35287,6 +35290,236 @@ setInterval(function(){ if(document.hidden&&window.BP_PERF&&BP_PERF.kitchen!==0)
 })();
 </script>
 <!-- BP-CREDIT:END -->
+
+<!-- BP-DRIVERS:BEGIN -->
+<style>
+#bpShareLoc{position:fixed;right:12px;bottom:calc(96px + env(safe-area-inset-bottom,0px));z-index:9000;display:none;flex-direction:column;align-items:flex-end;gap:6px}
+#bpShareLoc.on{display:flex}
+#bpShareLoc button{min-height:48px;padding:0 18px;border-radius:999px;border:0;background:#16794b;color:#fff;font-weight:900;font-size:15px;box-shadow:0 6px 20px rgba(0,0,0,.28)}
+#bpShareLoc.live button{background:#0f5132;box-shadow:0 0 0 0 rgba(22,121,75,.6);animation:bpShPulse 1.8s infinite}
+@keyframes bpShPulse{70%{box-shadow:0 0 0 14px rgba(22,121,75,0)}100%{box-shadow:0 0 0 0 rgba(22,121,75,0)}}
+#bpShareLoc small{background:rgba(0,0,0,.72);color:#fff;border-radius:10px;padding:4px 10px;font-size:11.5px;font-weight:700;max-width:260px;text-align:right}
+#driversTab{padding:10px 12px 110px}
+#driversTab .dr-h{display:flex;align-items:center;justify-content:space-between;gap:8px}
+#driversTab .dr-h h2{margin:6px 0;font-size:20px}
+#driversTab .dr-h button{min-height:44px;min-width:44px;border-radius:12px;border:1px solid var(--bp-line,#d0d5dd);background:var(--bp-card,#fff);color:inherit;font-size:20px;font-weight:900}
+#driversTab #drMap{height:52vh;min-height:280px;border-radius:16px;overflow:hidden;margin:8px 0;border:1px solid var(--bp-line,#e8eaf0);z-index:0}
+#driversTab .dr-row{display:flex;justify-content:space-between;align-items:center;gap:10px;background:var(--bp-card,#fff);border:1px solid var(--bp-line,#e8eaf0);border-radius:14px;padding:12px 14px;margin:8px 0}
+#driversTab .dr-row.old{border-color:#f79009;background:#fffaf0}
+#driversTab .dr-sub{font-size:12.5px;color:var(--bp-mute,#6b7280);margin-top:2px}
+#driversTab .dr-row a{font-weight:800;color:#0b63c8;text-decoration:none;min-height:40px;display:flex;align-items:center}
+#driversTab .dr-st-h{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:18px}
+#driversTab .dr-st-h h3{margin:0;font-size:17px}
+#driversTab .dr-seg{display:flex;gap:6px}
+#driversTab .dr-seg button{min-height:40px;padding:0 14px;border-radius:999px;border:1px solid var(--bp-line,#d0d5dd);background:var(--bp-card,#fff);color:inherit;font-weight:800}
+#driversTab .dr-seg button.on{background:#16794b;color:#fff;border-color:#16794b}
+#driversTab .dr-st{width:100%;border-collapse:collapse;margin-top:8px;font-size:14px}
+#driversTab .dr-st th{font-size:11.5px;text-transform:uppercase;color:var(--bp-mute,#6b7280);text-align:right;padding:6px 6px}
+#driversTab .dr-st th:first-child,#driversTab .dr-st td:first-child{text-align:left}
+#driversTab .dr-st td{padding:10px 6px;border-top:1px solid var(--bp-line,#eef0f4);text-align:right;font-variant-numeric:tabular-nums}
+#driversTab .dr-st td:first-child{font-weight:800;overflow-wrap:anywhere}
+#driversTab .dr-empty{padding:28px 10px;text-align:center;color:var(--bp-mute,#6b7280);font-weight:700}
+.bp-drv-pin{font-size:28px;line-height:34px;text-align:center;filter:drop-shadow(0 2px 3px rgba(0,0,0,.35))}
+</style>
+<script>
+(function(){
+ if(window.__bpDrivers) return; window.__bpDrivers = 1;
+ var TAB='driversTab', LKEY='bp_share_loc', STALE=120000, GONE=600000, LF='https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet';
+ function $(i){ return document.getElementById(i); }
+ function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
+ function role(){ try{ return BP_ROLE; }catch(e){ return ''; } }
+ function cl(){ try{ return sb; }catch(e){ return null; } }
+ function appOn(){ var a=$('app'); return !!a && !a.classList.contains('hidden'); }
+ function ago(ms){ var s=Math.max(0,Math.round(ms/1000)); return s<60 ? s+' s' : Math.round(s/60)+' min'; }
+
+ /* ---------- Leaflet caricato solo quando serve (non pesa all'avvio) ---------- */
+ var lfP=null;
+ function loadLeaflet(){
+  if(window.L && window.L.map) return Promise.resolve();
+  if(lfP) return lfP;
+  lfP = new Promise(function(res,rej){
+   var l=document.createElement('link'); l.rel='stylesheet'; l.href=LF+'.css'; document.head.appendChild(l);
+   var s=document.createElement('script'); s.src=LF+'.js'; s.onload=res; s.onerror=function(){ lfP=null; rej(new Error('leaflet')); }; document.head.appendChild(s);
+  });
+  return lfP;
+ }
+ function pin(){ return L.divIcon({html:'<div class="bp-drv-pin">🛵</div>',className:'',iconSize:[34,34],iconAnchor:[17,17]}); }
+ function tiles(m){ L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'}).addTo(m); }
+
+ /* ================= LATO AUTISTA: condivisione posizione ================= */
+ var sharing=false, watchId=null, lastPos=null, lastSent=0, wake=null, hb=null, email='', box=null, msgEl=null, btnEl=null;
+ async function getEmail(){
+  if(email) return email;
+  try{ var r=await sb.auth.getSession(); email=((r.data&&r.data.session&&r.data.session.user&&r.data.session.user.email)||'').toLowerCase(); }catch(e){}
+  return email;
+ }
+ function setMsg(t){ if(msgEl) msgEl.textContent=t||''; if(msgEl) msgEl.style.display=t?'block':'none'; }
+ function paint(){
+  if(!box) return;
+  box.classList.toggle('live',sharing);
+  btnEl.textContent = sharing ? '🟢 Posizione attiva · tocca per fermare' : '📡 Condividi posizione';
+ }
+ async function push(pos,active){
+  var em=await getEmail(), c=cl(); if(!em||!c) return;
+  var row={email:em,active:!!active,updated_at:new Date().toISOString()};
+  if(pos&&pos.coords){ row.lat=pos.coords.latitude; row.lng=pos.coords.longitude; row.accuracy=pos.coords.accuracy; row.heading=pos.coords.heading; row.speed=pos.coords.speed; }
+  try{
+   var r=await c.from('driver_locations').upsert(row,{onConflict:'email'});
+   if(r&&r.error){ setMsg('⚠️ '+(r.error.message||'errore invio posizione')); return false; }
+   lastSent=Date.now(); return true;
+  }catch(e){ setMsg('⚠️ Offline: riprovo…'); return false; }
+ }
+ async function getWake(){ try{ if(navigator.wakeLock && !wake){ wake=await navigator.wakeLock.request('screen'); wake.addEventListener('release',function(){ wake=null; }); } }catch(e){} }
+ function relWake(){ try{ if(wake){ wake.release(); wake=null; } }catch(e){} }
+ function start(){
+  if(sharing) return;
+  if(!navigator.geolocation){ setMsg('GPS non disponibile su questo dispositivo'); return; }
+  sharing=true; try{ localStorage.setItem(LKEY,'1'); }catch(e){}
+  watchId=navigator.geolocation.watchPosition(function(pos){
+   lastPos=pos;
+   if(Date.now()-lastSent<8000) return;
+   push(pos,true).then(function(ok){ if(ok) setMsg('📡 Inviata alle '+new Date().toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit',second:'2-digit'})); });
+  },function(err){
+   if(err && err.code===1){ setMsg('⚠️ Permesso posizione negato: abilitalo nelle impostazioni del browser'); stop(true); }
+   else setMsg('⚠️ Segnale GPS debole…');
+  },{enableHighAccuracy:true,maximumAge:5000,timeout:25000});
+  /* se l'autista sta fermo il GPS non scatta: rinvio periodico dell'ultima posizione */
+  hb=setInterval(function(){ if(sharing && lastPos && Date.now()-lastSent>20000) push(lastPos,true); },15000);
+  getWake(); paint(); setMsg('Attivazione GPS…');
+ }
+ function stop(silent){
+  if(!sharing && !silent) return;
+  sharing=false; try{ localStorage.removeItem(LKEY); }catch(e){}
+  if(watchId!=null){ try{ navigator.geolocation.clearWatch(watchId); }catch(e){} watchId=null; }
+  if(hb){ clearInterval(hb); hb=null; }
+  relWake(); lastPos=null; push(null,false); paint();
+  if(!silent) setMsg('');
+ }
+ function ensureShare(){
+  if(box) return;
+  box=document.createElement('div'); box.id='bpShareLoc'; box.className='no-print';
+  msgEl=document.createElement('small'); msgEl.style.display='none';
+  btnEl=document.createElement('button'); btnEl.type='button';
+  btnEl.onclick=function(){ if(sharing){ stop(); } else { start(); } };
+  box.appendChild(msgEl); box.appendChild(btnEl); document.body.appendChild(box); paint();
+ }
+ document.addEventListener('visibilitychange',function(){ if(!document.hidden && sharing) getWake(); });
+ var resumed=false;
+ function shareTick(){
+  try{
+   var isDrv = role()==='driver' && appOn();
+   if(isDrv){ ensureShare(); box.classList.add('on'); }
+   else { if(box) box.classList.remove('on'); if(sharing) stop(true); return; }
+   if(!resumed){ resumed=true;
+    var was=''; try{ was=localStorage.getItem(LKEY)||''; }catch(e){}
+    if(was==='1' && navigator.permissions && navigator.permissions.query){
+     navigator.permissions.query({name:'geolocation'}).then(function(p){ if(p.state==='granted') start(); }).catch(function(){});
+    }
+   }
+  }catch(e){}
+ }
+ setInterval(shareTick,2000);
+
+ /* ================= LATO MANAGER: mappa autisti ================= */
+ var DATA=[], map=null, markers={}, fitted=false, loading=false, statDays=1, statBusy=false;
+ /* statistiche dai log order_events: "In consegna" -> "Completato" per ogni ordine */
+ async function loadStats(){
+  var box=$('drStats'); if(!box || statBusy) return; statBusy=true;
+  box.innerHTML='<div class="dr-empty">Caricamento…</div>';
+  try{
+   var since=new Date(); since.setHours(0,0,0,0); since.setDate(since.getDate()-(statDays-1));
+   var r=await sb.from('order_events').select('order_id,to_status,by_email,at').in('to_status',['In consegna','Completato']).gte('at',since.toISOString()).order('at',{ascending:true}).limit(5000);
+   if(r.error) throw r.error;
+   var byOrd={};
+   (r.data||[]).forEach(function(e){
+    var o=byOrd[e.order_id]||(byOrd[e.order_id]={}), t=new Date(e.at).getTime();
+    if(e.to_status==='In consegna'){ o.out=t; o.drv=(e.by_email||'').toLowerCase(); }
+    else { o.done=t; o.doneBy=(e.by_email||'').toLowerCase(); }
+   });
+   var per={};
+   Object.keys(byOrd).forEach(function(id){
+    var o=byOrd[id]; if(!o.out||!o.done||o.done<o.out) return;
+    var m=(o.done-o.out)/60000; if(m>180) return;
+    var who=o.drv||o.doneBy||'—', p=per[who]||(per[who]={n:0,sum:0,max:0});
+    p.n++; p.sum+=m; if(m>p.max) p.max=m;
+   });
+   var rows=Object.keys(per).sort(function(a,b){ return per[b].n-per[a].n; });
+   if(!rows.length){ box.innerHTML='<div class="dr-empty">Nessuna consegna completata nel periodo.</div>'; }
+   else{
+    box.innerHTML='<table class="dr-st"><tr><th>Autista</th><th>Consegne</th><th>Media</th><th>Max</th></tr>'+rows.map(function(k){
+     var p=per[k]; return '<tr><td>'+esc(k.split('@')[0])+'</td><td>'+p.n+'</td><td>'+Math.round(p.sum/p.n)+' min</td><td>'+Math.round(p.max)+' min</td></tr>';
+    }).join('')+'</table><div class="dr-sub" style="margin-top:6px">Tempo = da «In consegna» a «Completato». Esclusi tempi oltre 3 ore.</div>';
+   }
+  }catch(e){
+   box.innerHTML='<div class="dr-empty">⚠️ Impossibile leggere lo storico ordini.<br><small>'+esc((e&&e.message)||'errore')+'</small></div>';
+  }finally{ statBusy=false; }
+ }
+ function ensure(){
+  var t=$(TAB); if(t) return t;
+  var app=$('app'); if(!app) return null;
+  t=document.createElement('div'); t.id=TAB; t.className='hidden';
+  t.innerHTML='<div class="dr-h"><h2>🛵 Autisti in consegna</h2><button type="button" id="drRefresh" title="Aggiorna">↻</button></div><div id="drMap"></div><div id="drList"></div><div class="dr-st-h"><h3>📊 Statistiche consegne</h3><div class="dr-seg"><button type="button" data-d="1" class="on">Oggi</button><button type="button" data-d="7">7 giorni</button></div></div><div id="drStats"></div>';
+  app.appendChild(t);
+  $('drRefresh').onclick=function(){ load(true); loadStats(); };
+  [].forEach.call(t.querySelectorAll('.dr-seg button'),function(b){ b.onclick=function(){ statDays=parseInt(b.getAttribute('data-d'),10)||1; [].forEach.call(t.querySelectorAll('.dr-seg button'),function(x){ x.classList.toggle('on',x===b); }); loadStats(); }; });
+  return t;
+ }
+ function drawMap(list){
+  var mb=$('drMap'); if(!mb) return;
+  if(!list.length){ mb.style.display='none'; return; }
+  mb.style.display='block';
+  if(!map || map.getContainer()!==mb){ map=L.map(mb,{zoomControl:true}); tiles(map); markers={}; fitted=false; }
+  map.invalidateSize();
+  var seen={}, pts=[];
+  list.forEach(function(d){
+   var ll=[d.lat,d.lng], nm=String(d.email||'').split('@')[0]; pts.push(ll); seen[d.email]=1;
+   if(markers[d.email]){ markers[d.email].setLatLng(ll); }
+   else { markers[d.email]=L.marker(ll,{icon:pin()}).addTo(map).bindTooltip(nm,{permanent:true,direction:'top',offset:[0,-16]}); }
+  });
+  Object.keys(markers).forEach(function(k){ if(!seen[k]){ map.removeLayer(markers[k]); delete markers[k]; } });
+  if(!fitted){ fitted=true; if(pts.length===1) map.setView(pts[0],15); else map.fitBounds(pts,{padding:[40,40]}); }
+ }
+ function render(){
+  var t=ensure(); if(!t) return;
+  var now=Date.now();
+  var list=DATA.filter(function(d){ return d.active && d.lat!=null && d.lng!=null && now-new Date(d.updated_at).getTime()<GONE; });
+  var lb=$('drList');
+  if(!list.length){
+   lb.innerHTML='<div class="dr-empty">Nessun autista sta condividendo la posizione.<br><small>L’autista deve aprire l’app dal suo telefono e toccare «Condividi posizione».</small></div>';
+  }else{
+   lb.innerHTML=list.map(function(d){
+    var age=now-new Date(d.updated_at).getTime(), old=age>STALE, nm=String(d.email||'').split('@')[0];
+    return '<div class="dr-row'+(old?' old':'')+'"><div><b>'+esc(nm)+'</b><div class="dr-sub">'+(old?'⚠️ segnale vecchio · ':'🟢 ')+ago(age)+' fa</div></div><a href="https://www.google.com/maps?q='+d.lat+','+d.lng+'" target="_blank" rel="noopener">Maps ↗</a></div>';
+   }).join('');
+  }
+  loadLeaflet().then(function(){ drawMap(list); }).catch(function(){ var mb=$('drMap'); if(mb){ mb.style.display='block'; mb.innerHTML='<div class="dr-empty">Mappa non disponibile (connessione?)</div>'; } });
+ }
+ async function load(showErr){
+  if(loading) return; loading=true;
+  try{
+   var r=await sb.from('driver_locations').select('*').eq('active',true);
+   if(r.error) throw r.error;
+   DATA=r.data||[]; render();
+  }catch(e){
+   var t=ensure();
+   if(t && showErr){ var lb=$('drList'); if(lb) lb.innerHTML='<div class="dr-empty">⚠️ Impossibile leggere le posizioni.<br><small>Hai eseguito lo script SQL 02_driver_tracking.sql?</small></div>'; }
+  }finally{ loading=false; }
+ }
+ var _sw=window.switchTab;
+ if(typeof _sw==='function'){
+  var wrapped=function(name){
+   var r=_sw.apply(this,arguments), t=ensure();
+   if(t){ t.classList.toggle('hidden',name!=='drivers'); }
+   if(name==='drivers'){ load(true); loadStats(); }
+   return r;
+  };
+  window.switchTab=wrapped; try{ switchTab=wrapped; }catch(e){}
+ }
+ setInterval(function(){ var t=$(TAB); if(t && !t.classList.contains('hidden') && !document.hidden) load(false); },10000);
+})();
+</script>
+<!-- BP-DRIVERS:END -->
+
 
 </body>
 </html>
