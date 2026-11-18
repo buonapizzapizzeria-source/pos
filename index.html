@@ -30044,12 +30044,15 @@ html.bp-shut #bpGqBadge{display:none!important}
  }
  async function setKeyGated(){ if(await gateKey()) return setKey(); return key(); }
  window.bpSetMapsKey = setKeyGated;
- (function(){ /* pressione prolungata sui titoli → codice → chiave */
-  var tm = null;
+ (function(){ /* pressione prolungata (1 s, tollera il tremolio del dito) oppure 3 tocchi veloci sui titoli → codice → chiave */
+  var tm = null, sx = 0, sy = 0, taps = [];
   function target(e){ return e.target && e.target.closest && e.target.closest('#routeBuilderBox .route-title, #bpGqCard .bp-set-head'); }
   function clr(){ if(tm){ clearTimeout(tm); tm = null; } }
-  document.addEventListener('pointerdown', function(e){ if(!target(e)) return; clr(); tm = setTimeout(function(){ tm = null; setKeyGated(); }, 1500); }, true);
-  ['pointerup', 'pointercancel', 'pointermove', 'scroll'].forEach(function(n){ document.addEventListener(n, clr, true); });
+  var st = document.createElement('style'); st.textContent = '#routeBuilderBox .route-title,#bpGqCard .bp-set-head{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;touch-action:manipulation}'; document.head.appendChild(st);
+  document.addEventListener('pointerdown', function(e){ if(!target(e)) return; clr(); sx = e.clientX; sy = e.clientY; tm = setTimeout(function(){ tm = null; setKeyGated(); }, 1000); }, true);
+  document.addEventListener('pointermove', function(e){ if(tm && (Math.abs(e.clientX - sx) > 14 || Math.abs(e.clientY - sy) > 14)) clr(); }, true);
+  ['pointerup', 'pointercancel'].forEach(function(n){ document.addEventListener(n, clr, true); });
+  document.addEventListener('click', function(e){ if(!target(e)) return; var t = Date.now(); taps = taps.filter(function(x){ return t - x < 900; }); taps.push(t); if(taps.length >= 3){ taps = []; clr(); setKeyGated(); } }, true);
   document.addEventListener('contextmenu', function(e){ if(target(e)) e.preventDefault(); }, true);
  })();
  function esc2(t){ return String(t == null ? '' : t).replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
@@ -33555,18 +33558,21 @@ body.qs-lock{overflow:hidden}
   return out;
  }
  function dn(baseName){ var g = null; try{ g = bpGustiInfo(baseName); }catch(e){} return g ? (g.label + ': ' + g.parts.join(' / ')) : baseName; }
- function ofCart(it){ if(!isPz(it.name, null, it.category)) return []; var gI = null; try{ gI = bpGustiInfo(it.name); }catch(e){} if(gI) return gl(gI, it.removedIngs, it.addedIngs); var rem = (it.removedIngs || []).map(fold); return uniq(parseIngredients(it.baseDesc || '').filter(function(x){ return rem.indexOf(fold(x)) < 0; }).concat(it.addedIngs || []).filter(is)); }
+ /* Menu: le Patatine del menu sono fritte e vanno nel cestino, MAI "dopo forno" */
+ function isMenuNm(name, cat){ return /^men[uù]\b/i.test(String(name || '').trim()) || /men[uù]/i.test(String(cat || '')); }
+ function mb(l, name, cat){ return isMenuNm(name, cat) ? l.filter(function(x){ return !/^patatin/.test(fold(x)); }) : l; }
+ function ofCart(it){ if(!isPz(it.name, null, it.category)) return []; var gI = null; try{ gI = bpGustiInfo(it.name); }catch(e){} if(gI) return gl(gI, it.removedIngs, it.addedIngs); var rem = (it.removedIngs || []).map(fold); return uniq(mb(parseIngredients(it.baseDesc || ''), it.name, it.category).filter(function(x){ return rem.indexOf(fold(x)) < 0; }).concat(it.addedIngs || []).filter(is)); }
  function ofOrderItem(i){
   var pr = splitProductAndMods(i.product_name), base = [], rem = [], add = [], pd = null;
   try{ pd = bpRcFindProd(pr.baseName); }catch(e){}
   if(!isPz(i.product_name, pd)) return [];
-  if(pd) base = parseIngredients(pd.description || '');
+  if(pd) base = mb(parseIngredients(pd.description || ''), pr.baseName, pd.category);
   var isM = false; try{ isM = !!(window.bpIsMenu && bpIsMenu(pr)); }catch(e){} var skipP = isM ? 1 : 0; /* Menu: la Patatine del menu va nel cestino a parte, NON dopo forno; solo una 2a Patatine (aggiunta sulla pizza) conta */
   pr.mods.forEach(function(m){ m = String(m).trim(); if(/^nota:/i.test(m)) return; if(skipP > 0 && fold(m.replace(/^\+\s*/, '')) === 'patatine'){ skipP--; return; } if(/^senza\s+/i.test(m)) rem.push(fold(m.replace(/^senza\s+/i, ''))); else add.push(m.replace(/^\+\s*/, '')); });
   var gI = null; try{ gI = bpGustiInfo(pr.baseName); }catch(e){} if(gI) return gl(gI, rem, add);
   return uniq(base.filter(function(x){ return rem.indexOf(fold(x)) < 0; }).concat(add).filter(is));
  }
- function badge(p){ try{ var l = parseIngredients(p.description || '').filter(is); return l.length ? '<span class="pb-b" title="Dopo forno: ' + esc(l.join(', ')) + '"><span class="pp-t">🌿 DOPO</span><span class="pp-a">بعد الفرن</span></span>' : ''; }catch(e){ return ''; } }
+ function badge(p){ try{ var l = mb(parseIngredients(p.description || ''), p.name, p.category).filter(is); return l.length ? '<span class="pb-b" title="Dopo forno: ' + esc(l.join(', ')) + '"><span class="pp-t">🌿 DOPO</span><span class="pp-a">بعد الفرن</span></span>' : ''; }catch(e){ return ''; } }
  function ticket(items, small){
   var rows = []; try{ (items || []).forEach(function(i){ if(bpIsSvc(i.product_name)) return; var l = ofOrderItem(i); if(l.length) rows.push('<div>' + i.quantity + '× ' + esc(dn(splitProductAndMods(i.product_name).baseName)) + ' ← ' + esc(l.join(' + ')) + '</div>'); }); }catch(e){}
   return rows.length ? '<div class="pb-tk' + (small ? ' sm' : '') + '"><h4>🌿 DOPO FORNO · بعد الفرن</h4>' + rows.join('') + '</div>' : '';
@@ -36319,5 +36325,15 @@ html #newTab #bpmGrid .bp-prep.two .pp-a{font-size:clamp(9px,7.4cqi,11.5px);line
  apply();
 })();
 </script>
+<style id="bpBadgeIcons">
+/* Badge DOPO/PRIMA forno: solo icona tonda, in alto a destra della foto, colori forti (non allarga la tessera) */
+html body #newTab #bpmGrid .bpm-tile .bp-prep{position:absolute!important;top:8px!important;right:8px!important;left:auto!important;bottom:auto!important;width:auto!important;height:auto!important;min-height:0!important;padding:0!important;margin:0!important;display:flex!important;flex-direction:row!important;gap:6px!important;z-index:6!important;pointer-events:none!important}
+html body #newTab #bpmGrid .bpm-tile .bp-prep .pb-b,html body #newTab #bpmGrid .bpm-tile .bp-prep .prefo-b{position:static!important;flex:none!important;width:36px!important;height:36px!important;min-width:36px!important;padding:0!important;border-radius:50%!important;background:#fff!important;display:flex!important;align-items:center!important;justify-content:center!important;overflow:hidden!important;font-size:0!important;line-height:0!important;box-shadow:0 0 0 2px #fff,0 3px 10px rgba(0,0,0,.55)!important}
+html body #newTab #bpmGrid .bpm-tile .bp-prep .pb-b{border:4px solid #00a896!important}
+html body #newTab #bpmGrid .bpm-tile .bp-prep .prefo-b{border:4px solid #ff6a00!important}
+html body #newTab #bpmGrid .bpm-tile .bp-prep .pb-b::before{content:"\1F33F";font-size:19px;line-height:1}
+html body #newTab #bpmGrid .bpm-tile .bp-prep .prefo-b::before{content:"\1F373";font-size:19px;line-height:1}
+html body #newTab #bpmGrid .bpm-tile .bp-prep .pp-t,html body #newTab #bpmGrid .bpm-tile .bp-prep .pp-a{display:none!important}
+</style>
 </body>
 </html>
