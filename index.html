@@ -17677,6 +17677,40 @@ openCartIngModal = function(key){
  '<button type="button" class="bpm-main" data-a="Normale"><b>' + esc(p.name) + '</b><small class="bpm-desc">' + esc(parseIngredients(p.description).join(' · ')) + '</small><i>' + euro(p.price_normal) + '</i></button>' +
  '<div class="bpm-act">' + (n ? '<button type="button" data-m title="Togli uno">−</button>' : '') + (maxi ? '<button type="button" data-a="Maxi" title="Maxi">XL<small>' + euro(p.price_maxi) + '</small></button>' : '') + (/pizz/i.test(p.category || '') ? '<button type="button" data-mn title="Menu +3 € · patatine + bibita">🍟<small>+3</small></button>' : '') + '<button type="button" data-c title="Personalizza">⚙️</button></div></div>';
  }
+  /* ricerca live: 1) nomi dei prodotti (pizze, panini...) 2) in fondo i prodotti che contengono l'ingrediente digitato 3) il resto */
+  function bpNameHit(p, q){
+   var kc = ssKC(p), qn = ingNorm(q);
+   if(qn.length >= 2 && kc.nameTxt.indexOf(qn) >= 0) return true;
+   var toks = arTok(String(q).toLowerCase()).filter(function(w){ return w && w !== "\u0648" && SS_SKIPW[w] !== 1 && AR_NUM[w] == null && !/^\d+$/.test(w); });
+   if(!toks.length) return false;
+   return toks.every(function(w){
+    var raw = AR_RX.test(w) ? "" : ingNorm(w), s = tokSkel(w);
+    if(raw.length >= 2 && kc.nameTxt.indexOf(raw) >= 0) return true;
+    return !!(s && (raw.length >= 4 || !raw) && ssBest(s, kc.n, 2.6) > 0);
+   });
+  }
+  var bpLsCache = {sig: '', q: '', out: null};
+  function bpLiveSearch(all, q){
+   var sg = all.length + '|' + all.map(function(p){ return p.id + p.name + (p.description || ''); }).join('~');
+   if(bpLsCache.out && bpLsCache.q === q && bpLsCache.sig === sg) return bpLsCache.out;
+   var seen = {}, nm = [], ing = [], rest = [];
+   try{ nm = ssNameMatch(all, q, false) || []; if(!nm.length) nm = ssNameMatch(all, q, true) || []; }catch(e){ nm = []; }
+   nm.forEach(function(p){ seen[p.id] = 1; });
+   all.forEach(function(p){ if(seen[p.id]) return; var h = false; try{ h = bpNameHit(p, q); }catch(e){ h = false; } if(h){ nm.push(p); seen[p.id] = 1; } });
+   var rs = []; try{ rs = ssSearchBase(all, q) || []; }catch(e){ rs = []; }
+   var pos = {}; rs.forEach(function(p, i){ pos[p.id] = i; });
+   all.forEach(function(p){
+    if(seen[p.id]) return;
+    var hit = false;
+    try{ hit = parseIngredients(p.description || '').some(function(g){ return ssIngQMatch(g, q); }); }catch(e){ hit = false; }
+    if(hit){ ing.push(p); seen[p.id] = 1; }
+   });
+   ing.sort(function(x, y){ var i = pos[x.id] == null ? 1e9 : pos[x.id], j = pos[y.id] == null ? 1e9 : pos[y.id]; return i - j; });
+   rs.forEach(function(p){ if(!seen[p.id]){ seen[p.id] = 1; rest.push(p); } });
+   var out = nm.concat(ing, rest);
+   bpLsCache = {sig: sg, q: q, out: out};
+   return out;
+  }
  function renderMenu(){
  if(M.drag) return;
  var box = $('#bpMenu'); if(!box) return;
@@ -17685,7 +17719,7 @@ openCartIngModal = function(key){
  var chips = [['__top', '⭐', 'Top', Math.min(30, all.length)], ['__all', '🍽️', 'Tutti', all.length]].concat(cats.map(function(c){ return [c, catIcon(c), c, all.filter(function(p){ return (p.category || 'Menu') === c; }).length]; }));
  $('#bpmCats').innerHTML = chips.map(function(c, ci){ return '<button type="button" class="bpm-chip' + (!M.q && M.cat === c[0] ? ' on' : '') + '" data-cat="' + esc(c[0]) + '"><span class="e">' + c[1] + '</span>' + (c[0] === '__top' ? '' : esc(c[2])) + '<i>' + c[3] + '</i></button>' + (ci === 1 ? '<button type="button" class="bpm-gchip" data-gusti="1" title="Pizza a gusti · Metà metà · بيتزا ميتا"><b>½</b><span class="e">🍕</span>Metà</button>' : ''); }).join('');
  var list;
- if(M.q) list = ssSearch(all, M.q);
+ if(M.q) list = bpLiveSearch(all, M.q);
  else if(M.cat === '__top') list = topList();
  else if(M.cat === '__all') list = all;
  else list = all.filter(function(p){ return (p.category || 'Menu') === M.cat; });
@@ -17868,7 +17902,7 @@ openCartIngModal = function(key){
  var box = $('#bpMenu'), lab = $('#bpMenu .bpm-search'); if(!box || !lab || $('#bpmPad')) return;
  var pad = document.createElement('div'); pad.id = 'bpmPad'; pad.innerHTML = padKeys(); box.appendChild(pad);
  var b = document.createElement('button'); b.type = 'button'; b.id = 'bpmPadBtn'; b.className = 'bpm-x'; b.title = 'Tastiera rapida · كيبورد سريع'; b.textContent = '⌨️'; lab.appendChild(b);
- b.onclick = function(e){ e.preventDefault(); padToggle(!PAD.on); };
+ b.onclick = function(e){ e.preventDefault(); var nv = !PAD.on; try{ localStorage.setItem('bp_pad_user', nv ? '1' : '0'); }catch(er){} padToggle(nv); };
  pad.addEventListener('pointerdown', function(e){
   var b = e.target.closest('button'); if(!b) return; e.preventDefault(); vib();
   var id = b.getAttribute('data-id');
@@ -17882,8 +17916,8 @@ openCartIngModal = function(key){
   else if(b.hasAttribute('data-add')){ var t = M.q.trim() && padRes()[0]; if(t) padAdd(t); else { try{ bpFlash('❌ اكتب حروف الأول · Scrivi prima', true); }catch(e){} } }
  });
  $('#bpmQ').addEventListener('keydown', function(e){ if(e.key === 'Enter'){ var t = M.q.trim() && padRes()[0]; if(t){ e.preventDefault(); padAdd(t); } } });
- var st = null; try{ st = localStorage.getItem('bp_pad_on'); }catch(e){}
- padToggle(st == null ? !!(window.matchMedia && matchMedia('(pointer:coarse)').matches) : st === '1');
+ var st = null; try{ st = localStorage.getItem('bp_pad_user'); }catch(e){}
+ padToggle(st === '1');
  }
  var _rm0 = renderMenu; renderMenu = function(){ var r = _rm0.apply(this, arguments); safe(padDraw); return r; };
  function buildMenu(){
@@ -17891,7 +17925,7 @@ openCartIngModal = function(key){
  var box = document.createElement('div'); box.id = 'bpMenu';
  box.innerHTML = '<div class="bpm-top"><label class="bpm-search"><span>🔍</span><input id="bpmQ" type="search" placeholder="Cerca · ابحث" autocomplete="off"><button type="button" id="bpmX" class="bpm-x hidden">✕</button></label><button type="button" id="bpmMic" class="bpm-ib" title="Cerca a voce">🎤</button><button type="button" id="bpmLang" class="bpm-ib" title="IT / عربي">🌐</button><button type="button" id="bpmSort" class="bpm-ib" title="Riordina piastrelle · ترتيب البلاطات">↕️</button><span class="bpm-zoom"><button type="button" id="bpmZm" title="Riduci · تصغير">−</button><b id="bpmZv" title="Reset 70%">70%</b><button type="button" id="bpmZp" title="Ingrandisci · تكبير">+</button></span></div><div id="bpmCats" class="bpm-cats"></div><div id="bpmSortBar" class="bpm-sortbar hidden"><span>↕️ اسحب البلاطات من ⠿ داخل نفس القسم · بيتطبق على كل الأجهزة · Trascina ⠿ (per tutti i dispositivi)</span><button type="button" id="bpmSortReset">↺ القسم</button><button type="button" id="bpmSortResetAll">↺ الكل</button><button type="button" id="bpmSortDone">✔ تم</button></div><div id="bpmGrid" class="bpm-grid"></div>';
  var anchor = $('#bpAccProd'); if(anchor && anchor.parentNode === panel) panel.insertBefore(box, anchor); else panel.appendChild(box);
- $('#bpmQ').oninput = function(){ M.q = this.value.trim(); if(M.q && M.edit) setEdit(false); renderMenu(); };
+ $('#bpmQ').oninput = function(){ M.q = this.value.trim(); if(M.q && M.edit) setEdit(false); sched(); };
  $('#bpmX').onclick = function(){ M.q = ''; $('#bpmQ').value = ''; renderMenu(); };
  
  $('#bpmLang').onclick = function(){ safe(function(){ bpVoiceToggle(); bpFlash('🎤 ' + (bpVoiceLang() === 'ar-EG' ? 'العربية' : 'Italiano')); }); };
@@ -23555,7 +23589,9 @@ html:not(.bp-mgr) #bpmSort,html:not(.bp-mgr) #bpmSortBar,html:not(.bp-mgr) .bpm-
 /* ricerca: compatta = si adatta agli altri elementi; in focus = occupa tutta la riga */
 html.pos64 .bpm-top .bpm-search{max-width:none!important;flex:1 1 120px;transition:flex-basis .2s,min-height .2s}
 html.pos64 .bpm-top.sx .bpm-search{flex:1 1 100%!important;min-height:56px!important;box-shadow:0 4px 16px #0002;border-color:var(--bp-brand,#d92d20)}
-html.pos64 .bpm-top.sx>:not(.bpm-search){display:none!important}
+html.pos64 .bpm-top.sx{display:flex!important;align-items:center;gap:8px}
+html.pos64 .bpm-top.sx>:not(.bpm-search):not(#bpmMic){display:none!important}
+html.pos64 .bpm-top.sx>#bpmMic{display:inline-flex!important;flex:0 0 52px!important;width:52px!important;min-width:52px!important;height:52px!important}
 html.pos64 .bpm-top.sx .bpm-search input{font-size:19px!important;font-weight:700}
 
 /* ===== bpV87 ===== */
