@@ -10083,9 +10083,17 @@ function renderCart(){
  return `<span class="p-ing-pill" style="${isRem?'background:#fee4e2;color:#b42318;text-decoration:line-through':''}">${esc(ing)}</span>`;
  }).join('');
 
+ /* SOLO CARNE (kebab): nel carrello mostra «SOLO CARNE» (+ eventuali ingredienti rimessi) invece di tutti i «Senza ...» */
+ let __soloKeep = null, __soloPlanN = [];
+ try{
+ let __isSoloMark = function(x){ return /^\+?\s*solo\b/i.test(String(x)); };
+ __soloKeep = bpSoloKeepOf({baseName: it.name, mods: (it.removedIngs||[]).map(function(x){ return 'SENZA ' + x; }).concat((it.addedIngs||[]).filter(__isSoloMark).map(function(x){ return '+' + x; }))});
+ if(__soloKeep !== null){ __soloPlanN = bpSoloPlan(it.name, []).concat(bpSoloPlanLegacy(it.name, [])).map(ingNorm); }
+ }catch(e){ __soloKeep = null; }
  let modsHtml = [
- ...it.removedIngs.map(x=>`<span class="pill st-annullato" style="font-size:11px;padding:2px 6px">🚫 Senza ${esc(x)}</span>`),
- ...it.addedIngs.map(x=>`<span class="pill st-pronto" style="font-size:11px;padding:2px 6px">➕ ${esc(x)}</span>`),
+ ...(__soloKeep !== null ? [`<span class="pill" style="font-size:13px;padding:3px 10px;background:#111;color:#fff;font-weight:900">🥩 ${esc(bpSoloText(__soloKeep))}</span>`] : []),
+ ...it.removedIngs.filter(x=>__soloKeep === null || __soloPlanN.indexOf(ingNorm(x)) < 0).map(x=>`<span class="pill st-annullato" style="font-size:11px;padding:2px 6px">🚫 Senza ${esc(x)}</span>`),
+ ...it.addedIngs.filter(x=>__soloKeep === null || !/^\+?\s*solo\b/i.test(String(x))).map(x=>`<span class="pill st-pronto" style="font-size:11px;padding:2px 6px">➕ ${esc(x)}</span>`),
  it.itemNote ? `<span class="pill st-prep" style="font-size:11px;padding:2px 6px">📝 ${esc(it.itemNote)}</span>` : ''
  ].filter(Boolean).join(' ');
 
