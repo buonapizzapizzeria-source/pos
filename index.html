@@ -17663,7 +17663,7 @@ openCartIngModal = function(key){
  var all = menu(), cats = catsList();
  if(M.cat !== '__top' && M.cat !== '__all' && cats.indexOf(M.cat) < 0) M.cat = '__top';
  var chips = [['__top', '⭐', 'Top', Math.min(30, all.length)], ['__all', '🍽️', 'Tutti', all.length]].concat(cats.map(function(c){ return [c, catIcon(c), c, all.filter(function(p){ return (p.category || 'Menu') === c; }).length]; }));
- $('#bpmCats').innerHTML = chips.map(function(c){ return '<button type="button" class="bpm-chip' + (!M.q && M.cat === c[0] ? ' on' : '') + '" data-cat="' + esc(c[0]) + '"><span class="e">' + c[1] + '</span>' + (c[0] === '__top' ? '' : esc(c[2])) + '<i>' + c[3] + '</i></button>'; }).join('');
+ $('#bpmCats').innerHTML = chips.map(function(c, ci){ return '<button type="button" class="bpm-chip' + (!M.q && M.cat === c[0] ? ' on' : '') + '" data-cat="' + esc(c[0]) + '"><span class="e">' + c[1] + '</span>' + (c[0] === '__top' ? '' : esc(c[2])) + '<i>' + c[3] + '</i></button>' + (ci === 1 ? '<button type="button" class="bpm-gchip" data-gusti="1" title="Pizza a gusti · Metà metà · بيتزا ميتا"><b>½</b><span class="e">🍕</span>Metà</button>' : ''); }).join('');
  var list;
  if(M.q) list = ssSearch(all, M.q);
  else if(M.cat === '__top') list = topList();
@@ -17868,17 +17868,17 @@ openCartIngModal = function(key){
  function buildMenu(){
  var panel = $('#newTab .grid > section.panel'); if(!panel || $('#bpMenu')) return !!$('#bpMenu');
  var box = document.createElement('div'); box.id = 'bpMenu';
- box.innerHTML = '<div class="bpm-top"><label class="bpm-search"><span>🔍</span><input id="bpmQ" type="search" placeholder="Cerca · ابحث" autocomplete="off"><button type="button" id="bpmX" class="bpm-x hidden">✕</button></label><button type="button" id="bpmMic" class="bpm-ib" title="Cerca a voce">🎤</button><button type="button" id="bpmLang" class="bpm-ib" title="IT / عربي">🌐</button><button type="button" id="bpmGusti" class="bpm-ib" title="Pizza a gusti · Metà metà" style="font-size:15px!important;font-weight:900">½🍕</button><button type="button" id="bpmSort" class="bpm-ib" title="Riordina piastrelle · ترتيب البلاطات">↕️</button><span class="bpm-zoom"><button type="button" id="bpmZm" title="Riduci · تصغير">−</button><b id="bpmZv" title="Reset 70%">70%</b><button type="button" id="bpmZp" title="Ingrandisci · تكبير">+</button></span></div><div id="bpmCats" class="bpm-cats"></div><div id="bpmSortBar" class="bpm-sortbar hidden"><span>↕️ اسحب البلاطات من ⠿ داخل نفس القسم · بيتطبق على كل الأجهزة · Trascina ⠿ (per tutti i dispositivi)</span><button type="button" id="bpmSortReset">↺ القسم</button><button type="button" id="bpmSortResetAll">↺ الكل</button><button type="button" id="bpmSortDone">✔ تم</button></div><div id="bpmGrid" class="bpm-grid"></div>';
+ box.innerHTML = '<div class="bpm-top"><label class="bpm-search"><span>🔍</span><input id="bpmQ" type="search" placeholder="Cerca · ابحث" autocomplete="off"><button type="button" id="bpmX" class="bpm-x hidden">✕</button></label><button type="button" id="bpmMic" class="bpm-ib" title="Cerca a voce">🎤</button><button type="button" id="bpmLang" class="bpm-ib" title="IT / عربي">🌐</button><button type="button" id="bpmSort" class="bpm-ib" title="Riordina piastrelle · ترتيب البلاطات">↕️</button><span class="bpm-zoom"><button type="button" id="bpmZm" title="Riduci · تصغير">−</button><b id="bpmZv" title="Reset 70%">70%</b><button type="button" id="bpmZp" title="Ingrandisci · تكبير">+</button></span></div><div id="bpmCats" class="bpm-cats"></div><div id="bpmSortBar" class="bpm-sortbar hidden"><span>↕️ اسحب البلاطات من ⠿ داخل نفس القسم · بيتطبق على كل الأجهزة · Trascina ⠿ (per tutti i dispositivi)</span><button type="button" id="bpmSortReset">↺ القسم</button><button type="button" id="bpmSortResetAll">↺ الكل</button><button type="button" id="bpmSortDone">✔ تم</button></div><div id="bpmGrid" class="bpm-grid"></div>';
  var anchor = $('#bpAccProd'); if(anchor && anchor.parentNode === panel) panel.insertBefore(box, anchor); else panel.appendChild(box);
  $('#bpmQ').oninput = function(){ M.q = this.value.trim(); if(M.q && M.edit) setEdit(false); renderMenu(); };
  $('#bpmX').onclick = function(){ M.q = ''; $('#bpmQ').value = ''; renderMenu(); };
- $('#bpmGusti').onclick = function(){ safe(function(){ bp36.openGusti(); }); };
+ 
  $('#bpmLang').onclick = function(){ safe(function(){ bpVoiceToggle(); bpFlash('🎤 ' + (bpVoiceLang() === 'ar-EG' ? 'العربية' : 'Italiano')); }); };
  $('#bpmMic').onclick = function(){
  var b = this; if(M.rec){ try{ M.rec.stop(); }catch(e){} return; }
  M.rec = pkListen(function(t){ M.q = t.trim(); $('#bpmQ').value = t; renderMenu(); }, function(on){ b.classList.toggle('on', on); if(!on) M.rec = null; });
  };
- $('#bpmCats').onclick = function(e){ var c = e.target.closest('[data-cat]'); if(!c) return; M.cat = c.getAttribute('data-cat'); M.q = ''; $('#bpmQ').value = ''; renderMenu(); };
+ $('#bpmCats').onclick = function(e){ if(e.target.closest('[data-gusti]')){ safe(function(){ bp36.openGusti(); }); return; } var c = e.target.closest('[data-cat]'); if(!c) return; M.cat = c.getAttribute('data-cat'); M.q = ''; $('#bpmQ').value = ''; renderMenu(); };
  $('#bpmGrid').onclick = function(e){
  if(M.edit || M.drag) return;
  var t = e.target.closest('.bpm-tile'); if(!t) return;
@@ -18790,6 +18790,19 @@ openCartIngModal = function(key){
  var r = document.getElementById('pkRoot');
  if(r){ r.style.zIndex = '2147483300'; var mo = new MutationObserver(function(){ if(r.classList.contains('hidden')){ r.style.zIndex = ''; mo.disconnect(); drawG(); } }); mo.observe(r, {attributes: true, attributeFilter: ['class']}); }
  }
+ /* foto reale della pizza (stessa del menu principale: foto caricata / incorporata / image_url / piastrella) */
+ function gPic(p){
+ var u = ''; try{ if(window.bpPhotoSrc) u = window.bpPhotoSrc(p) || ''; }catch(e){}
+ if(!u){ try{ var t = document.querySelector('#bpmGrid .bpm-tile[data-id="' + String(p.id).replace(/"/g, '') + '"] .bpm-bg img'); if(t && t.src) u = t.src; }catch(e){} }
+ if(!u && p && p.image_url && /^https?:/i.test(String(p.image_url))) u = String(p.image_url);
+ return u;
+ }
+ function gPicAttr(u){ return String(u).replace(/&/g, '&amp;').replace(/"/g, '%22').replace(/'/g, '%27').replace(/\(/g, '%28').replace(/\)/g, '%29').replace(/</g, '%3C').replace(/>/g, '%3E').replace(/\s/g, '%20'); }
+ function gThumb(p){
+ var u = gPic(p);
+ return '<span class="ph"><i>🍕</i>' + (u ? '<img src="' + gPicAttr(u) + '" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer" onerror="this.remove()">' : '') + '</span>';
+ }
+ var GMK = ['mm', 'g3', 'g4']; /* «2 gusti» uguale a «Metà metà»: tolto dalla scelta */
  function drawG(){
  var o = ensureOv('bp36G', '🍕 Pizza a gusti · بيتزا متعددة'); if(o.classList.contains('hidden')) return;
  $('h3', o).textContent = G.edit ? '✏️ Modifica pizza a gusti · تعديل البيتزا' : '🍕 Pizza a gusti · بيتزا متعددة';
@@ -18802,14 +18815,15 @@ openCartIngModal = function(key){
  h += '<div style="display:flex;gap:8px"><input class="bp36-in" data-gq placeholder="' + (G.mic ? '🎤 Parla… · تكلّم' : (G.micMsg || '🔍 Cerca pizza · ابحث')) + '" value="' + E(G.q) + '" style="flex:1;min-width:0"><button type="button" class="secondary' + (G.mic ? ' on' : '') + '" data-gmic title="Voce · إدخال صوتي" aria-label="Voce">🎤</button><button type="button" class="secondary" data-gback>✕</button></div>';
  h += '<div class="bp36-pl">' + list.map(function(p){
  var ing = parseIngredients(p.description).join(', ');
- return '<button type="button" class="bp36-pi" data-gp="' + E(String(p.id)) + '"><span style="font-size:24px">🍕</span><span class="nm"><b>' + E(p.name) + '</b><small>' + E(ing) + '</small></span><b>' + eur(pkSizePrice(p, G.size)) + '</b></button>';
+ return '<button type="button" class="bp36-pi" data-gp="' + E(String(p.id)) + '">' + gThumb(p) + '<span class="nm"><b>' + E(p.name) + '</b><small>' + E(ing) + '</small></span><b>' + eur(pkSizePrice(p, G.size)) + '</b></button>';
  }).join('') + (list.length ? '' : '<div class="bp36-empty">Nessuna pizza trovata</div>') + '</div>';
  b.innerHTML = h; ft.innerHTML = '';
  var inp = $('[data-gq]', b); if(inp && G._focus){ inp.focus(); inp.setSelectionRange(inp.value.length, inp.value.length); G._focus = false; }
  return;
  }
+ if(G.mode === 'g2') G.mode = 'mm';
  var m = G.mode, ok = maxiOk(); if(G.size === 'Maxi' && !ok) G.size = 'Normale';
- h += '<div class="bp36-lb">Tipo · النوع</div><div class="bp36-seg">' + ['mm', 'g2', 'g3', 'g4'].map(function(k){
+ h += '<div class="bp36-lb">Tipo · النوع</div><div class="bp36-seg">' + GMK.map(function(k){
  return '<button type="button" data-gm="' + k + '" class="' + (G.mode === k ? 'on' : '') + '"><span style="font-size:20px;font-weight:900">' + GM[k].fr + (GM[k].n > 2 ? '×' + GM[k].n : '') + '</span>' + GM[k].btn + '</button>';
  }).join('') + '</div>';
  h += '<div class="bp36-lb">Formato · الحجم</div><div class="bp36-seg">' + SIZES.map(function(s){
@@ -18820,7 +18834,7 @@ openCartIngModal = function(key){
  var slotHtml = '<div class="bp36-lb">Gusti · الأنواع</div><div class="bp36-g2" style="grid-template-columns:1fr 1fr">';
  G.slots.forEach(function(p, i){
  slotHtml += '<div class="bp36-cell">';
- slotHtml += '<button type="button" class="bp36-slot' + (p ? ' has' : '') + '" data-slot="' + i + '"><span class="fr">' + GM[m].fr + '</span><span class="nm"><b>' + (p ? E(p.name) : 'Scegli il gusto ' + (i + 1) + '…') + '</b>' + (p ? '<small>' + E(parseIngredients(p.description).join(', ')) + '</small>' : '') + '</span>' + (p ? '<b>' + eur(pkSizePrice(p, G.size)) + '</b>' : '<span style="font-size:20px">＋</span>') + '</button>';
+ var sph = p ? gPic(p) : ''; slotHtml += '<button type="button" class="bp36-slot' + (p ? ' has' : '') + (sph ? ' hasph' : '') + '" data-slot="' + i + '"' + (sph ? ' style="--ph:url(&quot;' + gPicAttr(sph) + '&quot;)"' : '') + '><span class="fr">' + GM[m].fr + '</span><span class="nm"><b>' + (p ? E(p.name) : 'Scegli il gusto ' + (i + 1) + '…') + '</b>' + (p ? '<small>' + E(parseIngredients(p.description).join(', ')) + '</small>' : '') + '</span>' + (p ? '<b>' + eur(pkSizePrice(p, G.size)) + '</b>' : '<span style="font-size:20px">＋</span>') + '</button>';
  if(p) slotHtml += gModRow(i, p);
  slotHtml += '</div>';
  });
@@ -18836,7 +18850,7 @@ openCartIngModal = function(key){
  if(isMgr()){
  var c = C.gusti;
  h += '<details class="bp36-card"><summary style="font-weight:850;cursor:pointer">⚙️ Prezzi delle pizze a gusti</summary><div class="bp36-note" style="margin:6px 0">Per ogni tipo scegli come calcolare il prezzo e un eventuale supplemento. «Prezzo fisso» usa il valore indicato (se 0, usa il prezzo più alto).</div>' +
- ['mm', 'g2', 'g3', 'g4'].map(function(k){
+ GMK.map(function(k){
  return '<div class="bp36-card" style="background:var(--bp-card,#fff)"><b>' + GM[k].btn + '</b>' + modeSel(c.rule[k], RULES, 'data-gr="' + k + '"') +
  '<div class="bp36-g2">' + SIZES.map(function(s){ return '<label class="bp36-note">Supplemento ' + s + ' (€)<input class="bp36-in" type="number" step="0.10" min="0" data-gsup="' + k + '|' + s + '" value="' + (num(c.sup[k][s]) || '') + '"></label>'; }).join('') +
  SIZES.map(function(s){ return '<label class="bp36-note">Prezzo fisso ' + s + ' (€)<input class="bp36-in" type="number" step="0.10" min="0" data-gfx="' + k + '|' + s + '" value="' + (num(c.fixed[k][s]) || '') + '"></label>'; }).join('') + '</div></div>';
@@ -32463,6 +32477,7 @@ E["baklava"]=i13;
 var EMBU={};function embSrc(p){var n=String((p&&p.name)||"").toLowerCase().replace(/\s+/g," ").trim();if(EMBU[n])return EMBU[n];var u=window.BP_EMB[n];if(!u)return "";try{var b=atob(u.slice(u.indexOf(",")+1)),a=new Uint8Array(b.length);for(var i=0;i<b.length;i++)a[i]=b.charCodeAt(i);EMBU[n]=URL.createObjectURL(new Blob([a],{type:"image/jpeg"}));}catch(e){EMBU[n]=u;}return EMBU[n];}
 function photoSrc(p){var c=CUS[String(p.id)];if(c)return c;c=embSrc(p);if(c)return c;if(okUrl(p.image_url)){if(URLC[p.image_url])return URLC[p.image_url];cacheUrl(p.image_url);return p.image_url;}return '';}
 /* ---- 3) البلاطة: الصورة تملا البلاطة ---- */
+window.bpPhotoSrc=function(p){try{return photoSrc(p)||'';}catch(e){return '';}};
 function bgHtml(p){var ph=photoSrc(p);return (ph?'<img class="f" alt="" draggable="false" decoding="async" referrerpolicy="no-referrer" src="'+ph+'" onerror="this.remove()">':'');}
 function decorate(force){
  var g=$('#bpmGrid');if(!g)return;var m=[];try{m=getActiveMenu();}catch(e){}
@@ -35593,5 +35608,92 @@ var h=document.querySelector('header');if(h)h.addEventListener('transitionend',f
 window.addEventListener('resize',later);window.addEventListener('orientationchange',later);later();
 }catch(e){console.error('[bp] ios-cart-fix',e)}})();
 </script>
+
+<style id="bpGustiV2">
+/* ===== Pizza a gusti · tema chiaro, colorato (rosso pomodoro · verde basilico · giallo) ===== */
+#bp36G.bp36-ov{background:rgba(60,24,8,.42)!important;backdrop-filter:blur(8px)!important;-webkit-backdrop-filter:blur(8px)!important}
+#bp36G .bp36-sheet{background:linear-gradient(180deg,#fffaf0 0%,#fff1dc 55%,#ffe8cf 100%)!important;color:#2b1608!important;border:0!important;box-shadow:0 -10px 50px rgba(239,68,68,.25)!important}
+#bp36G .bp36-hd{background:linear-gradient(110deg,#ef4444 0%,#f97316 55%,#fbbf24 100%)!important;border-bottom:0!important;padding:14px 18px!important;box-shadow:0 6px 18px rgba(239,68,68,.28)}
+#bp36G .bp36-hd h3{background:none!important;-webkit-text-fill-color:#fff!important;color:#fff!important;text-shadow:0 2px 8px rgba(120,20,0,.35);font-size:19px!important}
+#bp36G .bp36-hd button{background:rgba(255,255,255,.28)!important;color:#fff!important;border:1px solid rgba(255,255,255,.55)!important}
+#bp36G .bp36-body{background:transparent!important;gap:14px!important}
+#bp36G .bp36-lb{color:#b42318!important;font-weight:900!important;letter-spacing:1.6px!important;font-size:11px!important;display:flex;align-items:center;gap:8px}
+#bp36G .bp36-lb::before{content:'';width:9px;height:9px;border-radius:50%;background:linear-gradient(135deg,#ef4444,#f59e0b);box-shadow:0 0 0 3px rgba(239,68,68,.15)}
+#bp36G .bp36-lb::after{content:'';flex:1;height:2px;border-radius:2px;background:linear-gradient(90deg,rgba(239,68,68,.35),rgba(251,191,36,.25),transparent)}
+#bp36G .bp36-seg:has([data-gm]){grid-template-columns:repeat(3,1fr)!important}
+#bp36G .bp36-seg button{background:#fff!important;color:#5b3a1e!important;border:2px solid #fde2c3!important;border-radius:18px!important;box-shadow:0 4px 12px rgba(180,83,9,.10)!important;backdrop-filter:none!important}
+#bp36G .bp36-seg button span{color:#ef4444!important}
+#bp36G .bp36-seg button.on{background:linear-gradient(135deg,#ef4444,#f97316)!important;border-color:#fff!important;color:#fff!important;box-shadow:0 10px 24px rgba(239,68,68,.38)!important}
+#bp36G .bp36-seg button.on span{color:#fff!important}
+#bp36G .bp36-seg:has([data-gs]) button.on{background:linear-gradient(135deg,#22c55e,#15a34a)!important;box-shadow:0 10px 24px rgba(34,197,94,.38)!important}
+#bp36G .bp36-seg button:disabled{opacity:.45!important}
+#bp36G .bp36-slot{min-height:176px!important;border-radius:22px!important;padding:12px!important;justify-content:space-between!important;background:#fff!important;border:2px dashed #fb923c!important;box-shadow:0 6px 16px rgba(249,115,22,.12)!important;backdrop-filter:none!important}
+#bp36G .bp36-slot::before{display:none!important}
+#bp36G .bp36-slot.has{border:2px solid #fff!important;background:linear-gradient(150deg,#fff7d6,#ffe0b8)!important;box-shadow:0 12px 26px rgba(239,68,68,.22)!important}
+#bp36G .bp36-slot.hasph{background-image:linear-gradient(180deg,rgba(40,14,0,0) 30%,rgba(40,14,0,.88) 100%),var(--ph)!important;background-size:cover!important;background-position:center!important}
+#bp36G .bp36-slot .fr{background:linear-gradient(135deg,#ef4444,#f59e0b)!important;border:2px solid #fff!important;box-shadow:0 4px 10px rgba(239,68,68,.4)!important;color:#fff!important}
+#bp36G .bp36-slot .nm b{color:#2b1608!important;font-size:16px!important}
+#bp36G .bp36-slot .nm small{color:#7a5230!important}
+#bp36G .bp36-slot.hasph .nm{margin-top:auto}
+#bp36G .bp36-slot.hasph .nm b{color:#fff!important;text-shadow:0 2px 8px rgba(0,0,0,.7)}
+#bp36G .bp36-slot.hasph .nm small{color:rgba(255,255,255,.9)!important;text-shadow:0 1px 5px rgba(0,0,0,.7)}
+#bp36G .bp36-slot > b:last-child{background:#fff;padding:3px 11px;border-radius:999px;color:#dc2626!important;box-shadow:0 3px 8px rgba(0,0,0,.2)}
+#bp36G .bp36-slot > span[style*="font-size:20px"]{color:#f97316!important}
+#bp36G .bp36-modrow button{background:#fff!important;color:#c2410c!important;border:1.5px solid #fdba74!important;border-radius:12px!important}
+#bp36G .bp36-modsum{color:#7a5230!important}
+#bp36G .bp36-price{background:linear-gradient(135deg,#22c55e 0%,#16a34a 60%,#15803d 100%)!important;border:3px solid #fff!important;border-radius:22px!important;box-shadow:0 12px 28px rgba(22,163,74,.35)!important}
+#bp36G .bp36-price::before{background:radial-gradient(circle,rgba(255,255,255,.35) 0%,transparent 70%)!important}
+#bp36G .bp36-price > div > div{color:#fff!important}
+#bp36G .bp36-price small{color:rgba(255,255,255,.88)!important}
+#bp36G .bp36-price > b,#bp36G .bp36-price b:last-of-type{color:#fff!important;-webkit-text-fill-color:#fff!important;text-shadow:0 2px 10px rgba(0,60,20,.35)!important}
+#bp36G .bp36-pl{gap:10px!important}
+#bp36G .bp36-pi{padding:8px 14px 8px 8px!important;min-height:78px!important;border-radius:20px!important;background:#fff!important;border:2px solid #fde2c3!important;color:#2b1608!important;box-shadow:0 5px 14px rgba(180,83,9,.10)!important}
+#bp36G .bp36-pi:active{background:#fff3df!important;border-color:#f97316!important}
+#bp36G .bp36-pi .ph{position:relative;flex:0 0 62px;width:62px;height:62px;border-radius:18px;overflow:hidden;display:flex;align-items:center;justify-content:center;background:radial-gradient(circle at 30% 25%,#fde68a,#fb923c);box-shadow:0 5px 12px rgba(239,68,68,.28),0 0 0 3px #fff}
+#bp36G .bp36-pi .ph i{font-style:normal;font-size:28px}
+#bp36G .bp36-pi .ph img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+#bp36G .bp36-pi .nm b{color:#2b1608!important}
+#bp36G .bp36-pi .nm small{color:#8a6a4a!important}
+#bp36G .bp36-pi > b:last-child{color:#dc2626!important}
+#bp36G [data-gq],#bp36G [data-gnote]{background:#fff!important;border:2px solid #fde2c3!important;color:#2b1608!important;border-radius:16px!important}
+#bp36G [data-gq]::placeholder,#bp36G [data-gnote]::placeholder{color:#b08a66!important}
+#bp36G [data-gback],#bp36G [data-gmic]{background:#fff!important;color:#c2410c!important;border:2px solid #fde2c3!important;border-radius:14px!important}
+#bp36G [data-gmic].on{background:#ef4444!important;color:#fff!important}
+#bp36G .bp36-qty button{background:linear-gradient(135deg,#fbbf24,#f97316)!important;color:#fff!important;border:0!important;border-radius:12px!important;box-shadow:0 4px 10px rgba(249,115,22,.35)}
+#bp36G .bp36-qty b{color:#2b1608!important}
+#bp36G [data-gprice]{background:#fff!important;border:2px solid #f97316!important;color:#dc2626!important}
+#bp36G [data-gauto]{background:#fff!important;color:#c2410c!important;border:1.5px solid #fdba74!important}
+#bp36G .bp36-note{color:#7a5230!important}
+#bp36G .bp36-card{background:#fff!important;border:1.5px solid #fde2c3!important;color:#2b1608!important}
+#bp36G .bp36-card summary{color:#b42318!important}
+#bp36G .bp36-card input,#bp36G .bp36-card select{background:#fff8ee!important;border:1.5px solid #fdba74!important;color:#2b1608!important}
+#bp36G .bp36-card .bp36-note{color:#7a5230!important}
+#bp36G .bp36-empty{color:#b08a66!important}
+#bp36G .bp36-body::-webkit-scrollbar-thumb{background:rgba(249,115,22,.45)!important}
+#bp36G .bp36-ft{background:linear-gradient(180deg,#fff4e2,#ffe8cf)!important;border-top:2px solid #fff!important;box-shadow:0 -8px 22px rgba(239,68,68,.12)}
+#bp36G .bp36-ft button.secondary{background:#fff!important;color:#7a5230!important;border:2px solid #fde2c3!important;border-radius:16px!important}
+#bp36G .bp36-ft button.green{background:linear-gradient(135deg,#ef4444,#f97316)!important;color:#fff!important;border:0!important;border-radius:16px!important;box-shadow:0 10px 24px rgba(239,68,68,.4)!important;font-weight:900!important}
+#bp36G .bp36-ft button.green:disabled{background:#f1e4d3!important;color:#b9a48b!important;box-shadow:none!important;opacity:1!important}
+</style>
+<style id="bpGustiTiles">
+/* ===== Chip «½🍕 Metà» nella barra categorie (tra Tutti e Pizze) ===== */
+.bpm-gchip{flex:0 0 auto;display:inline-flex;align-items:center;gap:6px;min-height:46px;padding:6px 16px;border-radius:99px;border:2px solid #fff;background:linear-gradient(135deg,#fbbf24,#f97316 60%,#ef4444);color:#fff;font-weight:900;font-size:15px;box-shadow:0 6px 16px rgba(249,115,22,.38);text-shadow:0 1px 3px rgba(120,30,0,.4);cursor:pointer}
+.bpm-gchip b{font-size:19px;line-height:1}
+.bpm-gchip .e{font-size:20px}
+.bpm-gchip:active{transform:scale(.96)}
+html.pos64 body .bpm-gchip{min-height:38px;padding:4px 12px;font-size:13px}
+html.pos64 body .bpm-gchip .e{font-size:16px}
+/* ===== Pizza a gusti · scelta pizza a piastrelle con foto a tutto riquadro ===== */
+#bp36G .bp36-pl{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px!important}
+#bp36G .bp36-pi{position:relative!important;display:block!important;padding:0!important;min-height:0!important;aspect-ratio:1/1.08;border-radius:20px!important;overflow:hidden!important;border:2px solid #fff!important;background:#7c2d12!important;box-shadow:0 8px 20px rgba(120,40,0,.28)!important;text-align:left!important}
+#bp36G .bp36-pi:active{transform:scale(.97);border-color:#f97316!important;background:#7c2d12!important}
+#bp36G .bp36-pi .ph{position:absolute!important;inset:0!important;width:100%!important;height:100%!important;flex:none!important;border-radius:0!important;box-shadow:none!important;background:radial-gradient(circle at 30% 25%,#fde68a,#fb923c)!important}
+#bp36G .bp36-pi .ph i{font-size:56px!important}
+#bp36G .bp36-pi .ph img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+#bp36G .bp36-pi .nm{position:absolute!important;left:0;right:0;bottom:0;z-index:2;padding:34px 10px 9px!important;background:linear-gradient(180deg,rgba(25,8,0,0) 0%,rgba(25,8,0,.72) 38%,rgba(25,8,0,.94) 100%)!important}
+#bp36G .bp36-pi .nm b{color:#fff!important;font-size:16px!important;line-height:1.15;text-shadow:0 2px 6px rgba(0,0,0,.7)}
+#bp36G .bp36-pi .nm small{color:#ffe9c7!important;opacity:1!important;font-size:11.5px!important;line-height:1.3;white-space:normal!important;overflow:hidden;text-overflow:clip!important;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;margin-top:3px;text-shadow:0 1px 4px rgba(0,0,0,.8)}
+#bp36G .bp36-pi > b:last-child{position:absolute!important;top:8px;right:8px;z-index:3;background:#fff;color:#dc2626!important;padding:3px 10px;border-radius:999px;font-size:14px!important;box-shadow:0 3px 8px rgba(0,0,0,.3)}
+</style>
 </body>
 </html>
