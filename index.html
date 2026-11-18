@@ -17669,13 +17669,14 @@ openCartIngModal = function(key){
  if(out.length < 30) m.filter(function(p){ return !seen[p.id]; }).sort(function(a, b){ return (freq[b.name.toLowerCase()] || 0) - (freq[a.name.toLowerCase()] || 0); }).slice(0, 30 - out.length).forEach(function(p){ out.push(p); });
  return out;
  }
+ function bpPrepRow(p){ try{ var a = (window.bpPreFo ? bpPreFo.badge(p) : '') + (window.bpPB ? bpPB.badge(p) : ''); return a ? '<div class="bp-prep' + (a.split('<span class="pp-t">').length > 2 ? ' two' : '') + '">' + a + '</div>' : ''; }catch(e){ return ''; } }
  function tile(p){
  var n = qtyInCart(p), maxi = p.price_maxi != null && Number(p.price_maxi) > 0, id = String(p.id);
  return '<div class="bpm-tile' + (n ? ' has' : '') + (M.pop === id ? ' pop' : '') + '" data-id="' + esc(id) + '" data-cat="' + esc(p.category || 'Menu') + '" title="' + esc(parseIngredients(p.description).join(', ')) + '">' +
  (n ? '<span class="bpm-n">' + n + '</span>' : '') +
- (window.bpPB ? bpPB.badge(p) : '') + (window.bpPreFo ? bpPreFo.badge(p) : '') + '<span class="bpm-grip" title="Trascina · اسحب">⠿</span>' +
+ '<span class="bpm-grip" title="Trascina · اسحب">⠿</span>' +
  '<button type="button" class="bpm-main" data-a="Normale"><b>' + esc(p.name) + '</b><small class="bpm-desc">' + esc(parseIngredients(p.description).join(' · ')) + '</small><i>' + euro(p.price_normal) + '</i></button>' +
- '<div class="bpm-act">' + (n ? '<button type="button" data-m title="Togli uno">−</button>' : '') + (maxi ? '<button type="button" data-a="Maxi" title="Maxi">XL<small>' + euro(p.price_maxi) + '</small></button>' : '') + (/pizz/i.test(p.category || '') ? '<button type="button" data-mn title="Menu +3 € · patatine + bibita">🍟<small>+3</small></button>' : '') + '<button type="button" data-c title="Personalizza">⚙️</button></div></div>';
+ bpPrepRow(p) + '<div class="bpm-act">' + (n ? '<button type="button" data-m title="Togli uno">−</button>' : '') + (maxi ? '<button type="button" data-a="Maxi" title="Maxi">XL<small>' + euro(p.price_maxi) + '</small></button>' : '') + (/pizz/i.test(p.category || '') ? '<button type="button" data-mn title="Menu +3 € · patatine + bibita">🍟<small>+3</small></button>' : '') + '<button type="button" data-c title="Personalizza">⚙️</button></div></div>';
  }
   /* ricerca live: 1) nomi dei prodotti (pizze, panini...) 2) in fondo i prodotti che contengono l'ingrediente digitato 3) il resto */
   function bpNameHit(p, q){
@@ -33533,7 +33534,7 @@ body.qs-lock{overflow:hidden}
   var gI = null; try{ gI = bpGustiInfo(pr.baseName); }catch(e){} if(gI) return gl(gI, rem, add);
   return uniq(base.filter(function(x){ return rem.indexOf(fold(x)) < 0; }).concat(add).filter(is));
  }
- function badge(p){ try{ var l = parseIngredients(p.description || '').filter(is); return l.length ? '<span class="pb-b" title="Dopo forno: ' + esc(l.join(', ')) + '">🌿</span>' : ''; }catch(e){ return ''; } }
+ function badge(p){ try{ var l = parseIngredients(p.description || '').filter(is); return l.length ? '<span class="pb-b" title="Dopo forno: ' + esc(l.join(', ')) + '"><span class="pp-t">🌿 DOPO</span><span class="pp-a">بعد الفرن</span></span>' : ''; }catch(e){ return ''; } }
  function ticket(items, small){
   var rows = []; try{ (items || []).forEach(function(i){ if(bpIsSvc(i.product_name)) return; var l = ofOrderItem(i); if(l.length) rows.push('<div>' + i.quantity + '× ' + esc(dn(splitProductAndMods(i.product_name).baseName)) + ' ← ' + esc(l.join(' + ')) + '</div>'); }); }catch(e){}
   return rows.length ? '<div class="pb-tk' + (small ? ' sm' : '') + '"><h4>🌿 DOPO FORNO · بعد الفرن</h4>' + rows.join('') + '</div>' : '';
@@ -33628,7 +33629,7 @@ body.qs-lock{overflow:hidden}
   var gI = null; try{ gI = bpGustiInfo(pr.baseName); }catch(e){} if(gI) return gl(gI, rem, add);
   return uniq(base.filter(function(x){ return rem.indexOf(fold(x)) < 0; }).concat(add).filter(is));
  }
- function badge(p){ try{ var l = parseIngredients(p.description || '').filter(is); return l.length ? '<span class="prefo-b" title="Prima forno: ' + esc(l.join(', ')) + '">🍳</span>' : ''; }catch(e){ return ''; } }
+ function badge(p){ try{ var l = parseIngredients(p.description || '').filter(is); return l.length ? '<span class="prefo-b" title="Prima forno: ' + esc(l.join(', ')) + '"><span class="pp-t">🍳 PRIMA</span><span class="pp-a">قبل الفرن</span></span>' : ''; }catch(e){ return ''; } }
  function ticket(items, small){
   var rows = []; try{ (items || []).forEach(function(i){ if(bpIsSvc(i.product_name)) return; var l = ofOrderItem(i); if(l.length) rows.push('<div>' + i.quantity + '× ' + esc(dn(splitProductAndMods(i.product_name).baseName)) + ' ← ' + esc(l.join(' + ')) + '</div>'); }); }catch(e){}
   return rows.length ? '<div class="prefo-tk' + (small ? ' sm' : '') + '"><h4>🍳 PRIMA FORNO · قبل الفرن</h4>' + rows.join('') + '</div>' : '';
@@ -36238,6 +36239,19 @@ html.bpd-drag{cursor:grabbing}
  html.pos64:not(.p64-ticket) body #bpPar{position:static!important;flex:none!important}
  html.pos64:not(.p64-ticket) body #p64CartBar{position:sticky!important;bottom:0;z-index:7;min-height:46px;margin-top:8px}
 }
+
+/* ===== Prima/Dopo forno: fuori dalla foto, riga colorata sotto il nome ===== */
+html #newTab #bpmGrid .bp-prep{display:flex;gap:4px;padding:2px 5px 4px;box-sizing:border-box;width:100%;min-width:0;position:relative;z-index:1}
+html #newTab #bpmGrid .bp-prep .pb-b,html #newTab #bpmGrid .bp-prep .prefo-b{position:static!important;top:auto!important;left:auto!important;flex:1 1 0;min-width:0;display:flex;align-items:center;justify-content:center;text-align:center;white-space:nowrap;overflow:hidden;box-sizing:border-box;height:24px;padding:0 4px;line-height:1;border-radius:9px;border:2px solid #fff;color:#fff;font-weight:900;font-size:clamp(9.5px,8.2cqi,12.5px);letter-spacing:.1px;box-shadow:0 1px 4px rgba(0,0,0,.35);pointer-events:none}
+html #newTab #bpmGrid .bp-prep .pb-b{background:#0e9aa7}
+html #newTab #bpmGrid .bp-prep .prefo-b{background:#ea580c}
+
+html #newTab #bpmGrid .bp-prep .pp-t,html #newTab #bpmGrid .bp-prep .pp-a{display:block;white-space:nowrap;overflow:hidden;text-overflow:clip}
+html #newTab #bpmGrid .bp-prep:not(.two) .pb-b,html #newTab #bpmGrid .bp-prep:not(.two) .prefo-b{gap:7px}
+html #newTab #bpmGrid .bp-prep.two{gap:5px}
+html #newTab #bpmGrid .bp-prep.two .pb-b,html #newTab #bpmGrid .bp-prep.two .prefo-b{flex-direction:column;justify-content:center;gap:2px;height:38px;padding:2px 2px;border-radius:11px}
+html #newTab #bpmGrid .bp-prep.two .pp-t{font-size:clamp(10px,8.6cqi,13px);line-height:1}
+html #newTab #bpmGrid .bp-prep.two .pp-a{font-size:clamp(9px,7.4cqi,11.5px);line-height:1;font-weight:800;opacity:.95}
 </style>
 <script id="bpLandWide">
 /* telefono in orizzontale (app installata/PWA): usa lo stesso layout largo del browser (menu + ordine affiancati, barra a sinistra).
