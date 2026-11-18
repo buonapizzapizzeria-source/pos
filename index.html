@@ -29941,12 +29941,24 @@ html.bp-shut #bpGqBadge{display:none!important}
  function $(id){ return document.getElementById(id); }
  function key(){ try{ return (localStorage.getItem(LS) || '').trim(); }catch(e){ return ''; } }
  function setKey(){
-  var k = prompt('Incolla la chiave API di Google Maps.\nServono abilitate: Geocoding API, Places API (New), Routes API.', key());
+  var k = prompt('Incolla la chiave API di Google Maps.\nServono abilitate: Geocoding API, Places API (New), Routes API.\n\nالصق مفتاح Google Maps.\nيجب تفعيل: Geocoding API و Places API (New) و Routes API.', key());
   if(k !== null){ try{ localStorage.setItem(LS, k.trim()); }catch(e){} }
   return key();
  }
  window.bpSetMapsKey = setKey;
  function esc2(t){ return String(t == null ? '' : t).replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
+ function bi(it, ar){ return it + '<br><span dir="rtl" style="display:block;text-align:right;font-family:inherit">' + ar + '</span>'; } /* messaggio italiano + arabo */
+ function errBi(m){
+  var l = String(m).toLowerCase();
+  if(m === 'nokey') return bi('🗺️ Manca la chiave Google Maps.', '🗺️ مفتاح Google Maps غير موجود.');
+  if(l.indexOf('key is invalid') >= 0 || l.indexOf('api key not valid') >= 0) return bi('🔑 Chiave Google Maps non valida. Premi 🔑 e incolla la chiave corretta.', '🔑 مفتاح Google Maps غير صحيح. اضغط 🔑 والصق المفتاح الصحيح.');
+  if(l.indexOf('referer') >= 0) return bi('🔒 La chiave ha restrizioni sul sito (referrer). In Google Cloud: Restrizioni applicazioni → Nessuna.', '🔒 المفتاح مقيّد بعنوان الموقع. في Google Cloud اختر: Restrizioni delle applicazioni ← Nessuna.');
+  if(l.indexOf('not authorized') >= 0 || l.indexOf('not enabled') >= 0 || l.indexOf('has not been used') >= 0 || l.indexOf('api project') >= 0) return bi('⚙️ Geocoding API non abilitata per questa chiave/progetto.', '⚙️ خدمة Geocoding API غير مفعّلة لهذا المفتاح أو المشروع.');
+  if(l.indexOf('billing') >= 0) return bi('💳 Fatturazione non attiva nel progetto Google Cloud.', '💳 الفوترة (Billing) غير مفعّلة في مشروع Google Cloud.');
+  if(l.indexOf('over_query_limit') >= 0 || l.indexOf('quota') >= 0) return bi('⏳ Limite di richieste Google raggiunto. Riprova più tardi.', '⏳ تم الوصول للحد الأقصى من طلبات جوجل. حاول لاحقاً.');
+  if(l.indexOf('failed to fetch') >= 0 || l.indexOf('networkerror') >= 0 || l.indexOf('load failed') >= 0) return bi('📶 Connessione assente: controllo non riuscito.', '📶 لا يوجد اتصال بالإنترنت: تعذّر التحقق.');
+  return bi('🗺️ Controllo non riuscito (' + esc2(m) + ').', '🗺️ تعذّر التحقق من العنوان (' + esc2(m) + ').');
+ }
  function hav(a, b){
   var R = 6371, r = Math.PI / 180, dLa = (b.lat - a.lat) * r, dLo = (b.lng - a.lng) * r;
   var x = Math.sin(dLa / 2) * Math.sin(dLa / 2) + Math.cos(a.lat * r) * Math.cos(b.lat * r) * Math.sin(dLo / 2) * Math.sin(dLo / 2);
@@ -30182,16 +30194,18 @@ function matchIn(q, names, aliases){
   s.style.display = 'block'; s.style.background = c[0]; s.style.color = c[1]; s.style.border = '1px solid ' + c[1] + '55'; s.innerHTML = html;
  }
  function evaluate(c, h){
-  var km = hav(h, c), warn = [];
+  var km = hav(h, c), warn = [], warnAr = [];
   if(!TPL_CITY_RE.test(c.comune || '')) warn.push('fuori da Lodi Vecchio' + (c.comune ? ' (Comune: ' + esc2(c.comune) + ')' : ''));
   if(km > MAXKM) warn.push('a ' + km.toFixed(1).replace('.', ',') + ' km dalla pizzeria (oltre ' + MAXKM + ' km)');
-  return {km: km, warn: warn};
+  if(!TPL_CITY_RE.test(c.comune || '')) warnAr.push('خارج Lodi Vecchio' + (c.comune ? ' (البلدية: ' + esc2(c.comune) + ')' : ''));
+  if(km > MAXKM) warnAr.push('يبعد ' + km.toFixed(1).replace('.', ',') + ' كم عن المطعم (أكثر من ' + MAXKM + ' كم)');
+  return {km: km, warn: warn, warnAr: warnAr};
  }
  function render(s, c, h){
   var ev = evaluate(c, h), km = ev.km.toFixed(1).replace('.', ',');
-  var extra = c.num ? '' : '<br><span style="opacity:.85">ℹ️ Aggiungi il numero civico per un controllo preciso.</span>';
-  if(ev.warn.length) show(s, 'bad', '⚠️ <b>' + esc2(short(c.formatted)) + '</b><br>Attenzione: ' + ev.warn.join(' · ') + extra);
-  else show(s, 'ok', '✅ <b>' + esc2(short(c.formatted)) + '</b> · ' + km + ' km dalla pizzeria (in linea d\'aria)' + extra);
+  var extra = c.num ? '' : '<br><span style="opacity:.85">ℹ️ Aggiungi il numero civico per un controllo preciso.</span><span dir="rtl" style="display:block;text-align:right;opacity:.85">ℹ️ أضف رقم المبنى للتحقق بدقة.</span>';
+  if(ev.warn.length) show(s, 'bad', '⚠️ <b>' + esc2(short(c.formatted)) + '</b><br>Attenzione: ' + ev.warn.join(' · ') + '<span dir="rtl" style="display:block;text-align:right">تنبيه: ' + ev.warnAr.join(' · ') + '</span>' + extra);
+  else show(s, 'ok', '✅ <b>' + esc2(short(c.formatted)) + '</b> · ' + km + ' km dalla pizzeria (in linea d\'aria)<span dir="rtl" style="display:block;text-align:right">' + km + ' كم عن المطعم (خط مستقيم)</span>' + extra);
  }
  function wire(s, list, alts, h, inp){
   Array.prototype.slice.call(s.querySelectorAll('[data-bpgc]')).forEach(function(bn){
@@ -30218,11 +30232,11 @@ function matchIn(q, names, aliases){
   var t = $('type'); if(t && !/consegn/i.test(t.value)){ s.style.display = 'none'; return; }
   if(v.length < 4){ s.style.display = 'none'; return; }
   if(!key()){
-   show(s, 'warn', '🗺️ Per controllare l\'indirizzo su Google Maps serve la chiave. <button type="button" id="bpGeoKeyBtn" style="margin-right:6px">🔑 Imposta chiave</button>');
+   show(s, 'warn', bi('🗺️ Per controllare l\'indirizzo su Google Maps serve la chiave.', '🗺️ للتحقق من العنوان عبر Google Maps يلزم المفتاح.') + '<br><button type="button" id="bpGeoKeyBtn" style="margin-top:4px">🔑 Imposta chiave · إدخال المفتاح</button>');
    var b = $('bpGeoKeyBtn'); if(b) b.onclick = function(){ if(setKey()) check(); };
    return;
   }
-  var my = ++tokC; show(s, 'info', '🗺️ Controllo su Google Maps…');
+  var my = ++tokC; show(s, 'info', bi('🗺️ Controllo su Google Maps…', '🗺️ جارٍ التحقق عبر Google Maps…'));
   try{
    var res = await geocode(v), h = await ensureHome(); if(my !== tokC) return;
    var typed = core(nz(splitCivic(v.split(',')[0]).name));
@@ -30230,14 +30244,14 @@ function matchIn(q, names, aliases){
    res.filter(function(r){ return r.street; }).forEach(function(r){ var k = short(r.formatted); if(!seen[k]){ seen[k] = 1; list.push(r); } });
    var alts = localMatches(v).filter(function(m){ return !list.some(function(r){ return r.route && nz(r.route) === nz(m.n); }); }).slice(0, 3);
    if(!list.length){
-    show(s, 'bad', '⚠️ Via non trovata con precisione su Google Maps.' + (alts.length ? '<br>🔤 Forse cercavi:' + altBtns(alts) : '<br>Controlla il nome della via.'));
+    show(s, 'bad', bi('⚠️ Via non trovata con precisione su Google Maps.', '⚠️ لم يتم العثور على الشارع بدقة في Google Maps.') + (alts.length ? '<br>🔤 Forse cercavi · ربما تقصد:' + altBtns(alts) : '<br>' + bi('Controlla il nome della via.', 'راجع اسم الشارع.')));
     wire(s, list, alts, h, inp); return;
    }
    var trust = (typed === trustedCore);
    if(trust && list.length > 1) list = [list[0]];
    var typo = !trust && list.length === 1 && list[0].route && typed !== core(nz(list[0].route));
    if(list.length > 1 || typo){
-    show(s, 'warn', (typo ? '🔤 <b>Forse cercavi:</b>' : '🔎 Trovati <b>' + list.length + '</b> indirizzi simili, scegli quello giusto:') + candBtns(list, h) + (alts.length ? altBtns(alts) : ''));
+    show(s, 'warn', (typo ? '🔤 <b>Forse cercavi · ربما تقصد:</b>' : '🔎 Trovati <b>' + list.length + '</b> indirizzi simili, scegli quello giusto<br><span dir="rtl" style="display:block;text-align:right">🔎 وُجد <b>' + list.length + '</b> عناوين متشابهة، اختر الصحيح:</span>') + candBtns(list, h) + (alts.length ? altBtns(alts) : ''));
     wire(s, list, alts, h, inp); return;
    }
    render(s, list[0], h);
@@ -30246,10 +30260,10 @@ function matchIn(q, names, aliases){
    var m = String(e && e.message || e);
    if(m === window.bpGq.MSG){ /* quota esaurita: solo dizionario locale Lodi Vecchio */
     var lr = null; try{ lr = resolveLodiVecchioStreet(v); }catch(x){}
-    show(s, lr ? 'info' : 'warn', '🔒 ' + esc2(m) + '<br>' + (lr ? '📍 Dizionario locale: <b>' + esc2(lr.officialStreet + (lr.civic ? ' ' + lr.civic : '')) + '</b>, Lodi Vecchio' + (lr.exact ? ' ✅' : ' (controlla il nome)') : '⚠️ Via non riconosciuta nel dizionario locale.'));
+    show(s, lr ? 'info' : 'warn', bi('🔒 ' + esc2(m), '🔒 انتهت حصة جوجل اليوم - الوضع المحلي مفعّل') + '<br>' + (lr ? '📍 Dizionario locale · القاموس المحلي: <b>' + esc2(lr.officialStreet + (lr.civic ? ' ' + lr.civic : '')) + '</b>, Lodi Vecchio' + (lr.exact ? ' ✅' : ' (controlla il nome · راجع الاسم)') : bi('⚠️ Via non riconosciuta nel dizionario locale.', '⚠️ الشارع غير موجود في القاموس المحلي.')));
     return;
    }
-   show(s, 'warn', m === 'nokey' ? '🗺️ Manca la chiave Google Maps.' : '🗺️ Controllo non riuscito (' + esc2(m) + '). Verifica che Geocoding API sia abilitata per la chiave.');
+   show(s, 'warn', errBi(m));
   }
  }
  document.addEventListener('change', function(e){
@@ -30333,25 +30347,25 @@ function matchIn(q, names, aliases){
    var ids = selectedRouteOrderIds.slice();
    var stops = ids.map(function(id){ return orders.find(function(o){ return o.id === id; }); }).filter(function(o){ return o && o.address; });
    var noAddr = ids.filter(function(id){ return !stops.some(function(o){ return o.id === id; }); });
-   if(stops.length < 2){ say('warn', 'Servono almeno 2 consegne con indirizzo per ottimizzare il giro.'); return; }
+   if(stops.length < 2){ say('warn', bi('Servono almeno 2 consegne con indirizzo per ottimizzare il giro.', 'يلزم توصيلتان على الأقل بعنوان لترتيب خط التوصيل.')); return; }
    if(!key() && !setKey()) return;
-   say('info', '⏳ Calcolo il giro più breve sulle strade reali…');
+   say('info', bi('⏳ Calcolo il giro più breve sulle strade reali…', '⏳ جارٍ حساب أقصر خط توصيل على الطرق الفعلية…'));
    var h = await ensureHome(), pts = [], missing = [];
    for(var i = 0; i < stops.length; i++){
     var r; try{ r = await geocode(stops[i].address); }catch(eq){ if(String(eq && eq.message) === window.bpGq.MSG){ missing.push(stops[i]); continue; } throw eq; }
     var g = r.filter(function(x){ return x.street; })[0] || r[0];
     if(g) pts.push({lat: g.lat, lng: g.lng, o: stops[i]}); else missing.push(stops[i]);
    }
-   if(pts.length < 2){ say('warn', window.bpGq.blocked() ? '🔒 ' + window.bpGq.MSG + ': non riesco a localizzare gli indirizzi non ancora in memoria.' : 'Non riesco a localizzare abbastanza indirizzi su Google Maps.'); return; }
-   var res, how, err1 = '';
-   try{ res = await routesOpt(h, pts); how = '🛣️ strade reali e sensi unici (Google Routes)'; }
+   if(pts.length < 2){ say('warn', window.bpGq.blocked() ? bi('🔒 ' + window.bpGq.MSG + ': non riesco a localizzare gli indirizzi non ancora in memoria.', '🔒 انتهت حصة جوجل اليوم: لا أستطيع تحديد العناوين غير المحفوظة مسبقاً.') : bi('Non riesco a localizzare abbastanza indirizzi su Google Maps.', 'لم أستطع تحديد عدد كافٍ من العناوين على Google Maps.')); return; }
+   var res, how, howAr, err1 = '';
+   try{ res = await routesOpt(h, pts); how = '🛣️ strade reali e sensi unici (Google Routes)'; howAr = '🛣️ الطرق الفعلية والاتجاهات الواحدة (Google Routes)'; }
    catch(e1){
     err1 = String(e1 && e1.message || e1); console.warn('[bp] computeRoutes', e1);
-    try{ res = await matrixOpt(h, pts); how = '🛣️ strade reali e sensi unici (matrice Google + tutte le combinazioni)'; }
+    try{ res = await matrixOpt(h, pts); how = '🛣️ strade reali e sensi unici (matrice Google + tutte le combinazioni)'; howAr = '🛣️ الطرق الفعلية والاتجاهات الواحدة (مصفوفة Google)'; }
     catch(e2){
      console.warn('[bp] computeRouteMatrix', e2);
      var ord = tsp(h, pts), tot = 0, last = h; ord.forEach(function(ix){ tot += hav(last, pts[ix]); last = pts[ix]; }); tot += hav(last, h);
-     res = {order: ord, km: tot * 1.3, min: tot * 1.3 / 30 * 60}; how = '⚠️ stima in linea d\'aria (Routes API non risponde: ' + esc2(err1) + ')';
+     res = {order: ord, km: tot * 1.3, min: tot * 1.3 / 30 * 60}; how = '⚠️ stima in linea d\'aria (Routes API non risponde: ' + esc2(err1) + ')'; howAr = '⚠️ تقدير بخط مستقيم (Routes API لا تستجيب: ' + esc2(err1) + ')';
      err1 = '';
     }
    }
@@ -30359,10 +30373,11 @@ function matchIn(q, names, aliases){
    selectedRouteOrderIds = newIds;
    try{ renderOrders(); }catch(e){}
    say(how.indexOf('⚠️') === 0 ? 'warn' : 'ok', '⚡ Giro ottimizzato: <b>' + res.km.toFixed(1).replace('.', ',') + ' km</b> · circa <b>' + Math.round(res.min) + ' min</b> (andata e ritorno, senza soste) · ' + how
-    + (err1 ? '<br><small style="opacity:.75">computeRoutes non disponibile (' + esc2(err1) + '): usata la matrice.</small>' : '')
-    + (missing.length ? '<br>⚠️ Non localizzati (messi in fondo): ' + missing.map(function(o){ return '#' + o.id; }).join(', ') : '')
-    + '<br><span style="opacity:.8">Ordinato per percorso, non per orario di consegna. Ora «Apri Giro su Google Maps» usa questo ordine.</span>');
-  }catch(e){ console.warn('[bp] ottimizza', e); say('warn', '⚠️ Ottimizzazione non riuscita: ' + esc2(e && e.message || e)); }
+    + '<span dir="rtl" style="display:block;text-align:right">⚡ تم ترتيب الخط: <b>' + res.km.toFixed(1).replace('.', ',') + ' كم</b> · حوالي <b>' + Math.round(res.min) + ' دقيقة</b> (ذهاب وعودة بدون توقف) · ' + howAr + '</span>'
+    + (err1 ? '<br><small style="opacity:.75">computeRoutes non disponibile (' + esc2(err1) + '): usata la matrice. · computeRoutes غير متاح، تم استخدام المصفوفة.</small>' : '')
+    + (missing.length ? '<br>⚠️ Non localizzati (messi in fondo) · غير محدَّدة (وُضعت في النهاية): ' + missing.map(function(o){ return '#' + o.id; }).join(', ') : '')
+    + '<br><span style="opacity:.8">Ordinato per percorso, non per orario di consegna. Ora «Apri Giro su Google Maps» usa questo ordine.</span><span dir="rtl" style="display:block;text-align:right;opacity:.8">الترتيب حسب المسار وليس حسب موعد التسليم. زر «فتح الخط في Google Maps» سيستخدم هذا الترتيب الآن.</span>');
+  }catch(e){ console.warn('[bp] ottimizza', e); var em = String(e && e.message || e), eb = errBi(em); say('warn', bi('⚠️ Ottimizzazione non riuscita: ' + esc2(em), '⚠️ تعذّر ترتيب خط التوصيل: ' + esc2(em)) + (eb.indexOf('Controllo non riuscito') < 0 ? '<br>' + eb : '')); }
  }
  window.bpOptimizeRoute = optimize;
  /* Apri su Google Maps: giro completo con l'ordine attuale (dopo l'ottimizzazione), partenza e ritorno Via Libertà 29 */
@@ -30371,15 +30386,15 @@ function matchIn(q, names, aliases){
    var q = normAddr(canon(o.address)), c = cache[q.toLowerCase()];
    return (c && c[0] && c[0].street) ? short(c[0].formatted) : q;
   });
-  if(!stops.length){ alert('Seleziona almeno un ordine con indirizzo di consegna!'); return; }
+  if(!stops.length){ alert('Seleziona almeno un ordine con indirizzo di consegna!\nاختر طلباً واحداً على الأقل بعنوان توصيل!'); return; }
   var enc = encodeURIComponent, hq = enc(HOME_Q);
   window.open('https://www.google.com/maps/dir/?api=1&origin=' + hq + '&destination=' + hq + '&waypoints=' + stops.map(enc).join('|') + '&travelmode=driving', '_blank');
  };
  function mount(){
   var box = $('routeBuilderBox'); if(!box || $('bpOptBtn')) return;
   var open = box.querySelector('[onclick*="openGoogleMapsMultiRoute"]'); if(!open) return;
-  var b = document.createElement('button'); b.type = 'button'; b.id = 'bpOptBtn'; b.className = 'blue btn-sm'; b.textContent = '⚡ Ottimizza giro'; b.onclick = optimize;
-  var k = document.createElement('button'); k.type = 'button'; k.className = 'btn-sm'; k.textContent = '🔑'; k.title = 'Chiave Google Maps'; k.onclick = setKey;
+  var b = document.createElement('button'); b.type = 'button'; b.id = 'bpOptBtn'; b.className = 'blue btn-sm'; b.textContent = '⚡ Ottimizza giro · ترتيب الخط'; b.onclick = optimize;
+  var k = document.createElement('button'); k.type = 'button'; k.className = 'btn-sm'; k.textContent = '🔑'; k.title = 'Chiave Google Maps · مفتاح Google Maps'; k.onclick = setKey;
   open.parentNode.insertBefore(b, open); open.parentNode.appendChild(k);
  }
  setInterval(mount, 1500); mount();
