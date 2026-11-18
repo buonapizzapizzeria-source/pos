@@ -5095,26 +5095,7 @@ a,label,summary,[role="button"],[onclick],[data-tab],.tabs button,#bpNav *,#bpMo
  </label>
  <input id="cashGivenInput" min="0" oninput="renderCart()" placeholder="Es. 20 o 50" step="0.50" style="width:130px;padding:6px 10px;font-weight:900;text-align:center;border:2px solid #16794b" type="number"/>
  </div>
- <div class="quick-cash-btns">
- <button onclick="setCashGiven(10)" type="button">
- 💶 10 €
- </button>
- <button onclick="setCashGiven(20)" type="button">
- 💶 20 €
- </button>
- <button onclick="setCashGiven(30)" type="button">
- 💶 30 €
- </button>
- <button onclick="setCashGiven(50)" type="button">
- 💶 50 €
- </button>
- <button onclick="setCashGiven(100)" type="button">
- 💶 100 €
- </button>
- <button onclick="setCashGiven(0)" style="color:#667085;border-color:#d0d5dd" type="button">
- ✖ Esatto
- </button>
- </div>
+ <div class="quick-cash-btns"><button onclick="addCashGiven(5)" type="button">5 €</button><button onclick="addCashGiven(10)" type="button">10 €</button><button onclick="addCashGiven(20)" type="button">20 €</button><button onclick="addCashGiven(50)" type="button">50 €</button><button onclick="addCashGiven(100)" type="button">100 €</button><button onclick="setCashGiven(0)" class="qc-reset" type="button">↺ Azzera</button></div>
  <div class="resto-banner hidden" id="restoResultBanner" style="margin-top:8px">
  <span id="restoLabel">
  💰 Resto da dare al cliente:
@@ -8208,6 +8189,11 @@ function onPaymentMethodChange(){
  let isCash = el('payment').value === 'Contanti';
  el('cashCalcArea').classList.toggle('hidden', !isCash);
  renderCart();
+}
+
+function addCashGiven(v){
+ var cur = Number(el('cashGivenInput').value || 0);
+ setCashGiven(Math.round((cur + Number(v)) * 100) / 100);
 }
 
 function setCashGiven(val){
@@ -34343,7 +34329,7 @@ body.qs-lock{overflow:hidden}
 #bpCash button.on{background:#16794b;border-color:#16794b;color:#fff}
 #bpCash button.on small{color:#d1fadf}
 #bpCash button.ex{border-color:#d0d5dd;color:#344054}
-#cashCalcArea .quick-cash-btns{display:none!important}
+#cashCalcArea .quick-cash-btns{display:grid!important;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:8px}#cashCalcArea .quick-cash-btns button{min-height:50px;font-size:17px;font-weight:900;border:2px solid #abefc6;border-radius:14px;background:#fff;color:#16794b;padding:4px 6px}#cashCalcArea .quick-cash-btns button:active{background:#16794b;color:#fff}#cashCalcArea .quick-cash-btns button.qc-reset{color:#b42318;border-color:#fda29b;background:#fef3f2}
 #bpDl{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:6px 0;padding:6px 8px;border-radius:14px;background:#eef6ff;border:2px solid #9ec5f0}
 #bpDl .dl-s{font-weight:900;font-size:13px;color:#0b4a8f}
 #bpDl button{border:0;border-radius:99px!important;min-height:36px!important;height:auto!important;padding:4px 12px!important;font-size:14px;font-weight:800;min-width:0!important;background:#fff;color:#0b4a8f;border:2px dashed #3b82f6}
