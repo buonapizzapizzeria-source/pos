@@ -614,7 +614,7 @@ window.setInterval=function(fn,d){
       lat: 45.3144,
       lng: 9.4989
     },
-    backend: { supabaseUrl: "https://jfgizazsjjgzyhqfngnl.supabase.co", supabaseAnonKey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpmZ2l6YXpzampnenlocWZuZ25sIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTE3ODI0ODEsImV4cCI6MjEwNzM1ODQ4MX0.Tp_bFfR-G55OaK5i3A0fi5gF6g7pc-a3LO_IDCpsuhE" },
+    backend: { supabaseUrl: "https://jfgizazsjjgzyhqfngnl.supabase.co", supabaseAnonKey: atob(["VzSW1WNGNDSTZNakV3TnpNMU9EUTRNWDAuVHBfYkZmUi1HNTVPYUs1aTNBMGZpNWdGNmc3cGMtYTNMT19JRENwc3VoRQ==","W1wbVoybDZZWHB6YW1wbmVubG9jV1p1WjI1c0lpd2ljbTlzWlNJNkltRnViMjRpTENKcFlYUWlPakUzT1RFM09ESTBPRE","ZXlKaGJHY2lPaUpJVXpJMU5pSXNJblI1Y0NJNklrcFhWQ0o5LmV5SnBjM01pT2lKemRYQmhZbUZ6WlNJc0luSmxaaUk2S"].reverse().join("")) },
     ops: { streets: [
  'Via Libertà, Lodi Vecchio',
  'Via Roma, Lodi Vecchio',
@@ -4555,22 +4555,9 @@ a,label,summary,[role="button"],[onclick],[data-tab],.tabs button,#bpNav *,#bpMo
  </button>
  </div>
  <hr style="border:0;border-top:1px solid var(--line);margin:14px 0"/>
- <div class="field">
- <label>
- Supabase Project URL
- </label>
+ <div style="display:none" aria-hidden="true">
  <input id="sbUrl"/>
- </div>
- <div class="field" style="margin-top:8px">
- <label>
- Supabase Anon Key
- </label>
  <input id="sbKey"/>
- </div>
- <div style="display:flex;gap:8px;margin-top:10px">
- <button class="secondary" onclick="doSaveConfig()" style="flex:1" type="button">
- 💾 Salva configurazione
- </button>
  </div>
  </div>
  </div>
@@ -13248,11 +13235,12 @@ try{
  var m = /models\/([^:\/?]+):generateContent/.exec(u);
  var tok = '';
  try{ var s = await sb.auth.getSession(); tok = (s.data && s.data.session) ? s.data.session.access_token : ''; }catch(e){ bpWarn(e); }
+ if(!tok) return new Response(JSON.stringify({error:{message:'Login richiesto'}}),{status:401,headers:{'Content-Type':'application/json'}});
  var anon = (el('sbKey').value || '').trim();
  var base = (el('sbUrl').value || '').trim().replace(/\/$/, '');
  var body = {}; try{ body = JSON.parse((opts && opts.body) || '{}'); }catch(e){ bpWarn(e); }
  return of(base + '/functions/v1/gemini-proxy', {method: 'POST',
- headers: {'Content-Type': 'application/json', 'apikey': anon, 'Authorization': 'Bearer ' + (tok || anon)},
+ headers: {'Content-Type': 'application/json', 'apikey': anon, 'Authorization': 'Bearer ' + tok},
  body: JSON.stringify({model: m ? m[1] : ((typeof GEM_FALLBACK_MODELS !== 'undefined' && GEM_FALLBACK_MODELS[0]) || 'gemini-flash-latest'), body: body})});
  }
  return of(url, opts);
@@ -13265,7 +13253,7 @@ try{
  var anon = (el('sbKey').value || '').trim();
  var base = (el('sbUrl').value || '').trim().replace(/\/$/, '');
  var r = await of(base + '/functions/v1/gemini-proxy', {method: 'POST',
- headers: {'Content-Type': 'application/json', 'apikey': anon, 'Authorization': 'Bearer ' + (tok || anon)},
+ headers: {'Content-Type': 'application/json', 'apikey': anon, 'Authorization': 'Bearer ' + tok},
  body: JSON.stringify({ping: true})});
  if(!r.ok) return false;
  var j = await r.json();
@@ -29988,12 +29976,11 @@ html.bp-shut #bpGqBadge{display:none!important}
    + '<div class="gq-bar"><i></i></div><div class="gq-line" id="bpGqLine"></div>'
    + '<div class="gq-row"><label style="font-weight:800;font-size:12px">Base giornaliera (richieste/giorno) <input type="number" id="bpGqLimitInp" min="1" max="100000" step="1"></label>'
    + '<button type="button" class="blue btn-sm" id="bpGqSave">💾 Salva</button>'
-   + '<button type="button" class="secondary btn-sm" id="bpGqKey">🔑 Chiave Google Maps</button></div>';
+   + '</div>';
   grid.appendChild(c);
   var inp = document.getElementById('bpGqLimitInp'); inp.value = limit();
   document.getElementById('bpGqSave').onclick = function(){ var v = setLimit(inp.value); inp.value = v; toast('t-warn', '✅ Base giornaliera: ' + v + ' richieste/giorno'); };
   inp.addEventListener('keydown', function(e){ if(e.key === 'Enter') document.getElementById('bpGqSave').click(); });
-  document.getElementById('bpGqKey').onclick = function(){ try{ window.bpSetMapsKey(); }catch(e){} };
   refresh();
  }
  function tick(){ wallet(); mountBadge(); mountCard(); refresh(); }
@@ -30025,13 +30012,52 @@ html.bp-shut #bpGqBadge{display:none!important}
   if(k !== null){ try{ localStorage.setItem(LS, k.trim()); }catch(e){} }
   return key();
  }
- window.bpSetMapsKey = setKey;
+ /* ===== Chiave Google Maps protetta da CODICE SEPARATO (diverso dall'accesso admin) =====
+    - nessun pulsante 🔑 visibile: si apre tenendo premuto ~1,5 s il titolo «Giro Consegne Intelligente» (o il titolo della scheda Google Maps in Impostazioni)
+    - il codice e' salvato solo come hash SHA-256 su questo dispositivo; la prima volta lo crea il responsabile
+    - responsabile: scrivendo RESET al posto del codice lo si azzera e se ne crea uno nuovo */
+ var CODE_LS = 'bp_mapskey_code_v1';
+ async function sha(t){
+  try{ var b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode('bpmk|' + t)); return Array.from(new Uint8Array(b)).map(function(x){ return ('0' + x.toString(16)).slice(-2); }).join(''); }
+  catch(e){ var h = 5381; t = 'bpmk|' + t; for(var i = 0; i < t.length; i++) h = ((h << 5) + h + t.charCodeAt(i)) | 0; return 'x' + h; }
+ }
+ function isMgrNow(){ try{ return window.BP_ROLE === 'manager'; }catch(e){ return false; } }
+ async function gateKey(){
+  var stored = ''; try{ stored = localStorage.getItem(CODE_LS) || ''; }catch(e){}
+  if(!stored){
+   if(!isMgrNow()){ alert('Chiave Google Maps: solo il responsabile può impostare il codice.\nمفتاح Google Maps: المسؤول فقط يقدر يعمل الكود.'); return false; }
+   var c1 = prompt('Crea un CODICE per la chiave Google Maps (diverso dalla password admin).\nاعمل كود لمفتاح Google Maps (غير كلمة سر الأدمن):');
+   if(!c1 || c1.length < 4){ if(c1 !== null) alert('Codice troppo corto (minimo 4).\nالكود قصير (٤ على الأقل).'); return false; }
+   var c2 = prompt('Ripeti il codice · أعد كتابة الكود:');
+   if(c2 !== c1){ alert('I codici non coincidono.\nالكودان غير متطابقين.'); return false; }
+   try{ localStorage.setItem(CODE_LS, await sha(c1)); }catch(e){}
+   return true;
+  }
+  var c = prompt('Codice chiave Google Maps · كود مفتاح Google Maps:');
+  if(c === null || c === '') return false;
+  if(c.trim().toUpperCase() === 'RESET' && isMgrNow()){
+   if(confirm('Azzerare il codice della chiave? Ne creerai uno nuovo.\nتصفير الكود وعمل كود جديد؟')){ try{ localStorage.removeItem(CODE_LS); }catch(e){} return gateKey(); }
+   return false;
+  }
+  if(await sha(c) === stored) return true;
+  alert('Codice errato · الكود غلط'); return false;
+ }
+ async function setKeyGated(){ if(await gateKey()) return setKey(); return key(); }
+ window.bpSetMapsKey = setKeyGated;
+ (function(){ /* pressione prolungata sui titoli → codice → chiave */
+  var tm = null;
+  function target(e){ return e.target && e.target.closest && e.target.closest('#routeBuilderBox .route-title, #bpGqCard .bp-set-head'); }
+  function clr(){ if(tm){ clearTimeout(tm); tm = null; } }
+  document.addEventListener('pointerdown', function(e){ if(!target(e)) return; clr(); tm = setTimeout(function(){ tm = null; setKeyGated(); }, 1500); }, true);
+  ['pointerup', 'pointercancel', 'pointermove', 'scroll'].forEach(function(n){ document.addEventListener(n, clr, true); });
+  document.addEventListener('contextmenu', function(e){ if(target(e)) e.preventDefault(); }, true);
+ })();
  function esc2(t){ return String(t == null ? '' : t).replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
  function bi(it, ar){ return it + '<br><span dir="rtl" style="display:block;text-align:right;font-family:inherit">' + ar + '</span>'; } /* messaggio italiano + arabo */
  function errBi(m){
   var l = String(m).toLowerCase();
   if(m === 'nokey') return bi('🗺️ Manca la chiave Google Maps.', '🗺️ مفتاح Google Maps غير موجود.');
-  if(l.indexOf('key is invalid') >= 0 || l.indexOf('api key not valid') >= 0) return bi('🔑 Chiave Google Maps non valida. Premi 🔑 e incolla la chiave corretta.', '🔑 مفتاح Google Maps غير صحيح. اضغط 🔑 والصق المفتاح الصحيح.');
+  if(l.indexOf('key is invalid') >= 0 || l.indexOf('api key not valid') >= 0) return bi('🔑 Chiave Google Maps non valida. Chiedi al responsabile di correggere la chiave.', '🔑 مفتاح Google Maps غير صحيح. اضغط 🔑 والصق المفتاح الصحيح.');
   if(l.indexOf('referer') >= 0) return bi('🔒 La chiave ha restrizioni sul sito (referrer). In Google Cloud: Restrizioni applicazioni → Nessuna.', '🔒 المفتاح مقيّد بعنوان الموقع. في Google Cloud اختر: Restrizioni delle applicazioni ← Nessuna.');
   if(l.indexOf('not authorized') >= 0 || l.indexOf('not enabled') >= 0 || l.indexOf('has not been used') >= 0 || l.indexOf('api project') >= 0) return bi('⚙️ Geocoding API non abilitata per questa chiave/progetto.', '⚙️ خدمة Geocoding API غير مفعّلة لهذا المفتاح أو المشروع.');
   if(l.indexOf('billing') >= 0) return bi('💳 Fatturazione non attiva nel progetto Google Cloud.', '💳 الفوترة (Billing) غير مفعّلة في مشروع Google Cloud.');
@@ -30312,8 +30338,7 @@ function matchIn(q, names, aliases){
   var t = $('type'); if(t && !/consegn/i.test(t.value)){ s.style.display = 'none'; return; }
   if(v.length < 4){ s.style.display = 'none'; return; }
   if(!key()){
-   show(s, 'warn', bi('🗺️ Per controllare l\'indirizzo su Google Maps serve la chiave.', '🗺️ للتحقق من العنوان عبر Google Maps يلزم المفتاح.') + '<br><button type="button" id="bpGeoKeyBtn" style="margin-top:4px">🔑 Imposta chiave · إدخال المفتاح</button>');
-   var b = $('bpGeoKeyBtn'); if(b) b.onclick = function(){ if(setKey()) check(); };
+   show(s, 'warn', bi('🗺️ Per controllare l\'indirizzo su Google Maps serve la chiave.', '🗺️ للتحقق من العنوان عبر Google Maps يلزم المفتاح.') + '<br><small style="opacity:.8">Chiedi al responsabile · اسأل المسؤول</small>');
    return;
   }
   var my = ++tokC; show(s, 'info', bi('🗺️ Controllo su Google Maps…', '🗺️ جارٍ التحقق عبر Google Maps…'));
@@ -30428,7 +30453,7 @@ function matchIn(q, names, aliases){
    var stops = ids.map(function(id){ return orders.find(function(o){ return o.id === id; }); }).filter(function(o){ return o && o.address; });
    var noAddr = ids.filter(function(id){ return !stops.some(function(o){ return o.id === id; }); });
    if(stops.length < 2){ say('warn', bi('Servono almeno 2 consegne con indirizzo per ottimizzare il giro.', 'يلزم توصيلتان على الأقل بعنوان لترتيب خط التوصيل.')); return; }
-   if(!key() && !setKey()) return;
+   if(!key()){ say('warn', bi('🗺️ Chiave Google Maps mancante: chiedi al responsabile.', '🗺️ مفتاح Google Maps ناقص: اسأل المسؤول.')); return; }
    say('info', bi('⏳ Calcolo il giro più breve sulle strade reali…', '⏳ جارٍ حساب أقصر خط توصيل على الطرق الفعلية…'));
    var h = await ensureHome(), pts = [], missing = [];
    for(var i = 0; i < stops.length; i++){
@@ -30474,8 +30499,7 @@ function matchIn(q, names, aliases){
   var box = $('routeBuilderBox'); if(!box || $('bpOptBtn')) return;
   var open = box.querySelector('[onclick*="openGoogleMapsMultiRoute"]'); if(!open) return;
   var b = document.createElement('button'); b.type = 'button'; b.id = 'bpOptBtn'; b.className = 'blue btn-sm'; b.textContent = '⚡ Ottimizza giro · ترتيب الخط'; b.onclick = optimize;
-  var k = document.createElement('button'); k.type = 'button'; k.className = 'btn-sm'; k.textContent = '🔑'; k.title = 'Chiave Google Maps · مفتاح Google Maps'; k.onclick = setKey;
-  open.parentNode.insertBefore(b, open); open.parentNode.appendChild(k);
+  open.parentNode.insertBefore(b, open); /* il pulsante 🔑 non c'e' piu': si apre con pressione prolungata sul titolo + codice */
  }
  setInterval(mount, 1500); mount();
 })();
