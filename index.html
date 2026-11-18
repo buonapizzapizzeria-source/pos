@@ -36184,5 +36184,53 @@ html.bpd-drag{cursor:grabbing}
  },true);
 })();
 </script>
+<style id="bpLandPhone">
+/* telefono in orizzontale (schermo basso, largo < 900): Nuovo ordine = un'unica area che scorre.
+   تليفون أفقي: كل شاشة أوردر جديد تتسحب مع بعض (التابات + البحث + التصنيفات + المنيو) والمنيو 3 أعمدة */
+@media (orientation:landscape) and (max-height:560px) and (max-width:899px){
+ html.pos64:not(.p64-ticket) body #newTab:not(.hidden){display:block!important;overflow-y:auto!important;overflow-x:hidden!important;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;padding:4px 8px 8px!important}
+ html.pos64:not(.p64-ticket) body #newTab>.grid{display:block!important;position:static!important;height:auto!important;min-height:0!important;flex:none!important;margin:0!important}
+ html.pos64:not(.p64-ticket) body #newTab>.grid>section.panel:first-child{position:static!important;display:block!important;height:auto!important;max-height:none!important;overflow:visible!important;padding:4px!important}
+ html.pos64:not(.p64-ticket) body #bpMenu{display:flex!important;flex:none!important;height:auto!important;min-height:0!important;max-height:none!important;overflow:visible!important}
+ html.pos64:not(.p64-ticket) body #bpmGrid{flex:none!important;height:auto!important;max-height:none!important;overflow:visible!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:8px!important}
+ html.pos64:not(.p64-ticket) body #bpmGrid .bpm-tile{height:auto!important;min-height:max-content!important}
+ html.pos64:not(.p64-ticket) body #bpPar{position:static!important;flex:none!important}
+ html.pos64:not(.p64-ticket) body #p64CartBar{position:sticky!important;bottom:0;z-index:7;min-height:46px;margin-top:8px}
+}
+</style>
+<script id="bpLandWide">
+/* telefono in orizzontale (app installata/PWA): usa lo stesso layout largo del browser (menu + ordine affiancati, barra a sinistra).
+   Per disattivare: localStorage.bp_land_wide='0'.  تليفون أفقي: نفس تخطيط المتصفح (المنيو + الأوردر جنب بعض). */
+(function(){
+ var W=1100, busy=0, KEY='bp_land_wide';
+ var NORMAL='width=device-width,initial-scale=1,minimum-scale=0.5,maximum-scale=5,user-scalable=yes,viewport-fit=cover';
+ var WIDE='width='+W+',minimum-scale=0.3,maximum-scale=5,user-scalable=yes,viewport-fit=cover';
+ function wanted(){
+  try{ if(localStorage.getItem(KEY)==='0') return false; }catch(e){}
+  try{
+   var mn=Math.min(screen.width,screen.height), mx=Math.max(screen.width,screen.height);
+   return window.matchMedia('(orientation:landscape)').matches && mn<600 && mx<1000;
+  }catch(e){ return false; }
+ }
+ function meta(){
+  var m=document.querySelector('meta[name="viewport"]');
+  if(!m){ m=document.createElement('meta'); m.setAttribute('name','viewport'); document.head.appendChild(m); }
+  return m;
+ }
+ function apply(){
+  if(busy) return;
+  var m=meta(), want=wanted()?WIDE:NORMAL;
+  if(m.getAttribute('content')!==want){
+   busy=1; m.setAttribute('content',want);
+   setTimeout(function(){ busy=0; try{ window.dispatchEvent(new Event('resize')); }catch(e){} },80);
+  }
+ }
+ try{ new MutationObserver(function(){ if(!busy) apply(); }).observe(meta(),{attributes:true,attributeFilter:['content']}); }catch(e){}
+ window.addEventListener('orientationchange',function(){ setTimeout(apply,60); setTimeout(apply,400); });
+ window.addEventListener('resize',function(){ if(!busy) apply(); });
+ window.addEventListener('load',function(){ apply(); setTimeout(apply,600); setTimeout(apply,2000); });
+ apply();
+})();
+</script>
 </body>
 </html>
