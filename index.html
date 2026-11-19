@@ -4229,10 +4229,12 @@ window.bpTypeIcon=function(t){ var s=String(t||'').toLowerCase(), k=/consegna|do
  function lsDel(k){ try{ LS.removeItem(k); }catch(e){} }
  var st=document.createElement('style');
  st.textContent=
- '.bp-split{position:absolute;top:0;bottom:0;width:18px;margin-left:-9px;cursor:col-resize;z-index:60;touch-action:none;display:none}'+
- '@media(min-width:900px){.bp-split.on{display:block}}'+
- '.bp-split::after{content:"";position:absolute;top:50%;left:7px;width:4px;height:60px;margin-top:-30px;border-radius:4px;background:rgba(120,100,80,.38);transition:background .15s,height .15s}'+
- '.bp-split:hover::after,.bp-split.drag::after{background:#c8281e;height:96px}'+
+ '.bp-split{position:absolute;top:0;bottom:0;width:22px;margin-left:-11px;cursor:col-resize;z-index:60;touch-action:none;display:none;-webkit-tap-highlight-color:transparent;outline:0}'+
+'@media(pointer:coarse){.bp-split{width:36px;margin-left:-18px}}'+
+'@media(min-width:900px){.bp-split.on{display:block}}'+
+'.bp-split::after{content:"";position:absolute;top:50%;left:50%;width:5px;height:64px;margin:-32px 0 0 -2.5px;border-radius:5px;background:rgba(120,100,80,.38);transition:background .15s,height .15s}'+
+'.bp-split:hover::after,.bp-split:focus-visible::after,.bp-split.drag::after{background:#c8281e;height:104px}'+
+'.bp-split.drag::before{content:attr(data-pct);position:absolute;top:calc(50% - 76px);left:50%;transform:translateX(-50%);direction:ltr;unicode-bidi:isolate;white-space:nowrap;background:#1d2939;color:#fff;font:800 12px/1 system-ui,sans-serif;padding:6px 9px;border-radius:99px;box-shadow:0 4px 14px rgba(0,0,0,.3);pointer-events:none}'+
  'html.bp-resizing,html.bp-resizing *{cursor:col-resize!important;user-select:none!important;-webkit-user-select:none!important}'+
  '.bp-catarr{position:absolute;z-index:6;width:36px;border:0;border-radius:99px;background:rgba(255,253,248,.95);box-shadow:0 2px 10px rgba(0,0,0,.28);font-size:26px;font-weight:900;line-height:1;color:#7a2a1a;cursor:pointer;display:none;padding:0}'+
  '.bp-catarr:hover{background:#c8281e;color:#fff}'+
@@ -4264,38 +4266,61 @@ window.bpTypeIcon=function(t){ var s=String(t||'').toLowerCase(), k=/consegna|do
   r.style.display=(over&&vis&&bar.scrollLeft<bar.scrollWidth-bar.clientWidth-4)?'block':'none';
  }
 
- /* ---------- colonne ridimensionabili ---------- */
- var dragging=null, splits=[];
+ /* ---------- colonne ridimensionabili (v7: a prova di zoom ≠ 100% e di arabo/RTL) ---------- */
+ var dragging=null, splits=[], lastTap=0;
  function q(sel){ return document.querySelector(sel); }
+ /* px visivi per ogni px locale: con CSS zoom il puntatore e getBoundingClientRect sono in px visivi, il layout in px locali */
+ function kOf(el){ var w=el.offsetWidth, r=el.getBoundingClientRect().width; return (w>0&&r>0)?(r/w):1; }
+ function cw(g){ var cs=g.cs; return g.C.clientWidth-(parseFloat(cs.paddingLeft)||0)-(parseFloat(cs.paddingRight)||0); }
  function mkSplit(id,key,hostFn,contFn,leftFn,rightFn,minL,minR){
   var h=document.createElement('div'); h.className='bp-split'; h.id=id;
+  h.setAttribute('role','separator'); h.setAttribute('aria-orientation','vertical'); h.tabIndex=0;
   h.title='Trascina per ridimensionare · doppio clic = reset · اسحب لتغيير الحجم';
-  var c={id:id,key:key,h:h,host:hostFn,cont:contFn,left:leftFn,right:rightFn,minL:minL,minR:minR};
+  var c={id:id,key:key,h:h,host:hostFn,cont:contFn,left:leftFn,right:rightFn,minL:minL,minR:minR,moved:false,sx:0};
   function geom(){
    var C=c.cont(); if(!C) return null;
-   var cs=getComputedStyle(C);
-   return {C:C,cs:cs,off:(parseFloat(cs.paddingLeft)||0)+(parseFloat(cs.borderLeftWidth)||0),gap:parseFloat(cs.columnGap)||0};
+   var cs=getComputedStyle(C), rtl=cs.direction==='rtl';
+   var pad=parseFloat(rtl?cs.paddingRight:cs.paddingLeft)||0, bor=parseFloat(rtl?cs.borderRightWidth:cs.borderLeftWidth)||0;
+   return {C:C,cs:cs,rtl:rtl,off:pad+bor,gap:parseFloat(cs.columnGap)||0};
   }
-  function setW(px){
+  function setW(px,snap){
    var g=geom(); if(!g) return;
-   var tot=g.C.clientWidth; if(!tot) return;
+   var tot=cw(g); if(!tot) return;
    px=Math.max(c.minL,Math.min(tot-c.minR-g.gap,px));
+   var half=(tot-g.gap)/2;
+   if(snap && Math.abs(px-half)<10){ if(Math.abs(px-half)>1 && navigator.vibrate){ try{ navigator.vibrate(8); }catch(_){} } px=half; }
    lsSet(c.key,px/tot);
    g.C.style.setProperty('grid-template-columns',px+'px minmax(0,1fr)','important');
+   var pc=Math.round(px/(tot-g.gap)*100); h.setAttribute('data-pct',pc+'% · '+(100-pc)+'%');
   }
+  function reset(){ var C=c.cont(); lsDel(c.key); if(C) C.style.removeProperty('grid-template-columns'); tick(); }
   h.addEventListener('pointerdown',function(e){
    e.preventDefault(); try{ h.setPointerCapture(e.pointerId); }catch(_){}
+   c.moved=false; c.sx=e.clientX;
    dragging=c; h.classList.add('drag'); document.documentElement.classList.add('bp-resizing');
   });
   h.addEventListener('pointermove',function(e){
    if(dragging!==c) return; var g=geom(); if(!g) return;
-   var cr=g.C.getBoundingClientRect();
-   setW(e.clientX-cr.left-g.off-g.gap/2);
+   if(Math.abs(e.clientX-c.sx)>6) c.moved=true;
+   var cr=g.C.getBoundingClientRect(), k=kOf(g.C);
+   /* x in px locali dal bordo iniziale del contenitore (destro in RTL) */
+   var x=(g.rtl?(cr.right-e.clientX):(e.clientX-cr.left))/k;
+   setW(x-g.off-g.gap/2,true);
    tick();
   });
-  function end(){ if(dragging!==c) return; dragging=null; h.classList.remove('drag'); document.documentElement.classList.remove('bp-resizing'); }
+  function end(e){
+   if(dragging!==c) return; dragging=null; h.classList.remove('drag'); document.documentElement.classList.remove('bp-resizing');
+   if(e && e.type==='pointerup' && e.pointerType!=='mouse' && !c.moved){
+    var n=Date.now(); if(n-lastTap<320){ lastTap=0; reset(); } else lastTap=n;
+   }
+  }
   h.addEventListener('pointerup',end); h.addEventListener('pointercancel',end);
-  h.addEventListener('dblclick',function(){ var C=c.cont(); lsDel(c.key); if(C) C.style.removeProperty('grid-template-columns'); tick(); });
+  h.addEventListener('dblclick',reset);
+  h.addEventListener('keydown',function(e){
+   var d=e.key==='ArrowRight'?1:(e.key==='ArrowLeft'?-1:0); if(!d) return;
+   var g=geom(), L=c.left(); if(!g||!L) return; e.preventDefault();
+   setW(L.offsetWidth+(g.rtl?-d:d)*(e.shiftKey?60:24)); tick();
+  });
   c.geom=geom; c.setW=setW; splits.push(c); return c;
  }
  function gridEl(){ return q('#newTab > .grid'); }
@@ -4322,20 +4347,25 @@ window.bpTypeIcon=function(t){ var s=String(t||'').toLowerCase(), k=/consegna|do
    if(h.parentNode!==host){ if(getComputedStyle(host).position==='static') host.style.position='relative'; host.appendChild(h); }
    var saved=lsGet(c.key);
    if(dragging!==c && isFinite(saved) && saved>0.1 && saved<0.9){
-    var tot=C.clientWidth, g=c.geom();
+    var g=c.geom(), tot=cw(g);
     var px=Math.max(c.minL,Math.min(tot-c.minR-g.gap,saved*tot));
-    var want=px+'px minmax(0,1fr)';
-    if(Math.abs((L.getBoundingClientRect().width)-px)>2 || C.style.getPropertyValue('grid-template-columns').indexOf(Math.round(px))<0){
-      C.style.setProperty('grid-template-columns',want,'important');
+    if(Math.abs(L.offsetWidth-px)>2){
+      C.style.setProperty('grid-template-columns',px+'px minmax(0,1fr)','important');
     }
    }
-   var hr=host.getBoundingClientRect(), lr=L.getBoundingClientRect(), rr=R.getBoundingClientRect();
-   h.style.left=(((lr.right+rr.left)/2)-hr.left+host.scrollLeft)+'px';
+   /* posizione della maniglia: centro del vuoto tra i due pannelli, in px locali (indipendente da zoom e da RTL) */
+   var hr=host.getBoundingClientRect(), k=kOf(host), lr=L.getBoundingClientRect(), rr=R.getBoundingClientRect();
+   var a=Math.min(lr.right,rr.right), b=Math.max(lr.left,rr.left);
+   h.style.left=((((a+b)/2)-hr.left)/k-host.clientLeft+host.scrollLeft)+'px';
    h.classList.add('on');
   });
  }
- window.addEventListener('resize',tick);
- setInterval(tick,400);
+ var raf=0; function sched(){ if(raf) return; raf=requestAnimationFrame(function(){ raf=0; tick(); }); }
+ window.addEventListener('resize',sched); window.addEventListener('orientationchange',sched);
+ try{ new MutationObserver(sched).observe(document.documentElement,{attributes:true,attributeFilter:['dir','class','style','lang']}); }catch(e){}
+ try{ new MutationObserver(sched).observe(document.body,{attributes:true,attributeFilter:['dir','class','lang']}); }catch(e){}
+ try{ if(window.ResizeObserver){ var ro=new ResizeObserver(sched); ro.observe(document.documentElement); } }catch(e){}
+ setInterval(tick,600);
  document.addEventListener('DOMContentLoaded',tick);
 })();
 </script>
@@ -7329,7 +7359,7 @@ async function handleImageOrderUpload(input){
  input.value = '';
 }
 
-function compressImageToBase64(file, maxSide=1400){
+function compressImageToBase64(file, maxSide=2000){
  return new Promise((resolve, reject) => {
  const reader = new FileReader();
  reader.onload = (ev) => {
@@ -7349,7 +7379,7 @@ function compressImageToBase64(file, maxSide=1400){
  ctx.fillStyle = '#ffffff';
  ctx.fillRect(0, 0, w, h);
  ctx.drawImage(img, 0, 0, w, h);
- const dataUrl = canvas.toDataURL('image/jpeg', 0.82);
+ const dataUrl = canvas.toDataURL('image/jpeg', 0.86);
  resolve({
  dataUrl,
  base64: dataUrl.split(',')[1],
@@ -8732,7 +8762,7 @@ Se la foto e' lo scontrino/comanda di una piattaforma di consegna (logo o scritt
 - \`numero_ordine_piattaforma\`: il numero dell'ordine stampato (es. "5997"), solo cifre/lettere, senza "#".
 - \`totale_piattaforma\`: il TOTALE stampato (es. "Totale da incassare" o totale ordine) come numero con il punto decimale (es. 10.10). Se manca: null.
 - \`pagamento\`: "contanti" se e' scritto pagamento in contanti / "incassa ... dal rider" / pagamento alla consegna; "online" se e' gia' pagato; altrimenti "".
-- \`orario\`: se c'e' "Arrivo previsto del rider" usa quell'ora (HH:MM), altrimenti l'orario di ritiro/consegna indicato.
+- \`orario\`: se c'e' "Arrivo previsto del rider" usa quell'ora (HH:MM), altrimenti l'orario di ritiro/consegna indicato. "Effettuato" e' solo l'ora in cui il cliente ha ordinato: NON usarlo come orario. Il numero dopo "#" in grande (es. #8974) e' il numero ordine.
 - \`cliente\`: il nome cliente stampato (es. "Gian C"). \`indirizzo\`: lascia "" (il rider ritira in negozio). \`note\`: solo istruzioni utili (es. "NO POSATE").
 - \`righe\`: TUTTI i prodotti dello scontrino (anche salse, bibite, fritti), con la quantita' di ogni riga ("2x" = quantita 2) e il nome copiato dal menu se esiste. NON trattare "Numero di prodotti", "Totale" o le intestazioni di categoria (es. "BEVANDE (4)") come prodotti.
 Uno scontrino di piattaforma e' sempre un ordine valido: ordine_presente = true.
@@ -9188,6 +9218,7 @@ function gemShowReview(parsed, rows, menu){
  const chips = [];
  if(parsed.orderType && ['Consegna','Asporto'].includes(parsed.orderType)) chips.push('🛵 ' + parsed.orderType);
  if(parsed.deliveryTime) chips.push('⏰ ' + parsed.deliveryTime + (parsed.__autoTime ? ' (auto +' + GEM_AUTO_TIME_MIN + '′)' : '') + ((parsed.__unc || []).includes('deliveryTime') ? ' ❓' : ''));
+ if(parsed.platform) chips.push('📲 ' + parsed.platform + (parsed.platformOrderNo ? ' #' + parsed.platformOrderNo : '') + (parsed.platformTotal > 0 ? ' · €' + Number(parsed.platformTotal).toFixed(2) : ''));
  if(parsed.paymentMethod) chips.push('💳 ' + parsed.paymentMethod);
  if(parsed.cashGiven && Number(parsed.cashGiven) > 0) chips.push('💶 Paga con €' + Number(parsed.cashGiven));
 
@@ -9205,6 +9236,8 @@ function gemShowReview(parsed, rows, menu){
  <label>👤 Cliente<input id="gemF_name" class="${(parsed.__unc || []).includes('customerName') ? 'unsure' : ''}" value="${esc(parsed.customerName || '')}"></label>
  <label>📞 Telefono<input id="gemF_phone" inputmode="tel" class="${(parsed.__unc || []).includes('phone') ? 'unsure' : ''}" value="${esc(parsed.phone || '')}"></label>
  <label class="full">📍 Indirizzo<input id="gemF_addr" class="${(parsed.__unc || []).includes('address') ? 'unsure' : ''}" value="${esc(parsed.address || '')}"></label>
+ <label>📲 Piattaforma<select id="gemF_plat"><option value="">— nessuna —</option><option value="Deliveroo"${parsed.platform === 'Deliveroo' ? ' selected' : ''}>Deliveroo</option><option value="Glovo"${parsed.platform === 'Glovo' ? ' selected' : ''}>Glovo</option><option value="Just Eat"${parsed.platform === 'Just Eat' ? ' selected' : ''}>Just Eat</option></select></label>
+ <label>💶 Totale scontrino €<input id="gemF_ptot" inputmode="decimal" value="${parsed.platformTotal > 0 ? esc(String(parsed.platformTotal)) : ''}" placeholder="es. 27.00"></label>
  <label class="full">📝 Note<input id="gemF_notes" class="${(parsed.__unc || []).includes('notes') ? 'unsure' : ''}" value="${esc(parsed.notes || '')}"></label>
  </div>
  <div id="gemRows"></div>
@@ -9274,8 +9307,11 @@ function gemShowReview(parsed, rows, menu){
  customerName: back.querySelector('#gemF_name').value.trim(),
  phone: back.querySelector('#gemF_phone').value.trim(),
  address: back.querySelector('#gemF_addr').value.trim(),
- notes: back.querySelector('#gemF_notes').value.trim()
+ notes: back.querySelector('#gemF_notes').value.trim(),
+ platform: back.querySelector('#gemF_plat').value,
+ platformTotal: (function(){ const n = parseFloat(String(back.querySelector('#gemF_ptot').value || '').replace(',', '.')); return isNaN(n) || n <= 0 ? 0 : Math.round(n * 100) / 100; })()
  });
+ if(edited.platform){ edited.orderType = 'Asporto'; edited.address = ''; }
  const final = [], learned = [], skipped = [];
  rowsBox.querySelectorAll('.gem-row').forEach(d => {
  const pid = d.querySelector('.gp').value;
@@ -9386,10 +9422,12 @@ let __realKey = null; cart.forEach((v, k) => { if(__realKey === null && (!__befo
     const tag = pn + (parsed.platformOrderNo ? ' #' + parsed.platformOrderNo : '');
     const cur = String(el('notes').value || '').trim();
     if(cur.indexOf(tag) < 0) el('notes').value = (cur ? cur + ' · ' : '') + tag;
-    if(!parsed.paymentMethod){ /* nessun dato di pagamento letto: lascia com'e' */ }
+    /* ordine da app: gia' pagato alla piattaforma -> metodo "App Delivery" (non entra come contanti in cassa) */
+    try{ el('payment').value = 'Altro'; onPaymentMethodChange(); }catch(_pp){ bpWarn(_pp); }
     if(parsed.platformTotal > 0){
      const ex = el('extraAmountInput'), exr = el('extraReasonInput');
      if(ex) ex.value = '';
+     try{ const d0 = el('discountAmountInput'); if(d0) d0.value = ''; }catch(_d){}
      const base = getGrandTotal();
      const diff = Math.round((parsed.platformTotal - base) * 100) / 100;
      if(diff > 0.004 && ex){
@@ -9397,7 +9435,9 @@ let __realKey = null; cart.forEach((v, k) => { if(__realKey === null && (!__befo
       if(exr) exr.value = 'Differenza ' + pn;
       __platLog = `💶 Totale ${esc(pn)}: <strong>€${parsed.platformTotal.toFixed(2)}</strong> · tuoi prezzi €${base.toFixed(2)} · differenza aggiunta: <strong>+€${diff.toFixed(2)}</strong>`;
      }else if(diff < -0.004){
-      __platLog = `⚠️ I tuoi prezzi (€${base.toFixed(2)}) sono PIU' ALTI del totale ${esc(pn)} (€${parsed.platformTotal.toFixed(2)}): nessuna differenza aggiunta.`;
+      const dd = el('discountAmountInput'), ddr = el('discountReasonInput');
+      if(dd){ dd.value = String(Math.abs(diff)); if(ddr) ddr.value = 'Allineato a ' + pn; }
+      __platLog = `💶 Totale ${esc(pn)} €${parsed.platformTotal.toFixed(2)} · tuoi prezzi €${base.toFixed(2)} (piu' alti): sconto <strong>-€${Math.abs(diff).toFixed(2)}</strong> per allineare il totale.`;
      }else{
       __platLog = `💶 Totale ${esc(pn)} €${parsed.platformTotal.toFixed(2)} = tuoi prezzi: nessuna differenza.`;
      }
@@ -33933,13 +33973,18 @@ body.qs-lock{overflow:hidden}
   function isName(el){return !!(el&&el.closest&&el.closest(NM));}
   document.addEventListener('pointerdown',function(e){
    fired=false;clearTimeout(lp);
-   if(!isName(e.target)||document.documentElement.classList.contains('bp-sorting'))return;
-   var t=e.target.closest('.bpm-tile');if(!t)return;
+   if(document.documentElement.classList.contains('bp-sorting'))return;
+   var t=e.target.closest&&e.target.closest('#bpmGrid .bpm-tile');if(!t)return;
+   if(e.target.closest('.bpm-act,.bpm-grip,button,input,select,textarea'))return;
+   if(e.pointerType==='mouse'&&e.button!==0)return;
    sx=e.clientX;sy=e.clientY;
-   lp=setTimeout(function(){var p=find(t.getAttribute('data-id'));if(p&&window.bpQS){fired=true;try{navigator.vibrate&&navigator.vibrate(20);}catch(_){}bpQS.open(p);}},480);},true);
+   lp=setTimeout(function(){lp=null;var p=find(t.getAttribute('data-id'));if(p&&window.bpQS){fired=true;try{navigator.vibrate&&navigator.vibrate(30);}catch(_){}
+    try{document.dispatchEvent(new Event('pointercancel'));}catch(_){} /* annulla il trascinamento verso il carrello */
+    bpQS.open(p);}},650);},true);
   document.addEventListener('pointermove',function(e){if(lp&&(Math.abs(e.clientX-sx)>10||Math.abs(e.clientY-sy)>10)){clearTimeout(lp);lp=null;}},true);
   ['pointerup','pointercancel'].forEach(function(n){document.addEventListener(n,function(){clearTimeout(lp);lp=null;},true);});
-  document.addEventListener('contextmenu',function(e){if(isName(e.target))e.preventDefault();},true);
+  document.addEventListener('contextmenu',function(e){if(e.target.closest&&e.target.closest('#bpmGrid .bpm-tile'))e.preventDefault();},true);
+  document.addEventListener('dragstart',function(e){if(e.target.closest&&e.target.closest('#bpmGrid .bpm-tile'))e.preventDefault();},true);
   document.addEventListener('click',function(e){if(fired&&e.target.closest&&e.target.closest('#bpmGrid .bpm-tile')){fired=false;e.stopPropagation();e.preventDefault();}},true);
  })();
 
@@ -36399,6 +36444,8 @@ html body #newTab #bpmGrid .bpm-tile .bp-prep .pp-t,html body #newTab #bpmGrid .
 #bpShiftStrip summary{cursor:pointer;list-style:none;min-height:28px;display:flex;align-items:center}
 #bpShiftStrip summary::-webkit-details-marker{display:none}
 #bpShiftStrip .bpsh-row{font-weight:700;font-size:13px;padding:3px 0;border-top:1px dotted #b8a9f5}
+#bpmGrid .bpm-tile,#bpmGrid .bpm-tile *{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;-webkit-user-drag:none}
+#bpmGrid .bpm-tile img{pointer-events:none}
 </style>
 <script id="bpShiftScript">
 (function(){
