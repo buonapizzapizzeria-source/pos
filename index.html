@@ -18963,6 +18963,7 @@ openCartIngModal = function(key){
  var q = ingNorm(G.q || '');
  var list = pizzaList().filter(function(p){ return !q || ingNorm(p.name + ' ' + (p.description || '')).indexOf(q) >= 0; });
  h += '<div style="display:flex;gap:8px"><input class="bp36-in" data-gq placeholder="' + (G.mic ? '🎤 Parla… · تكلّم' : (G.micMsg || '🔍 Cerca pizza · ابحث')) + '" value="' + E(G.q) + '" style="flex:1;min-width:0"><button type="button" class="secondary' + (G.mic ? ' on' : '') + '" data-gmic title="Voce · إدخال صوتي" aria-label="Voce">🎤</button><button type="button" class="secondary" data-gback>✕</button></div>';
+ if(G.slots.length > 1) h += '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:6px 0"><button type="button" class="secondary btn-sm' + (G.fillAll === false ? '' : ' on') + '" data-gfill>' + (G.fillAll === false ? '☐' : '☑') + ' Riempi tutti i gusti vuoti · املأ الباقي</button><small class="bp36-note" style="margin:0">🎤 es. «3 tonno e cipolla, 1 margherita»</small></div>';
  h += '<div class="bp36-pl">' + list.map(function(p){
  var ing = parseIngredients(p.description).join(', ');
  return '<button type="button" class="bp36-pi" data-gp="' + E(String(p.id)) + '">' + gThumb(p) + '<span class="nm"><b>' + E(p.name) + '</b><small>' + E(ing) + '</small></span><b>' + eur(pkSizePrice(p, G.size)) + '</b></button>';
@@ -18986,6 +18987,7 @@ openCartIngModal = function(key){
  slotHtml += '<div class="bp36-cell">';
  var sph = p ? gPic(p) : ''; slotHtml += '<button type="button" class="bp36-slot' + (p ? ' has' : '') + (sph ? ' hasph' : '') + '" data-slot="' + i + '"' + (sph ? ' style="--ph:url(&quot;' + gPicAttr(sph) + '&quot;)"' : '') + '><span class="fr">' + GM[m].fr + '</span><span class="nm"><b>' + (p ? E(p.name) : 'Scegli il gusto ' + (i + 1) + '…') + '</b>' + (p ? '<small>' + E(parseIngredients(p.description).join(', ')) + '</small>' : '') + '</span>' + (p ? '<b>' + eur(pkSizePrice(p, G.size)) + '</b>' : '<span style="font-size:20px">＋</span>') + '</button>';
  if(p) slotHtml += gModRow(i, p);
+ if(p && G.slots.length > 2) slotHtml += '<button type="button" class="secondary btn-sm" data-gcopy="' + i + '" style="margin-top:4px;width:100%">📋 Copia su tutti gli altri · انسخ للكل</button>';
  slotHtml += '</div>';
  });
  slotHtml += '</div>';
@@ -19098,11 +19100,47 @@ openCartIngModal = function(key){
  q = ingNorm(q || '');
  return pizzaList().filter(function(p){ return !q || ingNorm(p.name + ' ' + (p.description || '')).indexOf(q) >= 0; });
  }
+ /* imposta il gusto i; se attivo "riempi", copia lo stesso gusto anche negli altri slot ancora vuoti */
+ function gSetSlot(i, p, fillEmpty){
+ if(!G.slots[i] || String(G.slots[i].id) !== String(p.id)) G.mods[i] = null;
+ G.slots[i] = p; G.priceOv = null;
+ if(fillEmpty && G.fillAll !== false){ for(var j = 0; j < G.slots.length; j++){ if(!G.slots[j]){ G.slots[j] = p; G.mods[j] = null; } } }
+ }
+ /* miglior pizza per un testo parlato: nome esatto > inizia con > contiene (solo se univoco) > ingredienti (solo se univoco) */
+ function gBestMatch(q){
+ q = ingNorm(q || ''); if(!q) return null;
+ var l = pizzaList(), a;
+ a = l.filter(function(p){ return ingNorm(p.name) === q; }); if(a.length === 1) return a[0];
+ a = l.filter(function(p){ return ingNorm(p.name).indexOf(q) === 0; }); if(a.length === 1) return a[0];
+ a = l.filter(function(p){ return ingNorm(p.name).indexOf(q) >= 0; }); if(a.length === 1) return a[0];
+ a = l.filter(function(p){ return ingNorm(p.name + ' ' + (p.description || '')).indexOf(q) >= 0; }); if(a.length === 1) return a[0];
+ return null;
+ }
+ /* "3 tonno e cipolla 1 margherita" / "tre tonno e una margherita" / "tutti margherita" -> [{n, name}] oppure null */
+ function gVoiceMulti(raw){
+ var NUM = {un: 1, uno: 1, una: 1, 1: 1, due: 2, 2: 2, tre: 3, 3: 3, quattro: 4, 4: 4, tutti: 99, tutte: 99, tutto: 99};
+ var t = String(raw || '').toLowerCase().replace(/[.,;:!?'"]/g, ' ').replace(/\b(\d)\s*x\b/g, '$1 ').replace(/\s+/g, ' ').trim();
+ if(!t) return null;
+ var toks = t.split(' '), out = [], cur = null;
+ toks.forEach(function(w){
+ if(NUM[w] != null){ cur = {n: NUM[w], words: []}; out.push(cur); }
+ else if(cur) cur.words.push(w);
+ });
+ if(!out.length) return null;
+ var res = [];
+ for(var i = 0; i < out.length; i++){
+ var txt = out[i].words.join(' ').replace(/\b(quarti|quarto|di|del|della|pizza|pizze|gusto|gusti|con|la|il|lo|per favore|grazie)\b/g, ' ').replace(/\s+/g, ' ').replace(/^(e\s+)+|(\s+e)+$/g, '').trim();
+ var p = gBestMatch(txt);
+ if(!p) return null;
+ res.push({n: out[i].n, p: p});
+ }
+ return res;
+ }
  function gMicStart(){
  var SRc = window.SpeechRecognition || window.webkitSpeechRecognition;
  if(!SRc){ G.micMsg = '🎤 Voce non supportata · غير مدعوم'; drawG(); return; }
  gMicStop();
- var r = new SRc(), finalTxt = '';
+ var r = new SRc(), finalTxt = '', rawFinal = '';
  r.lang = 'it-IT'; r.interimResults = true; r.continuous = false; r.maxAlternatives = 3;
  gRec = r; G.mic = true; G.micMsg = ''; G.q = ''; drawG();
  r.onresult = function(ev){
@@ -19110,7 +19148,7 @@ openCartIngModal = function(key){
  var txt = '', fin = false;
  for(var i = ev.resultIndex; i < ev.results.length; i++){ txt += ev.results[i][0].transcript + ' '; if(ev.results[i].isFinal) fin = true; }
  var q = gVoiceClean(txt);
- if(fin){ finalTxt = q; }
+ if(fin){ finalTxt = q; rawFinal = (rawFinal + ' ' + txt).trim(); }
  if(q){ G.q = q; G._focus = false; drawG(); }
  };
  r.onerror = function(ev){
@@ -19122,11 +19160,22 @@ openCartIngModal = function(key){
  if(gRec !== r) return;
  gRec = null; G.mic = false;
  /* se resta un solo gusto compatibile, lo scelgo subito */
+ var multi = (G.pick >= 0 && rawFinal) ? gVoiceMulti(rawFinal) : null;
+ if(multi && multi.length){
+ var tot = multi.reduce(function(a, x){ return a + (x.n === 99 ? 0 : x.n); }, 0), hasAll = multi.some(function(x){ return x.n === 99; });
+ if(tot <= G.slots.length && (tot > 0 || hasAll)){
+ var idx = 0;
+ multi.forEach(function(x){
+ var cnt = x.n === 99 ? (G.slots.length - idx) : x.n;
+ for(var k = 0; k < cnt && idx < G.slots.length; k++, idx++){ if(!G.slots[idx] || String(G.slots[idx].id) !== String(x.p.id)) G.mods[idx] = null; G.slots[idx] = x.p; }
+ });
+ G.priceOv = null; G.pick = -1; G.q = ''; drawG(); return;
+ }
+ }
  var m = finalTxt ? gMatches(finalTxt) : [];
  if(m.length === 1 && G.pick >= 0){
  var p = m[0];
- if(!G.slots[G.pick] || String(G.slots[G.pick].id) !== String(p.id)) G.mods[G.pick] = null;
- G.slots[G.pick] = p; G.priceOv = null; G.pick = -1; G.q = '';
+ gSetSlot(G.pick, p, true); G.pick = -1; G.q = '';
  }
  drawG();
  };
@@ -19140,10 +19189,19 @@ openCartIngModal = function(key){
  if((t = e.target.closest('[data-gs]'))){ if(!t.disabled){ G.size = t.getAttribute('data-gs'); G.priceOv = null; drawG(); } return; }
  if((t = e.target.closest('[data-gmod]'))){ gOpenMod(Number(t.getAttribute('data-gmod'))); return; }
  if((t = e.target.closest('[data-slot]'))){ G.pick = Number(t.getAttribute('data-slot')); G.q = ''; drawG(); return; }
+ if(e.target.closest('[data-gfill]')){ G.fillAll = (G.fillAll === false); drawG(); return; }
+ if((t = e.target.closest('[data-gcopy]'))){
+ var si = Number(t.getAttribute('data-gcopy')), sp = G.slots[si];
+ if(sp){ var sm = G.mods[si];
+ for(var j = 0; j < G.slots.length; j++){ if(j === si) continue; G.slots[j] = sp;
+ G.mods[j] = sm ? {added: new Set(sm.added), removed: new Set(sm.removed), other: (sm.other || []).slice()} : null; }
+ G.priceOv = null; drawG(); }
+ return;
+ }
  if(e.target.closest('[data-gback]')){ gMicStop(); G.pick = -1; drawG(); return; }
  if((t = e.target.closest('[data-gp]'))){
  var id = t.getAttribute('data-gp'), p = pizzaList().filter(function(x){ return String(x.id) === id; })[0];
- if(p){ if(!G.slots[G.pick] || String(G.slots[G.pick].id) !== String(p.id)) G.mods[G.pick] = null; G.slots[G.pick] = p; G.priceOv = null; } G.pick = -1; drawG(); return;
+ if(p){ gSetSlot(G.pick, p, true); } G.pick = -1; drawG(); return;
  }
  if((t = e.target.closest('[data-gq2]'))){ G.qty = Math.max(1, Math.min(50, G.qty + Number(t.getAttribute('data-gq2')))); drawG(); return; }
  if(e.target.closest('[data-gadd]')){ gAdd(); return; }
@@ -25543,6 +25601,56 @@ try{
  })();
 }catch(e){ console.warn('[bp] gusti patatine', e); }
 </script>
+<style id="bp-gusti-group-css">
+.gx .gx-f.gx-cnt{font-size:1.15em;min-width:2.1em;padding:0 .35em;border-radius:1em;border:2px solid #111;box-sizing:border-box;white-space:nowrap}
+.receipt-card .gx-f.gx-cnt{width:auto;min-width:27px;padding:0 6px;border-radius:11px;font-size:12px;height:19px}
+@media print{body.bp23-kitchen-print .receipt-card .gx-f.gx-cnt{width:auto;min-width:30px;font-size:13px;height:21px}}
+</style>
+<script>
+/* pizza a gusti: i gusti uguali si raggruppano (es. 3/4 TONNO E CIPOLLA + 1/4 MARGHERITA) -> ricevuta/comanda molto piu' corta */
+try{
+ (function(){
+ var _GH = bpGustiHtml, _GP = bpGustiPrintHtml;
+ function groupG(g){
+ var tot = (g.parts || []).length; if(tot < 3) return null;
+ var map = {}, parts = [], mods = [], cnt = [];
+ g.parts.forEach(function(nm, i){
+ var md = (g.mods && g.mods[i]) || [], key = String(nm).toLowerCase() + '|' + md.join(',').toLowerCase();
+ if(map[key] == null){ map[key] = parts.length; parts.push(nm); mods.push(md); cnt.push(0); }
+ cnt[map[key]]++;
+ });
+ if(parts.length === tot) return null;
+ return {g2: Object.assign({}, g, {parts: parts, mods: mods}), cnt: cnt, tot: tot};
+ }
+ function pieOf(cnt, tot){
+ var cols = ['#fbbf24', '#ef4444', '#f97316', '#84cc16'], st = [], a = 0;
+ cnt.forEach(function(c, i){
+ var w = 360 * c / tot, e = a + w;
+ st.push(cols[i % 4] + ' ' + a + 'deg ' + (e - 4) + 'deg', '#111 ' + (e - 4) + 'deg ' + e + 'deg'); a = e;
+ });
+ return 'conic-gradient(' + st.join(',') + ')';
+ }
+ bpGustiHtml = function(g){
+ var gr = null; try{ gr = groupG(g); }catch(e){}
+ if(!gr) return _GH(g);
+ var h = _GH(gr.g2), k = 0, n = (h.match(/<span class="gx-f">[^<]*<\/span>/g) || []).length;
+ if(n !== gr.cnt.length) return _GH(g);
+ h = h.replace(/<span class="gx-f">[^<]*<\/span>/g, function(){ var c = gr.cnt[k++]; return '<span class="gx-f gx-cnt">' + c + '/' + gr.tot + '</span>'; });
+ h = h.replace(/<em>[^<]*<\/em>/g, '');
+ h = h.replace(/(<span class="gx-pie" style="background:)[^"]*(")/, function(m, a, b){ return a + pieOf(gr.cnt, gr.tot) + b; });
+ return h;
+ };
+ bpGustiPrintHtml = function(g){
+ var gr = null; try{ gr = groupG(g); }catch(e){}
+ if(!gr) return _GP(g);
+ var h = _GP(gr.g2), k = 0, re = /(<span style="display:inline-block;flex:none;)width:19px;height:19px;line-height:17px;(border:1\.5px solid #000;)border-radius:50%;(text-align:center;font-size:12px;font-weight:900">)[^<]*(<\/span>)/g;
+ var n = (h.match(re) || []).length;
+ if(n !== gr.cnt.length) return _GP(g);
+ return h.replace(re, function(m, a, b, c, d){ var cc = gr.cnt[k++]; return a + 'min-width:28px;height:19px;line-height:17px;padding:0 4px;box-sizing:border-box;' + b + 'border-radius:10px;' + c + cc + '/' + gr.tot + d; });
+ };
+ })();
+}catch(e){ console.warn('[bp] gusti raggruppati', e); }
+</script>
 <script>
 /* promemoria: testo a capo, altezza = logo, tutti i nomi visibili (font adattato) */
 (function(){
@@ -26475,11 +26583,20 @@ html:not(.x) body #userBar button#thermalToggleBtn.ap-off,#thermalToggleBtn.ap-o
  var ingMode = settings && settings.ui && settings.ui.ingredientsMode ? settings.ui.ingredientsMode : 'clean';
  var showIng = ingMode === 'full';
  if(inf.gusti){
- inf.gusti.parts.forEach(function(pt, k){
- if(k) d.p(ind + rep('-', 10) + ' / ' + rep('-', 10), kit ? {b: 1} : {});
+ /* compatto: i gusti uguali si raggruppano (3/4 TONNO E CIPOLLA + 1/4 MARGHERITA), senza righe di separazione */
+ var gTot = inf.gusti.parts.length, gGrp = [], gMap = {};
+ inf.gusti.parts.forEach(function(pt){
  var hasFr = false; try{ hasFr = bpGustiPartHasFries(pt.name, pt.mods); }catch(e){}
- P(ind + (inf.gusti.fr ? inf.gusti.fr + ' ' : '') + inf.gusti.unit + ' ' + (k + 1) + ': ' + String(pt.name).toUpperCase() + (hasFr ? ' >> PATATINE' : ''), st, ind.length + 4);
- if(pt.ing && showIng) d.p(ind + ' ' + pt.ing, sm, ind.length + 4);
+ var key = ingNorm(pt.name) + '|' + (pt.mods || []).join(',').toLowerCase() + '|' + (hasFr ? 1 : 0);
+ if(gMap[key] == null){ gMap[key] = gGrp.length; gGrp.push({pt: pt, n: 0, hasFr: hasFr}); }
+ gGrp[gMap[key]].n++;
+ });
+ gGrp.forEach(function(gg){
+ var frac = gg.n + '/' + gTot;
+ P(ind + frac + '  ' + String(gg.pt.name).toUpperCase() + (gg.hasFr ? ' >> PATATINE' : ''), st, ind.length + frac.length + 2);
+ var gm = (gg.pt.mods || []).map(function(t){ t = String(t); return /^senza\s+/i.test(t) ? 'SENZA ' + t.replace(/^senza\s+/i, '').toUpperCase() : (t.charAt(0) === '+' ? 'EXTRA ' + t.replace(/^\+\s*/, '').toUpperCase() : t.toUpperCase()); });
+ if(gm.length) P(ind + '   >> ' + gm.join(', '), st, ind.length + 6);
+ if(gg.pt.ing && showIng) d.p(ind + ' ' + gg.pt.ing, sm, ind.length + 4);
  });
  }
  var mk = kit ? '>> ' : '', hg = hang + (kit ? 3 : 0);
