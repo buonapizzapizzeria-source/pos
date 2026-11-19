@@ -8537,7 +8537,8 @@ function gemNormalizeOrder(o){
   let menuList = [];
   try{ menuList = getActiveMenu() || []; }catch(e){}
   const t = str(o.tipo).toLowerCase();
-  const orderType = /consegna|domicilio/.test(t) ? 'Consegna' : (/ritiro|asporto/.test(t) ? 'Asporto' : '');
+  const __pl = (function(){ const x = str(o.piattaforma).toLowerCase(); return /deliveroo/.test(x) ? 'Deliveroo' : (/glovo/.test(x) ? 'Glovo' : (/just\s*-?\s*eat/.test(x) ? 'Just Eat' : '')); })();
+  const orderType = __pl ? 'Asporto' : (/consegna|domicilio/.test(t) ? 'Consegna' : (/ritiro|asporto/.test(t) ? 'Asporto' : ''));
 
   const __menuN = Math.max(parseInt(o.numero_menu, 10) || 0, gemMenuCountFromText(__gemSrcText));
   const items = gemSpreadMenuIntent(o.righe, __menuN, menuList).map(r => {
@@ -8587,8 +8588,11 @@ function gemNormalizeOrder(o){
     customerName: str(o.cliente),
     phone: str(o.telefono).replace(/\D/g, ''),
     orderType, deliveryTime, __autoTime: autoTime,
-    paymentMethod: '', cashGiven: 0,
-    address: str(o.indirizzo),
+    paymentMethod: (function(){ const x = str(o.pagamento).toLowerCase(); return /contant|cash/.test(x) ? 'Contanti' : (/online|carta|pagat/.test(x) ? 'Carta' : ''); })(), cashGiven: 0,
+    platform: __pl,
+    platformOrderNo: str(o.numero_ordine_piattaforma).replace(/^#/, ''),
+    platformTotal: (function(){ const n = parseFloat(String(o.totale_piattaforma == null ? '' : o.totale_piattaforma).replace(',', '.')); return isNaN(n) || n <= 0 ? 0 : Math.round(n * 100) / 100; })(),
+    address: __pl ? '' : str(o.indirizzo),
     notes: str(o.note),
     uncertainFields: unc,
     transcript: '',
@@ -8722,6 +8726,17 @@ Ascolta/leggi TUTTO il contenuto e decidi: il cliente sta ordinando davvero alme
 
 4. **Campi incerti (\`uncertainFields\`):** se telefono, indirizzo, nome cliente, orario o note non sono chiari al 100% (audio disturbato, ambiguo, dedotto), inserisci il nome del campo in \`uncertainFields\`. Usa SOLO questi nomi: "cliente", "telefono", "indirizzo", "orario", "note". Se sei sicuro di tutto: [].
 
+### ORDINI DA PIATTAFORME (Deliveroo, Glovo, Just Eat):
+Se la foto e' lo scontrino/comanda di una piattaforma di consegna (logo o scritte "Deliveroo", "Glovo", "Just Eat" / "JustEat"), compila anche questi campi:
+- \`piattaforma\`: esattamente "Deliveroo", "Glovo" o "Just Eat". Se non e' una piattaforma: "".
+- \`numero_ordine_piattaforma\`: il numero dell'ordine stampato (es. "5997"), solo cifre/lettere, senza "#".
+- \`totale_piattaforma\`: il TOTALE stampato (es. "Totale da incassare" o totale ordine) come numero con il punto decimale (es. 10.10). Se manca: null.
+- \`pagamento\`: "contanti" se e' scritto pagamento in contanti / "incassa ... dal rider" / pagamento alla consegna; "online" se e' gia' pagato; altrimenti "".
+- \`orario\`: se c'e' "Arrivo previsto del rider" usa quell'ora (HH:MM), altrimenti l'orario di ritiro/consegna indicato.
+- \`cliente\`: il nome cliente stampato (es. "Gian C"). \`indirizzo\`: lascia "" (il rider ritira in negozio). \`note\`: solo istruzioni utili (es. "NO POSATE").
+- \`righe\`: TUTTI i prodotti dello scontrino (anche salse, bibite, fritti), con la quantita' di ogni riga ("2x" = quantita 2) e il nome copiato dal menu se esiste. NON trattare "Numero di prodotti", "Totale" o le intestazioni di categoria (es. "BEVANDE (4)") come prodotti.
+Uno scontrino di piattaforma e' sempre un ordine valido: ordine_presente = true.
+
 ### FORMATO JSON DI RISPOSTA RICHIESTO:
 Restituisci ESCLUSIVAMENTE un oggetto JSON valido con la seguente struttura:
 {
@@ -8733,6 +8748,10 @@ Restituisci ESCLUSIVAMENTE un oggetto JSON valido con la seguente struttura:
   "indirizzo": "Viale Europa 28",
   "note": "",
   "uncertainFields": [],
+  "piattaforma": "",
+  "numero_ordine_piattaforma": "",
+  "totale_piattaforma": null,
+  "pagamento": "",
   "numero_menu": 2,
   "righe": [
     {
@@ -9357,6 +9376,37 @@ let __realKey = null; cart.forEach((v, k) => { if(__realKey === null && (!__befo
  let modStr = [asMenu ? '🍟🥤 Menu' : '', isBaby ? '👶 Baby' : '', ...rem.map(x => `🚫 Senza ${esc(x)}`), ...add.map(a => `➕ ${esc(a)}`)].filter(Boolean).join(' ');
  addedItemsLog.push(`<strong>${qty}× ${esc(prod.name)} (${size})</strong> ${modStr}`);
  });
+  /* ---- Piattaforme (Deliveroo / Glovo / Just Eat): etichetta cliente, n. ordine, differenza prezzo come Aggiunta manuale ---- */
+  let __platLog = '';
+  try{
+   if(parsed.platform){
+    const pn = parsed.platform;
+    let nm = String(el('customer').value || parsed.customerName || '').replace(/\s*·\s*🛵\s*(Deliveroo|Glovo|Just Eat)\s*$/i, '').trim();
+    el('customer').value = (nm ? nm + ' · ' : '') + '🛵 ' + pn;
+    const tag = pn + (parsed.platformOrderNo ? ' #' + parsed.platformOrderNo : '');
+    const cur = String(el('notes').value || '').trim();
+    if(cur.indexOf(tag) < 0) el('notes').value = (cur ? cur + ' · ' : '') + tag;
+    if(!parsed.paymentMethod){ /* nessun dato di pagamento letto: lascia com'e' */ }
+    if(parsed.platformTotal > 0){
+     const ex = el('extraAmountInput'), exr = el('extraReasonInput');
+     if(ex) ex.value = '';
+     const base = getGrandTotal();
+     const diff = Math.round((parsed.platformTotal - base) * 100) / 100;
+     if(diff > 0.004 && ex){
+      ex.value = String(diff);
+      if(exr) exr.value = 'Differenza ' + pn;
+      __platLog = `💶 Totale ${esc(pn)}: <strong>€${parsed.platformTotal.toFixed(2)}</strong> · tuoi prezzi €${base.toFixed(2)} · differenza aggiunta: <strong>+€${diff.toFixed(2)}</strong>`;
+     }else if(diff < -0.004){
+      __platLog = `⚠️ I tuoi prezzi (€${base.toFixed(2)}) sono PIU' ALTI del totale ${esc(pn)} (€${parsed.platformTotal.toFixed(2)}): nessuna differenza aggiunta.`;
+     }else{
+      __platLog = `💶 Totale ${esc(pn)} €${parsed.platformTotal.toFixed(2)} = tuoi prezzi: nessuna differenza.`;
+     }
+    }else{
+     __platLog = `⚠️ Totale ${esc(pn)} non letto dalla foto: differenza non calcolata.`;
+    }
+   }
+  }catch(_pe){ bpWarn(_pe); }
+
 
  renderCart();
  playOrderChime(true);
@@ -9365,6 +9415,7 @@ let __realKey = null; cart.forEach((v, k) => { if(__realKey === null && (!__befo
  `${sk.length ? '⚠️' : '✅'} <strong>Ordine inserito!</strong><br>` +
  (infoLog.length ? `📋 Dati Cliente: ${infoLog.join(' · ')}<br>` : '') +
  (addedItemsLog.length ? `🍕 Nel Carrello: ${addedItemsLog.join(', ')}<br>` : '') +
+  (__platLog ? __platLog + '<br>' : '') +
  (sk.length ? `⚠️ <strong>Righe saltate (nessun prodotto scelto):</strong> ${sk.map(esc).join(', ')}<br>` : '') +
  (ln.length ? `🧠 <strong>Imparato:</strong> ${ln.map(esc).join(' · ')}` : ''),
  sk.length || !addedItemsLog.length ? 'error' : 'success'
