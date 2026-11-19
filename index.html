@@ -7412,6 +7412,7 @@ function getOrderUrgencyMeta(o){
   var __days = Math.round((__d1.getTime() - __d0.getTime()) / 86400000);
   return {type:'future', timeLabel:tStr, sortMinutes:tm, diffMinutes:diff, isUrgent:false, isOverdue:false, cardClass:'', badgeClass:'urg-badge-scheduled', badgeText:'⏳ tra ' + __days + (__days === 1 ? ' giorno' : ' giorni')};
  }
+ if(!isDone && st !== 'In consegna' && window.bpShiftHides && window.bpShiftHides(tgt, diff)) return {type:'future', shiftHidden:true, timeLabel:tStr, sortMinutes:tm, diffMinutes:diff, isUrgent:false, isOverdue:false, cardClass:'', badgeClass:'urg-badge-scheduled', badgeText: window.bpShiftBadge(tgt, diff, tStr)};
  if(isDone) return {type:'done', timeLabel:tStr, sortMinutes:tm, diffMinutes:diff, isUrgent:false, isOverdue:false, cardClass:'', badgeClass:'time-badge', badgeText:'⏰ ' + tStr};
  if(diff < 0) return {type:'overdue', timeLabel:tStr, sortMinutes: tm - 1000000, diffMinutes:diff, isUrgent:true, isOverdue:true,
  cardClass:'urg-overdue', badgeClass:'urg-badge-overdue', badgeText:'🚨 ' + tStr + ' · IN RITARDO DI ' + __fmMin(diff)};
@@ -12791,7 +12792,7 @@ try{
  var kb = el("bp22KitchenBar");
  var activeOrds = orders.filter(function(o){
  var s = normStatus(o.status);
- return s === "Nuovo" || s === "In preparazione";
+ return (s === "Nuovo" || s === "In preparazione") && getOrderUrgencyMeta(o).type !== 'future';
  });
  if(kb){
  if(!activeOrds.length){
@@ -35856,7 +35857,7 @@ html #newTab #bpmGrid .bpm-tile.pa .bpm-main .bpm-desc{display:-webkit-box!impor
  if(window.__bpStableRender || typeof renderOrders!=='function') return; window.__bpStableRender=1;
  var orig=renderOrders,last='',pending=0;
  function scrollers(){var a=[],n=document.getElementById('openOrders');while(n&&n!==document.documentElement){try{var cs=getComputedStyle(n);if(/(auto|scroll)/.test(cs.overflowY)&&n.scrollHeight>n.clientHeight)a.push([n,n.scrollTop]);}catch(e){}n=n.parentElement;}return a;}
- function sig(){try{return JSON.stringify([orders,Array.from(itemsByOrder.entries()),statusFilter,Math.floor(Date.now()/60000),(document.getElementById('openOrders')||{}).childElementCount,(function(){var t=document.getElementById('ordersTab');return !!(t&&t.classList.contains('hidden'));})()]);}catch(e){return String(Math.random());}}
+ function sig(){try{return JSON.stringify([orders,Array.from(itemsByOrder.entries()),statusFilter,Math.floor(Date.now()/60000),(document.getElementById('openOrders')||{}).childElementCount,(window.bpShift?bpShift.view()+'|'+JSON.stringify(bpShift.cfg()):''),(function(){var t=document.getElementById('ordersTab');return !!(t&&t.classList.contains('hidden'));})()]);}catch(e){return String(Math.random());}}
  function restore(sc,sy){try{sc.forEach(function(x){x[0].scrollTop=x[1];});window.scrollTo(0,sy);}catch(e){}}
  renderOrders=function(){
   var s=sig(); if(s===last) return;
@@ -36335,5 +36336,160 @@ html body #newTab #bpmGrid .bpm-tile .bp-prep .pb-b::before{content:"\1F33F";fon
 html body #newTab #bpmGrid .bpm-tile .bp-prep .prefo-b::before{content:"\1F373";font-size:19px;line-height:1}
 html body #newTab #bpmGrid .bpm-tile .bp-prep .pp-t,html body #newTab #bpmGrid .bpm-tile .bp-prep .pp-a{display:none!important}
 </style>
+<style id="bpShiftCss">
+#bpShiftBar{display:flex;gap:6px;flex-wrap:nowrap;align-items:center;margin:8px 0 4px}
+#bpShiftBar button{flex:1 1 0;min-width:0;min-height:36px;padding:4px 6px;font-weight:800;font-size:12.5px;line-height:1.15;white-space:nowrap;border-radius:10px;background:#fff;color:#344054;border:1.5px solid #d0d5dd;box-shadow:none}#bpShiftBar button small{display:block;font-size:11px;font-weight:700;opacity:.8}#bpShiftBar button.on small{opacity:.9}
+#bpShiftBar button.on{background:#202124;color:#fff;border-color:#202124}
+#bpShiftNote{font-size:10.5px;font-weight:700;color:#667085;margin:0 2px 6px}
+#bpShiftStrip{margin:0 0 10px;border:1.5px dashed #7a5af8;background:#f4f3ff;border-radius:10px;padding:4px 10px;font-weight:800;font-size:13px;color:#3e1c96}
+#bpShiftStrip.tot{border-color:#17b26a;background:#ecfdf3;color:#085d3a}
+#bpShiftStrip.hidden{display:none}
+#bpShiftStrip summary{cursor:pointer;list-style:none;min-height:28px;display:flex;align-items:center}
+#bpShiftStrip summary::-webkit-details-marker{display:none}
+#bpShiftStrip .bpsh-row{font-weight:700;font-size:13px;padding:3px 0;border-top:1px dotted #b8a9f5}
+</style>
+<script id="bpShiftScript">
+(function(){
+ var CK='bp_shift_cfg', VK='bp_shift_view';
+ var DEF={start:'10:00',split:'18:00',end:'23:00',auto:true};
+ function LS(){try{return window.localStorage;}catch(e){return null;}}
+ function cfg(){var o={};try{o=JSON.parse(LS().getItem(CK)||'{}')||{};}catch(e){}return Object.assign({},DEF,o);}
+ function mins(s){var m=/^(\d{1,2}):(\d{2})$/.exec(String(s||''));return m?(+m[1]*60+ +m[2]):null;}
+ function splitMin(){var v=mins(cfg().split);return v==null?1080:v;}
+ function shiftOfMin(m){return m<splitMin()?'morning':'evening';}
+ function nowShift(){var d=new Date();return shiftOfMin(d.getHours()*60+d.getMinutes());}
+ function override(){
+  var o=null;try{o=JSON.parse(LS().getItem(VK)||'null');}catch(e){}
+  if(!o||(o.v!=='morning'&&o.v!=='evening'&&o.v!=='all'))return null;
+  if(cfg().auto&&o.at!==nowShift())return null;
+  return o;
+ }
+ function view(){var o=override();return o?o.v:nowShift();}
+ function setView(v){try{LS().setItem(VK,JSON.stringify({v:v,at:nowShift()}));}catch(e){}}
+ function fm(n){n=Math.abs(n);return n>=60?Math.floor(n/60)+'h '+(n%60)+'min':n+' min';}
+ function tlabel(S){return S==='evening'?'🌙 Sera':'☀️ Mattina';}
+ window.bpShift={cfg:cfg,view:view,nowShift:nowShift,setView:setView,DEF:DEF};
+ window.bpShiftHides=function(tgt,diff){
+  try{
+   var v=view();if(v==='all')return false;
+   var d=new Date(tgt),S=shiftOfMin(d.getHours()*60+d.getMinutes());
+   if(S===v)return false;
+   if(!override())return diff>0;
+   return true;
+  }catch(e){return false;}
+ };
+ window.bpShiftBadge=function(tgt,diff,tStr){
+  var d=new Date(tgt),S=shiftOfMin(d.getHours()*60+d.getMinutes());
+  return tlabel(S)+' · '+tStr+(diff>0?' (tra '+fm(diff)+')':'');
+ };
+ function E(id){return document.getElementById(id);}
+ function esc2(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+ function pizzas(o){
+  var n=0;try{(itemsByOrder.get(o.id)||[]).forEach(function(i){
+   if(bpIsSvc(i.product_name))return;
+   var isP=false;try{isP=bpStationOf(i.product_name)==='forno';}catch(e){}
+   if(isP)n+=Number(i.quantity||1);
+  });}catch(e){}
+  return n;
+ }
+ function sameDay(v){if(!v)return false;return new Date(v).toDateString()===new Date().toDateString();}
+ function mountBar(){
+  var tab=E('ordersTab');if(!tab||E('bpShiftBar'))return;
+  var anchor=E('urgencyRadarBanner');if(!anchor)return;
+  var bar=document.createElement('div');bar.id='bpShiftBar';
+  bar.innerHTML='<button type="button" data-v="morning">☀️ Mattina<small>صباحي</small></button><button type="button" data-v="evening">🌙 Sera<small>مسائي</small></button><button type="button" data-v="all">📅 Tutto<small>كل اليوم</small></button>';
+  var nt=document.createElement('div');nt.id='bpShiftNote';
+  var strip=document.createElement('details');strip.id='bpShiftStrip';strip.className='hidden';
+  anchor.parentNode.insertBefore(bar,anchor);
+  anchor.parentNode.insertBefore(nt,anchor);
+  anchor.parentNode.insertBefore(strip,anchor);
+  bar.addEventListener('click',function(ev){
+   var b=ev.target.closest('button[data-v]');if(!b)return;
+   var v2=b.getAttribute('data-v');setView(v2);
+   Array.prototype.forEach.call(bar.querySelectorAll('button[data-v]'),function(x){x.classList.toggle('on',x===b);});
+   if(window.__bpShT)clearTimeout(window.__bpShT);
+   window.__bpShT=setTimeout(function(){window.__bpShT=0;try{renderOrders();}catch(e){paint();}},0);
+  });
+ }
+ function paint(){
+  mountBar();
+  var bar=E('bpShiftBar'),strip=E('bpShiftStrip');if(!bar||!strip)return;
+  var v=view(),ov=override(),c=cfg();
+  Array.prototype.forEach.call(bar.querySelectorAll('button[data-v]'),function(b){b.classList.toggle('on',b.getAttribute('data-v')===v);});
+  var note=E('bpShiftNote');
+  if(note)note.textContent=(ov?'✋ Scelta manuale':'🔄 Turno automatico')+' · cambio turno alle '+c.split+(c.auto&&ov?' (torna in automatico al cambio turno)':'');
+  var open=orders.filter(function(o){var s=normStatus(o.status);return s!=='Completato'&&s!=='Annullato';});
+  if(v==='all'){
+   var today=orders.filter(function(o){return normStatus(o.status)!=='Annullato'&&(sameDay(o.created_at)||sameDay(o.scheduled_at));});
+   var mo=0,ev=0,pz=0;
+   today.forEach(function(o){
+    var u=null;try{u=getOrderUrgencyMeta(o);}catch(e){}
+    var t=u&&u.timeLabel?mins(u.timeLabel):null;
+    if(t==null){var cd=new Date(o.created_at);t=cd.getHours()*60+cd.getMinutes();}
+    if(shiftOfMin(t)==='morning')mo++;else ev++;
+    pz+=pizzas(o);
+   });
+   strip.className='tot';strip.open=false;
+   strip.innerHTML='<summary>📅 Totale oggi: '+today.length+' ordini · '+pz+' pizze &nbsp;(☀️ '+mo+' · 🌙 '+ev+')</summary>';
+   return;
+  }
+  var hid=[];
+  open.forEach(function(o){var u=null;try{u=getOrderUrgencyMeta(o);}catch(e){}if(u&&u.shiftHidden)hid.push({o:o,u:u});});
+  if(!hid.length){strip.className='hidden';strip.innerHTML='';return;}
+  hid.sort(function(a,b){return a.u.sortMinutes-b.u.sortMinutes;});
+  var other=v==='morning'?'evening':'morning',pz2=0;
+  hid.forEach(function(x){pz2+=pizzas(x.o);});
+  var wasOpen=strip.open;
+  strip.className='';
+  strip.innerHTML='<summary>'+tlabel(other)+': '+hid.length+' ordini · '+pz2+' pizze ▾</summary>'+hid.map(function(x){
+   return '<div class="bpsh-row">'+esc2(x.u.timeLabel)+' · '+esc2(x.o.customer_name||'Cliente')+' · '+pizzas(x.o)+' pizze</div>';
+  }).join('');
+  strip.open=wasOpen;
+ }
+ (function(){
+  var orig=window.getOrderUrgencyMeta,wm=new WeakMap();
+  if(typeof orig!=='function'||orig.__bpc)return;
+  var w=function(o){
+   try{
+    var key=(o.status||'')+'|'+(o.notes||'')+'|'+(o.scheduled_at||'')+'|'+(o.is_scheduled?1:0)+'|'+view()+'|'+(override()?1:0)+'|'+splitMin();
+    var e=wm.get(o),now=Date.now();
+    if(e&&e.k===key&&now-e.t<2000)return e.r;
+    var r=orig(o);wm.set(o,{k:key,t:now,r:r});return r;
+   }catch(x){return orig(o);}
+  };
+  w.__bpc=1;window.getOrderUrgencyMeta=w;
+  try{getOrderUrgencyMeta=w;}catch(e){}
+ })();
+ try{__renderOrdersHooks.push(paint);}catch(e){console.warn('[bpShift] hook',e);}
+ function mountSet(){
+  var grid=document.querySelector('#settingsTab .bp-set-grid');if(!grid||E('bpShiftCard'))return;
+  var C=cfg(),c=document.createElement('div');c.className='bp-set-card';c.id='bpShiftCard';c.style.borderTopColor='#7a5af8';
+  var L='style="font-weight:800;font-size:12px"',I='style="width:100%;margin-top:3px"';
+  c.innerHTML='<div class="bp-set-head"><span class="bp-set-ico" style="background:#f4f3ff;color:#5925dc">🕒</span><h3>Turni · الورديات (Mattina / Sera)</h3></div>'+
+   '<p class="bp-set-desc">Gli ordini si dividono per ora di consegna. Radar, contatori e Cucina mostrano solo il turno scelto; gli altri restano in una barra chiusa.</p>'+
+   '<label '+L+'>⏰ Inizio giornata · بداية اليوم<input id="bpSh_start" type="time" value="'+C.start+'" '+I+'></label>'+
+   '<label '+L+'>🔀 Cambio turno Mattina→Sera · الفاصل<input id="bpSh_split" type="time" value="'+C.split+'" '+I+'></label>'+
+   '<label '+L+'>🌙 Fine giornata · نهاية اليوم<input id="bpSh_end" type="time" value="'+C.end+'" '+I+'></label>'+
+   '<label style="display:flex;gap:8px;align-items:center;font-weight:800;font-size:13px"><input id="bpSh_auto" type="checkbox" '+(C.auto?'checked':'')+'> Cambio turno automatico · تبديل تلقائي</label>'+
+   '<div style="display:flex;gap:8px;margin-top:6px"><button type="button" id="bpSh_save" style="flex:2;min-height:44px;font-weight:900">💾 Salva</button><button type="button" id="bpSh_reset" class="secondary" style="flex:1;min-height:44px;font-weight:800">↺ Predefiniti</button></div>';
+  grid.appendChild(c);
+  E('bpSh_save').onclick=function(){
+   var s=E('bpSh_start').value,p=E('bpSh_split').value,e=E('bpSh_end').value;
+   if(mins(s)==null||mins(p)==null||mins(e)==null||!(mins(s)<mins(p)&&mins(p)<mins(e))){alert('⚠️ Ordine orari: inizio < cambio turno < fine');return;}
+   try{LS().setItem(CK,JSON.stringify({start:s,split:p,end:e,auto:E('bpSh_auto').checked}));LS().removeItem(VK);}catch(x){}
+   try{renderOrders();}catch(x){paint();}
+   alert('✅ Salvato · تم الحفظ');
+  };
+  E('bpSh_reset').onclick=function(){
+   try{LS().removeItem(CK);LS().removeItem(VK);}catch(x){}
+   E('bpSh_start').value=DEF.start;E('bpSh_split').value=DEF.split;E('bpSh_end').value=DEF.end;E('bpSh_auto').checked=true;
+   try{renderOrders();}catch(x){paint();}
+  };
+ }
+ setInterval(function(){mountBar();mountSet();},1500);
+ var last=nowShift();
+ setInterval(function(){var n=nowShift();if(n!==last){last=n;try{renderOrders();}catch(e){}}},20000);
+})();
+</script>
 </body>
 </html>
