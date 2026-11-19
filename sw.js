@@ -1,4 +1,4 @@
-const CACHE = 'bp-pos-v184';
+const CACHE = 'bp-pos-v185';
 const CDN = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2';
 
 self.addEventListener('install', (e) => {
