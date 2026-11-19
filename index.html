@@ -7399,6 +7399,7 @@ function getOrderUrgencyMeta(o){
  var schedTs = (o.is_scheduled && o.scheduled_at) ? new Date(o.scheduled_at).getTime() : NaN;
  if(!isNaN(schedTs)){ var sdt = new Date(schedTs); tStr = bpPad2(sdt.getHours()) + ':' + bpPad2(sdt.getMinutes()); m = /^(\d{1,2}):(\d{2})$/.exec(tStr); }
  if(!m){
+ if(!isDone && st !== 'In consegna' && window.bpShiftHidesAsap && window.bpShiftHidesAsap(created)) return {type:'future', shiftHidden:true, timeLabel:'Subito', sortMinutes:created/60000, diffMinutes:0, isUrgent:false, isOverdue:false, cardClass:'', badgeClass:'urg-badge-scheduled', badgeText: window.bpShiftBadgeAsap(created)};
  var wait = Math.max(0, Math.round((now - created) / 60000));
  var late = !isDone && st !== 'In consegna' && wait >= 25;
  return {type:'asap', timeLabel:'Prima possibile', sortMinutes: now / 60000 - 5 - Math.min(wait, 60), diffMinutes:0, waitMins:wait,
@@ -36378,6 +36379,18 @@ html body #newTab #bpmGrid .bpm-tile .bp-prep .pp-t,html body #newTab #bpmGrid .
    return true;
   }catch(e){return false;}
  };
+ window.bpShiftHidesAsap=function(created){
+  try{
+   if(!override())return false; /* automatico: i "Subito" aperti restano sempre visibili */
+   var v=view();if(v==='all')return false;
+   var d=new Date(created);
+   return shiftOfMin(d.getHours()*60+d.getMinutes())!==v;
+  }catch(e){return false;}
+ };
+ window.bpShiftBadgeAsap=function(created){
+  var d=new Date(created);
+  return '⚡ Subito · '+tlabel(shiftOfMin(d.getHours()*60+d.getMinutes()))+' · '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
+ };
  window.bpShiftBadge=function(tgt,diff,tStr){
   var d=new Date(tgt),S=shiftOfMin(d.getHours()*60+d.getMinutes());
   return tlabel(S)+' · '+tStr+(diff>0?' (tra '+fm(diff)+')':'');
@@ -36451,7 +36464,7 @@ html body #newTab #bpmGrid .bpm-tile .bp-prep .pp-t,html body #newTab #bpmGrid .
   if(typeof orig!=='function'||orig.__bpc)return;
   var w=function(o){
    try{
-    var key=(o.status||'')+'|'+(o.notes||'')+'|'+(o.scheduled_at||'')+'|'+(o.is_scheduled?1:0)+'|'+view()+'|'+(override()?1:0)+'|'+splitMin();
+    var key=(o.status||'')+'|'+(o.notes||'')+'|'+(o.scheduled_at||'')+'|'+(o.created_at||'')+'|'+(o.is_scheduled?1:0)+'|'+view()+'|'+(override()?1:0)+'|'+splitMin();
     var e=wm.get(o),now=Date.now();
     if(e&&e.k===key&&now-e.t<2000)return e.r;
     var r=orig(o);wm.set(o,{k:key,t:now,r:r});return r;
