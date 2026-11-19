@@ -8485,6 +8485,10 @@ const GEM_SCHEMA = {
     note:      { type: 'STRING' },
     uncertainFields: { type: 'ARRAY', items: { type: 'STRING' } },
     numero_menu: { type: 'INTEGER' },
+    piattaforma: { type: 'STRING' },
+    numero_ordine_piattaforma: { type: 'STRING' },
+    totale_piattaforma: { type: 'NUMBER', nullable: true },
+    pagamento: { type: 'STRING' },
     righe: {
       type: 'ARRAY',
       items: {
