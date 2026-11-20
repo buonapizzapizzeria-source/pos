@@ -37177,7 +37177,7 @@ html body #newTab #bpmGrid .bpm-tile .bp-prep .pp-t,html body #newTab #bpmGrid .
   b.addEventListener('click', onClick); b.addEventListener('change', onChange);
   return b;
  }
- var lastHtml = '';
+ var lastHtml = '', closeT = 0;
  function paint(force){
   if(!isStaff()) return;
   css(); var b = bar(); if(!b) return;
@@ -37224,6 +37224,7 @@ html body #newTab #bpmGrid .bpm-tile .bp-prep .pp-t,html body #newTab #bpmGrid .
   return h;
  }
  function onClick(e){
+  clearTimeout(closeT);
   var t = e.target && e.target.closest ? e.target.closest('button') : null; if(!t) return;
   if(t.hasAttribute('data-s')){ switchTo(t.getAttribute('data-s')); return; }
   if(t.hasAttribute('data-gear')){ panelOpen = !panelOpen; if(panelOpen){ loadDrivers().then(function(){ paint(true); }); pullCfg(); } paint(true); return; }
@@ -37259,6 +37260,11 @@ html body #newTab #bpmGrid .bpm-tile .bp-prep .pp-t,html body #newTab #bpmGrid .
    pullSel(); s2.email = lc(v); lastDb = null; pushCfg();
    if(s2.email){ markDirty(); }
    try{ renderOrders(); }catch(er){} paint(true);
+   clearTimeout(closeT);
+   if(s2.email){ /* collegato: chiudi il pannello (subito se tutti i giri hanno un autista, altrimenti dopo 5 s) */
+    var allOn = slots.every(function(x){ return x.email; });
+    closeT = setTimeout(function(){ if(panelOpen){ panelOpen = false; paint(true); } }, allOn ? 500 : 5000);
+   }
   }
  }
 
@@ -37385,5 +37391,136 @@ html body #opsChips .ops-chip.on:nth-child(n+5){background:#344054!important;bor
 </style>
 
 <style id="bpOcIng">.order-item-line .oc-ing{margin-top:2px;font-size:13px;font-weight:700;line-height:1.3;color:#6b5b4a}.order-item-line .oc-ing .gx-ico{font-size:1.7em;vertical-align:middle}</style>
+
+<style id="bpStoricoCompatto">
+/* ===== STORICO · layout compatto e a due colonne su tablet/PC ===== */
+html body #allTab{--cp-h:34px;--cp-r:10px}
+html body #allTab .topline{margin:0 0 8px!important;gap:6px!important;align-items:center!important}
+html body #allTab .topline h1{font-size:18px!important;line-height:1.2!important}
+html body #allTab>.topline>button{min-height:var(--cp-h)!important;padding:0 12px!important;font-size:13px!important;border-radius:var(--cp-r)!important}
+
+/* calendario */
+html body #storBar{padding:8px 10px!important;margin:0 0 8px!important;border-radius:14px!important}
+html body #storBar .topline{margin:0 0 6px!important;justify-content:space-between!important;flex-wrap:nowrap!important}
+html body #storBar .topline button{min-height:32px!important;width:40px;padding:0!important;border-radius:9px!important;font-size:13px!important}
+html body #storBar #stTitle{font-size:15px!important;text-transform:capitalize;line-height:1.2}
+html body #storBar .sg{gap:3px!important}
+html body #storBar .sh{font-size:11px!important;line-height:1.6}
+html body #storBar .sd{min-height:38px!important;padding:0!important;border-radius:9px!important;font-size:14px!important;border-width:1px!important;position:relative}
+html body #storBar .sd b{position:absolute;top:1px;inset-inline-end:2px;margin:0!important;font-size:9.5px!important;line-height:14px;min-width:14px;padding:0 4px!important;text-align:center}
+
+/* riepilogo del giorno */
+html body #storTotal{margin:0 0 8px!important;padding:9px 12px!important;border-radius:12px!important;font-size:13px!important;line-height:1.55!important;font-weight:800!important}
+html body #storTotal span{font-size:1.15em!important}
+
+/* filtri pagamento: una riga scorrevole */
+html body #storPayFilter{display:flex!important;flex-wrap:nowrap!important;gap:6px!important;margin:0 0 8px!important;padding:2px 2px 4px!important;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+html body #storPayFilter::-webkit-scrollbar{display:none}
+html body #storPayFilter button{flex:0 0 auto!important;min-height:34px!important;padding:0 12px!important;font-size:12.5px!important;white-space:nowrap!important;line-height:1!important;border-radius:99px!important}
+
+/* elenco ordini */
+html body #allTab #bpAccAll{margin:0!important;border-radius:14px!important}
+html body #allTab #bpAccAll>summary{min-height:40px!important;padding:6px 12px!important}
+html body #allTab #bpAccAll .rd-acc-t b{font-size:15px!important}
+html body #allTab #bpAccAll .rd-acc-body{padding:6px 8px 10px!important}
+html body #allOrders{gap:8px!important}
+html body #allOrders .order{padding:10px 12px!important;border-radius:16px!important;gap:8px!important}
+html body #allOrders .order h3{font-size:18px!important;line-height:1.25!important;margin:0 0 4px!important}
+html body #allTab .bpf-bar{display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:6px!important;margin:0 0 8px!important;padding:6px!important;border-radius:14px!important;align-items:stretch!important}
+html body #allTab .bpf-bar .bpf-chip{position:relative;min-height:var(--cp-h)!important;padding:0 4px!important;font-size:12.5px!important;gap:4px!important;justify-content:center!important;min-width:0!important;white-space:nowrap!important;border-width:1px!important;line-height:1!important}
+html body #allTab .bpf-bar .bpf-chip .uxi{font-size:14px!important;display:inline-flex;align-items:center}
+html body #allTab .bpf-bar .bpf-chip .uxi svg{width:15px!important;height:15px!important}
+html body #allTab .bpf-bar .bpf-chip .bpf-n{position:absolute;top:-6px;inset-inline-end:-3px;font-size:10px!important;min-width:17px!important;height:17px;line-height:17px;padding:0 4px!important;border-radius:9px!important;background:#475467!important;color:#fff!important;box-shadow:0 0 0 2px var(--bg,#fff)}
+html body #allTab .bpf-bar .bpf-chip.on .bpf-n{background:#fff!important;color:#101828!important}
+html body #allTab .bpf-bar .bpf-chip[data-grp]{grid-column:span 2}
+html body #allTab .bpf-bar .bpf-street{grid-column:span 2;width:100%!important;max-width:none!important;min-width:0!important;min-height:var(--cp-h)!important;height:var(--cp-h)!important;padding:0 12px!important;font-size:13px!important;border-width:1px!important}
+html body #allTab .bpf-bar .bpf-sep,html body #allTab .bpf-bar .bpf-hint{display:none!important}
+html body #allTab .bpf-bar .bpf-vie{grid-column:1/-1}
+html body #allTab .bpf-bar .bpf-vie:empty{display:none}
+ html body #allTab .bpf-bar .bpf-chip>span:has(>.uxi){display:none}
+
+/* tablet / PC: calendario a sinistra, riepilogo + filtri + elenco a destra */
+@media (min-width:900px){
+ html body #allTab:not(.hidden){display:grid!important;grid-template-columns:minmax(300px,360px) minmax(0,1fr);column-gap:14px;align-items:start}
+ html body #allTab:not(.hidden)>.topline{grid-column:1/-1}
+ html body #allTab:not(.hidden)>#storBar{grid-column:1;grid-row:2/span 3;position:sticky;top:8px;align-self:start}
+ html body #allTab:not(.hidden)>#storTotal{grid-column:2;grid-row:2}
+ html body #allTab:not(.hidden)>#storPayFilter{grid-column:2;grid-row:3}
+ html body #allTab:not(.hidden)>#bpAccAll{grid-column:2;grid-row:4}
+ html body #allTab:not(.hidden)::after{grid-column:1/-1}
+ html body #storBar .sd{min-height:44px!important}
+}
+</style>
+
+<style id="bpFoldCss">
+#bpFiltHead{margin:0 0 8px}
+#bpFiltHead .fh-btn{width:100%;display:flex;align-items:center;gap:8px;min-height:32px;padding:2px 10px;border:1px solid #e4e7ec;border-radius:10px;background:rgba(255,255,255,.7);color:#101828;font-weight:700;font-size:11.5px;text-align:start;cursor:pointer}
+#bpFiltHead .fh-sum{flex:1 1 auto;min-width:0;display:flex;gap:5px;overflow-x:auto;white-space:nowrap;scrollbar-width:none}
+#bpFiltHead .fh-sum::-webkit-scrollbar{display:none}
+#bpFiltHead .fh-pill{flex:0 0 auto;padding:1px 8px;border-radius:99px;background:#fef3f2;color:#b42318;font-size:11px;font-weight:700}
+#bpFiltHead .fh-pill.alt{background:#eff8ff;color:#175cd3}
+#bpFiltHead .fh-pill.dark{background:#202124;color:#fff}
+#bpFiltHead .fh-arr{flex:0 0 auto;color:#667085;transition:transform .2s}
+#bpFiltHead[data-open="1"] .fh-arr{transform:rotate(180deg)}
+body.dark-mode #bpFiltHead .fh-btn{background:#1e293b;color:#f8fafc;border-color:#334155}
+html body.bp-filt-fold #ordersTab .sort-toggle-bar,
+html body.bp-filt-fold #ordersTab .bpf-bar,
+html body.bp-filt-fold #ordersTab #bpShiftBar,
+html body.bp-filt-fold #ordersTab #bpShiftNote,
+html body.bp-filt-fold #statusFilters,
+html body.bp-filt-fold #bpFreezeBar,
+html body.bp-filt-fold #opsChips{display:none!important}
+</style>
+<script>
+/* ===== ORDINI · filtri comprimibili con riga riepilogo ===== */
+try{(function(){
+ if(window.__bpFold) return; window.__bpFold = true;
+ var SEL = {
+  sort:'#ordersTab .sort-toggle-bar button', type:'#ordersTab .bpf-bar .bpf-chip', shift:'#bpShiftBar button',
+  status:'#statusFilters button', ops:'#opsChips .ops-chip'
+ };
+ var ALL = [SEL.sort,SEL.type,SEL.shift,SEL.status,SEL.ops].join(',');
+ var folded = true, last = '';
+ function isOn(b){ return b.classList.contains('on') || b.classList.contains('active') || b.getAttribute('aria-pressed') === 'true'; }
+ function txt(b){ var c = b.cloneNode(true); c.querySelectorAll('.bpf-n,small,.badge-count,.uxi').forEach(function(x){ x.remove(); }); return c.textContent.replace(/\s+/g,' ').trim(); }
+ function esc(t){ return String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;'); }
+ function parts(){
+  var out = [];
+  function add(sel, cls, skipRe){ document.querySelectorAll(sel).forEach(function(b){ if(!isOn(b)) return; var t = txt(b); if(t && !(skipRe && skipRe.test(t))) out.push([t, cls]); }); }
+  add(SEL.shift, 'dark');
+  add(SEL.type, '', /^tutti/i);
+  var st = document.querySelector('#ordersTab .bpf-street'); if(st && st.value.trim()) out.push(['🔎 ' + st.value.trim(), '']);
+  add(SEL.status, '', /^tutti/i);
+  add(SEL.ops, '', /^(tutti|standard)/i);
+  add(SEL.sort, 'alt');
+  if(!out.length) out.push(['Tutti gli ordini', 'alt']);
+  return out;
+ }
+ function render(){
+  var h = document.getElementById('bpFiltHead'); if(!h) return;
+  var html = parts().map(function(p){ return '<span class="fh-pill ' + p[1] + '">' + esc(p[0]) + '</span>'; }).join('');
+  if(html !== last){ last = html; h.querySelector('.fh-sum').innerHTML = html; }
+ }
+ function apply(){ document.body.classList.toggle('bp-filt-fold', folded); var h = document.getElementById('bpFiltHead'); if(h) h.setAttribute('data-open', folded ? '0' : '1'); }
+ function ensure(){
+  var tab = document.getElementById('ordersTab'); if(!tab) return;
+  var anchor = tab.querySelector('.sort-toggle-bar') || tab.querySelector('.bpf-bar') || document.getElementById('bpShiftBar');
+  if(!anchor || !anchor.parentNode) return;
+  var h = document.getElementById('bpFiltHead');
+  if(!h){
+   h = document.createElement('div'); h.id = 'bpFiltHead';
+   h.innerHTML = '<button type="button" class="fh-btn"><span style="font-size:13px">🎚️</span><span class="fh-sum"></span><span class="fh-arr">▾</span></button>';
+   h.querySelector('.fh-btn').addEventListener('click', function(){ folded = !folded; apply(); });
+  }
+  if(h.nextElementSibling !== anchor) anchor.parentNode.insertBefore(h, anchor);
+  apply(); render();
+ }
+ document.addEventListener('click', function(e){
+  var t = e.target; if(!t || !t.closest || t.closest('#bpFiltHead')) return;
+  if(t.closest(ALL)) setTimeout(function(){ folded = true; apply(); render(); }, 350);
+ }, true);
+ setInterval(ensure, 600); ensure();
+})();}catch(e){ console.error('[bp] filtri comprimibili', e); }
+</script>
 </body>
 </html>
