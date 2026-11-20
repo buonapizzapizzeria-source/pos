@@ -16629,9 +16629,13 @@ var AR_NUM = {"una":1,"un":1,"uno":1,"صفر":0,"واحد":1,"واحده":1,"ا�
 var AR_ALIAS = {"مياه":"acqua","ماء":"acqua","مايه":"acqua","ميه":"acqua","مويه":"acqua","كولا":"coca cola","كوكا":"coca cola","بيره":"birra","عصير":"succo","بطاطس":"patatine","بطاطا":"patatine","سلطه":"insalata","برجر":"hamburger","همبرجر":"hamburger","كباب":"kebab","كيباب":"kebab","شاورما":"kebab","مشروم":"funghi","فطر":"funghi","زيتون":"olive","بصل":"cipolla","فلفل":"peperoni","لحمه":"carne","لحم":"carne","دجاج":"pollo","فراخ":"pollo","تونه":"tonno","جمبري":"gamberi","بيض":"uovo","سلامي":"salame","نقانق":"wurstel","ذره":"mais","اناناس":"ananas","طماطم":"pomodoro","صلصه":"salsa","مايونيز":"maionese","كاتشب":"ketchup","جبنه":"formaggio","جبن":"formaggio","مقدد":"bacon","ثوم":"aglio","سمك":"pesce","خس":"lattuga","حار":"piccante"};
 var AR_GENERIC = {"بيتزا":1,"بانيني":1,"ساندوتش":1,"سندوتش":1,"بياديني":1,"بيادينا":1,"طلب":1,"عايز":1,"عاوز":1,"اديني":1,"هات":1,"لو":1,"سمحت":1,"من":1,"في":1,"ب":1};
 var AR_IT_NUM = {"due":2,"tre":3,"quattro":4,"cinque":5,"sei":6,"sette":7,"otto":8,"nove":9,"dieci":10,"undici":11,"dodici":12};
+var AR_IT_AR = {"دو":"due","دوي":"due","دووي":"due","تري":"tre","تره":"tre","تراي":"tre","كواترو":"quattro","كوارترو":"quattro","كواتر":"quattro","تشينكوي":"cinque","تشنكوي":"cinque","تشينكوه":"cinque","سيتي":"sette","سيتيه":"sette","اوتو":"otto","نوفي":"nove","ديتشي":"dieci","دييتشي":"dieci"};
+(function(){ for(var k in AR_IT_AR) AR_IT_NUM[k] = AR_IT_NUM[AR_IT_AR[k]]; })();
+var AR_GEN_MAP = {"بيتزا":"pizz","بيتزه":"pizz","بانيني":"panin","بانينو":"panin","ساندوتش":"panin","سندوتش":"panin","بياديني":"piadin","بيادينا":"piadin"}, AR_HINT = null;
+var AR_LAT_GEN = {"pizza":"pizz","pizze":"pizz","pizzetta":"pizz","panino":"panin","panini":"panin","piadina":"piadin","piadine":"piadin"};
 var AR_IT_GEN = {"pizza":1,"pizze":1,"pizzetta":1,"panino":1,"panini":1,"piadina":1,"piadine":1};
 var AR_SOLO = {"solo":1,"soltanto":1,"بس":1,"فقط":1};
-var AR_SENZA = {"بدون":1}, AR_EXTRA = {"زياده":1,"زود":1,"زوده":1,"اضافه":1,"ضيف":1,"مع":1}, AR_MAXI = {"ماكسي":1,"كبيره":1,"كبير":1,"ميجا":1,"جامبو":1}, AR_NORM = {"عادي":1,"عاديه":1,"صغيره":1,"صغير":1,"نورمال":1,"وسط":1};
+var AR_SENZA = {"بدون":1,"سنسا":1,"سينسا":1,"سنزا":1,"سينزا":1,"senza":1}, AR_EXTRA = {"بيو":1,"piu":1,"più":1,"زياده":1,"زود":1,"زوده":1,"اضافه":1,"ضيف":1,"مع":1}, AR_MAXI = {"ماكسي":1,"كبيره":1,"كبير":1,"ميجا":1,"جامبو":1}, AR_NORM = {"عادي":1,"عاديه":1,"صغيره":1,"صغير":1,"نورمال":1,"وسط":1};
 function arNorm(s){
  return String(s == null ? "" : s).toLowerCase().replace(/[٠-٩]/g, function(d){ return d.charCodeAt(0) - 1632; }).replace(/[۰-۹]/g, function(d){ return d.charCodeAt(0) - 1776; })
  .replace(/[\u064B-\u0652\u0640]/g, "").replace(/[أإآٱ]/g, "ا").replace(/ى/g, "ي").replace(/ة/g, "ه")
@@ -16670,9 +16674,9 @@ function skOk(a, b){ if(!a || !b) return false; var m = Math.max(a.length, b.len
 function arKeys(text, minWord){ var ks = [latSkel(text)]; ingNorm(text).split(" ").forEach(function(w){ var k = latSkel(w); if(k.length >= (minWord || 3) && ks.indexOf(k) < 0) ks.push(k); }); return ks.filter(Boolean); }
 function arWin(toks, i, maxLen){ var res = []; for(var len = maxLen; len >= 1; len--){ if(i + len > toks.length) continue; var sk = toks.slice(i, i + len).map(tokSkel); if(sk.some(function(x){ return !x; })) continue; res.push({len: len, s: sk.join("")}); } return res; }
 function arFindProduct(toks, i){
- var best = null;
+ var best = null, menuSaid = toks.some(function(w){ return w === "menu" || w === "منو" || w === "ميني"; });
  arWin(toks, i, 3).forEach(function(w){
- getActiveMenu().forEach(function(p){ var lt = toks[i + w.len - 1]; if(w.len > 1 && AR_IT_NUM[lt] != null && ingNorm(p.name).split(" ").indexOf(lt) < 0) return; arKeys(p.name).forEach(function(k){ if(skOk(w.s, k)){ var sc = w.len * 10 + k.length - lev(w.s, k); if(!best || sc > best.sc) best = {p: p, len: w.len, sc: sc}; } }); });
+ getActiveMenu().forEach(function(p){ var lt = toks[i + w.len - 1]; if(w.len > 1 && AR_IT_NUM[lt] != null && ingNorm(p.name).split(" ").indexOf(AR_IT_AR[lt] || lt) < 0) return; arKeys(p.name).forEach(function(k){ if(skOk(w.s, k)){ var sc = w.len * 10 + k.length - lev(w.s, k) + (AR_HINT && (ingNorm(p.name).indexOf(AR_HINT) >= 0 || ingNorm(p.category || "").indexOf(AR_HINT) >= 0) ? 15 : 0) - (!menuSaid && /^menu\b/.test(ingNorm(p.name)) ? 6 : 0); if(!best || sc > best.sc) best = {p: p, len: w.len, sc: sc}; } }); });
  });
  return best;
 }
@@ -16698,19 +16702,21 @@ function ssCartAdd(p, size, qty, rem, add){
  if(e) e.qty += qty; else cart.set(key, {menu_id: p.id, name: p.name, category: p.category || "", baseDesc: p.description || "", size: sz, basePrice: base, extraPrice: ex, price: Math.round((base + ex) * 100) / 100, qty: qty, removedIngs: rem.slice(), addedIngs: add.slice(), itemNote: ""});
 }
 function arParseOrder(text){
- var toks = arTok(text).filter(function(w){ return w !== "e" && w !== "ed"; }), items = [], cur = null, mode = null, pq = null, last = -1, solo = false, all = ingUnique(getAllKnownIngredients());
+ var toks = arTok(text).filter(function(w){ return w !== "e" && w !== "ed"; }), items = [], cur = null, mode = null, pq = null, last = -1, solo = false, all = ingUnique(getAllKnownIngredients()); AR_HINT = null;
  for(var i = 0; i < toks.length; i++){
  var w = toks[i];
+ if(AR_GEN_MAP[w]){ AR_HINT = AR_GEN_MAP[w]; continue; }
+ if(AR_LAT_GEN[w]) AR_HINT = AR_LAT_GEN[w];
  if(AR_SENZA[w]){ mode = "r"; continue; }
  if(AR_EXTRA[w]){ mode = "e"; continue; }
  if(w === "و") continue;
  if(AR_SOLO[w]){ solo = true; continue; }
  var itn = AR_IT_NUM[w] != null ? AR_IT_NUM[w] : null;
- if(itn != null && toks[i + 1]){ var nsk = tokSkel(toks[i + 1]); if(nsk && getActiveMenu().some(function(p){ var nw = ingNorm(p.name).split(" "), k = nw.indexOf(w); return k >= 0 && k + 1 < nw.length && skOk(nsk, latSkel(nw[k + 1])); })) itn = null; } /* "quattro stagioni", "tre formaggi" = nome prodotto, non quantità */
+ if(itn != null && toks[i + 1]){ var nsk = tokSkel(toks[i + 1]); if(nsk && getActiveMenu().some(function(p){ var nw = ingNorm(p.name).split(" "), k = nw.indexOf(AR_IT_AR[w] || w); return k >= 0 && k + 1 < nw.length && skOk(nsk, latSkel(nw[k + 1])); })) itn = null; } /* "quattro stagioni", "tre formaggi" = nome prodotto, non quantità */
  if(AR_NUM[w] != null || /^\d+$/.test(w) || itn != null){
  var nv = Math.max(1, Math.min(50, Number(itn != null ? itn : (/^\d+$/.test(w) ? w : AR_NUM[w])))), ahead = false;
  for(var a = 1; a <= 2; a++){ if(i + a < toks.length && toks[i + a] !== "و" && arFindProduct(toks, i + a)) ahead = true; }
- if(!ahead && cur && !mode && last === i){ cur.qty = nv; pq = null; } else pq = nv;
+ if(!ahead && cur && !mode && last === i){ cur.qty = nv; cur.explicit = true; pq = null; } else pq = nv;
  mode = null; continue;
  }
  if(AR_MAXI[w]){ if(cur){ cur.size = "Maxi"; last = i + 1; } continue; }
@@ -16729,7 +16735,7 @@ function arParseOrder(text){
  if(cur && cur.p === f.p && last === i && pq == null){ i += f.len - 1; last = i + 1; continue; }
  var soloRem = [];
  if(solo){ try{ var ihs = arFindIng(toks, i, ingUnique(parseIngredients(f.p.description))); if(ihs) soloRem = window.arAutoRem(f.p, ihs.ing); }catch(e){ bpWarn(e); } solo = false; }
- cur = {p: f.p, qty: pq || 1, size: "Normale", rem: soloRem, add: []}; items.push(cur); pq = null; mode = null; i += f.len - 1; last = i + 1;
+ cur = {p: f.p, qty: pq || 1, explicit: pq != null, size: "Normale", rem: soloRem, add: []}; items.push(cur); pq = null; mode = null; AR_HINT = null; i += f.len - 1; last = i + 1;
  }else if(!mode){
  var ih = arFindIng(toks, i, all);
  if(ih){
@@ -16745,7 +16751,17 @@ function arParseOrder(text){
  }
  }
  }
- return items;
+ AR_HINT = null; return items;
+}
+function bpmVoiceAdd(text){
+ var items = arParseOrder(text);
+ if(!items.length) return false;
+ var go = items.some(function(it){
+  if(it.choice) return it.qty > 1;
+  return !!(it.explicit || it.qty > 1 || it.rem.length || it.add.length);
+ });
+ if(!go) return false;
+ return arProcess(text, false);
 }
 function arProcess(text, auto){
  var items = arParseOrder(text), ar = bpVoiceLang() === "ar-EG", msg;
@@ -16997,13 +17013,23 @@ function ssCmd(t){
  }
  return false;
 }
+/* v-qty: se nella ricerca vocale si sente un numero (due/دو/تري/2) o senza/سنسا, aggiunge subito al carrello */
+function ssVoiceDirect(cands){
+ for(var c = 0; c < cands.length; c++){
+  try{
+   var its = arParseOrder(cands[c]).filter(function(x){ return !x.choice; });
+   if(its.some(function(x){ return x.qty > 1 || x.rem.length || x.add.length; })){ arProcess(cands[c], false); return true; }
+  }catch(e){ bpWarn(e); }
+ }
+ return false;
+}
 function ssBindSearch(b, i, kind){
  var q = el("ssQ" + i); if(!q) return;
  q.oninput = function(){ ss.q = this.value.trim(); ss.alts = []; if(kind === "cust") ssRedrawTop("ssQ" + i); else ssFillList(i); };
  el("ssR" + i).onclick = ssResetSearch;
  el("ssMic" + i).onclick = function(){
  ssStartRec("s", false, function(t){ ss.q = t; q.value = t; if(kind !== "cust") ssFillList(i); },
- function(t, alts){ ss.live = ""; if(ssCmd(t)) return; if(kind === "cust"){ ssCustVoice(t); return; } ss.q = t; ss.alts = alts.slice(1); ss.altQ = t; ssHistAdd(t); q.value = t; ssFillList(i); });
+ function(t, alts){ ss.live = ""; if(ssCmd(t)) return; if(kind === "cust"){ ssCustVoice(t); return; } if(ssVoiceDirect([t].concat(alts || []))){ ss.q = ""; ss.alts = []; q.value = ""; ssFillList(i); ssBar(); return; } ss.q = t; ss.alts = alts.slice(1); ss.altQ = t; ssHistAdd(t); q.value = t; ssFillList(i); });
  };
  var a = el("ssAdd" + i);
  if(a) a.onclick = function(){
@@ -18049,7 +18075,17 @@ openCartIngModal = function(key){
  $('#bpmLang').onclick = function(){ safe(function(){ bpVoiceToggle(); bpFlash('🎤 ' + (bpVoiceLang() === 'ar-EG' ? 'العربية' : 'Italiano')); }); };
  $('#bpmMic').onclick = function(){
  var b = this; if(M.rec){ try{ M.rec.stop(); }catch(e){} return; }
- M.rec = pkListen(function(t){ M.q = t.trim(); $('#bpmQ').value = t; renderMenu(); }, function(on){ b.classList.toggle('on', on); if(!on) M.rec = null; });
+ var vDone = false;
+ M.rec = pkListen(function(t, fin){
+ t = String(t || '').trim();
+ if(fin && !vDone){
+ vDone = true;
+ var added = false;
+ try{ added = bpmVoiceAdd(t); }catch(e){ bpWarn(e); added = false; }
+ if(added){ M.q = ''; $('#bpmQ').value = ''; renderMenu(); return; }
+ }
+ M.q = t; $('#bpmQ').value = t; renderMenu();
+ }, function(on){ b.classList.toggle('on', on); if(!on) M.rec = null; });
  };
  $('#bpmCats').onclick = function(e){ if(e.target.closest('[data-gusti]')){ safe(function(){ bp36.openGusti(); }); return; } var c = e.target.closest('[data-cat]'); if(!c) return; M.cat = c.getAttribute('data-cat'); M.q = ''; $('#bpmQ').value = ''; renderMenu(); };
  $('#bpmGrid').onclick = function(e){
@@ -37439,16 +37475,19 @@ html body #allTab .bpf-bar .bpf-vie{grid-column:1/-1}
 html body #allTab .bpf-bar .bpf-vie:empty{display:none}
  html body #allTab .bpf-bar .bpf-chip>span:has(>.uxi){display:none}
 
-/* tablet / PC: calendario a sinistra, riepilogo + filtri + elenco a destra */
+/* tablet / PC: fascia in alto (calendario + riepilogo + filtri), sotto gli ordini a tutta larghezza */
 @media (min-width:900px){
- html body #allTab:not(.hidden){display:grid!important;grid-template-columns:minmax(300px,360px) minmax(0,1fr);column-gap:14px;align-items:start}
- html body #allTab:not(.hidden)>.topline{grid-column:1/-1}
- html body #allTab:not(.hidden)>#storBar{grid-column:1;grid-row:2/span 3;position:sticky;top:8px;align-self:start}
- html body #allTab:not(.hidden)>#storTotal{grid-column:2;grid-row:2}
- html body #allTab:not(.hidden)>#storPayFilter{grid-column:2;grid-row:3}
- html body #allTab:not(.hidden)>#bpAccAll{grid-column:2;grid-row:4}
+ html body #allTab:not(.hidden){display:grid!important;grid-template-columns:minmax(320px,420px) minmax(0,1fr);grid-template-rows:auto auto 1fr auto;column-gap:14px;align-items:start}
+ html body #allTab:not(.hidden)>.topline{grid-column:1/-1;grid-row:1}
+ html body #allTab:not(.hidden)>#storBar{grid-column:1;grid-row:2/span 2;position:static;align-self:start}
+ html body #allTab:not(.hidden)>#storTotal{grid-column:2;grid-row:2;font-size:15px!important}
+ html body #allTab:not(.hidden)>#storPayFilter{grid-column:2;grid-row:3;flex-wrap:wrap!important;overflow:visible!important}
+ html body #allTab:not(.hidden)>#bpAccAll{grid-column:1/-1;grid-row:4}
  html body #allTab:not(.hidden)::after{grid-column:1/-1}
- html body #storBar .sd{min-height:44px!important}
+ html body #storBar .sd{min-height:42px!important}
+ /* ordini: tutta la larghezza, quante colonne ci stanno (3-4 su tablet/PC) */
+ html body #allTab #bpAccAll .rd-acc-body{padding:8px 10px 14px!important}
+ html body #allOrders{grid-template-columns:repeat(auto-fill,minmax(330px,1fr))!important;gap:12px!important;width:100%!important;max-width:none!important}
 }
 </style>
 
