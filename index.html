@@ -11356,6 +11356,28 @@ function renderOrders(){
  });
 }
 
+/* ingredienti sotto ogni articolo nelle card ordine: pizza = 🍅🧀 + resto, panini/altro = elenco */
+function bpCardIngHtml(parsed){
+ try{
+  if(!parsed || bpGustiInfo(parsed.baseName)) return '';
+  var nm = String(parsed.baseName||'').replace(/^men[uù]\s+/i,'').trim().toLowerCase();
+  var p = allMenu.find(function(x){ return String(x.name).toLowerCase() === nm; });
+  if(!p || !p.description) return '';
+  var removed = (parsed.mods||[]).filter(function(m){ return /^senza\s/i.test(m); }).map(function(m){ return m.replace(/^senza\s+/i,'').trim().toLowerCase(); });
+  var list = parseIngredients(p.description).filter(function(b){ return removed.indexOf(String(b).toLowerCase().trim()) < 0; });
+  if(!list.length) return '';
+  var isPz = false; try{ isPz = getProductKind(p) === 'pizza'; }catch(e){ isPz = /pizz/i.test(String(p.category||'')); }
+  var lg = '', rest = list;
+  if(isPz){ /* emoji solo per pomodoro/mozzarella di base: i primi 2 ingredienti della pizza */
+   var t = false, m = false, keep = [];
+   list.forEach(function(b, idx){ var k = idx < 2 ? bpIngKind(b) : ''; if(k === 't' && !t){ t = true; } else if(k === 'm' && !m){ m = true; } else keep.push(b); });
+   lg = (t ? '🍅' : '') + (m ? '🧀' : ''); rest = keep;
+  }
+  rest = rest.join(', ');
+  if(!lg && !rest) return '';
+  return '<div class="oc-ing">' + (lg ? '<span class="gx-ico">' + lg + '</span> ' : '') + esc(rest) + '</div>';
+ }catch(e){ return ''; }
+}
 function renderOrderItemLineWithIcons(i){
  let parsed = splitProductAndMods(i.product_name);
  let soloKeep = null; try{ soloKeep = bpSoloKeepOf(parsed); }catch(e){ bpWarn(e); }
@@ -11379,6 +11401,7 @@ function renderOrderItemLineWithIcons(i){
  <div class="order-item-line">
  <div>
  <strong><span class="bp-qty">${i.quantity} ×</span>${bpNameHtml((window.bpIsMenu&&bpIsMenu(parsed)?'Menu ':'')+parsed.baseName)}</strong> <span class="muted">(${esc(i.size)})</span>
+ ${bpCardIngHtml(parsed)}
  ${modsHtml ? `<div style="margin-top:3px;display:flex;gap:4px;flex-wrap:wrap">${modsHtml}</div>` : ''}
  </div>
  <span>${euro(i.line_total)}</span>
@@ -37293,5 +37316,74 @@ html body #newTab #bpmGrid .bpm-tile .bp-prep .pp-t,html body #newTab #bpmGrid .
  window.__bpGiriState = function(){ return {slots: slots, active: active, routes: routes, savedMap: savedMap, pending: pending, noPos: noPos}; };
 })();
 </script>
+
+<style id="bpOrdiniCompatto">
+/* ===== ORDINI · pulsanti compatti e professionali (v-compatto) ===== */
+html body #ordersTab{--cp-h:34px;--cp-r:10px}
+
+/* 1) intestazione: titolo + pulsanti azione */
+html body #ordersTab .topline{margin:0 0 8px!important;gap:6px!important;align-items:center!important}
+html body #ordersTab .topline h1{font-size:18px!important;line-height:1.2!important}
+html body #ordersTab .topline button{min-height:var(--cp-h)!important;padding:0 12px!important;font-size:13px!important;border-radius:var(--cp-r)!important;line-height:1.1!important}
+
+/* 2) filtri tipo (Tutti/Domicilio/Ritiro/Tavolo) + Raggruppa per Via + ricerca */
+html body #ordersTab .bpf-bar{display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:6px!important;margin:0 0 8px!important;padding:6px!important;border-radius:14px!important;align-items:stretch!important}
+html body #ordersTab .bpf-bar .bpf-chip{position:relative;min-height:var(--cp-h)!important;padding:0 4px!important;font-size:12.5px!important;gap:4px!important;justify-content:center!important;min-width:0!important;white-space:nowrap!important;border-width:1px!important;line-height:1!important}
+html body #ordersTab .bpf-bar .bpf-chip .uxi{font-size:14px!important;display:inline-flex;align-items:center}
+html body #ordersTab .bpf-bar .bpf-chip .uxi svg{width:15px!important;height:15px!important}
+html body #ordersTab .bpf-bar .bpf-chip .bpf-n{position:absolute;top:-6px;inset-inline-end:-3px;font-size:10px!important;min-width:17px!important;height:17px;line-height:17px;padding:0 4px!important;border-radius:9px!important;background:#475467!important;color:#fff!important;box-shadow:0 0 0 2px var(--bg,#fff)}
+html body #ordersTab .bpf-bar .bpf-chip.on .bpf-n{background:#fff!important;color:#101828!important}
+html body #ordersTab .bpf-bar .bpf-chip[data-grp]{grid-column:span 2}
+html body #ordersTab .bpf-bar .bpf-street{grid-column:span 2;width:100%!important;max-width:none!important;min-width:0!important;min-height:var(--cp-h)!important;height:var(--cp-h)!important;padding:0 12px!important;font-size:13px!important;border-width:1px!important}
+html body #ordersTab .bpf-bar .bpf-sep,html body #ordersTab .bpf-bar .bpf-hint{display:none!important}
+html body #ordersTab .bpf-bar .bpf-vie{grid-column:1/-1}
+html body #ordersTab .bpf-bar .bpf-vie:empty{display:none}
+
+/* 3) turno: Mattina / Sera / Tutto come controllo segmentato */
+html body #ordersTab #bpShiftBar{gap:3px!important;padding:3px!important;margin:0 0 4px!important;background:rgba(127,127,127,.14);border-radius:12px}
+html body #ordersTab #bpShiftBar button{min-height:32px!important;padding:2px 6px!important;font-size:13px!important;border:0!important;border-radius:9px!important;background:transparent!important;color:#475467!important;display:flex!important;align-items:center;justify-content:center;gap:5px;line-height:1.1!important;white-space:nowrap}
+html body #ordersTab #bpShiftBar button small{display:inline!important;font-size:10.5px!important;opacity:.7;margin:0!important}
+html body #ordersTab #bpShiftBar button.on{background:#202124!important;color:#fff!important;box-shadow:0 1px 4px rgba(0,0,0,.25)}
+html body #ordersTab #bpShiftNote{font-size:10.5px!important;margin:0 4px 6px!important;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* 4) giri per autista */
+html body #bpGiriBar{padding:6px!important;margin:0 0 8px!important;border-radius:12px!important}
+html body #bpGiriBar .gi-row{gap:6px!important}
+html body #bpGiriBar .gi-tab{min-width:0!important;padding:5px 10px!important;border-width:1.5px!important;border-radius:10px!important;font-size:13px!important;line-height:1.2!important}
+html body #bpGiriBar .gi-tab small{font-size:10.5px!important;max-width:130px!important}
+html body #bpGiriBar .gi-tab .gi-n{min-width:18px!important;height:18px!important;font-size:11px!important;top:-6px!important}
+html body #bpGiriBar .gi-gear{width:36px!important;border-radius:10px!important;font-size:16px!important}
+html body #bpGiriBar .gi-note{margin-top:6px!important;padding:5px 9px!important;font-size:11.5px!important;line-height:1.35!important;border-radius:9px!important}
+html body #bpGiriBar .gi-panel{margin-top:6px!important;padding:8px!important}
+
+/* 5) giri suggeriti */
+html body #bpGiroBox{margin:0 0 8px!important;padding:8px 10px!important;border-width:1.5px!important;border-radius:12px!important;font-size:13px!important;line-height:1.4!important}
+html body #bpGiroBox summary{font-size:13px!important;padding:2px 0!important}
+html body #bpGiroBox button{min-height:34px!important;font-size:13px!important}
+
+/* 6) stati ordine: una sola riga scorrevole */
+html body #statusFilters{display:flex!important;flex-wrap:nowrap!important;gap:6px!important;margin:0 0 8px!important;padding:2px 2px 4px!important;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;scroll-snap-type:x proximity;scrollbar-width:none}
+html body #statusFilters::-webkit-scrollbar{display:none}
+html body #statusFilters button{flex:0 0 auto!important;min-height:34px!important;padding:0 11px!important;font-size:12.5px!important;gap:6px!important;white-space:nowrap!important;line-height:1!important;border-width:1px!important;scroll-snap-align:start}
+html body #statusFilters .badge-count{font-size:10.5px!important;min-width:18px!important;padding:2px 6px!important;line-height:1.1!important}
+
+/* 7) blocca schermo + filtro tipo + ordinamento */
+html body #bpFreezeBar{margin:0 0 6px!important;gap:8px!important;flex-wrap:nowrap!important}
+html body #bpScreenFreeze{min-height:30px!important;padding:0 12px!important;font-size:12px!important;border-radius:999px!important;line-height:1!important;white-space:nowrap}
+html body #bpFreezeNote{font-size:11px!important;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+html body #bpFreezeNote:empty{display:none}
+html body #opsChips{display:grid!important;grid-template-columns:repeat(12,minmax(0,1fr))!important;gap:6px!important;margin:0 0 8px!important}
+html body #opsChips .ops-chip{grid-column:span 3;min-height:var(--cp-h)!important;padding:0 4px!important;font-size:12.5px!important;line-height:1!important;border-radius:var(--cp-r)!important;display:flex!important;align-items:center;justify-content:center;white-space:nowrap;min-width:0}
+html body #opsChips .ops-chip:nth-child(n+5){grid-column:span 4}
+html body #opsChips .ops-chip.on:nth-child(n+5){background:#344054!important;border-color:#344054!important}
+
+/* telefoni stretti: niente icone nei filtri tipo, il testo resta leggibile */
+@media (max-width:380px){
+ html body #ordersTab .bpf-bar .bpf-chip>span:has(>.uxi){display:none}
+ html body #ordersTab #bpShiftBar button small{display:none!important}
+}
+</style>
+
+<style id="bpOcIng">.order-item-line .oc-ing{margin-top:2px;font-size:13px;font-weight:700;line-height:1.3;color:#6b5b4a}.order-item-line .oc-ing .gx-ico{font-size:1.7em;vertical-align:middle}</style>
 </body>
 </html>
