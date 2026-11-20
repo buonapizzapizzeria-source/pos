@@ -1960,6 +1960,7 @@ h1{font-size:24px;margin:4px 0 14px}h2{font-size:18px;margin:0 0 12px}.grid{disp
 .rc-total-bar .rc-tot-val{font-size:28px;font-weight:950;color:#fff;letter-spacing:-1px}
 .rc-footer{background:#fff;padding:10px 14px;text-align:center;font-size:12px;color:#475467;font-weight:700;border-top:1px solid #e0e0e0}
 /* Completo badge on receipt */
+.rc-completo-par{background:none!important;color:inherit!important;padding:0!important;font-size:.85em}
 .rc-completo{display:inline-block;background:#027a48;color:#fff;font-size:10px;font-weight:950;padding:1px 7px;border-radius:10px;margin-inline-start:6px;text-transform:uppercase;letter-spacing:.3px;vertical-align:middle}
 
 /* ===== Comanda cucina professionale (kr-*) ===== */
@@ -11400,7 +11401,7 @@ function renderOrderItemLineWithIcons(i){
  return `
  <div class="order-item-line">
  <div>
- <strong><span class="bp-qty">${i.quantity} ×</span>${bpNameHtml((window.bpIsMenu&&bpIsMenu(parsed)?'Menu ':'')+parsed.baseName)}</strong> <span class="muted">(${esc(i.size)})</span>
+ <strong><span class="bp-qty">${i.quantity} ×</span>${bpNameHtml((window.bpIsMenu&&bpIsMenu(parsed)?'Menu ':'')+parsed.baseName)}</strong> <span class="muted">(${esc(i.size)})</span>${(function(){ try{ var lb = bpCompletoLabel(i); return lb ? ' <span class="kr-completo" style="font-weight:900;white-space:nowrap">(' + lb + ')</span>' : ''; }catch(e){ return ''; } })()}
  ${bpCardIngHtml(parsed)}
  ${modsHtml ? `<div style="margin-top:3px;display:flex;gap:4px;flex-wrap:wrap">${modsHtml}</div>` : ''}
  </div>
@@ -11854,7 +11855,7 @@ function buildReceiptHtml(o, items){
  <div class="rc-item-top${isDrink ? ' rc-dl' : ''}">
  <div class="${isDrink ? 'rc-dl-main' : ''}">
  <span class="rc-qty-badge">${i.quantity}×</span>
- <span class="rc-item-name">${bpNameHtml((isMenuRow && !/^men[uù]\b/i.test(parsed.baseName) ? 'Menu ' : '')+parsed.baseName)}</span>${isMenuRow ? '<span class="rc-size-tag menu">🍟🥤 MENU</span>' : ''}${(function(){ try{ var lb = bpCompletoLabel(i); return lb ? '<span class="rc-completo">' + lb + '</span>' : ''; }catch(e){ return ''; } })()}
+ <span class="rc-item-name">${bpNameHtml((isMenuRow && !/^men[uù]\b/i.test(parsed.baseName) ? 'Menu ' : '')+parsed.baseName)}</span>${isMenuRow ? '<span class="rc-size-tag menu">🍟🥤 MENU</span>' : ''}${(function(){ try{ var lb = bpCompletoLabel(i); return lb ? '<span class="kr-completo rc-completo-par" style="font-weight:900;margin-inline-start:6px;white-space:nowrap">(' + lb + ')</span>' : ''; }catch(e){ return ''; } })()}
  ${sizeTag}${volHtml}
  </div>
  <div class="rc-item-price">${euro(i.line_total)}</div>
@@ -12268,14 +12269,14 @@ function bpCompletoLabel(i){ /* '' | 'Completo' (m.: panino, falafel) | 'Complet
  var pr = null;
  try{ var rl = raw.toLowerCase(); pr = allMenu.find(function(x){ return String(x.name).toLowerCase() === rl; }) || bpRcFindProd(raw); }catch(e){}
  var low = (String((pr && pr.category) || '') + ' ' + raw).toLowerCase();
- var okType = (w.k === 'pizza') ? !!w.kebabPizza : /panin|piadin|falafel|kebab|kebap|shawarma|durum/.test(low);
+ var okType = (w.k === 'pizza') ? !!w.kebabPizza : /panin|piadin|falafel|kebab|kebap|shawarma|durum|vaschett|donner|doner|\bbox\b/.test(low);
  if(!okType) return false;
  if(!pr || !parseIngredients(pr.description).length) return false;
  var mods = pa.mods || [];
  /* v96: Completo/Completa SOLO se non manca NESSUN ingrediente: qualsiasi "senza/no/niente/meno/poco/solo" (anche dentro una Nota) lo toglie */
  if(mods.some(function(m){ var t = String(m || '').replace(/^\s*\+\s*/, '').replace(/^\s*nota\s*:\s*/i, '').trim(); return /^(senza|no|non|niente|meno|poco|pochi|sin|togli|tolto|tolta|zero|solo)\b/i.test(t) || /\bsenza\b|\bniente\b|\bsolo\b|بدون|من غير|بلا/i.test(t); })) return false;
  try{ if(bpSoloOf(pa)) return false; }catch(e){}
- var fem = (w.k === 'pizza') || /pizz|piadin/.test(raw.toLowerCase());
+ var fem = (w.k === 'pizza') || /pizz|piadin|vaschett/.test(raw.toLowerCase());
  return fem ? 'Completa' : 'Completo';
  }catch(e){ return ''; }
 }
@@ -16680,10 +16681,12 @@ function arFindProduct(toks, i){
  });
  return best;
 }
+/* abbreviazioni nel menu: "Pom" = Pomodoro. Se lo scheletro del nome nel menu è l'inizio di quello detto a voce, è un match */
+function arAbbr(s, k){ return !!s && !!k && k.length >= 2 && k.length < s.length && k.length >= s.length * 0.4 && s.indexOf(k) === 0; }
 function arFindIng(toks, i, pool){
  var best = null;
  arWin(toks, i, 2).forEach(function(w){
- pool.forEach(function(ing){ arKeys(ing, 2).forEach(function(k){ if(skOk(w.s, k)){ var sc = w.len * 10 + k.length - lev(w.s, k); if(!best || sc > best.sc) best = {ing: ing, len: w.len, sc: sc}; } }); });
+ pool.forEach(function(ing){ arKeys(ing, 2).forEach(function(k){ var ab = arAbbr(w.s, k); if(skOk(w.s, k) || ab){ var sc = w.len * 10 + k.length - (ab ? 3 : lev(w.s, k)); if(!best || sc > best.sc) best = {ing: ing, len: w.len, sc: sc}; } }); });
  });
  return best;
 }
@@ -16692,7 +16695,7 @@ function arMatchProduct(p, q){
  var keys = arKeys(p.name).concat(parseIngredients(p.description).reduce(function(a, g){ return a.concat(arKeys(g, 2)); }, []));
  return sk.every(function(s){ return keys.some(function(k){ return skOk(s, k) || (s.length >= 3 && k.indexOf(s) === 0); }); });
 }
-function arMatchIng(ing, q){ var sk = arTok(q).map(tokSkel).filter(Boolean); if(!sk.length) return true; var ks = arKeys(ing, 2); return sk.every(function(s){ return ks.some(function(k){ return skOk(s, k) || (s.length >= 3 && k.indexOf(s) === 0); }); }); }
+function arMatchIng(ing, q){ var sk = arTok(q).map(tokSkel).filter(Boolean); if(!sk.length) return true; var ks = arKeys(ing, 2); return sk.every(function(s){ return ks.some(function(k){ return skOk(s, k) || arAbbr(s, k) || (s.length >= 3 && k.indexOf(s) === 0); }); }); }
 function ssQMatch(p, q){ if(!q) return true; if(AR_RX.test(q)) return arMatchProduct(p, q); return (p.name + " " + (p.description || "")).toLowerCase().indexOf(q.toLowerCase()) >= 0; }
 function ssIngQMatch(ing, q){ if(!q) return true; return ingNorm(ing).indexOf(ingNorm(q)) >= 0 || arMatchIng(ing, q); }
 function ssCartAdd(p, size, qty, rem, add){
@@ -26801,6 +26804,7 @@ function vsDoc(d, VS, title){
  if(inf.service){ d.lr(inf.title, money(i.line_total), {}, 3); return; }
  var hd = inf.head;
  if(inf.menuRow && !/^men[u\u00f9]\b/i.test(hd)) hd = 'Menu ' + hd;
+ try{ var cmpL = bpCompletoLabel(i); if(cmpL) hd += ' (' + cmpL + ')'; }catch(e){}
  d.item(String(inf.qty) + 'x', hd, money(i.line_total).padStart(8, ' '), nameSt(fsLevel() >= 1 ? {b: 1, h: 2} : {b: 1}), 4, 8);
  if(Number(i.quantity || 1) > 1) d.p(' ' + i.quantity + ' x ' + money(bpUnitPrice(i)), {f: 'B'});
  if(inf.menuRow) d.p(' [MENU: patatine + bibita]', {b: 1});
