@@ -8769,7 +8769,7 @@ Se la foto e' lo scontrino/comanda di una piattaforma di consegna (logo o scritt
 - \`pagamento\`: "contanti" se e' scritto pagamento in contanti / "incassa ... dal rider" / pagamento alla consegna; "online" se e' gia' pagato; altrimenti "".
 - \`orario\`: se c'e' "Arrivo previsto del rider" usa quell'ora (HH:MM), altrimenti l'orario di ritiro/consegna indicato. "Effettuato" e' solo l'ora in cui il cliente ha ordinato: NON usarlo come orario. Il numero dopo "#" in grande (es. #8974) e' il numero ordine.
 - \`cliente\`: il nome cliente stampato (es. "Gian C"). \`indirizzo\`: lascia "" (il rider ritira in negozio). \`note\`: solo istruzioni utili (es. "NO POSATE").
-- \`righe\`: TUTTI i prodotti dello scontrino (anche salse, bibite, fritti), con la quantita' di ogni riga ("2x" = quantita 2) e il nome copiato dal menu se esiste. NON trattare "Numero di prodotti", "Totale" o le intestazioni di categoria (es. "BEVANDE (4)") come prodotti.
+- \`righe\`: TUTTI i prodotti dello scontrino (anche salse, bibite, fritti), con la quantita' di ogni riga ("2x" = quantita 2) e il nome copiato dal menu se esiste. Nelle righe delle piattaforme "Con X" = modifica "+X" e "Senza X" = modifica "-X": separa SEMPRE ogni modifica con una virgola (es. "+cipolla, -piccante", mai "+cipolla -piccante"). NON trattare "Numero di prodotti", "Totale" o le intestazioni di categoria (es. "BEVANDE (4)") come prodotti.
 Uno scontrino di piattaforma e' sempre un ordine valido: ordine_presente = true.
 
 ### FORMATO JSON DI RISPOSTA RICHIESTO:
@@ -9113,9 +9113,10 @@ function gemFmtMods(rem, add){
 }
 function gemParseMods(str){
  const rem = [], add = [];
- String(str || '').split(/[,;]+/).map(x => x.trim()).filter(Boolean).forEach(x => {
+ /* fix: le piattaforme (Glovo ecc.) danno "+cipolla -piccante" / "con cipolla senza piccante" senza virgola: spezza prima di ogni +, - o parola senza/con/extra/no/togli/aggiungi */
+ String(str || '').split(/[,;]+/).flatMap(s => s.split(/\s+(?=(?:[+\-−–]\s*[^\s+\-−–])|(?:senza|con|extra|no|togli|aggiungi)\s+\S)/i)).map(x => x.trim()).filter(Boolean).forEach(x => {
  if(/^(\+|extra\s|con\s|aggiungi\s)/i.test(x)) add.push(x.replace(/^(\+|extra\s|con\s|aggiungi\s)\s*/i, '').trim());
- else rem.push(x.replace(/^(-|senza\s|no\s|togli\s)\s*/i, '').trim());
+ else rem.push(x.replace(/^([-−–]|senza\s|no\s|togli\s)\s*/i, '').trim());
  });
  return { rem: rem.filter(Boolean), add: add.filter(Boolean) };
 }
@@ -12274,7 +12275,7 @@ function bpCompletoLabel(i){ /* '' | 'Completo' (m.: panino, falafel) | 'Complet
  if(!pr || !parseIngredients(pr.description).length) return false;
  var mods = pa.mods || [];
  /* v96: Completo/Completa SOLO se non manca NESSUN ingrediente: qualsiasi "senza/no/niente/meno/poco/solo" (anche dentro una Nota) lo toglie */
- if(mods.some(function(m){ var t = String(m || '').replace(/^\s*\+\s*/, '').replace(/^\s*nota\s*:\s*/i, '').trim(); return /^(senza|no|non|niente|meno|poco|pochi|sin|togli|tolto|tolta|zero|solo)\b/i.test(t) || /\bsenza\b|\bniente\b|\bsolo\b|بدون|من غير|بلا/i.test(t); })) return false;
+ if(mods.some(function(m){ var t = String(m || '').replace(/^\s*\+\s*/, '').replace(/^\s*nota\s*:\s*/i, '').trim(); return /^(senza|no|non|niente|meno|poco|pochi|sin|togli|tolto|tolta|zero|solo)\b/i.test(t) || /\bsenza\b|\bniente\b|\bsolo\b|بدون|من غير|بلا/i.test(t) || /(^|\s)[-−–]\s*[a-zà-ùA-Z]/.test(t); })) return false;
  try{ if(bpSoloOf(pa)) return false; }catch(e){}
  var fem = (w.k === 'pizza') || /pizz|piadin|vaschett/.test(raw.toLowerCase());
  return fem ? 'Completa' : 'Completo';
