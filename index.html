@@ -26620,6 +26620,35 @@ html:not(.x) body #userBar button#thermalToggleBtn.ap-off,#thermalToggleBtn.ap-o
  lines.forEach(function(t, k){ if(k === 0) self.put(t + rep(' ', w - t.length - r.length) + r); else self.put(t); });
  return this;
  };
+ /* v10: riga in negativo (bianco su nero) a tutta larghezza per SENZA / EXTRA / NOTE: si vede subito, niente evidenziatore */
+ Doc.prototype.inv = function(text, style){
+ this.st(Object.assign({}, style || {}, {r: 1}));
+ var w = this.W(), self = this, t = this.c(String(text == null ? '' : text).replace(/^\s+/, ''));
+ wrapText(t, Math.max(6, w - 2), Math.max(6, w - 2), 2).forEach(function(l, k){ var ln = ' ' + l; if(ln.length > w) ln = ln.slice(0, w); self.put(ln + rep(' ', Math.max(0, w - ln.length))); });
+ return this;
+ };
+ /* v12: riga con triangolo di pericolo disegnato (immagine raster, non emoji: le stampanti termiche non stampano le emoji) */
+ Doc.prototype.warn = function(text){
+ var t = this.c(String(text == null ? '' : text).replace(/^\s+/, '')), w = Number(cfg.dots) || 576;
+ try{
+ var fz = 30, lh = 36, ic = 34, pad = 8, c = document.createElement('canvas'), x = c.getContext('2d'), fnt = 'bold ' + fz + 'px Arial, Helvetica, sans-serif';
+ x.font = fnt; var lim = w - 2 * (ic + pad * 2), words = t.split(' '), lines = [], cur = '';
+ words.forEach(function(wd){ var tt = cur ? cur + ' ' + wd : wd; if(x.measureText(tt).width <= lim || !cur) cur = tt; else { lines.push(cur); cur = wd; } });
+ if(cur) lines.push(cur);
+ var h = Math.max(lines.length * lh, ic) + 8; c.width = w; c.height = h; x = c.getContext('2d');
+ x.fillStyle = '#fff'; x.fillRect(0, 0, w, h);
+ function tri(cx, cy){ x.fillStyle = '#000'; x.beginPath(); x.moveTo(cx, cy - ic / 2); x.lineTo(cx + ic / 2, cy + ic / 2 - 2); x.lineTo(cx - ic / 2, cy + ic / 2 - 2); x.closePath(); x.fill(); x.fillStyle = '#fff'; x.fillRect(cx - 2.5, cy - 5, 5, 13); x.fillRect(cx - 2.5, cy + 11, 5, 5); }
+ var cy = h / 2; tri(pad + ic / 2, cy); tri(w - pad - ic / 2, cy);
+ x.font = fnt; x.fillStyle = '#000'; x.strokeStyle = '#000'; x.lineWidth = 1; x.textAlign = 'center'; x.textBaseline = 'alphabetic';
+ var y0 = (h - lines.length * lh) / 2;
+ lines.forEach(function(l, k){ var yy = y0 + lh * k + fz * 0.9; x.fillText(l, w / 2, yy); x.strokeText(l, w / 2, yy); });
+ var d = x.getImageData(0, 0, w, h).data, bpr = w >> 3, out = new Array(bpr * h), r, cc, b, k2;
+ for(r = 0; r < h; r++) for(cc = 0; cc < bpr; cc++){ b = 0; for(k2 = 0; k2 < 8; k2++){ var o = ((r * w) + cc * 8 + k2) * 4; if(d[o] * 0.3 + d[o + 1] * 0.59 + d[o + 2] * 0.11 < 150) b |= (0x80 >> k2); } out[r * bpr + cc] = b; }
+ this.st({}); this.raw([0x1D, 0x76, 0x30, 0x00, bpr & 255, bpr >> 8, h & 255, h >> 8].concat(out)); this.raw([0x0A]);
+ var self = this; lines.forEach(function(l){ self.pv.push('/!\\ ' + l + ' /!\\'); });
+ return this;
+ }catch(e){ return this.p('/!\\ ' + t + ' /!\\', {b: 1, h: 2}); }
+ };
  /* v99: riga di dettaglio (SENZA / EXTRA / NOTE) a penna. true = stampata, false = usare d.p() */
  Doc.prototype.penP = function(text, style){
  if((cfg.ns || 'std') !== 'pen' || (style && (style.w > 1 || style.f === 'B'))) return false;
@@ -26767,6 +26796,18 @@ html:not(.x) body #userBar button#thermalToggleBtn.ap-off,#thermalToggleBtn.ap-o
  var st = fs >= 2 ? {b: 1, h: 2} : {b: 1}; /* SENZA / EXTRA / NOTE */
  try{ var oi = window.bpShop.escStyle('ing'); if(oi) sm = oi; }catch(e){}
  function P(txt, style, hg){ if(!d.penP(txt, style)) d.p(txt, style, hg); }
+ function PI(txt, style, hg){
+ try{
+ var hl = cfg.hl || 'inv', t = String(txt == null ? '' : txt).replace(/^\s+/, '');
+ if(hl === 'off') return P(txt, style, hg);
+ if(hl === 'box'){ d.rule('-', {b: 1}); d.p(t, {b: 1, h: 2}); d.rule('-', {b: 1}); return; }
+ if(hl === 'big'){ d.p(t, {b: 1, w: 2, h: 2}); return; }
+ if(hl === 'under'){ d.p(' ' + t, Object.assign({}, style || {}, {b: 1, u: 1})); return; }
+ if(hl === 'warn'){ d.warn(t); return; }
+ if(hl === 'arrow'){ d.p('>>> ' + t + ' <<<', {b: 1, h: 2}); return; }
+ d.inv(txt, style);
+ }catch(e){ P(txt, style, hg); }
+ }
  var settings = loadSettings();
  var ingMode = settings && settings.ui && settings.ui.ingredientsMode ? settings.ui.ingredientsMode : 'clean';
  var showIng = ingMode === 'full';
@@ -26783,18 +26824,18 @@ html:not(.x) body #userBar button#thermalToggleBtn.ap-off,#thermalToggleBtn.ap-o
  var frac = gg.n + '/' + gTot;
  P(ind + frac + '  ' + String(gg.pt.name).toUpperCase() + (gg.hasFr ? ' >> PATATINE' : ''), st, ind.length + frac.length + 2);
  var gm = (gg.pt.mods || []).map(function(t){ t = String(t); return /^senza\s+/i.test(t) ? 'SENZA ' + t.replace(/^senza\s+/i, '').toUpperCase() : (t.charAt(0) === '+' ? 'EXTRA ' + t.replace(/^\+\s*/, '').toUpperCase() : t.toUpperCase()); });
- if(gm.length) P(ind + '   >> ' + gm.join(', '), st, ind.length + 6);
+ if(gm.length) PI(ind + '   >> ' + gm.join(', '), st, ind.length + 6);
  if(gg.pt.ing && showIng) d.p(ind + ' ' + gg.pt.ing, sm, ind.length + 4);
  });
  }
  var mk = kit ? '>> ' : '', hg = hang + (kit ? 3 : 0);
- if(inf.solo) P(ind + mk + '*** ' + bpSoloText(inf.soloKeep) + ' ***', st);
+ if(inf.solo) PI(ind + mk + '*** ' + bpSoloText(inf.soloKeep) + ' ***', st);
  if(showIng && inf.base.length) d.p(ind + 'Ingr.: ' + inf.base.join(', '), sm, hang);
  if(!showIng && ingMode === 'compact' && inf.base.length) d.p(ind + '🍅🧀', sm, hang);
- if(inf.rem.length && !inf.solo) P(ind + mk + 'SENZA: ' + up(inf.rem), st, hg);
- if(inf.add.length) P(ind + mk + 'EXTRA: ' + up(inf.add), st, hg);
- if(inf.notes.length) P(ind + mk + 'NOTE: ' + up(inf.notes), st, hg);
- inf.other.forEach(function(m){ P(ind + mk + 'NOTE: ' + String(m).toUpperCase(), st, hg); });
+ if(inf.rem.length && !inf.solo) PI(ind + mk + 'SENZA: ' + up(inf.rem), st, hg);
+ if(inf.add.length) PI(ind + mk + 'EXTRA: ' + up(inf.add), st, hg);
+ if(inf.notes.length) PI(ind + mk + 'NOTE: ' + up(inf.notes), st, hg);
+ inf.other.forEach(function(m){ PI(ind + mk + 'NOTE: ' + String(m).toUpperCase(), st, hg); });
  }
 
  function fitW(d, txt, max){ var n = Math.max(1, d.c(txt).length); return Math.max(1, Math.min(max, Math.floor(d.cols / n))); }
@@ -27368,6 +27409,7 @@ try{
  sel('dpCols', 'Larghezza', [[42, '80 mm - 42 colonne (consigliata)'], [48, '80 mm - 48 colonne'], [32, '58 mm - 32 colonne']], cfg.cols) +
  sel('dpNs', 'Stile nome articolo', [['std', 'Normale (grassetto)'], ['thin', 'Sottile (testo, senza grassetto)'], ['pen', 'Penna (immagine, stile a mano)']], cfg.ns || 'std') +
  sel('dpFs', 'Dimensione testo (ingredienti)', [[0, 'Normale (piccolo)'], [1, 'Grande'], [2, 'Molto grande (doppia altezza)']], fsLevel()) +
+ sel('dpHl', 'Evidenzia SENZA / EXTRA / NOTE', [['inv', 'Bianco su nero (consigliata)'], ['box', 'Riquadro: linee sopra e sotto + testo grande'], ['big', 'Testo gigante (doppia larghezza e altezza)'], ['warn', 'Triangolo di pericolo (disegnato) + testo grande'], ['arrow', 'Frecce >>> TESTO <<< grande'], ['under', 'Grassetto + sottolineato'], ['off', 'Nessuna (normale)']], cfg.hl || 'inv') +
  sel('dpCp', 'Caratteri / accenti', [['cp858', 'CP858 (consigliata, con \u20AC)'], ['cp1252', 'WPC1252 (Windows, con \u20AC) - prova questa se \u00E0 e \u20AC escono sbagliati'], ['cp437', 'CP437 (compatibile)'], ['ascii', 'ASCII (senza accenti)']], cfg.cp) +
  sel('dpBaud', 'Velocita\u0027 seriale', [9600, 19200, 38400, 57600, 115200].map(function(x){ return [x, x]; }), cfg.baud) +
  '</div>' +
@@ -27382,10 +27424,10 @@ try{
  function g(i){ return document.getElementById(i); }
   try{ window.bpShop.mountOpts(g('bpDpOpts'), function(){ var pr = g('dpPre'); if(pr && pr.style.display === 'block') g('dpPrev').click(); }); }catch(e){}
  function rd(){
- cfg.cols = Number(g('dpCols').value); cfg.ns = g('dpNs').value; cfg.dots = cfg.cols === 32 ? 384 : 576; cfg.fs = Number(g('dpFs').value); cfg.cp = g('dpCp').value; cfg.baud = Number(g('dpBaud').value);
+ cfg.cols = Number(g('dpCols').value); cfg.ns = g('dpNs').value; cfg.dots = cfg.cols === 32 ? 384 : 576; cfg.fs = Number(g('dpFs').value); cfg.hl = g('dpHl').value; cfg.cp = g('dpCp').value; cfg.baud = Number(g('dpBaud').value);
  cfg.kitchen = g('dpKit').checked ? 1 : 0; cfg.qr = g('dpQr').checked ? 1 : 0; cfg.kanji = g('dpKj').checked ? 1 : 0; save();
  }
- ['dpCols', 'dpNs', 'dpFs', 'dpCp', 'dpBaud', 'dpKit', 'dpQr', 'dpKj'].forEach(function(i){ g(i).onchange = rd; });
+ ['dpCols', 'dpNs', 'dpFs', 'dpHl', 'dpCp', 'dpBaud', 'dpKit', 'dpQr', 'dpKj'].forEach(function(i){ g(i).onchange = rd; });
  g('dpOn').onchange = function(){ setEnabled(g('dpOn').checked); };
  function conn(fn){ return function(){ rd(); fn().then(function(){ setEnabled(true); g('dpOn').checked = true; toast('Stampante collegata: ' + C.name); paint(); }).catch(function(e){ if(e && e.name === 'NotFoundError') return; toast('Collegamento non riuscito: ' + (e && e.message ? e.message : e), true); }); }; }
  g('dpRaw').onclick = function(){ rd(); cfg.transport = 'rawbt'; save(); C = {type: 'rawbt', name: 'RawBT (testo)'}; setEnabled(true); g('dpOn').checked = true; toast('RawBT (solo testo) attivo: usa "Stampa di prova" per controllare'); paint(); };
@@ -33250,6 +33292,10 @@ html.pos64 body #newTab #bpOrder .bpo-seg button.on b{color:#fff!important}
 html.pos64 body #newTab #bpOrder .bpo-seg button.on .uxi{color:#fff}
 html.pos64 body #newTab #bpOrder .bpo-seg button.on .uxi .d{fill:var(--uxc)}
 html.pos64 body #newTab #bpOrder .bpo-seg button.on .uxi .ds{stroke:var(--uxc)}
+/* v10: modo scuro - pulsanti non selezionati leggibili (sfondo scuro tinto + testo chiaro) */
+html.bp-dark.pos64 body #newTab #bpOrder .bpo-seg button:not(.on),body.dark-mode.pos64 #newTab #bpOrder .bpo-seg button:not(.on),html.pos64 body.dark-mode #newTab #bpOrder .bpo-seg button:not(.on){background:color-mix(in srgb,var(--uxc) 24%,#0f172a)!important;color:#f8fafc!important;border-color:color-mix(in srgb,var(--uxc) 70%,transparent)!important}
+html.bp-dark.pos64 body #newTab #bpOrder .bpo-seg button:not(.on) b,html.pos64 body.dark-mode #newTab #bpOrder .bpo-seg button:not(.on) b{color:#f8fafc!important}
+html.bp-dark.pos64 body #newTab #bpOrder .bpo-seg button:not(.on) .uxi,html.pos64 body.dark-mode #newTab #bpOrder .bpo-seg button:not(.on) .uxi{color:color-mix(in srgb,var(--uxc) 55%,#fff)}
 @media(min-width:900px){
  /* tipo ordine + pagamento sulla stessa riga: piu' compatto, tutto piu' in alto */
  html.pos64 body #bpOrder{grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px}
