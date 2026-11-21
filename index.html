@@ -16764,6 +16764,14 @@ function ssCartAdd(p, size, qty, rem, add, menu){
 }
 /* v7: parola "menu" detta/scritta (menù, menu, منيو, مينو, منو, ميني) = Menu +3 EUR (bibita + patatine) */
 window.bpMenuWordRx = /^(men[uù]|منيو|مينو|منو|ميني)$/i;
+/* prodotto-menu a listino gemello (es. "Panino Kebab" -> "Menu Kebab", "Pizza Kebab" -> "Menu Pizza Kebab", "Margherita" -> "Menu Margherita") */
+window.bpMenuTwin = function(list, p){
+  if(!p || /^men[uù]\b/i.test(p.name)) return null;
+  var gen = /^(pizza|pizze|pizzetta|panino|panini|piadina|piadine)$/, nz = function(x){ return ingNorm(x).split(' ').filter(Boolean); };
+  var pw = nz(p.name), pcore = pw.filter(function(w){ return !gen.test(w); }).join(' '), pPz = pw.some(function(w){ return /^pizz/.test(w); }), full = ['menu'].concat(pw).join(' '), hit = null, cand = [];
+  (list || []).forEach(function(m){ var mw = nz(m.name); if(mw[0] !== 'menu') return; if(mw.join(' ') === full){ hit = m; return; } var mc = mw.slice(1).filter(function(w){ return !gen.test(w); }).join(' '), mPz = mw.some(function(w){ return /^pizz/.test(w); }); if(mc && mc === pcore && mPz === pPz) cand.push(m); });
+  return hit || cand[0] || null;
+};
 window.bpMenuSplit = function(q){
   var t = String(q == null ? '' : q).trim().split(/\s+/), keep = [], menu = false;
   t.forEach(function(w){ if(w && window.bpMenuWordRx.test(w)) menu = true; else if(w) keep.push(w); });
@@ -16804,7 +16812,7 @@ function arParseOrder(text){
  if(cur && cur.p === f.p && last === i && pq == null){ i += f.len - 1; last = i + 1; continue; }
  var soloRem = [];
  if(solo){ try{ var ihs = arFindIng(toks, i, ingUnique(parseIngredients(f.p.description))); if(ihs) soloRem = window.arAutoRem(f.p, ihs.ing); }catch(e){ bpWarn(e); } solo = false; }
- cur = {p: f.p, qty: pq || 1, explicit: pq != null, size: "Normale", rem: soloRem, add: [], menu: pendMenu && arIsPizza(f.p)}; pendMenu = false; items.push(cur); pq = null; mode = null; AR_HINT = null; i += f.len - 1; last = i + 1;
+ var __tw = pendMenu ? window.bpMenuTwin(getActiveMenu(), f.p) : null; cur = {p: __tw || f.p, qty: pq || 1, explicit: pq != null, size: "Normale", rem: soloRem, add: [], menu: !__tw && pendMenu && arIsPizza(f.p)}; pendMenu = false; items.push(cur); pq = null; mode = null; AR_HINT = null; i += f.len - 1; last = i + 1;
  }else if(!mode){
  var ih = arFindIng(toks, i, all);
  if(ih){
@@ -17023,7 +17031,7 @@ function ssNameMatch(list, q, fuzzy){
 }
 function ssSearch(list, q){
   var __mi = window.bpMenuSplit(q);
-  if(__mi.menu){ var __a = ssSearch0(list, q); if(__a.length && /^menu\b/i.test(__a[0].name)) return __a; return ssSearch0(list, __mi.q); }
+  if(__mi.menu){ var __a = ssSearch0(list, q); if(__a.length && /^menu\b/i.test(__a[0].name)) return __a; var __b = ssSearch0(list, __mi.q), __t = __b.length ? window.bpMenuTwin(list, __b[0]) : null; return __t ? [__t].concat(__b.filter(function(x){ return x !== __t && x !== __b[0]; })) : __b; }
   return ssSearch0(list, q);
 }
 function ssSearch0(list, q){
@@ -17915,7 +17923,7 @@ openCartIngModal = function(key){
   function bpmMenuIntent(p){ try{ if(!M.q) return false; var s = window.bpMenuSplit(M.q); if(!s.menu) return false; if(/^men[uù]\b/i.test(p.name)) return false; return /pizz/i.test(p.category || ''); }catch(e){ return false; } }
   function bpLiveSearch(all, q){
    var __mi = window.bpMenuSplit(q);
-   if(__mi.menu){ var __a = bpLiveSearch0(all, q); if(__a.length && /^menu\b/i.test(__a[0].name)) return __a; return bpLiveSearch0(all, __mi.q); }
+   if(__mi.menu){ var __a = bpLiveSearch0(all, q); if(__a.length && /^menu\b/i.test(__a[0].name)) return __a; var __b = bpLiveSearch0(all, __mi.q), __t = __b.length ? window.bpMenuTwin(all, __b[0]) : null; return __t ? [__t].concat(__b.filter(function(x){ return x !== __t && x !== __b[0]; })) : __b; }
    return bpLiveSearch0(all, q);
   }
   function bpLiveSearch0(all, q){
@@ -20997,7 +21005,7 @@ try{
  if(window.__bpV43) return; window.__bpV43 = 1;
  function warn(e){ try{ bpWarn(e); }catch(_){ console.warn('[v43]', e); } }
  var KEY = 'bp_ext_layout_v1';
- function load(){ var c = null; try{ c = JSON.parse(localStorage.getItem(KEY) || 'null'); }catch(e){} c = c || {}; return Object.assign({hide: {}, order: {}, alias: {}, glabel: {}, add: [], move: {}}, c); }
+ function load(){ var c = null; try{ c = JSON.parse(localStorage.getItem(KEY) || 'null'); }catch(e){} c = c || {}; return Object.assign({hide: {}, order: {}, alias: {}, glabel: {}, add: [], move: {}, price: {}}, c); }
  var L = load();
  function save(){ try{ localStorage.setItem(KEY, JSON.stringify(L)); }catch(e){} rebuild(); }
  window.bpIngOrig = function(n){ return origOf(n); };
@@ -21022,7 +21030,8 @@ try{
  return _ig(o);
  };
  ingPrice = function(i){
- var o = origOf(i), ad = addEntry(o);
+ var o = origOf(i), ad = addEntry(o), pk = L.price && L.price[ingNorm(o)];
+ if(pk != null && pk !== '' && !isNaN(Number(pk))) return Number(pk);
  if(ad && ad.p != null && ad.p !== '') return Number(ad.p);
  return _ip(o);
  };
@@ -21062,14 +21071,14 @@ try{
  function draw(){
  var s = el('bpXe'); if(!s) return; var sec = curSec();
  var h = '<div class="sh"><div style="display:flex;gap:8px;align-items:center"><b style="flex:1;font-size:17px">✏️ ' + esc(L.glabel[cur.g] || PKG_LABEL[cur.g] || cur.g) + '</b><button type="button" class="secondary" data-x="rgrp">✏️ Rinomina lista</button><button type="button" class="secondary" data-x="close">✖</button></div>' +
- '<div class="muted" style="margin:6px 0">↑↓ ordine · ✏️ nome · 📂 sposta in altra lista · 🗑️ elimina · I prezzi seguono la lista (o il prezzo che imposti)</div>';
+ '<div class="muted" style="margin:6px 0">↑↓ ordine · ✏️ nome · € prezzo · 📂 sposta in altra lista · 🗑️ elimina · I prezzi seguono la lista (o il prezzo che imposti)</div>';
  var items = sec ? sec.items : [];
  if(!items.length) h += '<p class="muted">Lista vuota.</p>';
  items.forEach(function(n, i){
  var pr = ingPrice(n), mine = !!addEntry(origOf(n));
  h += '<div class="r"><span class="n">' + esc(n) + ' <small class="muted">' + (pr > 0 ? '+' + euro(pr) : 'gratis') + (mine ? ' · mia' : '') + '</small></span>' +
  '<button type="button" class="secondary" data-x="up" data-i="' + i + '">↑</button><button type="button" class="secondary" data-x="dn" data-i="' + i + '">↓</button>' +
- '<button type="button" class="secondary" data-x="ren" data-i="' + i + '">✏️</button><button type="button" class="secondary" data-x="mv" data-i="' + i + '">📂</button>' +
+ '<button type="button" class="secondary" data-x="ren" data-i="' + i + '">✏️</button><button type="button" class="secondary" data-x="prc" data-i="' + i + '">€</button><button type="button" class="secondary" data-x="mv" data-i="' + i + '">📂</button>' +
  '<button type="button" class="secondary" style="color:#b42318" data-x="del" data-i="' + i + '">🗑️</button></div>';
  });
  h += '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px"><button type="button" class="green" data-x="add">＋ Aggiungi extra</button><button type="button" class="secondary" data-x="rst">↺ Ripristina tutto</button></div>';
@@ -21103,6 +21112,13 @@ try{
  L.alias[k] = {o: orig, a: v};
  }
  }
+ else if(x === 'prc'){
+ var o3 = origOf(name), k3 = ingNorm(o3); L.price = L.price || {};
+ var pr0 = ingPrice(name), pin = prompt('Prezzo di «' + name + '» in €\n0 = gratis · vuoto = prezzo della lista', String(pr0).replace('.', ','));
+ if(pin === null) return; pin = pin.trim();
+ if(pin === ''){ delete L.price[k3]; }
+ else { var pn = Number(pin.replace(',', '.')); if(isNaN(pn) || pn < 0){ alert('Prezzo non valido.'); return; } L.price[k3] = Math.round(pn * 100) / 100; }
+ }
  else if(x === 'mv'){
  var gl = groupsList(), msg = gl.map(function(p, j){ return (j + 1) + ') ' + p[1]; }).join('\n');
  var pick = prompt('Sposta «' + name + '» in quale lista? Scrivi il numero:\n' + msg); var idx = Number(pick) - 1;
@@ -21127,7 +21143,7 @@ try{
  var cu = L.glabel[cur.g] || PKG_LABEL[cur.g] || cur.g, nl = prompt('Nuovo nome lista (puoi mettere emoji):', cu);
  if(nl === null) return; nl = nl.trim(); if(!nl || nl === PKG_LABEL[cur.g]) delete L.glabel[cur.g]; else L.glabel[cur.g] = nl;
  }
- else if(x === 'rst'){ if(!confirm('Ripristinare TUTTE le modifiche alle liste extra su questo dispositivo?')) return; L = {hide: {}, order: {}, alias: {}, glabel: {}, add: [], move: {}}; }
+ else if(x === 'rst'){ if(!confirm('Ripristinare TUTTE le modifiche alle liste extra su questo dispositivo?')) return; L = {hide: {}, order: {}, alias: {}, glabel: {}, add: [], move: {}, price: {}}; }
  save(); draw(); redrawPickers();
  });
  }
