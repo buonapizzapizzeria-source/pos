@@ -4492,6 +4492,7 @@ a,label,summary,[role="button"],[onclick],[data-tab],.tabs button,#bpNav *,#bpMo
 .pk-mprev{margin-top:8px;font-size:17px;font-weight:700;color:#475569;text-align:center}
 .pk-mprev b{font-size:24px;color:#15803d}
 </style>
+<style id="bp-paid-css">.bp-paid-btn{border-radius:14px;font-weight:900}.order-right .bpi.bp-unpaid,#allOrders .bpi.bp-unpaid{background:#d92d20!important;color:#fff!important}.order-right .bpi.bp-is-paid,#allOrders .bpi.bp-is-paid{background:#067647!important;color:#fff!important}</style>
 </head>
  <body>
  <header class="no-print">
@@ -6129,6 +6130,7 @@ async function startEditOrder(o){
  let parsedNotes = splitTimeAndNotes(o.notes);
  setDeliveryTimeDropdown(parsedNotes.time || 'Prima possibile');
  el('notes').value = parsedNotes.cleanNotes || '';
+ window.__bpEditPaidId = parsedNotes.paid ? o.id : null;
  bpFillSchedule(o);
 
  el('cashGivenInput').value = '';
@@ -7816,11 +7818,20 @@ function applyStreetOnlySuggestion(streetStr){
 }
 
 function clearCustomerFields(){
- el('customer').value = '';
- el('phone').value = '';
- el('address').value = '';
- el('customerLastOrderBanner').classList.add('hidden');
- hideAllAutoSuggest();
+ /* scopa: azzera TUTTO il nuovo ordine e torna ai valori predefiniti (carrello, cliente, note, extra, sconto, orario, tipo, pagamento) */
+ try{ if(typeof cart !== 'undefined' && cart.size && !confirm('Azzerare tutto l\'ordine? (carrello, cliente, note, extra, orario)')) return; }catch(e){}
+ try{ if(typeof editingOrderId !== 'undefined' && editingOrderId != null) cancelEditOrderMode(); }catch(e){ bpWarn(e); }
+ try{ window.__bpEditPaidId = null; }catch(e){}
+ try{ cart.clear(); }catch(e){}
+ ['customer','phone','address','notes','voiceSmartInput','cashGivenInput','extraAmountInput','extraReasonInput','discountAmountInput','discountReasonInput','tableNo'].forEach(function(id){ var x = el(id); if(x) x.value = ''; });
+ try{ el('customerLastOrderBanner').classList.add('hidden'); }catch(e){}
+ try{ hideAllAutoSuggest(); }catch(e){}
+ try{ var t = el('type'); if(t){ t.value = 'Consegna'; t.dispatchEvent(new Event('change', {bubbles: true})); } }catch(e){ bpWarn(e); }
+ try{ var pm = el('payment'); if(pm){ pm.value = 'Contanti'; pm.dispatchEvent(new Event('change', {bubbles: true})); } }catch(e){ bpWarn(e); }
+ try{ bpResetSchedule(); }catch(e){}
+ try{ var dh = el('deliveryHour'); if(dh){ dh.value = 'Prima possibile'; } onTimeHourChange(); }catch(e){ bpWarn(e); }
+ try{ renderCart(); }catch(e){ bpWarn(e); }
+ try{ setMsg('orderMsg', 'Ordine azzerato.', ''); }catch(e){}
 }
 
 function onCustomerFieldInput(sourceField){
@@ -8071,8 +8082,12 @@ function parseSpokenTimeSlot(text){
  return null;
 }
 
+/* PAGATO: marcatore [✅ PAGATO] nelle note = il cliente ha già pagato, non chiedere i soldi */
+const BP_PAID_RE = /\s*\[✅\s*PAGATO\]/i;
 function splitTimeAndNotes(rawNotes){
  let str = String(rawNotes||'').trim();
+ let paid = BP_PAID_RE.test(str);
+ if(paid) str = str.replace(BP_PAID_RE, '').trim();
  let time = 'Prima possibile';
  let m = str.match(/^\[⏰\s*([^\]]+)\]\s*(.*)$/);
  if(m){
@@ -8085,7 +8100,34 @@ function splitTimeAndNotes(rawNotes){
  cashInfo = cm[1].trim();
  str = cm[2].trim();
  }
- return { time, cashInfo, cleanNotes: str };
+ return { time, cashInfo, cleanNotes: str, paid };
+}
+
+async function bpTogglePaid(o, btn){
+ if(!o || (btn && btn.__busy)) return;
+ if(btn) btn.__busy = true;
+ var prev = String(o.notes || ''), wasPaid = BP_PAID_RE.test(prev);
+ var next = wasPaid ? prev.replace(BP_PAID_RE, '').trim() : (prev.trim() + ' [✅ PAGATO]').trim();
+ window.__bpHoldRender = Date.now() + 1500;
+ try{
+  var client = (typeof sb !== 'undefined' && sb) ? sb : window.sb;
+  if(!client) throw new Error('no-db');
+  var r = await client.from('orders').update({notes: next}).eq('id', o.id);
+  if(r && r.error) throw r.error;
+  o.notes = next;
+  try{ if(navigator.vibrate) navigator.vibrate(30); }catch(_){}
+  var card = btn && btn.closest('.order'), h3 = card && card.querySelector('h3');
+  if(h3){
+   var pill = h3.querySelector('[data-paid-pill]');
+   if(wasPaid){ if(pill) pill.remove(); }
+   else if(!pill){ var sp = document.createElement('span'); sp.className = 'pill'; sp.setAttribute('data-paid-pill', '1'); sp.style.cssText = 'background:#067647;color:#fff;font-weight:900'; sp.textContent = '✅ PAGATO'; var first = h3.querySelector('.pill'); if(first && first.nextSibling) h3.insertBefore(sp, first.nextSibling); else h3.appendChild(sp); }
+  }
+  if(btn){ btn.classList.toggle('bp-is-paid', !wasPaid); btn.classList.toggle('bp-unpaid', wasPaid); btn.innerHTML = wasPaid ? '💰' : '✅'; btn.title = wasPaid ? 'NON pagato (tocca per segnare pagato)' : 'PAGATO (tocca per annullare)'; }
+ }catch(err){
+  console.error('[bp] segna pagato fallito', err);
+  alert('Non salvato: controlla la connessione e riprova.');
+ }
+ if(btn) btn.__busy = false;
 }
 
 /* ================= v37: righe di servizio, aggiunta manuale, pizza a gusti ================= */
@@ -8579,6 +8621,10 @@ function gemNormalizeOrder(o){
   const items = gemSpreadMenuIntent(o.righe, __menuN, menuList).map(r => {
     r = r || {};
     let nome = str(r.nome);
+    let __tail = '';
+    if(!menuList.some(p => gemNorm(p.name) === gemNorm(nome))){
+      nome = nome.replace(/\s*[,;]?\s*\b(senza|senz'|togli|aggiungi)\b\s+.*$/i, function(m){ __tail = m.replace(/^[\s,;]+/, ''); return ''; }).trim();
+    }
     const fmt = str(r.formato).toLowerCase();
     // formato (dimensione) e is_menu (pasto con patatine + bibita) sono indipendenti
     // Baby = stesso prezzo e ingredienti del Normale; e' solo un avviso per il pizzaiolo (impasto piu' piccolo).
@@ -8594,7 +8640,7 @@ function gemNormalizeOrder(o){
     }
     // MENU: solo formato Normale (mai Maxi/Baby) -> bibita + patatine, +3,00 EUR sul prezzo Normale
     if(size !== 'Normale') isMenu = false;
-    const mods = gemParseMods(str(r.modifiche));
+    const mods = gemParseMods([str(r.modifiche), __tail].filter(Boolean).join(', '));
     const __pm = menuList.find(p => gemNorm(p.name) === gemNorm(nome));
     mods.add = gemDedupeBaseExtras(__pm ? __pm.name : nome, mods.add);
     return {
@@ -8953,6 +8999,7 @@ function gemMatchInfo(name, menu){
  const tk = gemTokens(name);
  if(!tk.length) return { prod: null, sure: false };
  let best = null, bestScore = 0, bestDiff = 1e9, bestSure = false;
+ const __tw = (n.match(/\b(panin[oi]|piadin[ae]|pizz[ae]|calzon[ei])/) || [''])[0].slice(0, 5);
  for(const p of menu){
  const pn = gemNorm(p.name), pt = gemTokens(p.name);
  if(!pt.length) continue;
@@ -8961,6 +9008,7 @@ function gemMatchInfo(name, menu){
  if(pt.some(u => u === t || (t.length >= 4 && gemLev(t, u) <= (t.length >= 8 ? 2 : 1)))) common++;
  }
  let score = 2 * common / (tk.length + pt.length);
+ if(__tw && common && pn.indexOf(__tw) >= 0) score += 0.05; /* panino kebab non deve diventare piadina kebab */
  if(n.length >= 3 && (pn.includes(n) || n.includes(pn))) score = Math.max(score, 0.85);
  const diff = Math.abs(pn.length - n.length);
  if(score > bestScore || (score === bestScore && diff < bestDiff)){
@@ -10462,7 +10510,7 @@ async function _doSaveOrderCore(){
  cashTag = `[💶 Paga con ${euro(cashGiven)} · Resto: ${euro(resto)}]`;
  }
  let userNotes = el('notes').value.trim();
- let combinedNotes = `[⏰ ${selectedTime}]` + (cashTag ? ` ${cashTag}` : '') + (userNotes ? ` ${userNotes}` : '');
+ let combinedNotes = `[⏰ ${selectedTime}]` + (cashTag ? ` ${cashTag}` : '') + (userNotes ? ` ${userNotes}` : '') + ((editingOrderId != null && window.__bpEditPaidId == editingOrderId) ? ' [✅ PAGATO]' : '');
 
  let custNameVal = el('customer').value.trim();
  let phoneVal = el('phone').value.trim();
@@ -11464,6 +11512,7 @@ function renderOrderList(id, list, isOpenTab=false){
  ${bpTableNo(o) ? '<span class="pill" style="background:#ce2b37;color:#fff;font-weight:900">🍽️ TAVOLO '+esc(bpTableNo(o))+'</span>' : ''}
  ${formatScheduledBadge(o)}
  <span class="pill ${u.badgeClass}">${esc(u.badgeText)}</span>
+ ${parsedNotes.paid ? '<span class="pill" data-paid-pill="1" style="background:#067647;color:#fff;font-weight:900">✅ PAGATO</span>' : ''}
  ${parsedNotes.cashInfo ? `<span class="pill resto-pill">💶 ${esc(parsedNotes.cashInfo)}</span>` : ''}
  </h3>
  <p>🕒 Creato: ${when} · ${bpTypeIcon(o.order_type)} <strong>${esc(o.order_type)}</strong> · ${bpPayIcon(o.payment_method)} ${esc(bpPayLabel(o.payment_method))}${o.created_by_email ? ' · 👤 ' + esc(o.created_by_email) : ''}</p>${o.updated_by_email ? '<p>✏️ Ultima modifica: <strong>' + esc(o.updated_by_email) + '</strong>' + (o.updated_at ? ' · ' + new Date(o.updated_at).toLocaleTimeString('it-IT', {hour: '2-digit', minute: '2-digit'}) : '') + '</p>' : ''}
@@ -11475,6 +11524,7 @@ function renderOrderList(id, list, isOpenTab=false){
  </div>
  <div class="order-right">
  <strong>${euro(o.total)}</strong>
+ ${(st !== 'Annullato' && !(window.bpIsDue && bpIsDue(o))) ? `<button type="button" class="bp-paid-btn btn-sm ${parsedNotes.paid ? 'bp-is-paid' : 'bp-unpaid'}" data-paga title="${parsedNotes.paid ? 'PAGATO (tocca per annullare)' : 'NON pagato (tocca per segnare pagato)'}">${parsedNotes.paid ? '✅' : '💰'}</button>` : ''}
  ${routeBtnHtml}
  <div style="display:flex;gap:5px">
  <button type="button" class="orange btn-sm" style="flex:1" data-modifica title="Modifica questo ordine (aggiungi/togli pizze o cambia orario)">✏️ Modifica</button>
@@ -11489,6 +11539,7 @@ function renderOrderList(id, list, isOpenTab=false){
 
  d.querySelector('[data-modifica]').onclick = ()=>startEditOrder(o);
  d.querySelector('[data-riordina]').onclick = ()=>repeatOrderIntoCart(o, items, true);
+ let __pdb = d.querySelector('[data-paga]'); if(__pdb) __pdb.onclick = ()=>bpTogglePaid(o, __pdb);
 
  d.querySelectorAll('[data-set-status]').forEach(btn=>{
  btn.onclick=async()=>{
@@ -11969,7 +12020,7 @@ function buildReceiptHtml(o, items){
  <div style="font-size:11.5px;font-weight:750;color:#475467;margin-top:2px">Reg: ${when}</div>
  </div>
  <div class="rc-type-box">
- <span class="rc-type-pill">${typeLabel}</span>
+ ${parsedNotes.paid ? '<span class="rc-paid-pill" style="display:inline-block;margin-right:6px;background:#067647;color:#fff;border:2px solid #000;border-radius:8px;padding:2px 9px;font-weight:950;font-size:15px;letter-spacing:.5px;-webkit-print-color-adjust:exact;print-color-adjust:exact">✅ PAGATO</span>' : ''}<span class="rc-type-pill">${typeLabel}</span>
  </div>
  </div>
 
@@ -12001,7 +12052,7 @@ function buildReceiptHtml(o, items){
  ${grandQty !== totalQty ? `<div class="rc-summary-row rc-tot-all"><span>Totale con fritti e bibite dei menu:</span><strong>${grandQty} pz</strong></div>` : ''}
  <div class="rc-summary-row">
  <span>Metodo di Pagamento:</span>
- <strong>${bpPayIcon(payMethod)} ${esc(bpPayLabel(payMethod).toUpperCase())}</strong>
+ <strong>${bpPayIcon(payMethod)} ${esc(bpPayLabel(payMethod).toUpperCase())}${parsedNotes.paid ? ' · PAGATO' : ''}</strong>
  </div>
  ${parsedNotes.cashInfo ? `<div class="rc-resto-highlight"><span>💶 CALCOLO RESTO:</span><span>${esc(parsedNotes.cashInfo)}</span></div>` : ''}
  </div>
@@ -12010,6 +12061,7 @@ function buildReceiptHtml(o, items){
  <span class="rc-tot-label">TOTALE CLIENTE</span>
  <span class="rc-tot-val">${euro(o.total)}</span>
  </div>
+ ${parsedNotes.paid ? '<div style="text-align:center;margin-top:4px;background:#067647;color:#fff;border:2px solid #000;border-radius:8px;padding:5px 8px;font-weight:950;font-size:20px;letter-spacing:1px;-webkit-print-color-adjust:exact;print-color-adjust:exact">✅ PAGATO</div>' : ''}
 
  ${reviewHtml}
  ${bpPOpt('footer') ? `<div class="rc-footer"><b>${esc(FT.thanks)}</b>${FT.hours ? '<br>' + esc(FT.hours) : ''}${FT.wa ? '<br>WhatsApp ' + esc(FT.wa) : ''}</div>` : ''}
@@ -16660,8 +16712,10 @@ function latSkel(s){
  s = ingNorm(s).replace(/[^a-z]/g, "").replace(/ch|gh|ph|qu|sc(?=[ei])/g, function(m){ return {ch:"k",gh:"g",ph:"f",qu:"k",sc:"s"}[m]; }).replace(/x/g, "ks");
  var o = []; for(var i = 0; i < s.length; i++) o.push(LAT_MAP[s[i]] || ""); return skCollapse(o);
 }
+function arSenzaSk(w){ if(!AR_RX.test(w)) return latSkel(w); var o = []; for(var i = 0; i < w.length; i++) o.push(AR_MAP[w[i]] || ""); return skCollapse(o); }
+function arIsSenza(w){ return !!AR_SENZA[w] || (w.length >= 3 && arSenzaSk(w) === "sns"); } /* tutte le varianti: senza, sensa, \u0633\u0646\u0633\u0647 \u0633\u064a\u0646\u0633\u0647 \u0633\u0646\u0632\u0647 ecc. */
 function tokSkel(w){
- if(w === "و" || AR_NUM[w] != null || /^\d+$/.test(w) || AR_SENZA[w] || AR_EXTRA[w] || AR_MAXI[w] || AR_NORM[w] || AR_GENERIC[w] || AR_SOLO[w]) return "";
+ if(w === "و" || AR_NUM[w] != null || /^\d+$/.test(w) || arIsSenza(w) || AR_EXTRA[w] || AR_MAXI[w] || AR_NORM[w] || AR_GENERIC[w] || AR_SOLO[w]) return "";
  if(AR_ALIAS[w]) return latSkel(AR_ALIAS[w]);
  if(!AR_RX.test(w)) return latSkel(w);
  if(w.length > 4 && w.indexOf("ال") === 0) w = w.slice(2);
@@ -16676,18 +16730,18 @@ function skOk(a, b){ if(!a || !b) return false; var m = Math.max(a.length, b.len
 function arKeys(text, minWord){ var ks = [latSkel(text)]; ingNorm(text).split(" ").forEach(function(w){ var k = latSkel(w); if(k.length >= (minWord || 3) && ks.indexOf(k) < 0) ks.push(k); }); return ks.filter(Boolean); }
 function arWin(toks, i, maxLen){ var res = []; for(var len = maxLen; len >= 1; len--){ if(i + len > toks.length) continue; var sk = toks.slice(i, i + len).map(tokSkel); if(sk.some(function(x){ return !x; })) continue; res.push({len: len, s: sk.join("")}); } return res; }
 function arFindProduct(toks, i){
- var best = null, menuSaid = toks.some(function(w){ return w === "menu" || w === "منو" || w === "ميني"; });
+ var best = null, menuSaid = toks.some(function(w){ return window.bpMenuWordRx.test(w); });
  arWin(toks, i, 3).forEach(function(w){
- getActiveMenu().forEach(function(p){ var lt = toks[i + w.len - 1]; if(w.len > 1 && AR_IT_NUM[lt] != null && ingNorm(p.name).split(" ").indexOf(AR_IT_AR[lt] || lt) < 0) return; arKeys(p.name).forEach(function(k){ if(skOk(w.s, k)){ var sc = w.len * 10 + k.length - lev(w.s, k) + (AR_HINT && (ingNorm(p.name).indexOf(AR_HINT) >= 0 || ingNorm(p.category || "").indexOf(AR_HINT) >= 0) ? 15 : 0) - (!menuSaid && /^menu\b/.test(ingNorm(p.name)) ? 6 : 0); if(!best || sc > best.sc) best = {p: p, len: w.len, sc: sc}; } }); });
+ getActiveMenu().forEach(function(p){ var lt = toks[i + w.len - 1]; if(w.len > 1 && AR_IT_NUM[lt] != null && ingNorm(p.name).split(" ").indexOf(AR_IT_AR[lt] || lt) < 0) return; arKeys(p.name).forEach(function(k){ if(skOk(w.s, k)){ var sc = w.len * 10 + k.length - lev(w.s, k) + (AR_HINT ? (ingNorm(p.name).indexOf(AR_HINT) >= 0 ? 15 : (ingNorm(p.category || "").indexOf(AR_HINT) >= 0 ? 6 : 0)) : 0) - (!menuSaid && /^menu\b/.test(ingNorm(p.name)) ? 6 : 0); if(!best || sc > best.sc) best = {p: p, len: w.len, sc: sc}; } }); });
  });
  return best;
 }
 /* abbreviazioni nel menu: "Pom" = Pomodoro. Se lo scheletro del nome nel menu è l'inizio di quello detto a voce, è un match */
 function arAbbr(s, k){ return !!s && !!k && k.length >= 2 && k.length < s.length && k.length >= s.length * 0.4 && s.indexOf(k) === 0; }
-function arFindIng(toks, i, pool){
+function arFindIng(toks, i, pool, strict){
  var best = null;
  arWin(toks, i, 2).forEach(function(w){
- pool.forEach(function(ing){ arKeys(ing, 2).forEach(function(k){ var ab = arAbbr(w.s, k); if(skOk(w.s, k) || ab){ var sc = w.len * 10 + k.length - (ab ? 3 : lev(w.s, k)); if(!best || sc > best.sc) best = {ing: ing, len: w.len, sc: sc}; } }); });
+ pool.forEach(function(ing){ arKeys(ing, 2).forEach(function(k){ var ab = arAbbr(w.s, k); if((strict && Math.max(w.s.length, k.length) <= 3 ? w.s === k : skOk(w.s, k)) || ab){ var sc = w.len * 10 + k.length - (ab ? 3 : lev(w.s, k)); if(!best || sc > best.sc) best = {ing: ing, len: w.len, sc: sc}; } }); });
  });
  return best;
 }
@@ -16699,19 +16753,30 @@ function arMatchProduct(p, q){
 function arMatchIng(ing, q){ var sk = arTok(q).map(tokSkel).filter(Boolean); if(!sk.length) return true; var ks = arKeys(ing, 2); return sk.every(function(s){ return ks.some(function(k){ return skOk(s, k) || arAbbr(s, k) || (s.length >= 3 && k.indexOf(s) === 0); }); }); }
 function ssQMatch(p, q){ if(!q) return true; if(AR_RX.test(q)) return arMatchProduct(p, q); return (p.name + " " + (p.description || "")).toLowerCase().indexOf(q.toLowerCase()) >= 0; }
 function ssIngQMatch(ing, q){ if(!q) return true; return ingNorm(ing).indexOf(ingNorm(q)) >= 0 || arMatchIng(ing, q); }
-function ssCartAdd(p, size, qty, rem, add){
+function ssUniqNorm(a){ var seen = {}, o = []; (a || []).forEach(function(x){ var k = ingNorm(x); if(k && !seen[k]){ seen[k] = 1; o.push(x); } }); return o; }
+function ssCartAdd(p, size, qty, rem, add, menu){
+ rem = ssUniqNorm(rem); add = ssUniqNorm(add);
  var isM = size === "Maxi" && p.price_maxi != null && Number(p.price_maxi) > 0, sz = isM ? "Maxi" : "Normale", base = pkSizePrice(p, sz), ex = 0;
  add.forEach(function(a){ ex += ingPrice(a); }); ex = Math.round(ex * 100) / 100;
  var sig = [].concat(rem, add, ex > 0 ? "ext" + ex : "").filter(Boolean).join("_") || "base", key = p.id + "-" + sz + "-" + sig, e = cart.get(key);
  if(e) e.qty += qty; else cart.set(key, {menu_id: p.id, name: p.name, category: p.category || "", baseDesc: p.description || "", size: sz, basePrice: base, extraPrice: ex, price: Math.round((base + ex) * 100) / 100, qty: qty, removedIngs: rem.slice(), addedIngs: add.slice(), itemNote: ""});
+ if(menu && sz === "Normale" && /pizz/i.test(p.category || p.name || "") && window.bpToggleMenu){ for(var mi = 0; mi < qty; mi++){ var ci = cart.get(key); if(ci && !ci.menu) window.bpToggleMenu(key); } }
 }
+/* v7: parola "menu" detta/scritta (menù, menu, منيو, مينو, منو, ميني) = Menu +3 EUR (bibita + patatine) */
+window.bpMenuWordRx = /^(men[uù]|منيو|مينو|منو|ميني)$/i;
+window.bpMenuSplit = function(q){
+  var t = String(q == null ? '' : q).trim().split(/\s+/), keep = [], menu = false;
+  t.forEach(function(w){ if(w && window.bpMenuWordRx.test(w)) menu = true; else if(w) keep.push(w); });
+  return (menu && keep.length) ? {menu: true, q: keep.join(' ')} : {menu: false, q: String(q == null ? '' : q).trim()};
+};
 function arParseOrder(text){
- var toks = arTok(text).filter(function(w){ return w !== "e" && w !== "ed"; }), items = [], cur = null, mode = null, pq = null, last = -1, solo = false, all = ingUnique(getAllKnownIngredients()); AR_HINT = null;
+ var toks = arTok(text).filter(function(w){ return w !== "e" && w !== "ed"; }), items = [], cur = null, mode = null, pq = null, last = -1, solo = false, pendMenu = false, all = ingUnique(getAllKnownIngredients()); AR_HINT = null;
  for(var i = 0; i < toks.length; i++){
  var w = toks[i];
+ if(window.bpMenuWordRx.test(w)){ var __nx = arFindProduct(toks, i + 1); if(!(__nx && /^menu\b/.test(ingNorm(__nx.p.name)))){ pendMenu = true; continue; } }
  if(AR_GEN_MAP[w]){ AR_HINT = AR_GEN_MAP[w]; continue; }
  if(AR_LAT_GEN[w]) AR_HINT = AR_LAT_GEN[w];
- if(AR_SENZA[w]){ mode = "r"; continue; }
+ if(arIsSenza(w)){ mode = "r"; continue; }
  if(AR_EXTRA[w]){ mode = "e"; continue; }
  if(w === "و") continue;
  if(AR_SOLO[w]){ solo = true; continue; }
@@ -16726,7 +16791,7 @@ function arParseOrder(text){
  if(AR_MAXI[w]){ if(cur){ cur.size = "Maxi"; last = i + 1; } continue; }
  if(AR_NORM[w]){ if(cur){ cur.size = "Normale"; last = i + 1; } continue; }
  if(mode && cur){
- var g = arFindIng(toks, i, mode === "r" ? ingUnique(parseIngredients(cur.p.description)) : all);
+ var g = arFindIng(toks, i, mode === "r" ? ingUnique(parseIngredients(cur.p.description)) : all, mode === "r");
  if(g){ var set = mode === "r" ? cur.rem : cur.add; if(set.indexOf(g.ing) < 0) set.push(g.ing); i += g.len - 1; last = i + 1; continue; }
  }
  var f = arFindProduct(toks, i);
@@ -16739,7 +16804,7 @@ function arParseOrder(text){
  if(cur && cur.p === f.p && last === i && pq == null){ i += f.len - 1; last = i + 1; continue; }
  var soloRem = [];
  if(solo){ try{ var ihs = arFindIng(toks, i, ingUnique(parseIngredients(f.p.description))); if(ihs) soloRem = window.arAutoRem(f.p, ihs.ing); }catch(e){ bpWarn(e); } solo = false; }
- cur = {p: f.p, qty: pq || 1, explicit: pq != null, size: "Normale", rem: soloRem, add: []}; items.push(cur); pq = null; mode = null; AR_HINT = null; i += f.len - 1; last = i + 1;
+ cur = {p: f.p, qty: pq || 1, explicit: pq != null, size: "Normale", rem: soloRem, add: [], menu: pendMenu && arIsPizza(f.p)}; pendMenu = false; items.push(cur); pq = null; mode = null; AR_HINT = null; i += f.len - 1; last = i + 1;
  }else if(!mode){
  var ih = arFindIng(toks, i, all);
  if(ih){
@@ -16762,7 +16827,7 @@ function bpmVoiceAdd(text){
  if(!items.length) return false;
  var go = items.some(function(it){
   if(it.choice) return it.qty > 1;
-  return !!(it.explicit || it.qty > 1 || it.rem.length || it.add.length);
+  return !!(it.menu || it.explicit || it.qty > 1 || it.rem.length || it.add.length);
  });
  if(!go) return false;
  return arProcess(text, false);
@@ -16771,10 +16836,10 @@ function arProcess(text, auto){
  var items = arParseOrder(text), ar = bpVoiceLang() === "ar-EG", msg;
  var choices = items.filter(function(it){ return it.choice; }); items = items.filter(function(it){ return !it.choice; });
  if(!items.length && !choices.length){ msg = (ar ? "❌ ما فهمتش أي منتج في: «" : "❌ Nessun prodotto riconosciuto in «") + text + "»"; ssToast(msg, true); try{ setVoiceMsg(msg, "error"); }catch(e){ bpWarn(e); } return false; }
- items.forEach(function(it){ ssCartAdd(it.p, it.size, it.qty, it.rem, it.add); });
+ items.forEach(function(it){ ssCartAdd(it.p, it.size, it.qty, it.rem, it.add, it.menu); });
  renderCart();
  choices.forEach(function(c){ bpShowChoice(c.ing, c.opts, function(p){ var rem = arAutoRem(p, c.ing); ssCartAdd(p, "Normale", c.qty, rem, []); var ek = p.id + "-Normale-" + (rem.length ? rem.join("_") : "base"); var en = cart.get(ek); if(en){ en.removedIngs = rem.slice(); } renderCart(); try{ ssToast(p.name + (rem.length ? " · senza " + rem.join(", ") : " · nessuna rimozione (" + (p.description || "descrizione vuota") + ")")); }catch(x){} }); });
- msg = "✅ " + items.map(function(it){ return it.qty + "× " + it.p.name + (it.size === "Maxi" ? " Maxi" : "") + (it.rem.length ? " · 🚫 " + it.rem.join(", ") : "") + (it.add.length ? " · ➕ " + it.add.join(", ") : ""); }).join(" | ");
+ msg = "✅ " + items.map(function(it){ return it.qty + "× " + (it.menu ? "🍟🥤 Menu " : "") + it.p.name + (it.size === "Maxi" ? " Maxi" : "") + (it.rem.length ? " · 🚫 " + it.rem.join(", ") : "") + (it.add.length ? " · ➕ " + it.add.join(", ") : ""); }).join(" | ");
  ssToast(msg); try{ setVoiceMsg(msg, ""); }catch(e){ bpWarn(e); }
  return true;
 }
@@ -16884,7 +16949,7 @@ function ssIngTerms(q){
  var toks = arTok(String(q).toLowerCase()), terms = [], base = false;
  toks.forEach(function(w){
   if(!w || w === "و" || SS_SKIPW[w] === 1) return;
-  if(AR_NUM[w] != null || /^\d+$/.test(w) || AR_SENZA[w] || AR_EXTRA[w] || AR_MAXI[w] || AR_NORM[w] || AR_GENERIC[w] || AR_SOLO[w] || AR_CATQ[w] || AR_IT_GEN[w]) return;
+  if(AR_NUM[w] != null || /^\d+$/.test(w) || arIsSenza(w) || AR_EXTRA[w] || AR_MAXI[w] || AR_NORM[w] || AR_GENERIC[w] || AR_SOLO[w] || AR_CATQ[w] || AR_IT_GEN[w]) return;
   var raw = AR_RX.test(w) ? "" : ingNorm(w), s = tokSkel(w);
   if(!raw && !s) return;
   if(raw === "margherita" || (s && skOk(s, latSkel("margherita")))){ base = true; return; }
@@ -16957,6 +17022,11 @@ function ssNameMatch(list, q, fuzzy){
   return hits.map(function(h){ return h.p; });
 }
 function ssSearch(list, q){
+  var __mi = window.bpMenuSplit(q);
+  if(__mi.menu){ var __a = ssSearch0(list, q); if(__a.length && /^menu\b/i.test(__a[0].name)) return __a; return ssSearch0(list, __mi.q); }
+  return ssSearch0(list, q);
+}
+function ssSearch0(list, q){
   var nm = ssNameMatch(list, q, false);
   if(!nm || !nm.length) nm = ssNameMatch(list, q, true);
   var rest = ssSearchBase(list, q);
@@ -17097,11 +17167,11 @@ function ssCustVoice(t){
  if(!AR_RX.test(t)){ ss.q = t; ssRedrawTop(); return; }
  for(var i = 0; i < toks.length; i++){
  var w = toks[i];
- if(AR_SENZA[w]){ mode = "r"; continue; } if(AR_EXTRA[w]){ mode = "e"; continue; } if(w === "و") continue;
+ if(arIsSenza(w)){ mode = "r"; continue; } if(AR_EXTRA[w]){ mode = "e"; continue; } if(w === "و") continue;
  if(AR_MAXI[w]){ c.sizes.forEach(function(s){ if(s[0] === "Maxi"){ c.setSize("Maxi"); done.push("Maxi"); } }); continue; }
  if(AR_NORM[w]){ c.setSize("Normale"); continue; }
  if(AR_NUM[w] != null || /^\d+$/.test(w)){ var n = /^\d+$/.test(w) ? Number(w) : AR_NUM[w]; c.setQty(n - c.qty); done.push("×" + n); mode = null; continue; }
- var g = arFindIng(toks, i, mode === "r" ? ingUnique(c.base) : all);
+ var g = arFindIng(toks, i, mode === "r" ? ingUnique(c.base) : all, mode === "r");
  if(g){ var set = mode === "r" ? c.removed : c.added; if(mode === "r" || mode === "e"){ if(set.has(g.ing)) set.delete(g.ing); else set.add(g.ing); done.push((mode === "r" ? "🚫 " : "➕ ") + g.ing); } else { search.push(g.ing); } i += g.len - 1; }
  }
  if(search.length && !done.length){ ss.q = t; } else ss.q = "";
@@ -17818,6 +17888,10 @@ openCartIngModal = function(key){
  }
  function bpPrepRow(p){ try{ var a = (window.bpPreFo ? bpPreFo.badge(p) : '') + (window.bpPB ? bpPB.badge(p) : ''); return a ? '<div class="bp-prep' + (a.split('<span class="pp-t">').length > 2 ? ' two' : '') + '">' + a + '</div>' : ''; }catch(e){ return ''; } }
  function tile(p){
+  var __h = tile0(p); if(!bpmMenuIntent(p)) return __h;
+  return __h.split('<b>' + esc(p.name) + '</b>').join('<b>🍟🥤 Menu ' + esc(p.name) + '</b>').split('<i>' + euro(p.price_normal) + '</i>').join('<i>' + euro(Number(p.price_normal) + 3) + '</i>');
+ }
+ function tile0(p){
  var n = qtyInCart(p), maxi = p.price_maxi != null && Number(p.price_maxi) > 0, id = String(p.id);
  return '<div class="bpm-tile' + (n ? ' has' : '') + (M.pop === id ? ' pop' : '') + '" data-id="' + esc(id) + '" data-cat="' + esc(p.category || 'Menu') + '" title="' + esc(parseIngredients(p.description).join(', ')) + '">' +
  (n ? '<span class="bpm-n">' + n + '</span>' : '') +
@@ -17838,7 +17912,13 @@ openCartIngModal = function(key){
    });
   }
   var bpLsCache = {sig: '', q: '', out: null};
+  function bpmMenuIntent(p){ try{ if(!M.q) return false; var s = window.bpMenuSplit(M.q); if(!s.menu) return false; if(/^men[uù]\b/i.test(p.name)) return false; return /pizz/i.test(p.category || ''); }catch(e){ return false; } }
   function bpLiveSearch(all, q){
+   var __mi = window.bpMenuSplit(q);
+   if(__mi.menu){ var __a = bpLiveSearch0(all, q); if(__a.length && /^menu\b/i.test(__a[0].name)) return __a; return bpLiveSearch0(all, __mi.q); }
+   return bpLiveSearch0(all, q);
+  }
+  function bpLiveSearch0(all, q){
    var sg = all.length + '|' + all.map(function(p){ return p.id + p.name + (p.description || ''); }).join('~');
    if(bpLsCache.out && bpLsCache.q === q && bpLsCache.sig === sg) return bpLsCache.out;
    var seen = {}, nm = [], ing = [], rest = [];
@@ -18037,6 +18117,7 @@ openCartIngModal = function(key){
  function padAdd(p){
  var n = PAD.qty, sz = (PAD.xl && p.price_maxi != null && Number(p.price_maxi) > 0) ? 'Maxi' : 'Normale';
  for(var i = 0; i < n; i++) addQuick(p, sz);
+ if(sz === 'Normale' && bpmMenuIntent(p) && window.bpToggleMenu){ var mk3 = p.id + '-Normale-base'; for(var j3 = 0; j3 < n; j3++){ var ci3 = cart.get(mk3); if(ci3 && !ci3.menu) window.bpToggleMenu(mk3); } }
  PAD.qty = 1; PAD.xl = false; try{ bpFlash('✅ ' + n + '× ' + p.name + (sz === 'Maxi' ? ' XL' : '')); }catch(e){}
  padSet('');
  }
@@ -18097,6 +18178,7 @@ openCartIngModal = function(key){
  var t = e.target.closest('.bpm-tile'); if(!t) return;
  var id = t.getAttribute('data-id'), p = menu().filter(function(x){ return String(x.id) === id; })[0]; if(!p) return;
  if(e.target.closest('[data-mn]')){ M.pop = id; vib(); var mk = p.id + '-Normale-base', mex = cart.get(mk); addQuick(p, 'Normale'); if(!(mex && mex.menu) && window.bpToggleMenu) window.bpToggleMenu(mk); return; }
+ var a = e.target.closest('[data-a]'); if(a && a.getAttribute('data-a') === 'Normale' && bpmMenuIntent(p)){ M.pop = id; vib(); var mk2 = p.id + '-Normale-base', mex2 = cart.get(mk2); addQuick(p, 'Normale'); if(!(mex2 && mex2.menu) && window.bpToggleMenu) window.bpToggleMenu(mk2); return; }
  var a = e.target.closest('[data-a]'); if(a){ M.pop = id; vib(); addQuick(p, a.getAttribute('data-a')); return; }
  if(e.target.closest('[data-m]')){ minusQuick(p); return; }
  if(e.target.closest('[data-c]')) openCustom(id); else {
@@ -18140,7 +18222,7 @@ openCartIngModal = function(key){
  safe(buildOrderCard);
 
  /* ---------- 5) CARTE ORDINE PULITE ---------- */
- var BTN = [['[data-modifica]','✏️','Modifica'],['[data-riordina]','🔁','Copia ordine'],['[data-dettagli]','🧾','Comanda / Stampa'],['.bp-hist-btn','🕘','Storia'],['.bp22-wa-cust','💬','WhatsApp']];
+ var BTN = [['[data-modifica]','✏️','Modifica'],['[data-riordina]','🔁','Copia ordine'],['[data-dettagli]','🧾','Comanda / Stampa'],['[data-paga]','💰','Pagato'],['.bp-hist-btn','🕘','Storia'],['.bp22-wa-cust','💬','WhatsApp']];
  function decorateCards(root){
  $$('.order', root).forEach(function(card){
  var rb = $('.order-right', card);
@@ -18149,7 +18231,7 @@ openCartIngModal = function(key){
  BTN.forEach(function(d){
  var b = $(d[0], card); if(!b || b.classList.contains('bpi')) return;
  if(!row){ row = document.createElement('div'); row.className = 'bpi-row'; rb.appendChild(row); }
- b.classList.add('bpi'); b.title = d[2]; b.innerHTML = d[1]; row.appendChild(b);
+ b.classList.add('bpi'); if(d[0] !== '[data-paga]'){ b.title = d[2]; b.innerHTML = d[1]; } row.appendChild(b);
  if(b.parentNode && b.parentNode !== row){ row.appendChild(b); }
  });
  $$('div', rb).forEach(function(d){ if(!d.classList.contains('bpi-row') && !d.children.length) d.remove(); });
@@ -26751,6 +26833,7 @@ function vsDoc(d, VS, title){
  try{ window.bpShop.docCustHead(d); }catch(e){ d.rule('='); d.p('BUONA PIZZA', {a: 'c', b: 1, w: 2, h: 2}); d.rule('='); }
  try{ window.bpShop.doc(d, o); }catch(e){}
  if(bpPOpt('ordine')){ var fo = fitW(d, 'ORDINE #' + o.id, 2); d.p('ORDINE #' + o.id, {a: 'c', b: 1, w: fo, h: fo}); }
+  if(parsedNotes.paid){ try{ d.bar('PAGATO', '', {c: 1, b: 1, h: 2}); }catch(e){} }
  d.bar(isCons ? 'CONSEGNA A DOMICILIO' : (tblNo ? 'TAVOLO ' + tblNo : (/tavolo/i.test(String(o.order_type||'')) ? 'TAVOLO' : 'RITIRO / ASPORTO')), '', {c: 1, b: 1});
  d.p('Reg: ' + fmtWhen(o.created_at), {a: 'c'});
  d.rule('-');
@@ -26849,13 +26932,14 @@ function vsDoc(d, VS, title){
  SV.disc.forEach(function(x){ d.lr('Sconto' + (x.why ? ' (' + x.why + ')' : '') + ':', '- ' + eur(x.v), {b: 1}, 2); });
  d.lr('Totale articoli:', totalQty + ' pz', {});
  if(grandQty !== totalQty) d.lr('Tot. con fritti/bibite menu:', grandQty + ' pz', {f: 'B'});
- d.lr('Pagamento:', bpPayLabel(o.payment_method || 'Contanti').toUpperCase(), {b: 1});
+ d.lr('Pagamento:', bpPayLabel(o.payment_method || 'Contanti').toUpperCase() + (splitTimeAndNotes(o.notes).paid ? ' - PAGATO' : ''), {b: 1});
  if(parsedNotes.cashInfo) d.lr('Cassa:', parsedNotes.cashInfo, {b: 1});
  d.rule('=');
  var tl = 'TOTALE CLIENTE', tv = eur(o.total);
  if(tl.length + tv.length + 1 > Math.floor(d.cols / 2)) tl = 'TOTALE';
  var big = (tl.length + d.c(tv).length + 1 <= Math.floor(d.cols / 2)) ? 2 : 1;
  d.bar(tl, tv, {b: 1, w: big, h: Math.max(big, 2)});
+  if(parsedNotes.paid){ try{ d.bar('PAGATO', '', {c: 1, b: 1, h: 2}); }catch(e){} }
  /* cliente/driver: nessuna riga vuota aggiuntiva dopo il totale per risparmiare carta */
  return d;
  }
@@ -34485,6 +34569,40 @@ body.qs-lock{overflow:hidden}
   return r;
  };
  ui();
+})();
+</script>
+<script id="bpFreeExtrasJs">
+/* ===== Extra GRATIS automatici: "Patatine" nel Panino Kebab / Piadina Kebab (sulla pizza resta a pagamento) =====
+   Per aggiungere altre regole gratuite basta aggiungere una riga a BP_FREE_EXTRAS:
+   {kinds: [tipi di prodotto: 'panino' | 'piadina' | 'pizza' | 'altro'], name: /parte del nome/i, ings: /parte dell'ingrediente/} */
+(function(){
+ 'use strict';
+ var BP_FREE_EXTRAS = window.BP_FREE_EXTRAS = window.BP_FREE_EXTRAS || [
+  {kinds: ['panino', 'piadina'], name: /kebab|kebap|d[o\u00f6]ner/i, ings: /^patat/}
+ ];
+ function kindOf(it){ try{ return getProductKind({name: it.name, category: it.category}); }catch(e){ return ''; } }
+ function norm(){
+  try{
+   cart.forEach(function(it){
+    var rule = null;
+    BP_FREE_EXTRAS.forEach(function(r){ if(r.kinds.indexOf(kindOf(it)) >= 0 && r.name.test(String(it.name || ''))) rule = r; });
+    if(!rule || !Array.isArray(it.addedIngs)){ if(it.__pfEx !== undefined) delete it.__pfEx; return; }
+    var free = 0;
+    it.addedIngs.forEach(function(a){ if(rule.ings.test(ingNorm(a))) free += Number(ingPrice(a)) || 0; });
+    if(free <= 0){ if(it.__pfEx !== undefined) delete it.__pfEx; return; }
+    var ex = Number(it.extraPrice) || 0;
+    if(it.__pfEx !== undefined && Math.abs(ex - it.__pfEx) < 0.001) return; /* gia' scontato */
+    if(ex + 0.001 < free) return;
+    it.extraPrice = Math.round((ex - free) * 100) / 100;
+    it.price = Math.round(((Number(it.basePrice) || 0) + it.extraPrice) * 100) / 100;
+    it.__pfEx = it.extraPrice;
+   });
+  }catch(e){ try{ console.warn('[bp] extra gratis', e); }catch(_){} }
+ }
+ window.bpFreeExtrasNormalize = norm;
+ var _r = renderCart;
+ renderCart = function(){ norm(); return _r.apply(this, arguments); };
+ try{ norm(); }catch(e){}
 })();
 </script>
 
