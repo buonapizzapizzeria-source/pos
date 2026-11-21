@@ -37763,24 +37763,27 @@ try{(function(){
 .bp-catarr{display:none!important}
 #bpcBar,#bpcSheet{display:none}
 
-/* ---------- تابلت: عمود الأقسام بطول الشاشة كلها على الشمال، لازق في عمود الإعدادات ---------- */
+/* ---------- تابلت: عمود الأقسام بطول الشاشة · شريط أحمر مضيء يبان من بعيد ---------- */
 @media (min-width:900px) and (min-height:601px){
- /* عمود واحد: كل الأقسام بتتقسم على طول الشاشة من غير سحب */
- html.pos64.bpc-dock body #newTab:not(.hidden){padding-left:78px!important}
- html.pos64 body #newTab>#bpmCats{position:absolute;left:8px;top:8px;bottom:8px;width:60px;max-width:none;margin:0;z-index:4;display:flex!important;flex-direction:column;flex-wrap:nowrap;gap:5px;overflow-y:auto;overflow-x:hidden;padding:0;min-height:0;cursor:auto;overscroll-behavior:contain;scrollbar-width:none}
+ html.pos64.bpc-dock body #newTab:not(.hidden){padding-left:92px!important}
+ html.pos64 body #newTab>#bpmCats{position:absolute;left:8px;top:8px;bottom:8px;width:74px;max-width:none;margin:0;z-index:4;display:flex!important;flex-direction:column;flex-wrap:nowrap;gap:6px;overflow-y:auto;overflow-x:hidden;padding:7px 5px;box-sizing:border-box;min-height:0;cursor:auto;overscroll-behavior:contain;scrollbar-width:none;border-radius:22px;background:linear-gradient(180deg,#ef4b36,#c42a1a 55%,#a51f12);box-shadow:0 0 0 2px rgba(255,255,255,.55),0 8px 26px rgba(0,0,0,.45),inset 0 0 18px rgba(255,255,255,.18)}
  html.pos64 body #newTab>#bpmCats::-webkit-scrollbar{display:none}
- html.pos64 body #newTab>#bpmCats>.bpm-chip,html.pos64 body #newTab>#bpmCats>.bpm-gchip{position:relative;width:100%;flex:1 1 0;max-height:80px;min-height:36px!important;padding:0!important;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:0!important;line-height:1;gap:0}
- html.pos64 body #newTab>#bpmCats .bpm-chip .e,html.pos64 body #newTab>#bpmCats .bpm-gchip .e{font-size:27px!important;line-height:1}
- html.pos64 body #newTab>#bpmCats .bpm-chip i{position:absolute;right:3px;bottom:2px;font-size:9px!important;padding:0 4px!important;line-height:14px;background:rgba(0,0,0,.28)!important;color:#fff!important}
+ html.pos64 body #newTab>#bpmCats>.bpm-chip,html.pos64 body #newTab>#bpmCats>.bpm-gchip{position:relative;width:100%;flex:1 1 0;max-height:84px;min-height:38px!important;padding:0!important;border-radius:16px;display:flex;align-items:center;justify-content:center;font-size:0!important;line-height:1;gap:0;transition:transform .15s,filter .15s,box-shadow .15s}
+ html.pos64 body #newTab>#bpmCats .bpm-chip .e,html.pos64 body #newTab>#bpmCats .bpm-gchip .e{font-size:30px!important;line-height:1}
+ html.pos64 body #newTab>#bpmCats .bpm-chip i{position:absolute;right:3px;bottom:3px;font-size:11px!important;font-weight:900;padding:0 5px!important;line-height:16px;background:#fff!important;color:#111!important;box-shadow:0 1px 4px rgba(0,0,0,.4)}
  html.pos64 body #newTab>#bpmCats .bpm-gchip{flex-direction:row;gap:1px;padding:0 2px!important}
- html.pos64 body #newTab>#bpmCats .bpm-gchip b{font-size:13px!important;line-height:1}
- html.pos64 body #newTab>#bpmCats .bpm-gchip .e{font-size:22px!important}
- html.pos64 body #newTab>#bpmCats .bpm-chip.bpc-ph{background-image:var(--bpc-img)!important;background-size:cover!important;background-position:center!important;background-repeat:no-repeat!important;filter:brightness(.8) saturate(.95);transition:filter .15s}
+ html.pos64 body #newTab>#bpmCats .bpm-gchip b{font-size:15px!important;line-height:1}
+ html.pos64 body #newTab>#bpmCats .bpm-gchip .e{font-size:24px!important}
+ /* أزرار بدون صورة (Top / Tutti): خلفية بيضاء مضيئة */
+ html.pos64 body #newTab>#bpmCats .bpm-chip:not(.bpc-ph){background:#fff!important;color:#111!important}
+ /* الأقسام بالصور */
+ html.pos64 body #newTab>#bpmCats .bpm-chip.bpc-ph{background-image:var(--bpc-img)!important;background-size:cover!important;background-position:center!important;background-repeat:no-repeat!important;filter:brightness(.9) saturate(1.08);box-shadow:inset 0 0 0 2px rgba(255,255,255,.65),inset 6px 0 0 0 var(--cc,#fff)}
  html.pos64 body #newTab>#bpmCats .bpm-chip.bpc-ph .e{display:none}
- html.pos64 body #newTab>#bpmCats .bpm-chip.bpc-ph.on{filter:none;box-shadow:inset 0 0 0 3px #fff,inset 0 0 0 5px var(--cc,#d92d20),0 4px 12px rgba(0,0,0,.35)!important}
+ /* القسم المفتوح: إطار أبيض سميك + توهج + تكبير */
+ html.pos64 body #newTab>#bpmCats .bpm-chip.on{filter:none!important;transform:scale(1.07);z-index:3;box-shadow:0 0 0 3px #fff,0 0 0 6px var(--cc,#ffd54a),0 0 22px 8px rgba(255,255,255,.75)!important}
+ html.pos64 body #newTab>#bpmCats .bpm-gchip{box-shadow:inset 0 0 0 2px rgba(255,255,255,.7)}
  }
 @media (min-width:900px){#bpcBar{display:none!important}}
-
 
 /* ---------- موبايل (< 900px) ---------- */
 @media (max-width:899px){
@@ -37810,19 +37813,22 @@ try{(function(){
 #bpcSheet .bpc-head b{font-size:17px;font-weight:900}
 #bpcSheet .bpc-x{border:0;background:rgba(120,120,120,.2);color:inherit;width:38px;height:38px;border-radius:99px;font-size:17px;font-weight:900}
 #bpcSheet .bpc-sub{font-size:12px;font-weight:800;opacity:.65;margin:2px 2px 6px}
-#bpcSheet .bpc-rec{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+#bpcSheet .bpc-rec{display:flex;gap:6px;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;margin-bottom:10px;flex:0 0 auto}
 #bpcSheet .bpc-rec:empty{display:none}
-#bpcSheet .bpc-rec button{border:0;border-radius:99px;min-height:38px;padding:4px 14px;font:inherit;font-weight:800;font-size:14px;background:color-mix(in srgb,var(--cc,#667085) 16%,var(--bp-card,#fff));color:inherit;display:flex;align-items:center;gap:6px}
+#bpcSheet .bpc-rec button{flex:0 0 auto;border:0;border-radius:99px;min-height:38px;padding:4px 14px;font:inherit;font-weight:800;font-size:14px;background:color-mix(in srgb,var(--cc,#667085) 16%,var(--bp-card,#fff));color:inherit;display:flex;align-items:center;gap:6px}
 #bpcSheet .bpc-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;padding:2px 0 4px}
 #bpcSheet .bpc-t{border:0;font:inherit;color:inherit;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;min-height:84px;padding:8px 4px;border-radius:18px;text-align:center;font-weight:800;font-size:13.5px;line-height:1.15;overflow-wrap:anywhere;background:color-mix(in srgb,var(--cc,#667085) 15%,var(--bp-card,#fff));-webkit-tap-highlight-color:transparent}
 #bpcSheet .bpc-t .e{font-size:28px;line-height:1}
 #bpcSheet .bpc-t i{font-style:normal;font-size:11px;opacity:.75;background:rgba(120,120,120,.2);border-radius:99px;padding:1px 8px}
 #bpcSheet .bpc-t.on{background:var(--cc,#d92d20);color:#fff;box-shadow:0 6px 14px rgba(0,0,0,.28)}
 #bpcSheet .bpc-t.on i{background:rgba(255,255,255,.28);opacity:1}
-#bpcSheet .bpc-t.ph{background-image:linear-gradient(to top,rgba(0,0,0,.78),rgba(0,0,0,0) 58%),var(--bpc-img);background-size:cover;background-position:center;color:#fff;justify-content:flex-end;min-height:96px;text-shadow:0 1px 4px rgba(0,0,0,.8)}
+#bpcSheet .bpc-t.ph{position:relative;overflow:hidden;padding:0;gap:0;min-height:122px;justify-content:flex-end;background:#1f2937;color:#fff;text-shadow:none}
+#bpcSheet .bpc-t.ph::before{content:"";position:absolute;left:0;right:0;top:0;bottom:42px;background:var(--bpc-img) center/cover no-repeat}
 #bpcSheet .bpc-t.ph .e{display:none}
-#bpcSheet .bpc-t.ph i{background:rgba(0,0,0,.45);color:#fff}
+#bpcSheet .bpc-t.ph .bpc-n{position:relative;z-index:1;display:flex;align-items:center;justify-content:center;width:100%;height:42px;padding:2px 5px;box-sizing:border-box;background:color-mix(in srgb,var(--cc,#374151) 55%,#000);color:#fff;font-weight:900;font-size:15px;line-height:1.1;letter-spacing:.1px;text-align:center}
+#bpcSheet .bpc-t.ph i{position:absolute;z-index:2;top:6px;right:6px;background:rgba(0,0,0,.68);color:#fff;opacity:1;font-size:12px;font-weight:900;padding:2px 8px}
 #bpcSheet .bpc-t.ph.on{box-shadow:inset 0 0 0 3px #fff,inset 0 0 0 5px var(--cc,#d92d20),0 6px 14px rgba(0,0,0,.35)}
+#bpcSheet .bpc-t.ph.on .bpc-n{background:var(--cc,#d92d20)}
 #bpcSheet .bpc-t.gold{background:linear-gradient(135deg,#fbbf24,#f97316 60%,#ef4444);color:#fff}
 #bpcSheet .bpc-t.gold b{font-size:22px;line-height:1}
 #bpcSheet .bpc-t:active{transform:scale(.96)}
@@ -37978,14 +37984,14 @@ try{(function(){
   var tiles=[]; order.forEach(function(x,i){ tiles.push(x); if(i===1&&gi) tiles.push(gi); });
   $('#bpcGrid',s).innerHTML=tiles.map(function(x){
    if(x.gusti) return '<button type="button" class="bpc-t gold" data-k="__gusti"><b>½</b><span class="e">🍕</span>Metà</button>';
-   return '<button type="button" class="bpc-t'+(c&&c.key===x.key?' on':'')+'" data-k="'+esc(x.key)+'"'+(x.cc?' style="--cc:'+esc(x.cc)+'"':'')+'><span class="e">'+esc(x.emoji)+'</span>'+esc(x.key==='__top'?'Top ⭐':x.name)+'<i>'+esc(x.count)+'</i></button>';
+   return '<button type="button" class="bpc-t'+(c&&c.key===x.key?' on':'')+'" data-k="'+esc(x.key)+'"'+(x.cc?' style="--cc:'+esc(x.cc)+'"':'')+'><span class="e">'+esc(x.emoji)+'</span><span class="bpc-n">'+esc(x.key==='__top'?'Top ⭐':x.name)+'</span><i>'+esc(x.count)+'</i></button>';
   }).join('');
   Array.prototype.forEach.call($('#bpcGrid',s).querySelectorAll('.bpc-t[data-k]'),function(t){ var x=order.filter(function(o){ return o.key===t.getAttribute('data-k'); })[0]; if(x&&x.ph){ t.classList.add('ph'); t.style.setProperty('--bpc-img',cssUrl(x.ph)); } });
   var rec=[]; try{ rec=JSON.parse(lsGet(LSK_REC)||'[]'); }catch(e){ rec=[]; }
   var rl=rec.map(function(k){ return order.filter(function(x){ return x.key===k; })[0]; }).filter(function(x){ return x&&!(c&&c.key===x.key); }).slice(0,4);
   $('#bpcRec',s).innerHTML=rl.map(function(x){ return '<button type="button" data-k="'+esc(x.key)+'"'+(x.cc?' style="--cc:'+esc(x.cc)+'"':'')+'><span>'+esc(x.emoji)+'</span>'+esc(x.key==='__top'?'Top':x.name)+'</button>'; }).join('');
   $('#bpcSubRec',s).hidden=!rl.length;
-  s.classList.add('open');
+  s.classList.add('open'); $('#bpcGrid',s).scrollTop=0;
  }
  function closeSheet(){ var s=$('#bpcSheet'); if(s) s.classList.remove('open'); }
  document.addEventListener('keydown',function(e){ if(e.key==='Escape') closeSheet(); });
