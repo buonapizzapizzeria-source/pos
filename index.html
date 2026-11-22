@@ -26731,11 +26731,11 @@ html:not(.x) body #userBar button#thermalToggleBtn.ap-off,#thermalToggleBtn.ap-o
  }catch(e){ return null; }
  }
 
- function penText(text, w, big){
+ function penText(text, w, big, indPx){
  try{
  if(!PEN.ready) return null;
  var c = document.createElement('canvas'), x = c.getContext('2d');
- var fz = big ? 32 : 27, lh = Math.round(fz * 1.18), ind = 12;
+ var fz = big ? 32 : 27, lh = Math.round(fz * 1.18), ind = indPx || 12;
  x.font = fz + 'px ' + PEN.fam;
  var m = String(text).trim().match(/^(>> )?[A-ZÀ-Ý*]+[A-ZÀ-Ý. ]*: /), hang = m ? Math.ceil(x.measureText(m[0]).width) : 0;
  var words = String(text).trim().split(' '), lines = [], cur = '', lim = w - ind - 4;
@@ -26809,6 +26809,16 @@ html:not(.x) body #userBar button#thermalToggleBtn.ap-off,#thermalToggleBtn.ap-o
  return this;
  };
  Doc.prototype.blank = function(n){ this.st({}); for(var i = 0; i < (n || 1); i++) this.put(''); return this; };
+  /* piccolo spazio verticale in punti (ESC J n), senza sprecare una riga intera */
+  Doc.prototype.gap = function(n){ this.st({}); this.raw([0x1B, 0x4A, Math.max(1, Math.min(255, n | 0))]); return this; };
+  /* intestazione di sezione NON in negativo (grassetto grande sottolineato): il nero resta solo per PRIMA FORNO / DOPO FORNO */
+  Doc.prototype.hdr = function(l, r, style){
+    this.st(Object.assign({b: 1, h: 2, u: 1}, style || {}));
+    var w = this.W(); l = this.c(l); r = (r == null || r === '') ? '' : this.c(r);
+    l = rep(' ', 2) + l; if(r) r = r + rep(' ', 2);
+    if(l.length + r.length + 1 > w) l = l.slice(0, Math.max(1, w - r.length - 1));
+    return this.put(l + rep(' ', w - l.length - r.length) + r);
+  };
  Doc.prototype.rule = function(ch, style){ this.st(style); return this.put(rep(ch || '-', this.W())); };
  /* barra a tutta larghezza in negativo (bianco su nero) */
  Doc.prototype.bar = function(l, r, style){
@@ -26878,7 +26888,7 @@ html:not(.x) body #userBar button#thermalToggleBtn.ap-off,#thermalToggleBtn.ap-o
  /* v99: riga di dettaglio (SENZA / EXTRA / NOTE) a penna. true = stampata, false = usare d.p() */
  Doc.prototype.penP = function(text, style){
  if((cfg.ns || 'std') !== 'pen' || (style && (style.w > 1 || style.f === 'B'))) return false;
- var pr = penText(this.c(text), Number(cfg.dots) || 576, !!(style && style.h > 1));
+ var pr = penText(this.c(text), Number(cfg.dots) || 576, !!(style && style.h > 1), style && style.gx);
  if(!pr) return false;
  this.st({}); this.raw(pr.bytes); this.raw([0x0A]);
  var self = this; pr.lines.forEach(function(t, k){ self.pv.push((k ? rep(' ', 8) : ' ') + t); });
@@ -27046,13 +27056,17 @@ html:not(.x) body #userBar button#thermalToggleBtn.ap-off,#thermalToggleBtn.ap-o
  if(gMap[key] == null){ gMap[key] = gGrp.length; gGrp.push({pt: pt, n: 0, hasFr: hasFr}); }
  gGrp[gMap[key]].n++;
  });
+ if(gGrp.length){
+ /* v-fix: nessuno spazio sotto «Pizza metà metà»: la descrizione sta subito sotto, allineata al nome */
+ var gSeg = function(withFr){ return gGrp.map(function(gg){ return (gg.n + '/' + gTot) + ' ' + String(gg.pt.name).toUpperCase() + (withFr && gg.hasFr ? ' >> PATATINE' : ''); }); };
+ var gInd = '    ', gx = (fsLevel() >= 1 ? 68 : 57);
+ gSeg(true).forEach(function(sg){ P(gInd + sg, Object.assign({}, st, {gx: gx}), gInd.length + 6); });
  gGrp.forEach(function(gg){
- var frac = gg.n + '/' + gTot;
- P(ind + frac + '  ' + String(gg.pt.name).toUpperCase() + (gg.hasFr ? ' >> PATATINE' : ''), st, ind.length + frac.length + 2);
  var gm = (gg.pt.mods || []).map(function(t){ t = String(t); return /^senza\s+/i.test(t) ? 'SENZA ' + t.replace(/^senza\s+/i, '').toUpperCase() : (t.charAt(0) === '+' ? 'EXTRA ' + t.replace(/^\+\s*/, '').toUpperCase() : t.toUpperCase()); });
- if(gm.length) PI(ind + '   >> ' + gm.join(', '), st, ind.length + 6);
+ if(gm.length) PI(ind + '   >> ' + (gGrp.length > 1 ? String(gg.pt.name).toUpperCase() + ': ' : '') + gm.join(', '), st, ind.length + 6);
  if(gg.pt.ing && showIng) d.p(ind + ' ' + gg.pt.ing, sm, ind.length + 4);
  });
+ }
  }
  var mk = kit ? '>> ' : '', hg = hang + (kit ? 3 : 0);
  if(inf.solo) PI(ind + mk + '*** ' + bpSoloText(inf.soloKeep) + ' ***', st);
@@ -27179,7 +27193,7 @@ function vsDoc(d, VS, title){
 
  /* articoli, raggruppati come nella ricevuta a video */
  var sec = function(title, n, arr, sub, pre, post){
- d.bar(title, String(n), {b: 1, h: 2, pad: 2});
+ if(title === 'PIZZE') d.bar(title, String(n), {b: 1, h: 2, pad: 2}); else d.hdr(title, String(n));
  if(sub) d.p(sub, {f: 'B'});
  if(pre) pre();
  arr.forEach(function(i){
@@ -27289,12 +27303,13 @@ function vsDoc(d, VS, title){
 function prefoDoc(d, items){
 try{
  var G = window.bpPreFo ? bpPreFo.groups(items) : []; if(!G.length) return;
- d.bar('PRIMA FORNO', '', {c: 1, b: 1, h: 2});
+ d.bar('PRIMA FORNO', '', {c: 1, b: 1, h: 2}); d.blank(1); d.gap(10);
  G.forEach(function(g){
   var nm = g.n.map(function(x){ return x.q + 'x ' + x.n; }).join(', '), ig = g.l.join(', ');
   if((nm + ': ' + ig).length <= 34) d.p(nm + ': ' + ig, {b: 1}, 3);
   else { d.p(nm, {b: 1}, 3); d.p('+ ' + ig, {b: 1}, 5); }
  });
+ d.gap(10);
  d.rule('-');
 }catch(e){}
 }
@@ -27302,12 +27317,13 @@ try{
  function pbDoc(d, items){
  try{
   var G = window.bpPB ? bpPB.groups(items) : []; if(!G.length) return;
-  d.bar('DOPO FORNO', '', {c: 1, b: 1, h: 2});
+  d.bar('DOPO FORNO', '', {c: 1, b: 1, h: 2}); d.blank(1); d.gap(10);
   G.forEach(function(g){
    var nm = g.n.map(function(x){ return x.q + 'x ' + x.n; }).join(', '), ig = g.l.join(', ');
    if((nm + ': ' + ig).length <= 34) d.p(nm + ': ' + ig, {b: 1}, 3);
    else { d.p(nm, {b: 1}, 3); d.p('+ ' + ig, {b: 1}, 5); }
   });
+  d.gap(10);
   d.rule('-');
  }catch(e){}
  }
@@ -27326,7 +27342,7 @@ try{
  detailLines(d, inf, true);
  if(extraTag) d.p(' >> ' + extraTag, {b: 1});
  }
- var sec = function(title, n, fn){ d.bar(title, String(n), {b: 1, h: 2, pad: 2}); fn(); d.blank(1); };
+ var sec = function(title, n, fn){ d.hdr(title, String(n)); fn(); d.blank(1); };
 
  /* ---- intestazione: nome, numero giornaliero, tipo e orario in grande ---- */
  try{ window.bpShop.docKitHead(d); }catch(e){ d.rule('='); d.bar('COMANDA CUCINA', '', {c: 1, b: 1, w: 2, h: 2}); d.rule('='); }
@@ -38201,6 +38217,24 @@ try{(function(){
 @keyframes bpcFade{from{opacity:0}to{opacity:1}}
 @media (prefers-reduced-motion:reduce){#bpcSheet .bpc-panel,#bpcSheet .bpc-back{animation:none}}
 @media (min-width:900px){#bpcSheet{display:none!important}}
+</style>
+<style id="bpTabletRailV2">
+/* ===== tablet: barra a sinistra SOLO icone + colonna categorie piu' larga e chiara ===== */
+@media (min-width:900px){
+ #bpNav .l,#bpNav .bpn-item .l{display:none!important}
+ #bpNav{width:calc(70px + env(safe-area-inset-left,0px))!important;padding:12px 6px!important;gap:8px!important}
+ #bpNav .bpn-item{padding:13px 2px!important;min-height:52px!important}
+ #bpNav .i{font-size:clamp(24px,4.6vh,30px)!important}
+ main#app.wrap{padding-left:calc(92px + env(safe-area-inset-left,0px))!important}
+}
+@media (min-width:900px) and (min-height:601px){
+ html.pos64.bpc-dock body #newTab:not(.hidden){padding-left:134px!important}
+ html.pos64 body #newTab>#bpmCats{width:112px!important;--cs:clamp(60px,calc((100vh - 170px) / 10),88px)!important;padding:12px 6px!important;gap:9px!important}
+ html.pos64 body #newTab>#bpmCats .bpm-chip i{font-size:14px!important;line-height:20px!important;min-width:22px;text-align:center;padding:0 6px!important;right:-4px!important;bottom:-4px!important}
+ html.pos64 body #newTab>#bpmCats .bpm-gchip b{font-size:20px!important}
+ html.pos64 body #newTab>#bpmCats .bpm-gchip .e{font-size:26px!important}
+ html.pos64 body #newTab>#bpmCats>.bpco-btn{height:44px!important}
+}
 </style>
 <script id="bpCatNavJs">
 (function(){ try{
