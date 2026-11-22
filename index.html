@@ -34598,6 +34598,17 @@ body.qs-lock{overflow:hidden}
 .qs-sp b{font-size:11px;line-height:1.1;text-align:center;font-weight:800;color:#1d1209;max-height:2.3em;overflow:hidden}
 .qs-sp small{font-size:11px;font-weight:900;color:#b42318}
 .qs-sp i{position:absolute;top:2px;inset-inline-end:4px;font-style:normal;font-weight:900;color:#16a34a;font-size:14px}
+.qs-ipg{display:flex;flex-wrap:wrap;gap:8px;padding:4px 14px 6px}
+.qs-ip{flex:0 0 auto;width:72px;border:2px solid #16a34a;border-radius:14px;background:#e8f7ee;padding:4px 2px;display:flex;flex-direction:column;align-items:center;gap:2px;position:relative;font-family:inherit}
+.qs-ip .ic{width:44px;height:44px;display:flex;align-items:center;justify-content:center}
+.qs-ip .ic>*{max-width:100%;max-height:100%}
+.qs-ip .ic img{width:44px;height:44px;object-fit:cover;border-radius:10px}
+.qs-ip b{font-size:11px;line-height:1.1;text-align:center;font-weight:800;color:#1d1209;max-height:2.3em;overflow:hidden}
+.qs-ip i{position:absolute;top:2px;inset-inline-end:4px;font-style:normal;font-weight:900;color:#16a34a;font-size:14px}
+.qs-ip.off{border-color:#f04438;background:#fee4e2}
+.qs-ip.off .ic{opacity:.35;filter:grayscale(1)}
+.qs-ip.off b{color:#b42318;text-decoration:line-through}
+.qs-ip.off i{color:#b42318}
 #qsRoot .qs-c.off::before{content:"↩ ";text-decoration:none;display:inline-block}
 </style>
 
@@ -34727,6 +34738,25 @@ body.qs-lock{overflow:hidden}
   live.innerHTML='<span>'+euro(base)+(ex?' <span class="pl">+ '+euro(ex)+'</span>':'')+(S.rem.size?' <span class="mi">− '+S.rem.size+' ingr.</span>':'')+(S.qty>1?' × '+S.qty:'')+'</span><span class="tt'+(lastTot!==null&&lastTot!==tt?' pulse':'')+'">= '+euro(tt)+'</span>';
   lastTot=tt;
   var anchor=body.querySelector('.qs-fm')||hd;anchor.parentNode.insertBefore(live,anchor.nextSibling);
+  /* ingredienti base con foto (stessa piastrella dei suggeriti): tocca = togli / rimetti */
+  try{
+   var tI=Array.prototype.filter.call(body.querySelectorAll('.qs-t'),function(x){return /^Ingredienti/.test(x.textContent||'');})[0];
+   var gI=tI&&tI.nextElementSibling;
+   if(gI&&gI.classList.contains('qs-g')){
+    var bsn=Array.prototype.map.call(gI.querySelectorAll('[data-i]'),function(c){return c.getAttribute('data-i');});
+    if(bsn.length){
+     var remK=[];S.rem.forEach(function(x){remK.push(ingNorm(x));});
+     var gp=document.createElement('div');gp.className='qs-ipg';
+     gp.innerHTML=bsn.map(function(n){
+      var off=remK.indexOf(ingNorm(n))>=0,ic='';
+      try{ic=window.bpPh?bpPh(n,window.bpQIcon?bpQIcon(n):ingIcon(n)):(window.bpQIcon?bpQIcon(n):ingIcon(n));}catch(e){ic='🍽️';}
+      return '<button type="button" class="qs-ip'+(off?' off':'')+'" data-i="'+esc(n)+'"><span class="ic">'+ic+'</span><b>'+esc(n)+'</b><i>'+(off?'✕':'✓')+'</i></button>';
+     }).join('');
+     gI.parentNode.replaceChild(gp,gI);
+     try{if(window.bpPhHydrate)bpPhHydrate(gp);}catch(e){}
+    }
+   }
+  }catch(eI){console.warn('[qs] ingredienti con foto',eI);}
   /* suggerimenti con foto */
   var kind='altro';try{kind=getProductKind(p);}catch(e){}
   var names=[];try{var sg=JSON.parse(localStorage.getItem('bp_qs_learn_v1')||'{}')[String(p.id)];if(sg&&sg.e)Object.keys(sg.e).sort(function(a,b){return sg.e[b]-sg.e[a];}).forEach(function(n){if(names.indexOf(n)<0)names.push(n);});}catch(e){}
@@ -38928,7 +38958,7 @@ body.dark-mode #csShell .mvx-del,html.bp-dark #csShell .mvx-del{background:#4218
   ".pk-ico .ing-real{width:46px;height:46px}" +
   ".ss-ch .ti .ing-real{width:40px;height:40px;vertical-align:middle}" +
   ".ss-qx .ti .ing-real{width:30px;height:30px;border-radius:9px;vertical-align:middle}" +
-  ".qs-xi .ing-real,.qs-sp .ing-real,.qs-sgp .ing-real{width:100%;height:100%;border-radius:12px}" +
+  ".qs-xi .ing-real,.qs-sp .ing-real,.qs-sgp .ing-real,.qs-ip .ing-real{width:100%;height:100%;border-radius:12px}" +
   "#qsXRoot .qs-xc .qs-xi .ing-real{border-radius:0}" +
   ".ss-bd .ss-tl:has(.ing-real),.ss-bd .ss-qx:has(.ing-real),.pk-tile:has(.ing-real){position:relative!important;overflow:hidden!important;padding:0!important;aspect-ratio:1/1;min-height:0!important;justify-content:flex-end!important;gap:0!important;background:#fff!important}" +
   ".ss-bd .ss-tl:has(.ing-real):before,.ss-bd .ss-qx:has(.ing-real):before,.pk-tile:has(.ing-real):before{content:\"\";position:absolute;left:0;right:0;bottom:0;height:52%;background:linear-gradient(to bottom,rgba(0,0,0,0),rgba(0,0,0,.78) 78%);z-index:1;pointer-events:none}" +
