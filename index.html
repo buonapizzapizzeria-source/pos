@@ -39410,5 +39410,42 @@ html body .ss .ss-bd .ss-qx.on:has(.bp-badge)::after{content:"\2713";position:ab
  window.bpDoughImg=function(kd){ return img(kd==="i"?"ig":"gf"); };
 })();
 </script>
+<style id="bp-mic-pro">
+/* Mic grande e distinto (fuori dal box) */
+html body #bpMenu .bpm-top #bpmMic{
+  width:68px!important;min-width:68px!important;height:68px!important;flex:0 0 68px!important;
+  border-radius:50%!important;font-size:32px!important;line-height:1;
+  background:linear-gradient(145deg,#ff6a55,#c81e1e)!important;color:#fff!important;
+  border:3px solid #fff!important;box-shadow:0 0 0 2px #c81e1e,0 6px 18px #c81e1e88!important;
+  margin:0 4px;
+}
+html body #bpMenu .bpm-top #bpmMic.on{background:linear-gradient(145deg,#22c55e,#15803d)!important;box-shadow:0 0 0 2px #15803d,0 6px 18px #15803d88!important}
+html.pos64 body #bpMenu .bpm-top:not(.sx) #bpmMic{grid-column:span 2;width:100%!important;border-radius:34px!important}
+html.pos64 body #bpMenu .bpm-top.sx>#bpmMic{flex:0 0 68px!important;width:68px!important;min-width:68px!important;height:68px!important}
+/* Mic dentro il box di ricerca */
+#bpmMicIn{flex:0 0 auto;width:42px;height:42px;min-height:0!important;padding:0!important;border-radius:50%!important;
+  display:inline-flex;align-items:center;justify-content:center;font-size:22px!important;border:0;
+  background:var(--bp-soft,#f2f4f7)!important;color:var(--bp-ink,#111)!important}
+#bpmMicIn.on{background:#22c55e!important;color:#fff!important;animation:bpPulse 1s infinite}
+</style>
+<script>
+(function(){
+ function sync(){
+  var lab=document.querySelector('#bpMenu .bpm-search'), big=document.getElementById('bpmMic');
+  if(!lab||!big) return;
+  var b=document.getElementById('bpmMicIn');
+  if(!b){
+   b=document.createElement('button'); b.type='button'; b.id='bpmMicIn'; b.title='Cerca a voce'; b.textContent='\uD83C\uDFA4';
+   b.addEventListener('mousedown',function(e){e.preventDefault();});
+   b.addEventListener('click',function(e){e.preventDefault();e.stopPropagation();var g=document.getElementById('bpmMic'); if(g) g.click();});
+  }
+  var pad=document.getElementById('bpmPadBtn');
+  if(pad && pad.parentNode===lab){ if(pad.previousSibling!==b) lab.insertBefore(b, pad); }
+  else if(b.parentNode!==lab){ lab.appendChild(b); }
+  b.classList.toggle('on', big.classList.contains('on'));
+ }
+ setInterval(function(){ try{ sync(); }catch(e){} }, 300);
+})();
+</script>
 </body>
 </html>
