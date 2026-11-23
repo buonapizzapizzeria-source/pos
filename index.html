@@ -9515,7 +9515,7 @@ let __realKey = null; cart.forEach((v, k) => { if(__realKey === null && (!__befo
  const it0 = cart.get(tk);
  if(it0){
  const bk = tk + '~baby' + (asMenu ? 'M' : ''), exb = cart.get(bk), moved = Math.min(qty, it0.qty);
- if(exb){ exb.qty += moved; } else { const c = JSON.parse(JSON.stringify(it0)); c.qty = moved; c.itemNote = 'Baby'; cart.set(bk, c); }
+ if(exb){ exb.qty += moved; } else { const c = JSON.parse(JSON.stringify(it0)); c.qty = moved; c.size = 'Baby'; c.itemNote = ''; cart.set(bk, c); }
  if(moved >= it0.qty) cart.delete(tk); else it0.qty -= moved;
  tk = bk;
  }
@@ -10312,7 +10312,7 @@ function renderCart(){
  ...(__soloKeep !== null ? [`<span class="pill" style="font-size:13px;padding:3px 10px;background:#111;color:#fff;font-weight:900">🥩 ${esc(bpSoloText(__soloKeep))}</span>`] : []),
  ...it.removedIngs.filter(x=>__soloKeep === null || __soloPlanN.indexOf(ingNorm(x)) < 0).map(x=>`<span class="pill st-annullato" style="font-size:11px;padding:2px 6px">🚫 Senza ${esc(x)}</span>`),
  ...it.addedIngs.filter(x=>__soloKeep === null || !/^\+?\s*solo\b/i.test(String(x))).map(x=>`<span class="pill st-pronto" style="font-size:11px;padding:2px 6px">${(window.bpDietIco&&bpDietIco(x))||'➕'} ${esc(x)}</span>`),
- it.itemNote ? `<span class="pill st-prep" style="font-size:11px;padding:2px 6px">📝 ${esc(it.itemNote)}</span>` : ''
+ it.itemNote ? `<span class="pill st-prep" style="font-size:11px;padding:2px 6px">📝 ${/^\s*baby\s*$/i.test(String(it.itemNote)) ? "(baby)" : esc(it.itemNote)}</span>` : ''
  ].filter(Boolean).join(' ');
 
  row.innerHTML=`
@@ -12019,7 +12019,7 @@ function buildReceiptHtml(o, items){
  let bigDrink = !isService && !isMaxi && (bpRcBigDrink(parsed.baseName) || (isDrink && volMl >= 1000));
  let sizeTag = isService ? '' : (isMaxi
  ? `<span class="rc-size-tag maxi">MAXI</span>`
- : (bigDrink ? `<span class="rc-size-tag maxi">XL</span>` : (isDrink ? '' : `<span class="rc-size-tag normale">Normale</span>`)));
+ : (bigDrink ? `<span class="rc-size-tag maxi">XL</span>` : (isDrink ? '' : `<span class="rc-size-tag normale">${String(i.size||"").toLowerCase()==="baby" ? "Baby" : "Normale"}</span>`)));
  let volHtml = volTxt ? `<span class="rc-vol">${esc(volTxt)}</span>` : '';
  let isMenuRow = false; try{ isMenuRow = !isService && ((window.bpIsMenu && bpIsMenu(parsed)) || (typeof bpMenuUnits === 'function' && bpMenuUnits(i) > 0)); }catch(e){}
 
@@ -12055,7 +12055,7 @@ function buildReceiptHtml(o, items){
  let nFri = (fd.fri || 0), nBib = Math.max(fd.bib || 0, q(G.bevanda) + (fd.menu || 0));
  let subF = fd.menu ? 'patatine dei menu: ' + fd.menu : '';
  let frPz = G.pizza.filter(function(i){ try{ return (bpWorkCat(i).fries || 0) > 0; }catch(e){ return false; } });
- let frPzNames = frPz.map(function(i){ var nm = ''; try{ nm = splitProductAndMods(i.product_name).baseName; }catch(e){ nm = i.product_name; } return (Number(i.quantity||1) > 1 ? i.quantity + '× ' : '') + nm + (String(i.size||'').toLowerCase() === 'maxi' ? ' MAXI' : ''); }).join(' · ');
+ let frPzNames = frPz.map(function(i){ var nm = ''; try{ nm = splitProductAndMods(i.product_name).baseName; }catch(e){ nm = i.product_name; } return (Number(i.quantity||1) > 1 ? i.quantity + '× ' : '') + nm + (String(i.size||'').toLowerCase() === 'maxi' ? ' MAXI' : (String(i.size||'').toLowerCase() === 'baby' ? ' BABY' : '')); }).join(' · ');
  let frPzCount = q(frPz);
  const sec = (ico, title, n, arr, sub, raw)=>`<div class="rc-sec"><div class="rc-sec-h"><span>${ico} ${title}</span><span>${n}</span></div>${sub ? `<div class="rc-sec-sub">${sub}</div>` : ''}${raw || ''}${arr.map(bpRenderRcItem).join('')}</div>`;
  const pzNoteHtml = parsedNotes.cleanNotes ? '<div class="rc-pz-note">📝 <b>NOTE PIZZA:</b> ' + esc(parsedNotes.cleanNotes) + '</div>' : '';
@@ -12329,7 +12329,7 @@ function buildKitchenReceiptHtml(o, items){
  parsed = {baseName: parsed.baseName, mods: rest};
  }
  let bigDrink = !isService && !isMaxi && (bpRcBigDrink(parsed.baseName) || (isDrink && volMl >= 1000));
- let sizeTag = isService ? '' : (isMaxi ? `<span class="rc-size-tag maxi">MAXI</span>` : (bigDrink ? `<span class="rc-size-tag maxi">XL</span>` : (isDrink ? '' : `<span class="rc-size-tag normale">Normale</span>`)));
+ let sizeTag = isService ? '' : (isMaxi ? `<span class="rc-size-tag maxi">MAXI</span>` : (bigDrink ? `<span class="rc-size-tag maxi">XL</span>` : (isDrink ? '' : `<span class="rc-size-tag normale">${String(i.size||"").toLowerCase()==="baby" ? "Baby" : "Normale"}</span>`)));
  let volHtml = volTxt ? `<span class="rc-vol">${esc(volTxt)}</span>` : '';
  let modsLines = bpRcModsHtml(parsed, isService, isDrink);
  
@@ -12362,7 +12362,7 @@ function buildKitchenReceiptHtml(o, items){
  const line = i => {
  let parsed = splitProductAndMods(i.product_name);
  let top = krTopFries(i), mu = 0; try{ mu = bpMenuUnits(i); }catch(e){}
- let maxi = String(i.size||'').toLowerCase()==='maxi' ? '<span class="rc-size-tag maxi">MAXI</span>' : '';
+ let maxi = String(i.size||'').toLowerCase()==='maxi' ? '<span class="rc-size-tag maxi">MAXI</span>' : (String(i.size||'').toLowerCase()==='baby' ? '<span class=\"rc-size-tag normale\">BABY</span>' : '');
  return `<div class="kr-pz"><span class="rc-qty-badge">${i.quantity}×</span><span class="rc-item-name">${bpNameHtml(parsed.baseName)}</span>${maxi}${top ? `<span class="kr-fries">🍟 SU PIZZA ×${top}</span>` : ''}${mu ? '<span class="kr-fries kr-menu">🍟🥤 MENU ' + bpMenuKindInfo(i).kind + '</span>' : ''}</div>`;
  };
  pizzaHtml = `<div class="kr-sec kr-small"><div class="kr-sec-h kr-inv"><span>🍕 PIZZE CON PATATINE</span><em>${qtyOf(pizzaItems)}</em></div><div class="kr-sec-b">${pizzaItems.map(line).join('')}</div></div>`;
@@ -12540,7 +12540,7 @@ function bpKitchenHtml(plan, mode, sections){
  }catch(e){}
  try{ if(isPizzaItem(i) && bpWorkCat(i).kebabPizza){ var tl = bpKebabTopList(i); if(tl.length) top = '<span class="kt-top">' + tl.map(esc).join(' · ') + '</span>'; } }catch(e){}
  var q = kds ? '<b class="bp-qty">' + esc(i.quantity) + '×</b> ' : '<span class="kt-q">' + i.quantity + '×</span> ';
- var maxi = String(i.size).toLowerCase() === 'maxi' ? (kds ? ' <em>MAXI</em>' : ' <span class="kt-maxi">MAXI</span>') : '';
+ var maxi = String(i.size).toLowerCase() === 'maxi' ? (kds ? ' <em>MAXI</em>' : ' <span class="kt-maxi">MAXI</span>') : (String(i.size).toLowerCase() === 'baby' ? (kds ? ' <em>BABY</em>' : ' <span class="kt-maxi">BABY</span>') : '');
  return '<div class="' + ci + '">' + q + bpNameHtml(disp) + maxi + extra + top + mods + '</div>';
  }
  var qty = function(a){ return a.reduce(function(n, i){ return n + Number(i.quantity || 1); }, 0); };
@@ -16811,8 +16811,8 @@ function bpVoiceToggle(){ var n = bpVoiceLang() === "ar-EG" ? "it-IT" : "ar-EG";
 function bpVoicePills(){ var t = bpVoiceLang() === "ar-EG" ? "🎤 عربي" : "🎤 Italiano"; document.querySelectorAll(".bp-vl").forEach(function(b){ b.textContent = t; }); }
 /* v95-fix1: parole del "contorno" dell'ordine (tipo, pagamento, orario, piattaforme...) non sono MAI prodotti né ingredienti.
    Senza questo, lo scheletro fonetico di "sporto" coincide con "Sprite", "per le sei" diventava 6 pizze, ecc. */
-var BP_ORDER_STOP = (function(){ var o = {}; ("da per con alle ore tra entro subito asporto sporto sporta porto consegna domicilio ritiro tavolo tavola paga pagare pagato pagata prepagato prepagata gia già carta carte contanti contante pos poss bancomat app numero telefono tel cell cellulare cliente clienti via viale piazza piazzale corso largo vico strada totale sconto euro eur glovo deliveroo justeat just eat delivero deliverò minuti minuto mezza mezzo quarto normale ok ordine ordina ordinare vorrei prendo dammi").split(" ").forEach(function(w){ if(w) o[w] = 1; }); return o; })();
-var BP_SIZE_WORD = {"piccola":1,"piccolo":1,"lattina":1,"lattine":1,"bottiglia":1,"bottiglietta":1};
+var BP_ORDER_STOP = (function(){ var o = {}; ("possibile presto prima adesso da per con alle ore tra entro subito asporto sporto sporta porto consegna domicilio ritiro tavolo tavola paga pagare pagato pagata prepagato prepagata gia già carta carte contanti contante pos poss bancomat app numero telefono tel cell cellulare cliente clienti via viale piazza piazzale corso largo vico strada totale sconto euro eur glovo deliveroo justeat just eat delivero deliverò minuti minuto mezza mezzo quarto normale ok ordine ordina ordinare vorrei prendo dammi").split(" ").forEach(function(w){ if(w) o[w] = 1; }); return o; })();
+var BP_SIZE_WORD = {"piccola":1,"piccolo":1,"lattina":1,"lattine":1,"bottiglia":1,"bottiglietta":1,"poco":1,"poca":1,"pochi":1,"poche":1,"molto":1,"molta":1,"tanto":1,"tanta":1,"meno":1,"doppio":1,"doppia":1,"extra":1}; /* v96: poco/molto/doppio = modificatori, mai prodotti */
 var AR_RX = /[\u0600-\u06FF]/;
 var AR_NUM = {"una":1,"un":1,"uno":1,"صفر":0,"واحد":1,"واحده":1,"اتنين":2,"اثنين":2,"تنين":2,"اثنان":2,"تلاته":3,"ثلاثه":3,"تلات":3,"ثلاث":3,"اربعه":4,"اربع":4,"خمسه":5,"خمس":5,"سته":6,"ست":6,"سبعه":7,"سبع":7,"تمانيه":8,"ثمانيه":8,"تمان":8,"ثمان":8,"تسعه":9,"تسع":9,"عشره":10,"عشر":10};
 var AR_ALIAS = {"مياه":"acqua","ماء":"acqua","مايه":"acqua","ميه":"acqua","مويه":"acqua","كولا":"coca cola","كوكا":"coca cola","بيره":"birra","عصير":"succo","بطاطس":"patatine","بطاطا":"patatine","سلطه":"insalata","برجر":"hamburger","همبرجر":"hamburger","كباب":"kebab","كيباب":"kebab","شاورما":"kebab","مشروم":"funghi","فطر":"funghi","زيتون":"olive","بصل":"cipolla","فلفل":"peperoni","لحمه":"carne","لحم":"carne","دجاج":"pollo","فراخ":"pollo","تونه":"tonno","جمبري":"gamberi","بيض":"uovo","سلامي":"salame","نقانق":"wurstel","ذره":"mais","اناناس":"ananas","طماطم":"pomodoro","صلصه":"salsa","مايونيز":"maionese","كاتشب":"ketchup","جبنه":"formaggio","جبن":"formaggio","مقدد":"bacon","ثوم":"aglio","سمك":"pesce","خس":"lattuga","حار":"piccante"};
@@ -16825,6 +16825,7 @@ var AR_LAT_GEN = {"pizza":"pizz","pizze":"pizz","pizzetta":"pizz","panino":"pani
 var AR_IT_GEN = {"pizza":1,"pizze":1,"pizzetta":1,"panino":1,"panini":1,"piadina":1,"piadine":1};
 var AR_SOLO = {"solo":1,"soltanto":1,"بس":1,"فقط":1};
 var AR_SENZA = {"بدون":1,"سنسا":1,"سينسا":1,"سنزا":1,"سينزا":1,"senza":1}, AR_EXTRA = {"بيو":1,"piu":1,"più":1,"زياده":1,"زود":1,"زوده":1,"اضافه":1,"ضيف":1,"مع":1}, AR_MAXI = {"ماكسي":1,"كبيره":1,"كبير":1,"ميجا":1,"جامبو":1}, AR_NORM = {"عادي":1,"عاديه":1,"صغيره":1,"صغير":1,"نورمال":1,"وسط":1};
+var AR_BABY = {"baby":1,"bebe":1,"bebè":1,"بيبي":1,"بيبى":1,"بيبيه":1,"بيبه":1,"بابي":1};
 function arNorm(s){
  return String(s == null ? "" : s).toLowerCase().replace(/[٠-٩]/g, function(d){ return d.charCodeAt(0) - 1632; }).replace(/[۰-۹]/g, function(d){ return d.charCodeAt(0) - 1776; })
  .replace(/[\u064B-\u0652\u0640]/g, "").replace(/[أإآٱ]/g, "ا").replace(/ى/g, "ي").replace(/ة/g, "ه")
@@ -16850,7 +16851,7 @@ function latSkel(s){
 function arSenzaSk(w){ if(!AR_RX.test(w)) return latSkel(w); var o = []; for(var i = 0; i < w.length; i++) o.push(AR_MAP[w[i]] || ""); return skCollapse(o); }
 function arIsSenza(w){ return !!AR_SENZA[w] || (w.length >= 3 && arSenzaSk(w) === "sns"); } /* tutte le varianti: senza, sensa, \u0633\u0646\u0633\u0647 \u0633\u064a\u0646\u0633\u0647 \u0633\u0646\u0632\u0647 ecc. */
 function tokSkel(w){
- if(w === "و" || AR_NUM[w] != null || /^\d+$/.test(w) || arIsSenza(w) || AR_EXTRA[w] || AR_MAXI[w] || AR_NORM[w] || AR_GENERIC[w] || AR_SOLO[w] || BP_ORDER_STOP[w]) return "";
+ if(w === "و" || AR_NUM[w] != null || /^\d+$/.test(w) || arIsSenza(w) || AR_EXTRA[w] || AR_MAXI[w] || AR_BABY[w] || AR_NORM[w] || AR_GENERIC[w] || AR_SOLO[w] || BP_ORDER_STOP[w]) return "";
  if(AR_ALIAS[w]) return latSkel(AR_ALIAS[w]);
  if(!AR_RX.test(w)) return latSkel(w);
  if(w.length > 4 && w.indexOf("ال") === 0) w = w.slice(2);
@@ -16889,6 +16890,18 @@ function arMatchIng(ing, q){ var sk = arTok(q).map(tokSkel).filter(Boolean); if(
 function ssQMatch(p, q){ if(!q) return true; if(AR_RX.test(q)) return arMatchProduct(p, q); return (p.name + " " + (p.description || "")).toLowerCase().indexOf(q.toLowerCase()) >= 0; }
 function ssIngQMatch(ing, q){ if(!q) return true; return ingNorm(ing).indexOf(ingNorm(q)) >= 0 || arMatchIng(ing, q); }
 function ssUniqNorm(a){ var seen = {}, o = []; (a || []).forEach(function(x){ var k = ingNorm(x); if(k && !seen[k]){ seen[k] = 1; o.push(x); } }); return o; }
+var __famW = ["famiglia","famiglie","family","فاميلي","فاميليا","فاميلى","فاميليه","فاميلية"]; try{ __famW.forEach(function(w){ AR_MAXI[w] = 1; }); }catch(e){}
+/* v-mic2: Baby = stesso prezzo/ingredienti del Normale, riga separata con nota "Baby" (mostrata come (baby)) */
+function bpSsAddItem(it){
+ if(!it.baby){ ssCartAdd(it.p, it.size, it.qty, it.rem, it.add, it.menu); return; }
+ var before = new Map(); cart.forEach(function(v, k){ before.set(k, v.qty); });
+ ssCartAdd(it.p, "Normale", it.qty, it.rem, it.add, false);
+ var key = null; cart.forEach(function(v, k){ if(key === null && (!before.has(k) || v.qty > before.get(k))) key = k; });
+ if(key === null) return;
+ var it0 = cart.get(key), bk = key + "~baby", ex = cart.get(bk), moved = Math.min(it.qty, it0.qty);
+ if(ex) ex.qty += moved; else { var c = JSON.parse(JSON.stringify(it0)); c.qty = moved; c.size = "Baby"; c.itemNote = ""; cart.set(bk, c); }
+ if(moved >= it0.qty) cart.delete(key); else it0.qty -= moved;
+}
 function ssCartAdd(p, size, qty, rem, add, menu){
  rem = ssUniqNorm(rem); add = ssUniqNorm(add);
  var isM = size === "Maxi" && p.price_maxi != null && Number(p.price_maxi) > 0, sz = isM ? "Maxi" : "Normale", base = pkSizePrice(p, sz), ex = 0;
@@ -16912,39 +16925,156 @@ window.bpMenuSplit = function(q){
   t.forEach(function(w){ if(w && window.bpMenuWordRx.test(w)) menu = true; else if(w) keep.push(w); });
   return (menu && keep.length) ? {menu: true, q: keep.join(' ')} : {menu: false, q: String(q == null ? '' : q).trim()};
 };
-/* v97: pizza metà metà detta a voce/testo: "una pizza metà metà primo body, secondo metà patatosa" -> UNA riga «Pizza metà metà: ½ Body / ½ Patatosa» (prezzo secondo le regole di «Pizza a gusti») */
+/* v120: pizza metà metà a voce/testo (IT + AR). Formule: «metà metà A B», «metà A e metà B», «mezza A mezza B», «una metà e metà A B»,
+   «نص A ونص B», «ميتا ميتا A B». Per ogni metà: senza / più / +ingrediente. Maxi/famiglia ovunque nella frase.
+   Nome dubbio (più pizze vicine) = la metà resta «da scegliere»: window.bpHalfAsk apre i pulsanti da toccare. */
 window.bpHalfPre = function(toks, store){
-  var isMM = function(a, b){ return /^(met[àa]|mezz[ao])$/.test(a || "") && /^(met[àa]|mezz[ao])$/.test(b || ""); };
-  var FILL = {primo: 1, prima: 1, secondo: 1, seconda: 1, "metà": 1, meta: 1, mezza: 1, mezzo: 1, la: 1, il: 1, lo: 1, l: 1, con: 1, gusto: 1, gusti: 1, poi: 1, pizza: 1, pizze: 1, "e": 1, ed: 1};
-  var out = [], i = 0;
-  while(i < toks.length){
-    if(isMM(toks[i], toks[i + 1])){
-      var parts = [], pc = null, mode = null, j = i + 2, end = i + 1;
-      while(j < toks.length){
-        var w = toks[j];
-        if(pc && arIsSenza(w)){ mode = "r"; j++; end = j - 1; continue; }
-        if(mode === "r" && pc){
-          var g = arFindIng(toks, j, ingUnique(parseIngredients(pc.p.description)), true);
-          if(g){ if(pc.rem.indexOf(g.ing) < 0) pc.rem.push(g.ing); j += g.len; end = j - 1; continue; }
-          mode = null;
-        }
-        if(FILL[w]){ if(parts.length >= 2) break; j++; continue; }
-        if(parts.length >= 2) break;
-        var f = arFindProduct(toks, j);
-        if(f && arIsPizza(f.p)){ pc = {p: f.p, rem: []}; parts.push(pc); j += f.len; end = j - 1; mode = null; continue; }
-        break;
+  var HW = function(w){ return /^(met[àa]['’]?|mezz[aoe]|half|ميتا|ميتاه|نص|نصف|ونص|ونصف|النص|النصف|والنص|والنصف)$/.test(w || ""); };
+  var FILL = {primo: 1, prima: 1, secondo: 1, seconda: 1, la: 1, il: 1, lo: 1, l: 1, di: 1, gusto: 1, gusti: 1, poi: 1, pizza: 1, pizze: 1, e: 1, ed: 1, "و": 1, "ثم": 1, "بعدين": 1, "وبعدين": 1, "بيتزا": 1, "بيتسا": 1, "بيتزه": 1, "بيتسه": 1, "اول": 1, "الاول": 1, una: 1, un: 1, uno: 1, gli: 1, terzo: 1, terza: 1, quarto: 1, quarta: 1, stesso: 1, "الثالث": 1, "الثالثه": 1, "التالت": 1, "التالته": 1, "تالت": 1, "ثالث": 1, "الرابع": 1, "الرابعه": 1, "رابع": 1, primo: 1, secondo: 1, altro: 1, altra: 1, altri: 1, altre: 1, resto: 1, restante: 1, rimanente: 1, "البريمو": 1, "بريمو": 1, "البريما": 1, "بريما": 1, "السكوندو": 1, "سكوندو": 1, "السكوندا": 1, "سكوندا": 1, "الاخر": 1, "الاخري": 1, "الاخره": 1, "اخر": 1, "اخري": 1, "الباقي": 1, "الباقيه": 1, "باقي": 1, "الاولي": 1, "تاني": 1, "التاني": 1, "التانيه": 1, "ثاني": 1, "الثاني": 1, "الثانيه": 1};
+  var isMaxi = function(w){ return !!AR_MAXI[w] || /^(maxi|maxy|xl|gigante|grande)$/.test(w || ""); };
+  var pizzas = function(){ return getActiveMenu().filter(function(p){ return arIsPizza(p) && !/^\s*men[uù]\b/i.test(p.name); }); };
+  var skOf = function(a){ return a.map(tokSkel).join(""); };
+  var fullKey = function(p){ return latSkel(String(p.name).replace(/^\s*pizza\s+/i, "")); };
+  var all = ingUnique(getAllKnownIngredients());
+  /* pizze il cui nome (o un ingrediente, se loose) assomiglia a quanto detto, dalla più vicina */
+  var cand = function(s, loose){
+    var out = [];
+    pizzas().forEach(function(p){
+      var best = 99;
+      arKeys(p.name).forEach(function(k){ var d = lev(s, k); if(skOk(s, k) || (s.length >= 3 && k.indexOf(s) === 0) || (loose && s.length >= 4 && d <= 2)){ if(d < best) best = d; } });
+      if(loose && s.length >= 3){ parseIngredients(p.description).forEach(function(g){ arKeys(g, 2).forEach(function(k){ if(arAbbr(s, k) || skOk(s, k) || (s.length >= 4 && k.indexOf(s) === 0)){ if(best > 2) best = 2; } }); }); }
+      if(best < 99) out.push({p: p, d: best});
+    });
+    out.sort(function(a, b){ return a.d - b.d || String(a.p.name).length - String(b.p.name).length; });
+    return out.map(function(x){ return x.p; });
+  };
+  var resolveName = function(s){
+    var ex = pizzas().filter(function(p){ return fullKey(p) === s || latSkel(p.name) === s; });
+    if(ex.length === 1) return {p: ex[0], exact: true};
+    var c = ex.length > 1 ? ex : cand(s, false);
+    if(c.length === 1) return {p: c[0]};
+    if(c.length > 1) return {opts: c.slice(0, 6)};
+    return null;
+  };
+  var PH = function(){ return {name: "❓", category: "Pizza"}; };
+  var prodAt = function(j){ var lim = toks.length; for(var k = j + 1; k < toks.length; k++){ if(HW(toks[k]) || isMaxi(toks[k])){ lim = k; break; } } return arFindProduct(toks.slice(0, lim), j); }; /* il nome non può scavalcare il prossimo «metà» */
+  var ingAt = function(j, pool, strict){ var lim = toks.length; for(var k = j + 1; k < toks.length; k++){ if(HW(toks[k]) || isMaxi(toks[k])){ lim = k; break; } } var g = arFindIng(toks.slice(0, lim), j, pool, strict);
+    if(g && g.len > 1){ var nx = prodAt(j + 1); if(nx && arIsPizza(nx.p)) g = arFindIng(toks.slice(0, j + 1), j, pool, strict); } /* «senza origano diavola»: «diavola» è la pizza, non parte dell'ingrediente */
+    return g; };
+  var REST = /^(resto|restante|restanti|rimanente|rimanenti|altri|altre|tutti|tutte|tutto|الباقي|الباقيه|باقي|الباقين|الكل|كلهم)$/, PFX = /^(l|un|d|dell|all|nell)['’]/;
+  var tryGroup = function(start, N, gus){
+    N = N || 2;
+    var j = start, parts = [], pc = null, mode = null, size = null, end = start, hw = gus ? 2 : 0, afterHW = false, seen = {}, restF = false;
+    while(j < toks.length){
+      var w = toks[j];
+      if(HW(w)){ if(gus || parts.length >= N) break; hw++; afterHW = true; mode = null; j++; end = j - 1; continue; }
+      if(pc && !seen[j] && (w.charAt(0) === "+" || w.charAt(0) === "-") && w.length > 1){ seen[j] = 1; mode = w.charAt(0) === "+" ? "e" : "r"; continue; }
+      if(pc && arIsSenza(w)){ mode = "r"; j++; end = j - 1; continue; }
+      if(pc && (AR_EXTRA[w] || w === "extra" || w === "con") && ingAt(j + 1, all, false)){ mode = "e"; j++; end = j - 1; continue; }
+      if(mode && pc){
+        var pool = (mode === "r" && !pc.unres) ? ingUnique(parseIngredients(pc.p.description)) : all;
+        var g = ingAt(j, pool, mode === "r");
+        if(!g && mode === "r" && !pc.unres){ var g2 = ingAt(j, all, true); if(g2){ j += g2.len; end = j - 1; continue; } } /* «senza X» ma la pizza non ha X: niente da togliere */
+        if(g){ var set = mode === "e" ? pc.add : (pc.unres ? pc.pendRem : pc.rem); if(set.indexOf(g.ing) < 0) set.push(g.ing); j += g.len; end = j - 1; continue; }
+        mode = null;
       }
-      if(parts.length === 2){ store.push(parts); out.push("§hh" + (store.length - 1)); i = end + 1; continue; }
+      if(isMaxi(w)){ size = "Maxi"; mode = null; j++; end = j - 1; continue; }
+      if(AR_BABY[w] || AR_NORM[w]){ mode = null; j++; end = j - 1; continue; }
+      if(gus && parts.length < N && REST.test(w.replace(PFX, ""))){ restF = true; mode = null; j++; continue; } /* «il resto X» / «gli altri X» / «tutti X» */
+      if(FILL[w] || FILL[w.replace(PFX, "")]){ if(parts.length >= N) break; mode = null; j++; continue; } /* anche «l'altro», «un'altra» */
+      if(parts.length >= N) break;
+      var f = prodAt(j);
+      if(f && (!arIsPizza(f.p) || /^\s*men[uù]\b/i.test(f.p.name))) f = null;
+      if(f){
+        var r = resolveName(skOf(toks.slice(j, j + f.len))) || {p: f.p};
+        pc = {p: r.p || PH(), rem: [], add: [], pendRem: [], exact: !!r.exact};
+        if(r.opts) pc.unres = {q: toks.slice(j, j + f.len).join(" "), opts: r.opts};
+        parts.push(pc); j += f.len; end = j - 1; mode = null; afterHW = false; continue;
+      }
+      /* nome non riconosciuto: solo dentro una frase di metà → proposte da toccare */
+      if(hw >= 2 && tokSkel(w) && AR_NUM[w] == null && !/^\d+$/.test(w)){
+        var cs = cand(tokSkel(w), true);
+        if(cs.length){ pc = {p: PH(), rem: [], add: [], pendRem: [], unres: {q: w, opts: cs.slice(0, 6)}}; parts.push(pc); j++; end = j - 1; mode = null; afterHW = false; continue; }
+      }
+      break;
+    }
+    while(restF && parts.length >= 1 && parts.length < N){ var lp = parts[parts.length - 1], cp = {p: lp.p, rem: lp.rem.slice(), add: lp.add.slice(), pendRem: lp.pendRem.slice(), exact: lp.exact}; if(lp.unres || lp.dupOf != null) cp.dupOf = (lp.dupOf != null ? lp.dupOf : parts.length - 1); parts.push(cp); }
+    if(parts.length !== N) return null;
+    if(hw < 2 && parts.some(function(x){ return !x.exact; })) return null; /* un solo «mezza/metà»: solo con nomi esatti (evita «mezza porzione di patatine») */
+    parts.size = size;
+    return {parts: parts, end: end};
+  };
+  var out = [], i = 0;
+  var GN = function(w){ var n = /^\d+$/.test(w || "") ? Number(w) : (AR_IT_NUM[w] != null ? AR_IT_NUM[w] : (AR_NUM[w] != null ? AR_NUM[w] : 0)); return (n >= 2 && n <= 4) ? n : 0; };
+  var GW = function(w){ return /^(gusti|gusto|اصناف|نكهات|اذواق|طعم|نكهه)$/.test(w || ""); };
+  while(i < toks.length){
+    var gn = GN(toks[i]);
+    if(gn && GW(toks[i + 1])){ /* v121: «3 gusti» / «4 gusti»: primo/secondo/terzo…, «il resto X» */
+      var g3 = tryGroup(i + 2, gn, true);
+      if(g3){ if(out.length && isMaxi(out[out.length - 1])){ g3.parts.size = "Maxi"; out.pop(); } store.push(g3.parts); out.push("§hh" + (store.length - 1)); i = Math.max(g3.end, i + 1) + 1; continue; }
+    }
+    if(HW(toks[i])){
+      var gr = tryGroup(i);
+      if(gr){
+        if(out.length && isMaxi(out[out.length - 1])){ gr.parts.size = "Maxi"; out.pop(); } /* «una maxi metà…» */
+        store.push(gr.parts); out.push("§hh" + (store.length - 1)); i = Math.max(gr.end, i) + 1; continue; }
     }
     out.push(toks[i]); i++;
   }
   return out;
 };
+/* v120: finestra a pulsanti (stessa grafica di bpShowChoice) per scegliere la metà dubbia */
+window.bpShowHalfChoice = function(o){
+  var old = document.getElementById("bpChoice"); if(old) old.remove();
+  var d = document.createElement("div"); d.id = "bpChoice";
+  d.style.cssText = "position:fixed;inset:0;z-index:2147483600;background:rgba(0,0,0,.45);display:flex;align-items:flex-end;justify-content:center;padding:12px";
+  var box = document.createElement("div");
+  box.style.cssText = "background:#fff;color:#101828;border-radius:18px;padding:14px;width:min(560px,100%);max-height:80vh;overflow:auto;box-sizing:border-box";
+  var h = document.createElement("div"); h.style.cssText = "font-weight:900;font-size:17px;margin-bottom:4px"; h.textContent = o.title; box.appendChild(h);
+  if(o.sub){ var s = document.createElement("div"); s.style.cssText = "font-size:13px;color:#667085;margin-bottom:8px"; s.textContent = o.sub; box.appendChild(s); }
+  o.opts.forEach(function(p){
+    var b = document.createElement("button"); b.type = "button";
+    b.style.cssText = "display:flex;justify-content:space-between;align-items:center;width:100%;min-height:56px;margin:6px 0;padding:10px 14px;border-radius:14px;border:2px solid #d92d20;background:#fff;color:#101828;font-weight:800;font-size:16px";
+    var pr = ""; try{ pr = pkSizePrice(p, o.size || "Normale"); }catch(e){}
+    b.innerHTML = "<span></span><span></span>"; b.firstChild.textContent = p.name; b.lastChild.textContent = pr !== "" ? euro(pr) : "";
+    b.onclick = function(){ d.remove(); o.onPick(p); }; box.appendChild(b);
+  });
+  var c = document.createElement("button"); c.type = "button";
+  c.style.cssText = "width:100%;min-height:48px;margin-top:6px;border-radius:14px;border:0;background:#eef0f4;color:#344054;font-weight:800";
+  c.textContent = "Annulla"; c.onclick = function(){ d.remove(); if(o.onCancel) o.onCancel(); };
+  box.appendChild(c); d.appendChild(box);
+  d.onclick = function(e){ if(e.target === d){ d.remove(); if(o.onCancel) o.onCancel(); } };
+  document.body.appendChild(d);
+};
+/* v120: chiede (a tocchi) le metà dubbie, poi aggiunge la pizza al carrello */
+window.bpHalfAsk = function(it){
+  var parts = it.parts, idx = [];
+  parts.forEach(function(x, i){ if(x.unres) idx.push(i); });
+  var has = function(p, ing){ var k = ingNorm(ing); return parseIngredients((p && p.description) || "").some(function(g){ return ingNorm(g) === k; }); };
+  var finish = function(){
+    parts.forEach(function(x){ if(x.dupOf != null && parts[x.dupOf] && !parts[x.dupOf].unres){ x.p = parts[x.dupOf].p; x.rem = (parts[x.dupOf].rem || []).slice(); } });
+    var ok = false; try{ ok = window.bpHalfAdd && window.bpHalfAdd(parts, it.qty, it.size); }catch(e){ bpWarn(e); }
+    if(!ok) parts.forEach(function(x){ ssCartAdd(x.p, "Normale", it.qty, x.rem, [], false); });
+    renderCart();
+    try{ ssToast("✅ " + it.qty + "× Pizza " + (parts.length === 2 ? "metà metà" : parts.length + " gusti") + ": " + parts.map(function(x){ return "½ " + x.p.name; }).join(" / ") + (it.size === "Maxi" ? " Maxi" : "")); }catch(e){}
+  };
+  var step = function(k){
+    if(k >= idx.length){ finish(); return; }
+    var i = idx[k], x = parts[i], others = parts.filter(function(y){ return y !== x && !y.unres; }).map(function(y){ return y.p.name; }).filter(function(n, q, a){ return a.indexOf(n) === q; }).join(", ");
+    window.bpShowHalfChoice({
+      title: (parts.length === 2 ? (i === 0 ? "Prima metà" : "Seconda metà") : ["Primo", "Secondo", "Terzo", "Quarto"][i] + " gusto") + " — «" + x.unres.q + "» quale?",
+      sub: others ? (parts.length === 2 ? "L'altra metà: " : "Gli altri gusti: ") + others : "", opts: x.unres.opts, size: it.size,
+      onPick: function(p){ x.p = p; x.rem = (x.pendRem || []).filter(function(g){ return has(p, g); }); delete x.unres; step(k + 1); },
+      onCancel: function(){ try{ ssToast("❎ Pizza metà metà annullata"); }catch(e){} }
+    });
+  };
+  step(0);
+};
 function arParseOrder(text){
- var __hh = [], toks = window.bpHalfPre(arTok(text).filter(function(w){ return w !== "e" && w !== "ed"; }), __hh), items = [], cur = null, mode = null, pq = null, last = -1, solo = false, pendMenu = false, all = ingUnique(getAllKnownIngredients()); AR_HINT = null;
+ var pendSz = null, pendBaby = false, __hh = [], toks = window.bpHalfPre(arTok(text).filter(function(w){ return w !== "e" && w !== "ed"; }), __hh), items = [], cur = null, mode = null, pq = null, last = -1, solo = false, pendMenu = false, all = ingUnique(getAllKnownIngredients()); AR_HINT = null;
  for(var i = 0; i < toks.length; i++){
  var w = toks[i];
- if(w.indexOf("§hh") === 0){ var __hp = __hh[Number(w.slice(3))]; items.push({half: true, parts: __hp, qty: pq || 1, explicit: true, size: "Normale", rem: [], add: [], menu: false, p: {name: "Pizza metà metà: " + __hp.map(function(x){ return "½ " + x.p.name; }).join(" / "), category: "Pizza"}}); pq = null; cur = null; mode = null; pendMenu = false; last = -1; continue; }
+ if(w.indexOf("§hh") === 0){ var __hp = __hh[Number(w.slice(3))]; items.push({half: true, parts: __hp, qty: pq || 1, explicit: true, size: __hp.size || (pendSz === "Maxi" ? "Maxi" : "Normale"), rem: [], add: [], menu: false, p: {name: "Pizza " + (__hp.length === 2 ? "metà metà" : __hp.length + " gusti") + ": " + __hp.map(function(x){ return ({2: "½", 3: "⅓", 4: "¼"})[__hp.length] + " " + x.p.name; }).join(" / "), category: "Pizza"}}); pq = null; pendSz = null; pendBaby = false; cur = null; mode = null; pendMenu = false; last = -1; continue; }
  if(window.bpMenuWordRx.test(w)){ var __nx = arFindProduct(toks, i + 1); if(!(__nx && /^menu\b/.test(ingNorm(__nx.p.name)))){ pendMenu = true; continue; } }
  if(AR_GEN_MAP[w]){ AR_HINT = AR_GEN_MAP[w]; continue; }
  if(AR_LAT_GEN[w]) AR_HINT = AR_LAT_GEN[w];
@@ -16961,7 +17091,8 @@ function arParseOrder(text){
  if(!ahead && cur && !mode && last === i){ cur.qty = nv; cur.explicit = true; pq = null; } else pq = nv;
  mode = null; continue;
  }
- if(AR_MAXI[w]){ if(cur){ cur.size = "Maxi"; last = i + 1; } continue; }
+ if(AR_MAXI[w]){ if(cur && pq == null){ cur.size = "Maxi"; last = i + 1; } else pendSz = "Maxi"; continue; }
+ if(AR_BABY[w]){ if(cur && pq == null){ cur.baby = true; last = i + 1; } else pendBaby = true; continue; }
  if(AR_NORM[w]){ if(cur){ cur.size = "Normale"; last = i + 1; } continue; } if(typeof BP_SIZE_WORD !== "undefined" && BP_SIZE_WORD[w]){ if(cur) last = i + 1; continue; } /* v96-fix3: "piccola"/"lattina" non sono ingredienti */
  if(mode && cur){
  var g = arFindIng(toks, i, mode === "r" ? ingUnique(parseIngredients(cur.p.description)) : all, mode === "r");
@@ -16977,7 +17108,7 @@ function arParseOrder(text){
  if(cur && cur.p === f.p && last === i && pq == null){ i += f.len - 1; last = i + 1; continue; }
  var soloRem = [];
  if(solo){ try{ var ihs = arFindIng(toks, i, ingUnique(parseIngredients(f.p.description))); if(ihs) soloRem = window.arAutoRem(f.p, ihs.ing); }catch(e){ bpWarn(e); } solo = false; }
- var __tw = pendMenu ? window.bpMenuTwin(getActiveMenu(), f.p) : null; cur = {p: __tw || f.p, qty: pq || 1, explicit: pq != null, size: "Normale", rem: soloRem, add: [], menu: !__tw && pendMenu && arIsPizza(f.p)}; pendMenu = false; items.push(cur); pq = null; mode = null; AR_HINT = null; i += f.len - 1; last = i + 1;
+ var __tw = pendMenu ? window.bpMenuTwin(getActiveMenu(), f.p) : null; cur = {p: __tw || f.p, qty: pq || 1, explicit: pq != null, size: pendSz || "Normale", baby: pendBaby, rem: soloRem, add: [], menu: !__tw && pendMenu && arIsPizza(f.p) && !pendSz && !pendBaby}; pendMenu = false; pendSz = null; pendBaby = false; items.push(cur); pq = null; mode = null; AR_HINT = null; i += f.len - 1; last = i + 1;
  }else if(!mode && !(typeof BP_ORDER_STOP !== "undefined" && BP_ORDER_STOP[w]) && w.length >= 3){ /* v96-fix3: parole d'ordine/articoli non sono ingredienti */
  var ih = arFindIng(toks, i, all);
  if(ih){
@@ -16995,12 +17126,47 @@ function arParseOrder(text){
  }
  AR_HINT = null; return items;
 }
+/* v-mic1: UN SOLO cervello per 🎤 piccolo (accanto a ⌨️) e 🎙️ rosso: frase d'ordine completa -> estrazione completa; solo prodotti con numero/menu/senza/extra -> aggiunge subito; altrimenti cerca */
+function bpVoiceIsFullOrder(text){
+ var t = String(text || ""); try{ t = bpArDigits(t); }catch(e){}
+ var l = t.toLowerCase(), NW = "uno|una|due|tre|quattro|cinque|sei|sette|otto|nove|dieci|undici|dodici|mezzanotte";
+ if(/\d(?:[\s.\-]?\d){8,11}/.test(l)) return true;
+ if(/\b(?:via|viale|piazza|piazzale|corso|largo|strada|vico)\s+\S+/.test(l)) return true;
+ if(/\b(?:tavolo|asporto|ritiro|consegna|domicilio|glovo|deliveroo|just\s?eat|justeat)\b/.test(l)) return true;
+ if(new RegExp("\\b(?:per\\s+le|per\\s+l'|alle|entro\\s+le|verso\\s+le)\\s*(?:\\d|(?:" + NW + ")\\b)").test(l)) return true;
+ if(/\b(?:paga|pago|pagato|pagare|pagher\w*|contanti|bancomat|resto)\b/.test(l)) return true;
+ if(/\b(?:totale|sconto)\b/.test(l)) return true;
+ if(/(?:توصيل|ديليفري|دليفري|ترابيزه|ترابيزة|طاوله|طاولة|عنوان|تليفون|رقم التليفون)/.test(l)) return true;
+ return false;
+}
+window.bpVoiceIsFullOrder = bpVoiceIsFullOrder;
+function bpVoiceSmartFinal(text){
+ /* ritorna: "order" | "add" | "search" */
+ text = String(text || "").trim(); if(!text) return "search";
+ if(bpVoiceIsFullOrder(text)){
+  try{ var ta = document.getElementById("voiceSmartInput"); if(ta) ta.value = text; }catch(e){ bpWarn(e); }
+  try{
+   Promise.resolve(runFullOrderExtraction(false)).then(function(){
+    try{
+     var g = function(id){ var x = document.getElementById(id); return x ? String(x.value || "").trim() : ""; }, n = 0;
+     try{ cart.forEach(function(it){ n += it.qty; }); }catch(e){}
+     var parts = [g("customer"), g("address"), g("phone")].filter(Boolean); if(n) parts.push(n + " pz");
+     if(parts.length) ssToast("✅ " + parts.join(" · "));
+    }catch(e){ bpWarn(e); }
+   });
+  }catch(e){ bpWarn(e); }
+  return "order";
+ }
+ var added = false; try{ added = bpmVoiceAdd(text); }catch(e){ bpWarn(e); }
+ return added ? "add" : "search";
+}
+window.bpVoiceSmartFinal = bpVoiceSmartFinal;
 function bpmVoiceAdd(text){
  var items = arParseOrder(text);
  if(!items.length) return false;
  var go = items.some(function(it){
   if(it.choice) return it.qty > 1;
-  return !!(it.menu || it.explicit || it.qty > 1 || it.rem.length || it.add.length);
+  return !!(it.menu || it.explicit || it.qty > 1 || it.rem.length || it.add.length || it.size === "Maxi" || it.baby);
  });
  if(!go) return false;
  return arProcess(text, false);
@@ -17023,10 +17189,10 @@ function arProcess(text, auto){
    if(__dn.length){ var __ne = document.getElementById("notes"); if(__ne){ var __cur = String(__ne.value || "").trim(), __add = __dn.join(", "); if(__cur.toLowerCase().indexOf(__add) < 0) __ne.value = __cur ? __cur + " · " + __add : __add; } }
   }
  }catch(e){ bpWarn(e); }
- items.forEach(function(it){ if(it.half){ var __ok = false; try{ __ok = window.bpHalfAdd && window.bpHalfAdd(it.parts, it.qty, it.size); }catch(e){ bpWarn(e); } if(!__ok) it.parts.forEach(function(x){ ssCartAdd(x.p, "Normale", it.qty, x.rem, [], false); }); } else ssCartAdd(it.p, it.size, it.qty, it.rem, it.add, it.menu); });
+ items.forEach(function(it){ if(it.half && it.parts.some(function(x){ return x.unres; })){ try{ window.bpHalfAsk(it); }catch(e){ bpWarn(e); } return; } if(it.half){ var __ok = false; try{ __ok = window.bpHalfAdd && window.bpHalfAdd(it.parts, it.qty, it.size); }catch(e){ bpWarn(e); } if(!__ok) it.parts.forEach(function(x){ ssCartAdd(x.p, "Normale", it.qty, x.rem, [], false); }); } else bpSsAddItem(it); });
  renderCart();
  choices.forEach(function(c){ bpShowChoice(c.ing, c.opts, function(p){ var rem = arAutoRem(p, c.ing); ssCartAdd(p, "Normale", c.qty, rem, []); var ek = p.id + "-Normale-" + (rem.length ? rem.join("_") : "base"); var en = cart.get(ek); if(en){ en.removedIngs = rem.slice(); } renderCart(); try{ ssToast(p.name + (rem.length ? " · senza " + rem.join(", ") : " · nessuna rimozione (" + (p.description || "descrizione vuota") + ")")); }catch(x){} }); });
- msg = "✅ " + items.map(function(it){ return it.qty + "× " + (it.menu ? "🍟🥤 Menu " : "") + it.p.name + (it.size === "Maxi" ? " Maxi" : "") + (it.rem.length ? " · 🚫 " + it.rem.join(", ") : "") + (it.add.length ? " · ➕ " + it.add.join(", ") : ""); }).join(" | ");
+ msg = "✅ " + items.map(function(it){ return it.qty + "× " + (it.menu ? "🍟🥤 Menu " : "") + it.p.name + (it.size === "Maxi" ? (Number(it.p.price_maxi) > 0 ? " Maxi" : " ⚠️ Maxi non a listino (aggiunta Normale)") : "") + (it.baby ? " (baby)" : "") + (it.rem.length ? " · 🚫 " + it.rem.join(", ") : "") + (it.add.length ? " · ➕ " + it.add.join(", ") : ""); }).join(" | ");
  ssToast(msg); try{ setVoiceMsg(msg, ""); }catch(e){ bpWarn(e); }
  return true;
 }
@@ -17041,6 +17207,8 @@ window.bpCleanOrderText = function(raw){
   R(/\b(?:numero\s+di\s+telefono|numero\s+telefonico|telefono|tel\.?|cell(?:ulare)?|n\.?\s*tel)\s*[:\-]?\s*\+?\d[\d\s.\-]{6,}\d/gi);
   R(/\+?\b\d(?:[\s.\-]?\d){8,11}\b/g);
   R(/\b(?:numero\s+di\s+telefono|numero\s+telefonico|telefono)\b/gi);
+  /* v96: "il prima possibile" / "il più possibile" / "al più presto" / "appena possibile" = subito */
+  R(/\b(?:il\s+)?(?:più|piu|prima)\s+(?:presto\s+)?possibile\b|\bal\s+più\s+presto\b|\bal\s+piu\s+presto\b|\bappena\s+possibile\b|\bil\s+prima\s+possibile\b/gi);
   /* orario */
   R(new RegExp("\\b(?:per\\s+le|per\\s+l'|alle(?:\\s+ore)?|ore|entro\\s+le|verso\\s+le)\\s*(?:\\d{1,2}(?:[:.]\\d{2})?|(?:" + BP_NW + "))(?:\\s+e\\s+(?:mezza|mezzo|un\\s+quarto|\\d{1,2}|(?:" + BP_NW + ")))?", "gi"));
   R(/\b(?:tra|fra)\s+\w+\s+minut[io]\b/gi);
@@ -17158,7 +17326,7 @@ function ssBest(s, keys, w){ var b = 0; keys.forEach(function(k){ if(k === s) b 
 function ssScoreQ(p, q){
  var kc = ssKC(p), toks = arTok(String(q).toLowerCase()), sum = 0, cnt = 0, miss = 0;
  toks.forEach(function(w){
- if(w === "و" || AR_NUM[w] != null || /^\d+$/.test(w) || AR_SENZA[w] || AR_EXTRA[w] || AR_MAXI[w] || AR_NORM[w]) return;
+ if(w === "و" || AR_NUM[w] != null || /^\d+$/.test(w) || AR_SENZA[w] || AR_EXTRA[w] || AR_MAXI[w] || AR_BABY[w] || AR_NORM[w]) return;
  var sc = 0, raw = AR_RX.test(w) ? "" : ingNorm(w), s = tokSkel(w);
  if(AR_CATQ[w]){ if(new RegExp(AR_CATQ[w]).test(kc.cat)) sc = 2.5; cnt++; if(!sc) miss++; sum += sc; return; }
  if(AR_GENERIC[w]) return;
@@ -17176,7 +17344,7 @@ function ssIngTerms(q){
  var toks = arTok(String(q).toLowerCase()), terms = [], base = false;
  toks.forEach(function(w){
   if(!w || w === "و" || SS_SKIPW[w] === 1) return;
-  if(AR_NUM[w] != null || /^\d+$/.test(w) || arIsSenza(w) || AR_EXTRA[w] || AR_MAXI[w] || AR_NORM[w] || AR_GENERIC[w] || AR_SOLO[w] || AR_CATQ[w] || AR_IT_GEN[w]) return;
+  if(AR_NUM[w] != null || /^\d+$/.test(w) || arIsSenza(w) || AR_EXTRA[w] || AR_MAXI[w] || AR_BABY[w] || AR_NORM[w] || AR_GENERIC[w] || AR_SOLO[w] || AR_CATQ[w] || AR_IT_GEN[w]) return;
   var raw = AR_RX.test(w) ? "" : ingNorm(w), s = tokSkel(w);
   if(!raw && !s) return;
   if(raw === "margherita" || (s && skOk(s, latSkel("margherita")))){ base = true; return; }
@@ -17228,7 +17396,7 @@ function ssNameMatch(list, q, fuzzy){
   var toks = arTok(String(q).toLowerCase()), need = [];
   for(var t = 0; t < toks.length; t++){
     var w = toks[t];
-    if(!w || w === "و" || AR_NUM[w] != null || /^\d+$/.test(w) || AR_SENZA[w] || AR_EXTRA[w] || AR_MAXI[w] || AR_NORM[w] || AR_SOLO[w] || SS_SKIPW[w] === 1) continue;
+    if(!w || w === "و" || AR_NUM[w] != null || /^\d+$/.test(w) || AR_SENZA[w] || AR_EXTRA[w] || AR_MAXI[w] || AR_BABY[w] || AR_NORM[w] || AR_SOLO[w] || SS_SKIPW[w] === 1) continue;
     var lat = AR_ALIAS[w] ? AR_ALIAS[w] : (AR_RX.test(w) ? null : w);
     if(lat == null) return null;
     lat = ingNorm(lat);
@@ -17319,7 +17487,7 @@ function ssVoiceDirect(cands){
  for(var c = 0; c < cands.length; c++){
   try{
    var its = arParseOrder(cands[c]).filter(function(x){ return !x.choice; });
-   if(its.some(function(x){ return x.qty > 1 || x.rem.length || x.add.length; })){ arProcess(cands[c], false); return true; }
+   if(its.some(function(x){ return x.qty > 1 || x.rem.length || x.add.length || x.size === "Maxi" || x.baby; })){ arProcess(cands[c], false); return true; }
   }catch(e){ bpWarn(e); }
  }
  return false;
@@ -18414,9 +18582,8 @@ openCartIngModal = function(key){
  t = String(t || '').trim();
  if(fin && !vDone){
  vDone = true;
- var added = false;
- try{ added = bpmVoiceAdd(t); }catch(e){ bpWarn(e); added = false; }
- if(added){ M.q = ''; $('#bpmQ').value = ''; renderMenu(); return; }
+ var mode = bpVoiceSmartFinal(t);
+        if(mode !== 'search'){ M.q = ''; $('#bpmQ').value = ''; renderMenu(); return; }
  }
  M.q = t; $('#bpmQ').value = t; renderMenu();
  }, function(on){ b.classList.toggle('on', on); if(!on) M.rec = null; });
@@ -19559,13 +19726,13 @@ openCartIngModal = function(key){
  window.bpHalfAdd = function(parts, qty, size){
   var sv = {mode: G.mode, slots: G.slots, mods: G.mods, size: G.size, qty: G.qty, note: G.note, priceOv: G.priceOv, menuAdd: G.menuAdd};
   try{
-   G.mode = 'mm'; G.slots = parts.map(function(x){ return x.p; }); G.size = size || 'Normale'; G.priceOv = null; G.menuAdd = 0; G.note = '';
-   G.mods = parts.map(function(x){ return (x.rem && x.rem.length) ? {added: new Set(), removed: new Set(x.rem), other: []} : null; });
+   var __md = parts.length === 2 ? 'mm' : 'g' + parts.length; G.mode = __md; G.slots = parts.map(function(x){ return x.p; }); G.size = size || 'Normale'; G.priceOv = null; G.menuAdd = 0; G.note = '';
+   G.mods = parts.map(function(x){ return ((x.rem && x.rem.length) || (x.add && x.add.length)) ? {added: new Set(x.add || []), removed: new Set(x.rem || []), other: []} : null; });
    if(G.size === 'Maxi' && !maxiOk()) G.size = 'Normale';
    var price = gPrice(); if(price == null) return false;
-   var sel = G.slots.slice(), names = sel.map(function(p){ return p.name; }), fr = GM.mm.fr;
-   var name = 'Pizza ' + GM.mm.label + ': ' + names.map(function(n, i){ return fr + ' ' + n + gModTxt(i); }).join(' / ');
-   var key = ['g', 'mm', G.size, sel.map(function(p){ return p.id; }).join('+'), '', name].join('|'), ex = cart.get(key);
+   var sel = G.slots.slice(), names = sel.map(function(p){ return p.name; }), fr = GM[__md].fr;
+   var name = 'Pizza ' + GM[__md].label + ': ' + names.map(function(n, i){ return fr + ' ' + n + gModTxt(i); }).join(' / ');
+   var key = ['g', __md, G.size, sel.map(function(p){ return p.id; }).join('+'), '', name].join('|'), ex = cart.get(key);
    if(ex) ex.qty += (qty || 1);
    else cart.set(key, {menu_id: null, name: name, category: sel[0].category || 'Pizza', baseDesc: '', size: G.size, basePrice: price, extraPrice: 0, price: price, qty: (qty || 1), removedIngs: [], addedIngs: [], itemNote: ''});
    return true;
@@ -27105,7 +27272,7 @@ html:not(.x) body #userBar button#thermalToggleBtn.ap-off,#thermalToggleBtn.ap-o
  parsed = {baseName: parsed.baseName, mods: rest};
  }
  var big = false; try{ big = !isMaxi && (bpRcBigDrink(parsed.baseName) || (isDrink && volMl >= 1000)); }catch(e){}
- R.tag = isMaxi ? 'MAXI' : (big ? 'XL' : '');
+ R.tag = isMaxi ? 'MAXI' : (sz === 'baby' ? 'BABY' : (big ? 'XL' : ''));
  var isMenuFlag = false; try{ isMenuFlag = !!(window.bpIsMenu && bpIsMenu(parsed)); }catch(e){}
  var mk = ''; try{ mk = bpRcMenuKind(parsed); }catch(e){}
  var g = null; try{ g = bpGustiInfo(parsed.baseName); }catch(e){}
@@ -27316,7 +27483,7 @@ function vsDoc(d, VS, title){
 
  /* articoli, raggruppati come nella ricevuta a video */
  var sec = function(title, n, arr, sub, pre, post){
- if(title === 'PIZZE') d.bar(title, String(n), {b: 1, h: 2, pad: 2}); else d.hdr(title, String(n));
+ d.bar(title, String(n), {b: 1, h: 2, pad: 2}); /* tutte le sezioni = barra bianco su nero col numero */
  if(sub) d.p(sub, {f: 'B'});
  if(pre) pre();
  arr.forEach(function(i){
@@ -27466,7 +27633,7 @@ try{
  detailLines(d, inf, true);
  if(extraTag) d.p(' >> ' + extraTag, {b: 1});
  }
- var sec = function(title, n, fn){ d.hdr(title, String(n)); fn(); d.blank(1); };
+ var sec = function(title, n, fn){ d.bar(title, String(n), {b: 1, h: 2, pad: 2}); fn(); d.blank(1); };
 
  /* ---- intestazione: nome, numero giornaliero, tipo e orario in grande ---- */
  try{ window.bpShop.docKitHead(d); }catch(e){ d.rule('='); d.bar('COMANDA CUCINA', '', {c: 1, b: 1, w: 2, h: 2}); d.rule('='); }
@@ -35098,7 +35265,7 @@ body.qs-lock{overflow:hidden}
   (v.removedIngs||[]).forEach(function(x){h+='<span class="cf-md r">− SENZA '+esc(x)+'</span>';});
   (v.addedIngs||[]).forEach(function(x){h+='<span class="cf-md a">+ '+esc(x)+'</span>';});
   }
-  if(v.itemNote)h+='<span class="cf-md n">📝 '+esc(v.itemNote)+'</span>';return h;
+  if(v.itemNote)h+='<span class="cf-md n">📝 '+(/^\s*baby\s*$/i.test(String(v.itemNote))?'(baby)':esc(v.itemNote))+'</span>';return h;
  }
  var root=null,resolver=null;
  function confirmUI(dup){
@@ -35117,7 +35284,7 @@ body.qs-lock{overflow:hidden}
    var icon=ty==='Consegna'?'🛵':ty==='Tavolo'?'🍽️':'🛍️';
    var ed=false;try{ed=!!editingOrderId;}catch(e){}
    var items='';cart.forEach(function(v){
-    var isM=!!v.menu,sz=v.size==='Maxi'?'<span class="tg">XL</span>':'';
+    var isM=!!v.menu,sz=v.size==='Maxi'?'<span class="tg">XL</span>':(v.size==='Baby'?'<span class="tg">BABY</span>':'');
     items+='<div class="cf-it"><div class="cf-q">'+v.qty+'×</div><div class="cf-nm">'+esc(v.name)+(isM?'<span class="tg">MENU</span>':'')+sz+modsHtml(v)+'</div><div class="cf-pr">'+euro(Math.round(v.price*v.qty*100)/100)+'</div></div>';});
    var dupH='';
    if(dup){dupH='<div class="cf-dup">⚠️ '+(dup.kind==='same'?'ORDINE IDENTICO già inserito':'Questo cliente ha già un ordine aperto')+' (#'+esc(String(dup.o.id))+', '+Math.max(1,Math.round(dup.mins))+' min fa) · '+(dup.kind==='same'?'الأوردر ده متسجّل قبل كده':'العميل عنده أوردر مفتوح')+'</div>';}
