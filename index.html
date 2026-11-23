@@ -40447,6 +40447,7 @@ if(hasDoc){ setInterval(function(){ try{ refresh(); mount(); }catch(e){} }, 1500
     if((m = t.match(new RegExp("\\b" + plat + "[,\\s]+(" + C + "(?:\\s+" + C + ")?)")))){ var c2 = cleanTail(m[1]); if(c2 && okName(c2.split(" ")[0])) return c2; }
     if((m = t.match(new RegExp("\\b(" + C + "(?:\\s+" + C + ")?)[,\\s]+" + plat + "\\b")))){ var c3 = cleanTail(m[1]); if(c3) return c3; }
     if((m = t.match(new RegExp("\\bper\\s+(" + C + ")(?=[\\s,.]*(?:numero|telefono|tel\\b|cell|\\d))")))){ if(okName(m[1])) return m[1]; }
+    if((m = t.match(/\bper\s+([a-zà-ù'’]{3,})(?=\s*,?\s*(?:numero\b|telefono\b|tel\b|cell|via\b|viale\b|piazza\b|corso\b|\d{6,}))/i))){ if(okName(m[1])) return m[1].charAt(0).toUpperCase() + m[1].slice(1).toLowerCase(); }
     if((m = t.match(new RegExp("\\btavol[oa](?:\\s+\\d+)?[,\\s]+(" + C + ")\\b")))){ if(okName(m[1])) return m[1]; }
     if((m = t.match(new RegExp("\\b(" + C + ")[,\\s]+(?:via|viale|piazza|piazzale|corso)\\b")))){ if(okName(m[1])) return m[1]; }
     return "";
@@ -40641,6 +40642,7 @@ if(hasDoc){ setInterval(function(){ try{ refresh(); mount(); }catch(e){} }, 1500
       var ad = g("address");
       if(ad && ad.value){
         var am = t.match(/\b((?:via|viale|piazza|piazzale|corso|largo|vicolo|strada)\s+(?:[A-Za-zÀ-ùà-ù'’.]+\s+){0,4}?\d{1,4})\s*\/\s*([A-Za-z])\b/i);
+        if(!am && /\d$/.test(ad.value)){ var sm = t.match(/\b((?:via|viale|piazza|piazzale|corso|largo|vicolo|strada)\s+(?:[A-Za-zÀ-ùà-ù'’.]+\s+){0,4}?\d{1,4})\s+([A-DF-Ha-df-h]|E)\b(?!['’]?\s*[a-zà-ù])/); if(sm){ ad.value = sm[1].replace(/^./, function(c){ return c.toUpperCase(); }) + " " + sm[2].toUpperCase(); } }
         if(am && ad.value.indexOf("/") < 0){ var base = am[1].replace(/^./, function(c){ return c.toUpperCase(); }); ad.value = base + "/" + am[2].toUpperCase(); }
       }
       /* nome in fondo alla frase ("... per le 7 Amicasto") */
@@ -41066,6 +41068,74 @@ body.dark-mode #bpKzBar .kz-l,body.dark-mode #bpKzBar b{color:#e2e8f0}
   window.addEventListener('resize', later); window.addEventListener('orientationchange', function(){ setTimeout(later, 300); });
   var wasVis = false;
   setInterval(function(){ try{ ensure(); var v = visible(cols()); if(v && !wasVis) later(); wasVis = v; }catch(e){} }, 1000);
+})();
+</script>
+<script id="bp-voicelog">
+/* Log voce: salva ogni trascrizione + cosa ha capito il programma + cosa è stato davvero salvato (correzioni). Solo su questo dispositivo (localStorage). */
+(function(){
+  var KEY = "bp_voice_log_v1", MAX = 300;
+  function load(){ try{ return JSON.parse(localStorage.getItem(KEY) || "[]") || []; }catch(e){ return []; } }
+  function save(a){ try{ localStorage.setItem(KEY, JSON.stringify(a.slice(-MAX))); }catch(e){} paint(); }
+  function v(id){ var e = document.getElementById(id); return e ? String(e.value || "") : ""; }
+  function snap(){
+    var items = [];
+    try{ items = [...cart.values()].map(function(x){ return {name: x.name, size: x.size, qty: x.qty, price: x.price, removed: x.removedIngs || [], added: x.addedIngs || [], note: x.itemNote || ""}; }); }catch(e){}
+    return {customer: v("customer"), phone: v("phone"), address: v("address"), type: v("type"), payment: v("payment"), notes: v("notes"), items: items};
+  }
+  var pending = null; /* indice/id della voce in attesa di essere salvata */
+  function record(text){
+    text = String(text || "").trim(); if(!text) return;
+    var a = load(), last = a[a.length - 1];
+    var lang = ""; try{ lang = bpVoiceLang(); }catch(e){}
+    if(last && !last.order_id && last.text === text){ last.parsed = snap(); }
+    else { a.push({id: Date.now(), ts: new Date().toISOString(), lang: lang, text: text, parsed: snap(), final: null, order_id: null}); }
+    pending = a[a.length - 1].id; save(a);
+  }
+  /* dopo l'estrazione */
+  try{
+    var __rfe = runFullOrderExtraction;
+    runFullOrderExtraction = async function(){
+      var text = ""; try{ text = document.getElementById("voiceSmartInput").value; }catch(e){}
+      var r = await __rfe.apply(this, arguments);
+      setTimeout(function(){ try{ record(text); }catch(e){} }, 500);
+      return r;
+    };
+  }catch(e){}
+  /* appena prima del salvataggio: cosa c'è davvero nell'ordine (= dopo le tue correzioni) */
+  document.addEventListener("click", function(e){
+    try{
+      if(!e.target.closest || !e.target.closest("#saveOrder") || !pending) return;
+      var a = load(), x = a.filter(function(z){ return z.id === pending; })[0];
+      if(x){ x.final = snap(); x.saved_at = new Date().toISOString(); x.saved_id_before = window.__lastSavedOrderId || null; save(a); }
+    }catch(er){}
+  }, true);
+  /* numero ordine dopo il salvataggio */
+  setInterval(function(){
+    try{
+      var id = window.__lastSavedOrderId; if(!id || !pending) return;
+      var a = load(), x = a.filter(function(z){ return z.id === pending; })[0];
+      if(x && x.final && !x.order_id && id !== x.saved_id_before){ x.order_id = id; save(a); pending = null; }
+    }catch(er){}
+  }, 1000);
+  function exportLog(){
+    var a = load(); if(!a.length){ alert("Log vuoto"); return; }
+    var s = JSON.stringify(a, null, 1), d = new Date(), nm = "voice_log_" + d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0") + ".json";
+    try{ var b = new Blob([s], {type: "application/json"}), u = URL.createObjectURL(b), l = document.createElement("a"); l.href = u; l.download = nm; document.body.appendChild(l); l.click(); l.remove(); setTimeout(function(){ URL.revokeObjectURL(u); }, 2000); }catch(e){}
+    try{ if(navigator.clipboard) navigator.clipboard.writeText(s); }catch(e){}
+  }
+  function paint(){
+    var b = document.getElementById("bpVlogBtn"); if(b) b.textContent = "🗂️ Log voce (" + load().length + ")";
+  }
+  function mount(){
+    var ta = document.getElementById("voiceSmartInput"); if(!ta || document.getElementById("bpVlogBtn")) return;
+    var w = document.createElement("div"); w.style.cssText = "display:flex;gap:6px;margin:6px 0;flex-wrap:wrap";
+    var b = document.createElement("button"); b.type = "button"; b.id = "bpVlogBtn"; b.className = "secondary"; b.onclick = exportLog;
+    var c = document.createElement("button"); c.type = "button"; c.className = "secondary"; c.textContent = "🗑️"; c.title = "Svuota log";
+    c.onclick = function(){ if(confirm("Svuotare il log voce?")){ save([]); } };
+    w.appendChild(b); w.appendChild(c); ta.parentNode.insertBefore(w, ta.nextSibling); paint();
+  }
+  mount(); setTimeout(mount, 1500); setTimeout(mount, 4000);
+  window.bpVoiceLog = {load: load, export: exportLog, clear: function(){ save([]); }};
 })();
 </script>
 </body>
