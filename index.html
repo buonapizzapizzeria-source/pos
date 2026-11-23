@@ -8862,7 +8862,7 @@ Se la foto e' lo scontrino/comanda di una piattaforma di consegna (logo o scritt
 - \`orario\`: se c'e' "Arrivo previsto del rider" usa quell'ora (HH:MM), altrimenti l'orario di ritiro/consegna indicato. "Effettuato" e' solo l'ora in cui il cliente ha ordinato: NON usarlo come orario. Il numero dopo "#" in grande (es. #8974) e' il numero ordine.
 - \`cliente\`: il nome cliente stampato (es. "Gian C"). \`indirizzo\`: se sotto "Dettagli cliente" e' stampato l'indirizzo di consegna, scrivilo nel formato "Via Nome Civico, CAP Citta'" (es. se e' stampato "36 Via San Rocco" / "26855" / "Lodi Vecchio" scrivi "Via San Rocco 36, 26855 Lodi Vecchio"). Nota: sulle piattaforme il numero civico e' spesso PRIMA del nome della via: riordinalo. NON includere la riga "Citofono" e il nome del cliente nell'indirizzo. Se non c'e' nessun indirizzo scrivi "". Non inventarlo mai. \`note\`: solo istruzioni utili (es. "NO POSATE"); se c'e' la riga "Citofono: X" aggiungi "citofono X" (es. "citofono Cornalba").
 - Telefoni sulle piattaforme (possono essere DUE): \`telefono_piattaforma\` = il numero della piattaforma/intermediario, di solito stampato dopo "Per contattare il cliente chiama:" (spesso con un codice di verifica), scritto con cifre e spazi come stampato (es. "02 9475 7275"), "" se non c'e'. \`codice_verifica\` = il codice dopo "codice di verifica" (es. "790 512 915"), "" se non c'e'. \`telefono\` = SOLO il numero diretto del cliente, se e' stampato separatamente; NON mettere qui il numero della piattaforma. Se e' presente un solo numero ed e' quello della piattaforma, \`telefono\` resta "".
-- \`righe\`: TUTTI i prodotti dello scontrino (anche salse, bibite, fritti), con la quantita' di ogni riga ("2x" = quantita 2) e il nome copiato dal menu se esiste. Nelle righe delle piattaforme "Con X" = modifica "+X" e "Senza X" = modifica "-X": separa SEMPRE ogni modifica con una virgola (es. "+cipolla, -piccante", mai "+cipolla -piccante"). NON trattare "Numero di prodotti", "Totale" o le intestazioni di categoria (es. "BEVANDE (4)") come prodotti.
+- \`righe\`: TUTTI i prodotti dello scontrino (anche salse, bibite, fritti), con la quantita' di ogni riga ("2x" = quantita 2) e il nome copiato dal menu se esiste. Nelle righe delle piattaforme "Con X" = modifica "+X" e "Senza X" = modifica "-X": separa SEMPRE ogni modifica con una virgola (es. "+cipolla, -piccante", mai "+cipolla -piccante"). Le SALSE stampate come righe a se' (sezione \"SALSE\" della piattaforma, o \"KETCHUP\"/\"MAIONESE\" con prezzo 0,00 sullo scontrino interno) sono BUSTINE singole: ogni salsa e' una riga autonoma con il suo nome (es. nome \"Ketchup\", quantita 2) e MAI una modifica (\`modifiche\`) di un panino, piadina o pizza, anche se nell'ordine ci sono panini/pizze. Solo se la salsa e' scritta DENTRO la riga di un panino (\"con maionese\") e' una modifica. NON trattare "Numero di prodotti", "Totale" o le intestazioni di categoria (es. "BEVANDE (4)") come prodotti.
 Uno scontrino di piattaforma e' sempre un ordine valido: ordine_presente = true.
 
 ### FORMATO JSON DI RISPOSTA RICHIESTO:
@@ -9039,6 +9039,17 @@ function gemLev(a, b){
 function gemMatchInfo(name, menu){
  const n = gemNorm(name);
  if(!n) return { prod: null, sure: false };
+ /* SALSE SINGOLE (Ketchup, Maionese...) = Bustine: se la riga e' solo una salsa (senza panino/pizza), prendila dalla categoria Bustine del menu, mai come ingrediente/extra */
+ try{
+  const __sw = n.replace(/^(?:bustin[ae]|dose|salsa|salse)\s+(?:di\s+)?/, '').trim();
+  if(/^(ketchup|ketch up|catchup|maionese|mayo|mayonese|senape|bbq|barbecue|salsa rosa|salsa piccante|salsa yogurt|harissa|tahina)$/.test(__sw)){
+   const __b = menu.filter(p => /bustin/.test(gemNorm(p.category || '')));
+   const __kw = __sw.replace(/\s+/g, '').replace('catchup', 'ketchup').replace('mayonese', 'maionese').replace('mayo', 'maionese');
+   const __hit = __b.find(p => gemNorm(p.name).replace(/\s+/g, '').replace(/^bustin[ae]/, '').indexOf(__kw) >= 0)
+              || __b.find(p => gemNorm(p.name).replace(/\s+/g, '').indexOf(__kw) >= 0);
+   if(__hit) return { prod: __hit, sure: true };
+  }
+ }catch(_e){}
  const alId = gemAliasLoad()[n]; // nome appreso in precedenza
  if(alId != null){ const ap = menu.find(p => String(p.id) === String(alId)); if(ap) return { prod: ap, sure: true }; }
  const exact = menu.find(p => gemNorm(p.name) === n);
@@ -40352,7 +40363,7 @@ function refresh(){
   if(root && !root.classList.contains('hidden') && root.classList.contains('pk-tm')){
     var pk = $('#ovPick'); var top = $('#pkTop');
     if(!pk && top){ pk = document.createElement('div'); pk.id = 'ovPick'; top.parentNode.insertBefore(pk, top); bind(pk); }
-    if(pk) put(pk, '<div class="ov-sum"><span>🔥 ' + summary(v) + '</span><button type="button" class="ov-btn ov-open" data-ovopen="1">Pannello forno</button></div><div class="ov-row">' + chipsHtml(v, 12, true) + '</div>');
+    if(pk) put(pk, '<div class="ov-pk-h"><span class="ov-pk-t">🔥 FORNO<small>الفرن</small></span><button type="button" class="ov-btn ov-open" data-ovopen="1">Pannello forno ›</button></div><div class="ov-pk-sum">' + summary(v) + '</div><div class="ov-row">' + chipsHtml(v, 12, true) + '</div>');
   } else { var old = $('#ovPick'); if(old && old.parentNode) old.parentNode.removeChild(old); }
   if(ov) paintPanel();
 }
@@ -40682,5 +40693,35 @@ if(hasDoc){ setInterval(function(){ try{ refresh(); mount(); }catch(e){} }, 1500
 })();
 </script>
 
+<style id="bpOvPickCss">
+/* ===== Pannello forno nel selettore orario: card distinta, schermo diviso, ✖ rosso grande ===== */
+html body #ovPick{margin:10px 12px 14px;padding:0;border:3px solid #e8590c;border-radius:18px;background:linear-gradient(180deg,#fff4e5,#ffe8cc);box-shadow:0 6px 16px rgba(232,89,12,.28);overflow:hidden;color:#231815}
+html body #ovPick .ov-pk-h{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 12px;background:linear-gradient(90deg,#c2410c,#ea580c 60%,#f59e0b);color:#fff}
+html body #ovPick .ov-pk-t{font-size:16px;font-weight:900;letter-spacing:.3px;white-space:nowrap}
+html body #ovPick .ov-pk-t small{font-size:13px;font-weight:800;opacity:.92;margin-inline-start:8px}
+html body #ovPick .ov-pk-h .ov-btn{flex:none;margin:0;background:#231815;color:#fff;border:2px solid rgba(255,255,255,.55);border-radius:12px;padding:8px 14px;min-height:38px;font-size:14px;font-weight:900;white-space:nowrap}
+html body #ovPick .ov-pk-sum{display:block;padding:10px 12px 0;font-size:15px;font-weight:800;line-height:1.5;overflow-wrap:anywhere}
+html body #ovPick .ov-pk-sum .ov-btn{display:inline-block;margin:4px 0 0 8px}
+html body #ovPick .ov-row{padding:10px 12px 12px;gap:7px}
+html body #pkRoot.pk-tm .pk-head{box-shadow:inset 0 3px 0 #f1d9b5}
+html body #pkRoot.pk-tm .pk-title{flex:1 1 calc(100% - 68px)!important}
+html body #pkRoot.pk-tm #pkClose{min-width:50px!important;width:50px!important;min-height:46px!important;height:46px!important;padding:0!important;display:flex!important;align-items:center;justify-content:center;border-radius:14px!important;background:#d92d20!important;border:2px solid #b42318!important;color:#fff!important;font-size:24px!important;font-weight:900!important;line-height:1!important;box-shadow:0 3px 8px rgba(185,28,28,.4)!important}
+html body #pkRoot.pk-tm #pkClose:active{transform:scale(.94);background:#b42318!important}
+#bpOven .ov-x{background:#d92d20;color:#fff;border-radius:14px;font-size:24px;line-height:1;padding:8px 18px;min-width:56px;min-height:48px;box-shadow:0 3px 8px rgba(185,28,28,.4)}
+@media (orientation:landscape) and (min-width:900px) and (min-height:561px){
+ html body #pkRoot.pk-tm .pk-sheet{display:grid!important;grid-template-columns:minmax(300px,36%) minmax(0,1fr);align-content:start;max-width:1240px;border-radius:20px!important}
+ html body #pkRoot.pk-tm .pk-head,html body #pkRoot.pk-tm .pk-strip,html body #pkRoot.pk-tm .pk-quick,html body #pkRoot.pk-tm .pk-selbar,html body #pkRoot.pk-tm .pk-top,html body #pkRoot.pk-tm .pk-msg,html body #pkRoot.pk-tm .pk-body,html body #pkRoot.pk-tm .pk-foot{grid-column:2}
+ html body #pkRoot.pk-tm #ovPick{grid-column:1;grid-row:1 / span 8;align-self:stretch;margin:12px;overflow:auto}
+ html body #ovPick .ov-row{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));align-content:start;overflow:visible;gap:8px}
+ html body #ovPick .ov-row .ov-c:first-child{grid-column:1/-1}
+ html body #ovPick .ov-c{min-width:0;padding:9px 6px;font-size:17px}
+}
+@media (orientation:landscape) and (max-height:560px){
+ html body #ovPick{margin:4px 8px 6px}
+ html body #ovPick .ov-pk-h{padding:5px 10px}
+ html body #ovPick .ov-pk-sum{padding:6px 10px 0;font-size:13px}
+ html body #ovPick .ov-row{padding:6px 10px 8px}
+}
+</style>
 </body>
 </html>
