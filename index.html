@@ -40726,5 +40726,347 @@ html body #pkRoot.pk-tm #pkClose:active{transform:scale(.94);background:#b42318!
  html body #ovPick .ov-row{padding:6px 10px 8px}
 }
 </style>
+<style id="bpV4Css">
+/* =====================================================================
+   v4 · 1) ORDINI: barra superiore riprogettata (pillola filtri · Giro · Aggiorna · Pizzaiolo · Forno)
+   ===================================================================== */
+html body #ordersTab{--hd-h:46px;--hd-r:14px;--hd-bd:#e6d9c3}
+html body #ordersTab .topline{display:grid!important;grid-template-columns:1fr 1fr!important;gap:10px!important;align-items:stretch!important;margin:0 0 12px!important}
+html body #ordersTab .topline>div:first-child{grid-column:1/-1}
+html body #ordersTab .topline h1{font-size:23px!important;font-weight:900!important;letter-spacing:-.2px;line-height:1.15!important}
+html body #ordersTab .topline>div:nth-child(2){grid-column:1/-1;display:flex!important;flex-wrap:wrap!important;gap:8px!important;align-items:stretch!important;width:100%}
+/* pillola filtri */
+html body #ordersTab .topline #bpFiltHead{flex:1 1 0;min-width:0;margin:0!important}
+html body #ordersTab .topline #bpFiltHead .fh-btn{min-height:var(--hd-h)!important;height:var(--hd-h);padding:0 14px!important;border:1.5px solid var(--hd-bd)!important;border-radius:var(--hd-r)!important;background:#fff!important;box-shadow:0 1px 2px rgba(16,24,40,.06),inset 0 -2px 0 rgba(0,0,0,.02);gap:10px!important;font-size:13px!important}
+html body #ordersTab .topline #bpFiltHead .fh-pill{padding:4px 11px!important;font-size:12.5px!important;font-weight:800!important}
+html body #ordersTab .topline #bpFiltHead .fh-arr{font-size:13px}
+/* Giro */
+html body #ordersTab .topline button[onclick*="selectReadyDeliveries"]{flex:0 0 auto;min-height:var(--hd-h)!important;height:var(--hd-h);padding:0 20px!important;border:0!important;border-radius:var(--hd-r)!important;font-size:15px!important;font-weight:900!important;letter-spacing:.2px;color:#fff!important;background:linear-gradient(180deg,#3b82f6,#1d4ed8)!important;box-shadow:0 5px 12px rgba(29,78,216,.30),inset 0 1px 0 rgba(255,255,255,.25)!important;display:inline-flex;align-items:center;justify-content:center;gap:7px}
+/* Aggiorna */
+html body #ordersTab .topline button[onclick="loadOrders()"]{flex:0 0 var(--hd-h);width:var(--hd-h);min-width:var(--hd-h);min-height:var(--hd-h)!important;height:var(--hd-h);padding:0!important;border:1.5px solid var(--hd-bd)!important;border-radius:var(--hd-r)!important;background:#fff!important;color:#344054!important;font-size:19px!important;display:inline-flex;align-items:center;justify-content:center;box-shadow:0 1px 2px rgba(16,24,40,.06)!important}
+html body #ordersTab .topline button[onclick="loadOrders()"]:active{background:#f4eadb!important}
+/* ordinamento (compare solo quando la pillola e' aperta) */
+html body #ordersTab .topline .sort-toggle-bar{flex:1 1 100%;order:9;display:flex;gap:4px;padding:4px;border-radius:12px;background:rgba(127,127,127,.14)}
+html body #ordersTab .topline .sort-toggle-bar button{flex:1;min-height:36px!important;border-radius:9px!important}
+/* Schermo pizzaiolo · Forno */
+html body #ordersTab .topline button.pz-open,html body #ordersTab .topline button.ov-open2{min-height:50px!important;height:50px;padding:0 14px!important;border:0!important;border-radius:var(--hd-r)!important;font-size:15px!important;font-weight:900!important;color:#fff!important;display:flex!important;align-items:center;justify-content:center;gap:8px;white-space:nowrap!important;letter-spacing:.2px;transition:transform .12s ease,filter .12s ease}
+html body #ordersTab .topline button.pz-open{background:linear-gradient(180deg,#475467,#1d2939)!important;box-shadow:0 5px 12px rgba(16,24,40,.28),inset 0 1px 0 rgba(255,255,255,.18)!important}
+html body #ordersTab .topline button.ov-open2{background:linear-gradient(180deg,#fb923c,#c2410c)!important;box-shadow:0 5px 12px rgba(194,65,12,.32),inset 0 1px 0 rgba(255,255,255,.28)!important}
+html body #ordersTab .topline button.pz-open:active,html body #ordersTab .topline button.ov-open2:active,html body #ordersTab .topline button[onclick*="selectReadyDeliveries"]:active{transform:scale(.97);filter:brightness(.94)}
+@media (min-width:900px){
+ html body #ordersTab .topline{grid-template-columns:minmax(0,1fr) auto auto auto!important;align-items:center!important}
+ html body #ordersTab .topline>div:first-child{grid-column:auto}
+ html body #ordersTab .topline>div:nth-child(2){grid-column:auto;width:auto;flex-wrap:nowrap!important}
+ html body #ordersTab .topline #bpFiltHead{min-width:260px}
+ html body #ordersTab .topline button.pz-open,html body #ordersTab .topline button.ov-open2{height:var(--hd-h);min-height:var(--hd-h)!important;padding:0 18px!important}
+}
+body.dark-mode #ordersTab{--hd-bd:#334155}
+body.dark-mode #ordersTab .topline #bpFiltHead .fh-btn,body.dark-mode #ordersTab .topline button[onclick="loadOrders()"]{background:#1e293b!important;color:#f8fafc!important}
+
+/* =====================================================================
+   v4 · 2) NUOVO ORDINE: pulsante "Piano orari" + pannello carico per fascia
+   ===================================================================== */
+#bpPlanBtn{display:flex;align-items:center;gap:12px;width:100%;margin:8px 0 10px;padding:9px 14px;min-height:56px;border:0;border-radius:16px;cursor:pointer;text-align:start;color:#fff;background:linear-gradient(135deg,#1d2939 0%,#344054 55%,#c2410c 140%);box-shadow:0 6px 14px rgba(16,24,40,.25),inset 0 1px 0 rgba(255,255,255,.14);-webkit-tap-highlight-color:transparent}
+#bpPlanBtn:active{transform:scale(.985);filter:brightness(.95)}
+#bpPlanBtn .pb-ic{flex:0 0 38px;height:38px;border-radius:12px;background:rgba(255,255,255,.14);display:flex;align-items:center;justify-content:center;font-size:21px}
+#bpPlanBtn .pb-tx{flex:1 1 auto;min-width:0;display:flex;flex-direction:column;gap:2px}
+#bpPlanBtn .pb-tx b{font-size:15px;font-weight:900;letter-spacing:.2px}
+#bpPlanBtn .pb-tx b i{font-style:normal;font-weight:800;opacity:.75;margin-inline-start:6px;font-size:13px}
+#bpPlanBtn .pb-sum{font-size:12.5px;font-weight:700;opacity:.92;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#bpPlanBtn .pb-ch{flex:0 0 auto;font-size:26px;line-height:1;opacity:.8}
+#bpPlan{position:fixed;inset:0;z-index:2147483000;background:rgba(15,23,42,.58);display:flex;align-items:flex-end;justify-content:center;-webkit-tap-highlight-color:transparent}
+#bpPlan .pl-sh{width:min(760px,100%);max-height:90vh;max-height:90dvh;background:#fffaf1;color:#1d1209;border-radius:24px 24px 0 0;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 -10px 40px rgba(0,0,0,.35);padding-bottom:env(safe-area-inset-bottom,0)}
+@media (min-width:900px){#bpPlan{align-items:center}#bpPlan .pl-sh{border-radius:24px;max-height:86vh}}
+#bpPlan .pl-h{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:13px 16px;background:linear-gradient(90deg,#c2410c,#ea580c 60%,#f59e0b);color:#fff}
+#bpPlan .pl-h h3{margin:0;font-size:17px;font-weight:900}
+#bpPlan .pl-h h3 small{font-size:13px;font-weight:800;opacity:.9;margin-inline-start:8px}
+#bpPlan .pl-x{flex:none;width:40px;height:40px;border:0;border-radius:12px;background:rgba(0,0,0,.28);color:#fff;font-size:20px;font-weight:900;cursor:pointer}
+#bpPlan .pl-tools{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:10px 14px 6px}
+#bpPlan .pl-seg{display:flex;gap:3px;padding:3px;border-radius:12px;background:rgba(0,0,0,.07)}
+#bpPlan .pl-seg button{border:0;background:transparent;min-height:34px;padding:0 13px;border-radius:9px;font-size:13.5px;font-weight:800;color:#475467;cursor:pointer}
+#bpPlan .pl-seg button.on{background:#1d2939;color:#fff;box-shadow:0 1px 4px rgba(0,0,0,.25)}
+#bpPlan .pl-asap{margin-inline-start:auto;min-height:38px;padding:0 14px;border:0;border-radius:12px;font-size:14px;font-weight:900;color:#fff;background:linear-gradient(180deg,#ef4444,#b42318);cursor:pointer}
+#bpPlan .pl-cart{margin:2px 14px 8px;padding:7px 12px;border-radius:12px;background:#e6f0f8;border:1.5px solid #1f6fa8;font-size:13px;font-weight:800;color:#0b3a5e;display:flex;flex-wrap:wrap;gap:4px 10px;align-items:center}
+#bpPlan .pl-list{overflow-y:auto;-webkit-overflow-scrolling:touch;padding:4px 12px 12px;display:flex;flex-direction:column;gap:8px}
+#bpPlan .pl-r{position:relative;display:grid;grid-template-columns:auto 1fr auto;gap:6px 12px;align-items:center;padding:10px 12px 12px;border-radius:16px;background:#fff;border:1.5px solid #eadfcd;border-inline-start:7px solid #16a34a;cursor:pointer}
+#bpPlan .pl-r.a{border-inline-start-color:#f59e0b;background:#fffbeb}
+#bpPlan .pl-r.f{border-inline-start-color:#dc2626;background:#fef3f2}
+#bpPlan .pl-r.sel{outline:3px solid #1f6fa8;outline-offset:1px}
+#bpPlan .pl-r.now .pl-t::after{content:"ORA";display:block;font-size:10px;font-weight:900;color:#c2410c;letter-spacing:.6px;margin-top:1px}
+#bpPlan .pl-t{font-size:23px;font-weight:900;line-height:1;font-variant-numeric:tabular-nums}
+#bpPlan .pl-t small{display:block;font-size:11px;font-weight:800;color:#667085;margin-top:2px}
+#bpPlan .pl-b{display:flex;flex-wrap:wrap;gap:5px 6px;min-width:0}
+#bpPlan .pl-c{display:inline-flex;align-items:center;gap:4px;padding:4px 9px;border-radius:999px;background:#f2e8d6;font-size:14.5px;font-weight:900;white-space:nowrap}
+#bpPlan .pl-c.o{background:#1d2939;color:#fff}
+#bpPlan .pl-c.p{background:#fde7d0;color:#9a3412}
+#bpPlan .pl-c.k{background:#e4efdd;color:#26591a}
+#bpPlan .pl-c.f{background:#fff1b8;color:#7a5200}
+#bpPlan .pl-c.d{background:#dbeafe;color:#1e40af}
+#bpPlan .pl-free{font-size:14px;font-weight:800;color:#16794b}
+#bpPlan .pl-i{flex:none;width:36px;height:36px;border:0;border-radius:10px;background:rgba(0,0,0,.07);color:#475467;font-size:15px;font-weight:900;cursor:pointer}
+#bpPlan .pl-bar{grid-column:1/-1;height:6px;border-radius:99px;background:rgba(0,0,0,.08);overflow:hidden}
+#bpPlan .pl-bar i{display:block;height:100%;border-radius:99px;background:#16a34a}
+#bpPlan .pl-r.a .pl-bar i{background:#f59e0b}
+#bpPlan .pl-r.f .pl-bar i{background:#dc2626}
+#bpPlan .pl-ex{grid-column:1/-1;display:none;flex-direction:column;gap:4px;font-size:13px;font-weight:700;color:#344054;border-top:1px dashed #d0c3ac;padding-top:6px}
+#bpPlan .pl-r.open .pl-ex{display:flex}
+#bpPlan .pl-ex div{display:flex;flex-wrap:wrap;gap:3px 8px;align-items:center}
+#bpPlan .pl-ex b{color:#1d1209}
+#bpPlan .pl-hint{padding:8px 16px 10px;font-size:12px;font-weight:700;color:#667085;border-top:1px solid #eadfcd;background:#fff6e8}
+body.dark-mode #bpPlan .pl-sh{background:#1e293b;color:#f8fafc}
+body.dark-mode #bpPlan .pl-r{background:#0f172a;border-color:#334155;color:#f8fafc}
+body.dark-mode #bpPlan .pl-r.a{background:#2a2410}
+body.dark-mode #bpPlan .pl-r.f{background:#2c1513}
+body.dark-mode #bpPlan .pl-hint{background:#162033;color:#94a3b8;border-color:#334155}
+
+/* =====================================================================
+   v4 · 3) CUCINA (pagina normale): zoom + / − + adatta automatico
+   ===================================================================== */
+#bpKzBar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:0 0 10px;padding:6px 8px;border-radius:14px;background:rgba(127,127,127,.14)}
+#bpKzBar .kz-l{font-size:12.5px;font-weight:900;color:#475467;padding:0 4px}
+#bpKzBar button{min-width:44px;min-height:40px;padding:0 12px;border:0;border-radius:11px;background:#fff;color:#1d2939;font-size:18px;font-weight:900;box-shadow:0 1px 3px rgba(16,24,40,.18);cursor:pointer}
+#bpKzBar button:active{transform:scale(.95)}
+#bpKzBar button.kz-t{font-size:13.5px}
+#bpKzBar button.on{background:#1d2939;color:#fff}
+#bpKzBar b{min-width:54px;text-align:center;font-size:15px;font-weight:900;font-variant-numeric:tabular-nums}
+body.dark-mode #bpKzBar .kz-l,body.dark-mode #bpKzBar b{color:#e2e8f0}
+</style>
+<script id="bpV4Js">
+/* ===== v4 · Piano orari (carrello) ===== */
+(function(){
+  if(window.__bpPlan) return; window.__bpPlan = 1;
+  var LS = 'bp_plan_gran', SLOT = 15 * 60000, sheet = null, timer = 0, openRows = {};
+  function $(s, r){ return (r || document).querySelector(s); }
+  function esc(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+  function pad(n){ return n < 10 ? '0' + n : '' + n; }
+  function hhmm(ms){ var d = new Date(ms); return pad(d.getHours()) + ':' + pad(d.getMinutes()); }
+  function dayStart(ms){ var d = new Date(ms); d.setHours(0, 0, 0, 0); return d.getTime(); }
+  function H(){ return window.__pz && window.__pz.h; }
+  function cap(){ try{ return window.__ov.cap(); }catch(e){ return 12; } }
+  function gran(){ var g = 0; try{ g = Number(localStorage.getItem(LS)); }catch(e){} return (g === 30 || g === 60) ? g : 15; }
+  function setGran(g){ try{ localStorage.setItem(LS, String(g)); }catch(e){} }
+  function selDay(){
+    try{ var cb = $('#orderIsScheduled'), dt = $('#orderScheduledDate');
+      if(cb && cb.checked && dt && dt.value){ var p = dt.value.split('-'); return new Date(+p[0], +p[1] - 1, +p[2]).getTime(); } }catch(e){}
+    return dayStart(Date.now());
+  }
+  function selTime(){ try{ return getSelectedDeliveryTime(); }catch(e){ return 'Prima possibile'; } }
+  function editingId(){ try{ return (typeof editingOrderId !== 'undefined' && editingOrderId) ? editingOrderId : null; }catch(e){ return null; } }
+  function toast(m){ try{ var h = H(); if(h && h.toast) h.toast(m); }catch(e){} }
+
+  /* ---- classificazione righe: pizza / panino(kebab,piadina) / fritti / bibite ---- */
+  var SAUCE = /^(ketchup|maionese|senape|barbecue|bbq|salsa(\s\w+)?|tabasco|harissa|posate|pane)\b/;
+  function kcat(nm){
+    if(/piadin/.test(nm)) return 'panino';
+    if(/calzon/.test(nm)) return 'pizza';
+    if(/pizz[^|]*kebab|kebab[^|]*pizz/.test(nm)) return 'pizza';
+    if(/panin|kebab|kebap|burger|durum|falafel/.test(nm)) return 'panino';
+    return 'pizza';
+  }
+  function addItem(c, i){
+    try{ if(bpIsSvc(i.product_name)) return; }catch(e){}
+    var q = Number(i.quantity || 1), base, nm;
+    try{ base = splitProductAndMods(i.product_name).baseName; }catch(e){ base = String(i.product_name || ''); }
+    nm = (base + ' ' + (i.size || '')).toLowerCase().trim();
+    if(SAUCE.test(nm)) return;
+    var mu = 0, fd = {f: 0, d: 0};
+    try{ mu = bpMenuUnits(i) || 0; }catch(e){}
+    try{ fd = bpItemFD(i) || fd; }catch(e){}
+    if(mu > 0){ c.fritti += fd.f || 0; c.bibite += fd.d || 0; c[kcat(nm.replace(/^men[uù]\s+/, ''))] += q; }
+    else if(fd.d > 0) c.bibite += fd.d;
+    else if(fd.f > 0) c.fritti += fd.f;
+    else c[kcat(nm)] += q;
+  }
+  function zero(){ return {pizza: 0, panino: 0, fritti: 0, bibite: 0}; }
+  function countOrder(o){ var c = zero(), h = H(), its = []; try{ its = h.itemsOf(o.id) || []; }catch(e){} its.forEach(function(i){ addItem(c, i); }); return c; }
+  function countCart(){
+    var c = zero();
+    try{ cart.forEach(function(x){ addItem(c, {product_name: x.name, size: x.size, quantity: x.qty}); }); }catch(e){}
+    return c;
+  }
+
+  /* ---- costruzione fasce ---- */
+  function build(g){
+    var h = H(); if(!h) return null;
+    var now = Date.now(), day = selDay(), ex = editingId(), G = g * 60000, isToday = day === dayStart(now), map = {}, last = 0;
+    h.allOrders().forEach(function(o){
+      if(ex != null && String(o.id) === String(ex)) return;
+      var s = h.stOf(o); if(s !== 'Nuovo' && s !== 'In preparazione') return;
+      var tg = h.targetMs(o), cr = o.created_at ? new Date(o.created_at).getTime() : now;
+      var t = isNaN(tg.ms) ? Math.max(now, cr) : tg.ms;
+      if(isToday && t < now) t = now;
+      if(dayStart(t) !== day) return;
+      var c = countOrder(o); if(!(c.pizza + c.panino + c.fritti + c.bibite)) return;
+      var k = Math.floor(t / G) * G, e = map[k] || (map[k] = {s: k, ords: [], c: zero()});
+      e.ords.push({o: o, c: c, t: t});
+      ['pizza', 'panino', 'fritti', 'bibite'].forEach(function(q){ e.c[q] += c[q]; });
+      if(k > last) last = k;
+    });
+    var CLOSE = day + 23 * 3600000, first = 0;
+    for(var kk in map){ kk = Number(kk); if(!first || kk < first) first = kk; }
+    var start = isToday ? Math.floor(now / G) * G : day + 11 * 3600000;
+    if(!isToday && first && first < start) start = first;
+    var end = Math.max(CLOSE, last + G); if(end > day + 24 * 3600000) end = day + 24 * 3600000;
+    if(end <= start) end = Math.min(start + 4 * G, day + 24 * 3600000);
+    var rows = [];
+    for(var s = start; s < end; s += G) rows.push(map[s] || {s: s, ords: [], c: zero()});
+    return {rows: rows, day: day, now: now, G: G, g: g, isToday: isToday};
+  }
+  function level(r, G){
+    var m = G / SLOT, ratio = r.c.pizza / (cap() * m);
+    if(ratio >= 1) return {cl: 'f', pct: 100};
+    if(ratio >= .75 || r.ords.length >= 4 * m) return {cl: 'a', pct: Math.max(ratio * 100, 75)};
+    return {cl: '', pct: Math.max(ratio * 100, r.ords.length ? 8 : 0)};
+  }
+  function chips(c, n){
+    var h = '';
+    if(n != null) h += '<span class="pl-c o">📋 ' + n + '</span>';
+    if(c.pizza) h += '<span class="pl-c p">🍕 ' + c.pizza + '</span>';
+    if(c.panino) h += '<span class="pl-c k">🥙 ' + c.panino + '</span>';
+    if(c.fritti) h += '<span class="pl-c f">🍟 ' + c.fritti + '</span>';
+    if(c.bibite) h += '<span class="pl-c d">🥤 ' + c.bibite + '</span>';
+    return h;
+  }
+
+  /* ---- imposta l'orario nel carrello ---- */
+  function setTimeMs(ms){
+    var now = Date.now(); if(ms < now){ ms = Math.ceil(now / SLOT) * SLOT; }
+    var d = new Date(ms), hh = pad(d.getHours()), mm = pad(d.getMinutes()), h = $('#deliveryHour'), m = $('#deliveryMinute'); if(!h || !m) return;
+    h.value = hh; try{ onTimeHourChange(); }catch(e){}
+    if(!Array.prototype.some.call(m.options, function(o){ return o.value === mm; })){ var op = document.createElement('option'); op.value = mm; op.textContent = ':' + mm; m.appendChild(op); }
+    m.value = mm; try{ refreshTimeBtn(); }catch(e){}
+    [h, m].forEach(function(x){ try{ x.dispatchEvent(new Event('change', {bubbles: true})); }catch(e){} });
+    toast('⏰ Orario impostato: ' + hhmm(ms));
+  }
+  function setAsap(){
+    var h = $('#deliveryHour'); if(!h) return; h.value = 'Prima possibile';
+    try{ onTimeHourChange(); }catch(e){} try{ refreshTimeBtn(); }catch(e){}
+    try{ h.dispatchEvent(new Event('change', {bubbles: true})); }catch(e){}
+    toast('⚡ Subito (Prima possibile)');
+  }
+
+  /* ---- pannello ---- */
+  function paint(){
+    if(!sheet) return;
+    var g = gran(), B = build(g), list = $('.pl-list', sheet), top = list ? list.scrollTop : 0;
+    if(!B){ $('.pl-list', sheet).innerHTML = '<div class="pl-free" style="padding:16px">Dati ordini non ancora disponibili…</div>'; return; }
+    var t = selTime(), sel = null, m = /^(\d{1,2}):(\d{2})$/.exec(t);
+    if(m){ var d = new Date(B.day); d.setHours(+m[1], +m[2], 0, 0); sel = Math.floor(d.getTime() / B.G) * B.G; }
+    var cc = countCart(), has = cc.pizza + cc.panino + cc.fritti + cc.bibite > 0, html = '';
+    $('.pl-cart', sheet).innerHTML = has ? '<span>🧾 Questo ordine:</span>' + chips(cc) : '<span style="opacity:.75">🧾 Carrello vuoto · tocca una fascia per scegliere l\'orario</span>';
+    var curSlot = B.isToday ? Math.floor(B.now / B.G) * B.G : -1;
+    B.rows.forEach(function(r){
+      var lv = level(r, B.G), end = r.s + B.G, n = r.ords.length;
+      html += '<div class="pl-r ' + lv.cl + (r.s === sel ? ' sel' : '') + (r.s === curSlot ? ' now' : '') + (openRows[r.s] ? ' open' : '') + '" data-s="' + r.s + '">' +
+        '<div class="pl-t">' + hhmm(r.s) + (B.g > 15 ? '<small>→ ' + hhmm(end) + '</small>' : '') + '</div>' +
+        '<div class="pl-b">' + (n ? chips(r.c, n) : '<span class="pl-free">✓ libero</span>') + '</div>' +
+        (n ? '<button type="button" class="pl-i" data-i="' + r.s + '">' + (openRows[r.s] ? '▴' : '▾') + '</button>' : '<span></span>') +
+        '<div class="pl-bar"><i style="width:' + Math.min(100, lv.pct) + '%"></i></div>';
+      if(n){
+        html += '<div class="pl-ex">' + r.ords.map(function(x){
+          var nm = ''; try{ nm = x.o.customer_name || ''; }catch(e){}
+          return '<div><b>#' + esc(x.o.id) + '</b> · ' + hhmm(x.t) + (nm ? ' · ' + esc(nm) : '') + ' ' + chips(x.c) + '</div>';
+        }).join('') + '</div>';
+      }
+      html += '</div>';
+    });
+    $('.pl-list', sheet).innerHTML = html; $('.pl-list', sheet).scrollTop = top;
+    $$('.pl-seg button', sheet).forEach(function(b){ b.classList.toggle('on', Number(b.getAttribute('data-g')) === g); });
+  }
+  function $$(s, r){ return Array.prototype.slice.call((r || document).querySelectorAll(s)); }
+  function openSheet(){
+    if(sheet) return;
+    sheet = document.createElement('div'); sheet.id = 'bpPlan'; sheet.className = 'no-print';
+    sheet.innerHTML = '<div class="pl-sh"><div class="pl-h"><h3>🗓️ Piano orari<small>المواعيد</small></h3><button type="button" class="pl-x" data-x="1">✕</button></div>' +
+      '<div class="pl-tools"><div class="pl-seg"><button type="button" data-g="15">15\'</button><button type="button" data-g="30">30\'</button><button type="button" data-g="60">1 ora</button></div><button type="button" class="pl-asap" data-asap="1">⚡ Subito</button></div>' +
+      '<div class="pl-cart"></div><div class="pl-list"></div>' +
+      '<div class="pl-hint">📋 ordini · 🍕 pizze · 🥙 panini/kebab/piadine · 🍟 fritti · 🥤 bibite — solo ordini Nuovo / In preparazione. Tocca una fascia per usarla come orario, ▾ per vedere gli ordini.</div></div>';
+    document.body.appendChild(sheet);
+    sheet.addEventListener('click', function(e){
+      var t;
+      if(e.target === sheet || e.target.closest('[data-x]')){ closeSheet(); return; }
+      if((t = e.target.closest('[data-g]'))){ setGran(Number(t.getAttribute('data-g'))); openRows = {}; paint(); return; }
+      if(e.target.closest('[data-asap]')){ setAsap(); closeSheet(); return; }
+      if((t = e.target.closest('[data-i]'))){ var s = t.getAttribute('data-i'); openRows[s] = !openRows[s]; paint(); return; }
+      if((t = e.target.closest('.pl-r'))){ setTimeMs(Number(t.getAttribute('data-s'))); closeSheet(); }
+    });
+    paint(); timer = setInterval(function(){ try{ paint(); }catch(e){} }, 3000);
+  }
+  function closeSheet(){ if(!sheet) return; clearInterval(timer); sheet.remove(); sheet = null; try{ refreshBtn(); }catch(e){} }
+
+  /* ---- pulsante in cima al carrello ---- */
+  function btnSummary(){
+    var B = build(15); if(!B) return 'Tocca per vedere gli orari occupati';
+    var lim = B.now + 60 * 60000, c = zero(), n = 0;
+    B.rows.forEach(function(r){ if(r.s < lim && r.ords.length){ n += r.ords.length; ['pizza', 'panino', 'fritti', 'bibite'].forEach(function(q){ c[q] += r.c[q]; }); } });
+    if(!n) return 'Prossima ora: libero ✓';
+    var s = 'Prossima ora: ' + n + ' ordin' + (n === 1 ? 'e' : 'i');
+    if(c.pizza) s += ' · 🍕' + c.pizza; if(c.panino) s += ' · 🥙' + c.panino; if(c.fritti) s += ' · 🍟' + c.fritti;
+    return s;
+  }
+  function refreshBtn(){ var s = $('#bpPlanSum'); if(s){ var t = btnSummary(); if(s.textContent !== t) s.textContent = t; } }
+  function ensureBtn(){
+    var cartEl = document.getElementById('cart'), panel = cartEl && cartEl.closest('section.panel'), tl = panel && panel.querySelector('.topline');
+    if(!tl) return;
+    var b = document.getElementById('bpPlanBtn');
+    if(!b){
+      b = document.createElement('button'); b.type = 'button'; b.id = 'bpPlanBtn';
+      b.innerHTML = '<span class="pb-ic">🗓️</span><span class="pb-tx"><b>Piano orari<i>المواعيد</i></b><span class="pb-sum" id="bpPlanSum">…</span></span><span class="pb-ch">›</span>';
+      b.addEventListener('click', openSheet);
+    }
+    if(tl.nextElementSibling !== b) tl.parentNode.insertBefore(b, tl.nextSibling);
+    refreshBtn();
+  }
+  setInterval(function(){ try{ ensureBtn(); }catch(e){} }, 1500);
+  window.__bpPlan = {open: openSheet, close: closeSheet, build: build};
+})();
+
+/* ===== v4 · Cucina (pagina normale): zoom + / − + adatta automatico ===== */
+(function(){
+  if(window.__bpKz) return; window.__bpKz = 1;
+  var KEY = 'bp_kz_v1', MIN = .5, MAX = 1.5, st = {z: 1, auto: true}, deb = 0, obs = null, obsEl = null;
+  try{ var s = JSON.parse(localStorage.getItem(KEY) || 'null'); if(s && typeof s.z === 'number'){ st.z = Math.min(MAX, Math.max(MIN, s.z)); st.auto = s.auto !== false; } }catch(e){}
+  function save(){ try{ localStorage.setItem(KEY, JSON.stringify(st)); }catch(e){} }
+  function cols(){ return document.getElementById('kitchenCols'); }
+  function visible(c){ return !!(c && c.offsetParent !== null); }
+  function label(){
+    var v = document.getElementById('bpKzV'); if(v) v.textContent = Math.round(st.z * 100) + '%';
+    var a = document.querySelector('#bpKzBar [data-kz="auto"]'); if(a) a.classList.toggle('on', st.auto);
+  }
+  function apply(){ var c = cols(); if(c) c.style.zoom = String(st.z); label(); }
+  function fit(){
+    var c = cols(); if(!visible(c)) return;
+    var reserve = window.innerWidth < 900 ? 92 : 20, z = MAX;
+    c.style.zoom = String(z);
+    var top = c.getBoundingClientRect().top + window.scrollY;
+    for(; z >= MIN - .001; z -= .05){
+      c.style.zoom = String(z);
+      if(top + c.getBoundingClientRect().height <= window.innerHeight - reserve) break;
+    }
+    st.z = Math.round(Math.min(MAX, Math.max(MIN, z)) * 100) / 100; apply(); save();
+  }
+  function later(){ clearTimeout(deb); deb = setTimeout(function(){ if(st.auto) fit(); }, 250); }
+  function step(d){ st.auto = false; st.z = Math.round(Math.min(MAX, Math.max(MIN, st.z + d)) * 100) / 100; apply(); save(); }
+  function ensure(){
+    var c = cols(); if(!c) return;
+    var bar = document.getElementById('bpKzBar');
+    if(!bar){
+      bar = document.createElement('div'); bar.id = 'bpKzBar';
+      bar.innerHTML = '<span class="kz-l">🔍 Zoom</span><button type="button" data-kz="-" aria-label="Riduci">−</button><b id="bpKzV">100%</b><button type="button" data-kz="+" aria-label="Ingrandisci">+</button><button type="button" class="kz-t" data-kz="auto">⤢ Auto</button><button type="button" class="kz-t" data-kz="1">100%</button>';
+      bar.addEventListener('click', function(e){
+        var t = e.target.closest('[data-kz]'); if(!t) return; var k = t.getAttribute('data-kz');
+        if(k === '-') step(-.1); else if(k === '+') step(.1);
+        else if(k === '1'){ st.auto = false; st.z = 1; apply(); save(); }
+        else if(k === 'auto'){ st.auto = !st.auto; save(); if(st.auto) fit(); else label(); }
+      });
+    }
+    if(c.previousElementSibling !== bar) c.parentNode.insertBefore(bar, c);
+    if(obsEl !== c){ if(obs) obs.disconnect(); obsEl = c; obs = new MutationObserver(later); obs.observe(c, {childList: true, subtree: true}); apply(); later(); }
+  }
+  window.addEventListener('resize', later); window.addEventListener('orientationchange', function(){ setTimeout(later, 300); });
+  var wasVis = false;
+  setInterval(function(){ try{ ensure(); var v = visible(cols()); if(v && !wasVis) later(); wasVis = v; }catch(e){} }, 1000);
+})();
+</script>
 </body>
 </html>
