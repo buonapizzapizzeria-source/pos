@@ -4649,6 +4649,9 @@ a,label,summary,[role="button"],[onclick],[data-tab],.tabs button,#bpNav *,#bpMo
  0
  </span>
  </button>
+ <button data-tab="pizzaiolo" onclick="if(window.bpOpenPizzaioloScreen)bpOpenPizzaioloScreen()" type="button">
+ 🔥 Pizzaiolo
+ </button>
  <button data-tab="menu" onclick="switchTab('menu')" type="button">
  🍕 Gestione Menu
  <span class="badge-count" id="menuCountBadge">
@@ -14139,7 +14142,7 @@ try{
 /* ---------- SEZIONE 24: ruoli, storia ordine, schermata cucina (v31) ---------- */
 try{
 var BP_ROLE = 'cashier';
-var BP_TABS = {manager:['new','orders','kitchen','menu','all','cassa','credit','drivers','purchases','settings'], cashier:['new','orders','kitchen','all','credit','drivers'], kitchen:['kitchen','orders'], driver:['orders'], viewer:['orders','kitchen','all']};
+var BP_TABS = {manager:['new','orders','kitchen','pizzaiolo','menu','all','cassa','credit','drivers','purchases','settings'], cashier:['new','orders','kitchen','pizzaiolo','all','credit','drivers'], kitchen:['kitchen','pizzaiolo','orders'], driver:['orders'], viewer:['orders','kitchen','pizzaiolo','all']};
 var BP_HOME = {manager:'new', cashier:'new', kitchen:'kitchen', driver:'orders', viewer:'orders'};
 function bpApplyRole(role){
  if(!BP_TABS[role]) role = 'cashier';
@@ -18034,8 +18037,8 @@ openCartIngModal = function(key){
  function vib(){ try{ if(navigator.vibrate) navigator.vibrate(12); }catch(e){} }
 
  /* ---------- 1) NAVIGAZIONE A ICONE ---------- */
- var NAV = [['new','🛒','Nuovo'],['orders','📋','Ordini'],['kitchen','👨‍🍳','Cucina'],['cassa','💰','Cassa'],['menu','🍕','Menu'],['all','🕒','Storico'],['credit','💳','Da pagare'],['drivers','🛵','Autisti'],['purchases','🧾','Acquisti'],['inventory','📦','Scorte'],['loyalty','👑','Clienti'],['analytics','📊','Report'],['settings','⚙️','Impostazioni']];
- var PRIMARY = {'new':1,'orders':1,'kitchen':1,'cassa':1};
+ var NAV = [['new','🛒','Nuovo'],['orders','📋','Ordini'],['kitchen','👨‍🍳','Cucina'],['pizzaiolo','🔥','Pizzaiolo'],['cassa','💰','Cassa'],['menu','🍕','Menu'],['all','🕒','Storico'],['credit','💳','Da pagare'],['drivers','🛵','Autisti'],['purchases','🧾','Acquisti'],['inventory','📦','Scorte'],['loyalty','👑','Clienti'],['analytics','📊','Report'],['settings','⚙️','Impostazioni']];
+ var PRIMARY = {'new':1,'orders':1,'kitchen':1,'pizzaiolo':1,'cassa':1};
  var nav = document.createElement('nav'); nav.id = 'bpNav'; nav.className = 'no-print hidden';
  var more = document.createElement('div'); more.id = 'bpMore'; more.className = 'hidden no-print';
  document.body.appendChild(nav); document.body.appendChild(more);
@@ -18068,12 +18071,12 @@ openCartIngModal = function(key){
  more.innerHTML = '<div class="sheet">' + sheet + '</div>';
  }
  nav.onclick = function(e){
- var g = e.target.closest('[data-go]'); if(g){ safe(function(){ switchTab(g.getAttribute('data-go')); }); return; }
+ var g = e.target.closest('[data-go]'); if(g){ safe(function(){ var t = g.getAttribute('data-go'); if(t === 'pizzaiolo' && window.bpOpenPizzaioloScreen) window.bpOpenPizzaioloScreen(); else switchTab(t); }); return; }
  if(e.target.closest('[data-more]')) more.classList.toggle('hidden');
  };
  more.onclick = function(e){
  var g = e.target.closest('[data-go]');
- if(g){ more.classList.add('hidden'); safe(function(){ switchTab(g.getAttribute('data-go')); }); }
+ if(g){ more.classList.add('hidden'); safe(function(){ var t = g.getAttribute('data-go'); if(t === 'pizzaiolo' && window.bpOpenPizzaioloScreen) window.bpOpenPizzaioloScreen(); else switchTab(t); }); }
  else if(e.target === more) more.classList.add('hidden');
  };
  var _sw = switchTab;
@@ -40149,7 +40152,7 @@ function openPZ(){
     var s = signature(); force++;
     if(s !== sig || force >= 15){ sig = s; force = 0; checkNew(); paint(); }
   }, 1000);
-  try{ if(pz.requestFullscreen) pz.requestFullscreen().catch(function(){}); }catch(e){}
+  
   try{ if(navigator.wakeLock) navigator.wakeLock.request('screen').then(function(w){ wake = w; }).catch(function(){}); }catch(e){}
 }
 function closePZ(){
@@ -40201,7 +40204,7 @@ function installWrapper(){
 
 /* ---------- ruolo "pizzaiolo" + pulsante di apertura + etichette nella cucina ---------- */
 function installRole(){
-  try{ if(typeof BP_TABS !== 'undefined'){ BP_TABS.pizzaiolo = ['orders', 'kitchen']; BP_HOME.pizzaiolo = 'orders'; } }catch(e){ console.warn('[pz] roles', e); }
+  try{ if(typeof BP_TABS !== 'undefined'){ BP_TABS.pizzaiolo = ['orders', 'kitchen', 'pizzaiolo']; BP_HOME.pizzaiolo = 'orders'; } }catch(e){ console.warn('[pz] roles', e); }
   var prev = window.bpApplyRole;
   if(typeof prev === 'function'){
     var nw = function(role){ var r = prev.apply(this, arguments); if(role === 'pizzaiolo') setTimeout(openPZ, 400); return r; };
