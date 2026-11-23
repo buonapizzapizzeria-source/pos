@@ -39525,72 +39525,106 @@ html body .ss .ss-bd .ss-dough .ss-ch.dtl .dnm{font-size:13px!important}
 </script>
 <style id="bp-pizzaiolo-css">
 html.bp-pz-on,html.bp-pz-on body{overflow:hidden}
-#bpPZ{position:fixed;inset:0;z-index:2147483100;background:#0e1220;color:#f4f2ec;display:flex;flex-direction:column;font-size:calc(16px * var(--pzf,1));font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;padding:env(safe-area-inset-top,0) 0 env(safe-area-inset-bottom,0);-webkit-user-select:none;user-select:none}
+#bpPZ{--bg:#0b0f19;--pn:#111827;--cd:#161d2e;--ln:#26324a;--tx:#f3f4f6;--mu:#9aa6c0;--red:#ef4444;--amb:#f59e0b;--blu:#3b82f6;--grn:#22c55e;--pur:#8b5cf6;
+position:fixed;inset:0;z-index:2147483100;background:var(--bg);color:var(--tx);display:block;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;font-size:calc(16px * var(--pzf,1));font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;padding:env(safe-area-inset-top,0) 0 env(safe-area-inset-bottom,0);-webkit-user-select:none;user-select:none}
 #bpPZ *{box-sizing:border-box}
 #bpPZ button{font:inherit;color:inherit;cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
-#bpPZ .pz-top{display:flex;align-items:center;gap:.6em;padding:.6em .9em;flex-wrap:wrap}
-#bpPZ .pz-clock{font-size:2.6em;font-weight:900;letter-spacing:.02em;line-height:1;font-variant-numeric:tabular-nums}
-#bpPZ .pz-chip2{background:#171d33;border:2px solid #2a3254;border-radius:.8em;padding:.45em .8em;font-weight:800;font-size:1.05em;white-space:nowrap}
-#bpPZ .pz-chip2.warn{border-color:#e0a21a;color:#ffd36b}
-#bpPZ .pz-chip2.bad{border-color:#e5484d;color:#ff8f93}
+/* ----- testata fissa ----- */
+#bpPZ .pz-head{position:sticky;top:0;z-index:5;background:var(--pn);border-bottom:1px solid var(--ln);padding:.5em .8em .55em;box-shadow:0 6px 18px rgba(0,0,0,.45)}
+#bpPZ .pz-h1{display:flex;align-items:center;gap:.5em;flex-wrap:wrap}
+#bpPZ .pz-clock{font-size:2.1em;font-weight:900;letter-spacing:.02em;line-height:1;font-variant-numeric:tabular-nums;margin-inline-end:.15em}
 #bpPZ .pz-sp{flex:1}
-#bpPZ .pz-btn{background:#171d33;border:2px solid #2a3254;border-radius:.8em;padding:.5em .9em;font-weight:800;font-size:1.05em}
-#bpPZ .pz-btn.on{background:#f4f2ec;color:#10131f;border-color:#f4f2ec}
-#bpPZ .pz-btn.sm{padding:.4em .7em;font-size:.95em}
-#bpPZ .pz-warn{margin:0 .9em .4em;padding:.5em .8em;border-radius:.7em;background:#5a2a00;border:2px solid #e0a21a;font-weight:700;font-size:.95em}
-#bpPZ .pz-body{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1fr) 22em;gap:1em;padding:.2em .9em .9em}
-#bpPZ .pz-body.one{grid-template-columns:minmax(0,1fr)}
-@media (max-width:900px),(orientation:portrait){#bpPZ .pz-body{grid-template-columns:minmax(0,1fr);overflow:auto}#bpPZ .pz-side{max-height:none}}
-#bpPZ .pz-main,#bpPZ .pz-side{overflow:auto;min-height:0;-webkit-overflow-scrolling:touch}
-#bpPZ .pz-main{display:flex;flex-direction:column;gap:.7em}
-#bpPZ .pz-main.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(19em,1fr));align-content:start;gap:.8em}
-#bpPZ .pz-side{display:flex;flex-direction:column;gap:.7em}
-#bpPZ .pz-sh{font-size:.8em;letter-spacing:.2em;font-weight:900;color:#a8b0c9;padding:.2em .2em 0}
-#bpPZ .pz-g{display:flex;align-items:center;gap:.9em;background:#1a2038;border:2px solid #2a3254;border-radius:1.1em;padding:.7em .9em}
-#bpPZ .pz-g.now{border-color:#e5484d}
-#bpPZ .pz-g.fin{opacity:.45}
-#bpPZ .pz-qty{min-width:2.2em;height:2.2em;display:flex;align-items:center;justify-content:center;background:#f4f2ec;color:#10131f;border-radius:.6em;font-size:1.7em;font-weight:900;padding:0 .25em}
-#bpPZ .pz-gn{flex:0 1 38%;min-width:7em}
-#bpPZ .pz-gn b{display:block;font-size:1.8em;line-height:1.05;font-weight:900}
-#bpPZ .pz-tag{display:inline-block;margin-top:.3em;padding:.15em .6em;border-radius:99em;font-size:.8em;font-weight:900;background:#c62828;color:#fff}
-#bpPZ .pz-tag.t{background:#0e8a8a}
-#bpPZ .pz-chips{flex:1;display:flex;flex-wrap:wrap;gap:.5em;justify-content:flex-end}
-#bpPZ .pz-chip{display:flex;align-items:center;gap:.6em;border:0;border-radius:.8em;padding:.45em .7em;text-align:left;min-width:8.2em;background:var(--c,#555);color:var(--f,#fff)}
-#bpPZ .pz-chip .tx{display:flex;flex-direction:column;line-height:1.15}
-#bpPZ .pz-chip .tx b{font-size:1.45em;font-weight:900}
-#bpPZ .pz-chip .tx small{font-size:.85em;font-weight:700;opacity:.92}
-#bpPZ .pz-chip .tx i{font-style:normal;font-size:.8em;font-weight:900;margin-top:.15em;background:rgba(0,0,0,.28);border-radius:.4em;padding:.1em .4em}
-#bpPZ .pz-box{margin-left:auto;width:2.1em;height:2.1em;border:.2em solid currentColor;border-radius:.5em;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:1.1em;flex:none}
-#bpPZ .pz-chip.done{opacity:.4}
-#bpPZ .pz-chip.done .tx b{text-decoration:line-through}
-#bpPZ .pz-chip.done .pz-box{background:currentColor}
-#bpPZ .pz-chip.done .pz-box::after{content:"✓";color:var(--c)}
-#bpPZ .pz-card{background:#1a2038;border:2px solid #2a3254;border-radius:1.1em;padding:.7em .8em;display:flex;flex-direction:column;gap:.5em}
-#bpPZ .pz-card.now{border-color:#e5484d}
-#bpPZ .pz-card.ready{border-color:#2fb36a;background:#14301f}
-#bpPZ .pz-ch{display:flex;align-items:center;gap:.6em}
-#bpPZ .pz-pill{background:var(--c);color:var(--f);border-radius:99em;padding:.2em .7em;font-weight:900;font-size:1.1em}
-#bpPZ .pz-ty{color:#a8b0c9;font-weight:700}
-#bpPZ .pz-tm{margin-left:auto;font-size:1.7em;font-weight:900;font-variant-numeric:tabular-nums}
-#bpPZ .pz-bar{height:.6em;border-radius:99em;background:#2a3254;overflow:hidden}
-#bpPZ .pz-bar i{display:block;height:100%;background:#2fb36a}
-#bpPZ .pz-cf{display:flex;align-items:center;gap:.5em;flex-wrap:wrap;font-weight:800}
-#bpPZ .pz-bd{margin-left:auto;padding:.2em .7em;border-radius:99em;font-size:.85em;font-weight:900;background:#2a3254}
-#bpPZ .pz-bd.r{background:#c62828;color:#fff}.pz-bd.y{background:#e0a21a!important;color:#1b1500!important}.pz-bd.g{background:#1f8a3f!important;color:#fff!important}.pz-bd.w{background:#6b4fc9!important;color:#fff!important}
-#bpPZ .pz-kc{font-size:.85em;color:#a8b0c9;font-weight:700}
-#bpPZ .pz-kc.ok{color:#6fe3a0}
-#bpPZ .pz-ln{display:flex;align-items:center;gap:.6em;border:0;border-radius:.8em;background:#232b48;padding:.5em .6em;text-align:left;width:100%}
-#bpPZ .pz-ln .l{flex:1;display:flex;flex-direction:column;line-height:1.15}
-#bpPZ .pz-ln .l b{font-size:1.25em;font-weight:900}
-#bpPZ .pz-ln .l small{font-size:.85em;color:#cfd5ea;font-weight:700}
-#bpPZ .pz-ln .pz-box{color:#f4f2ec}
-#bpPZ .pz-ln.done{opacity:.4}#bpPZ .pz-ln.done .l b{text-decoration:line-through}
-#bpPZ .pz-ln.done .pz-box{background:#f4f2ec}#bpPZ .pz-ln.done .pz-box::after{content:"✓";color:#232b48}
-#bpPZ .pz-go{border:0;border-radius:.8em;padding:.7em .9em;font-weight:900;font-size:1.05em;background:#2fb36a;color:#06210f}
+#bpPZ .pz-chip2{background:#1f2937;border:1px solid #374151;border-radius:.7em;padding:.35em .65em;font-weight:850;font-size:.95em;white-space:nowrap}
+#bpPZ .pz-chip2.todo{background:#172554;border-color:#1d4ed8;color:#bfdbfe}
+#bpPZ .pz-chip2.ok{background:#052e16;border-color:#15803d;color:#86efac}
+#bpPZ .pz-chip2.warn{background:#3b2a07;border-color:var(--amb);color:#fcd34d}
+#bpPZ .pz-chip2.bad{background:#450a0a;border-color:var(--red);color:#fecaca}
+#bpPZ .pz-chip2.late{background:#7f1d1d;border-color:var(--red);color:#fff;animation:pzpulse 1.3s ease-in-out infinite}
+@keyframes pzpulse{0%,100%{box-shadow:0 0 0 0 rgba(239,68,68,.0)}50%{box-shadow:0 0 0 .35em rgba(239,68,68,.35)}}
+#bpPZ .pz-x{background:#b42318;border:1px solid #b42318;border-radius:.7em;padding:.35em .8em;font-weight:900;font-size:1.05em}
+#bpPZ .pz-seg{display:flex;gap:.35em;margin-top:.5em;background:#0b1220;border:1px solid var(--ln);border-radius:.9em;padding:.25em}
+#bpPZ .pz-seg button{flex:1;border:0;border-radius:.7em;background:transparent;color:var(--mu);font-weight:900;font-size:1.02em;padding:.5em .4em}
+#bpPZ .pz-seg button.on{background:#f3f4f6;color:#10131f}
+/* ----- barra strumenti (scorre via con la pagina) ----- */
+#bpPZ .pz-tools{display:flex;gap:.4em;flex-wrap:wrap;padding:.6em .8em 0}
+#bpPZ .pz-btn{background:#1f2937;border:1px solid #374151;border-radius:.7em;padding:.4em .75em;font-weight:800;font-size:.95em}
+#bpPZ .pz-warn{margin:.6em .8em 0;padding:.5em .8em;border-radius:.7em;background:#451a03;border:1px solid var(--amb);font-weight:700;font-size:.92em;color:#fde68a}
+/* ----- corpo ----- */
+#bpPZ .pz-body{padding:.7em .8em 2em;display:flex;flex-direction:column;gap:.9em}
+#bpPZ .pz-cols{display:grid;grid-template-columns:minmax(0,1fr);gap:1.1em;align-items:start}
+@media (min-width:1000px) and (orientation:landscape){#bpPZ .pz-cols.two{grid-template-columns:minmax(0,1fr) 27em}}
+#bpPZ .pz-col{display:flex;flex-direction:column;gap:.7em;min-width:0}
+#bpPZ .pz-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(21em,1fr));gap:.8em;align-items:start}
+@media (max-width:480px){#bpPZ .pz-grid{grid-template-columns:minmax(0,1fr)}}
+#bpPZ .pz-sh{display:flex;align-items:center;justify-content:space-between;gap:.6em;background:#0f1626;border:1px solid #1f2a44;border-radius:.8em;padding:.45em .8em;font-size:.95em;font-weight:900;letter-spacing:.06em;color:#e5e7eb}
+#bpPZ .pz-sh em{font-style:normal;background:#1f2937;border-radius:99em;padding:.05em .75em;font-size:.95em}
+#bpPZ .pz-sh.red{border-color:#7f1d1d;color:#fecaca}#bpPZ .pz-sh.grn{border-color:#14532d;color:#bbf7d0}#bpPZ .pz-sh.blu{border-color:#1e3a8a;color:#bfdbfe}
+/* forno */
+#bpPZ .pz-oven{display:flex;align-items:center;gap:.7em;background:var(--cd);border:1px solid var(--ln);border-radius:.9em;padding:.55em .8em;font-weight:800}
+#bpPZ .pz-oven .bar{flex:1;height:.8em;border-radius:99em;background:#0b1220;overflow:hidden}
+#bpPZ .pz-oven .bar i{display:block;height:100%;border-radius:99em;background:var(--grn)}
+#bpPZ .pz-oven.warn .bar i{background:var(--amb)}#bpPZ .pz-oven.bad .bar i{background:var(--red)}
+#bpPZ .pz-oven small{color:var(--mu);font-weight:700}
+/* ----- gruppi per pizza ----- */
+#bpPZ .pz-g{background:var(--cd);border:2px solid var(--ln);border-inline-start:.5em solid var(--gc,#475569);border-radius:1em;overflow:hidden}
+#bpPZ .pz-g.u-late{--gc:var(--red);border-color:#7f1d1d}#bpPZ .pz-g.u-now{--gc:var(--red)}#bpPZ .pz-g.u-soon{--gc:var(--amb)}#bpPZ .pz-g.u-later{--gc:var(--blu)}
+#bpPZ .pz-g.fin{opacity:.5;--gc:#166534}
+#bpPZ .pz-gh{display:flex;align-items:center;gap:.7em;padding:.7em .8em .5em}
+#bpPZ .pz-qty{min-width:2.3em;height:2.3em;display:flex;align-items:center;justify-content:center;background:var(--gc,#475569);color:#fff;border-radius:.6em;font-size:1.6em;font-weight:900;padding:0 .2em}
+#bpPZ .u-soon .pz-qty{color:#1b1200}
+#bpPZ .pz-gn{flex:1;min-width:0}
+#bpPZ .pz-gn b{display:block;font-size:1.45em;line-height:1.1;font-weight:900;overflow-wrap:anywhere}
+#bpPZ .pz-tag{display:inline-block;margin-top:.25em;padding:.1em .6em;border-radius:99em;font-size:.78em;font-weight:900;background:var(--gc);color:#fff}
+#bpPZ .u-soon .pz-tag{color:#1b1200}
+#bpPZ .pz-rows{display:flex;flex-direction:column;gap:.4em;padding:0 .6em .7em}
+/* riga = una pizza di un ordine */
+#bpPZ .pz-row,#bpPZ .pz-ln{display:flex;align-items:center;gap:.6em;width:100%;text-align:start;border:0;border-inline-start:.4em solid var(--oc,#64748b);border-radius:.8em;background:#1e2740;padding:.55em .6em;min-height:3.4em;position:relative}
+#bpPZ .pz-pill{flex:none;background:var(--oc);color:var(--of);border-radius:.6em;padding:.2em .55em;font-weight:900;font-size:1.25em;font-variant-numeric:tabular-nums}
+#bpPZ .pz-rb,#bpPZ .pz-ln .l{flex:1;min-width:0;display:flex;flex-direction:column;gap:.18em;line-height:1.2}
+#bpPZ .pz-r1,#bpPZ .pz-r2{display:flex;align-items:center;gap:.5em;flex-wrap:wrap}
+#bpPZ .pz-r1 .q{font-size:1.3em;font-weight:900;color:#fbbf24}
+#bpPZ .dst{display:inline-flex;align-items:center;gap:.25em;border-radius:99em;padding:.05em .6em;font-size:.85em;font-weight:900;background:var(--dc);color:#111}
+#bpPZ .cu{font-size:.9em;font-weight:750;color:#cbd5e1}
+#bpPZ .tm{font-size:.9em;font-weight:850;background:#0f172a;border-radius:.5em;padding:.05em .5em}
+#bpPZ .eta{font-size:.85em;font-weight:800;color:var(--mu)}
+#bpPZ .eta.late{color:#fca5a5}#bpPZ .eta.soon{color:#fcd34d}
+#bpPZ .sz{font-style:normal;font-size:.78em;font-weight:900;border-radius:.4em;padding:.05em .5em;background:#7c3aed;color:#fff}
+#bpPZ .sz.b{background:#0e7490}
+#bpPZ .pz-r3{display:flex;flex-wrap:wrap;gap:.2em .7em;font-size:.88em;font-weight:850}
+#bpPZ .m-no{color:#fca5a5}#bpPZ .m-ex{color:#86efac}#bpPZ .m-nt{color:#fde68a}
+#bpPZ .pz-box{flex:none;margin-inline-start:auto;width:2.4em;height:2.4em;border:.2em solid #cbd5e1;border-radius:.6em;display:flex;align-items:center;justify-content:center;font-weight:900;color:#cbd5e1}
+#bpPZ .done{opacity:.45}
+#bpPZ .done .pz-r1 .q,#bpPZ .pz-ln.done .l b{text-decoration:line-through}
+#bpPZ .done .pz-box{background:var(--grn);border-color:var(--grn);color:#052e16}
+#bpPZ .done .pz-box::after{content:"✓"}
+#bpPZ .pz-row.new,#bpPZ .pz-card.new{animation:pznew 1.2s ease-out 4}
+@keyframes pznew{0%,100%{background-color:#1e2740}50%{background-color:#1d4ed8}}
+/* ----- schede ordine (stile biglietto cucina) ----- */
+#bpPZ .pz-card{background:var(--cd);border:2px solid var(--ln);border-inline-start:.5em solid var(--gc,#475569);border-radius:1em;padding:.7em .75em;display:flex;flex-direction:column;gap:.5em}
+#bpPZ .pz-card.u-late{--gc:var(--red);border-color:#7f1d1d}#bpPZ .pz-card.u-now{--gc:var(--red)}#bpPZ .pz-card.u-soon{--gc:var(--amb)}#bpPZ .pz-card.u-later{--gc:var(--blu)}#bpPZ .pz-card.u-wait{--gc:var(--pur);border-color:#4c1d95}
+#bpPZ .pz-card.u-done{--gc:var(--grn);border-color:#14532d;background:#10281c}
+#bpPZ .pz-ch{display:flex;align-items:center;gap:.5em;flex-wrap:wrap}
+#bpPZ .pz-tm{margin-inline-start:auto;font-size:1.5em;font-weight:900;font-variant-numeric:tabular-nums}
+#bpPZ .pz-nt{background:#422006;color:#fde68a;border-radius:.6em;padding:.4em .65em;font-weight:750;font-size:.92em}
+#bpPZ .pz-bar{height:.55em;border-radius:99em;background:#0b1220;overflow:hidden}
+#bpPZ .pz-bar i{display:block;height:100%;background:var(--grn)}
+#bpPZ .pz-cf{display:flex;align-items:center;gap:.5em;flex-wrap:wrap;font-weight:800;font-size:.95em}
+#bpPZ .pz-kc{font-size:.9em;color:var(--mu);font-weight:750}#bpPZ .pz-kc.ok{color:#86efac}
+#bpPZ .pz-bd{margin-inline-start:auto;padding:.2em .7em;border-radius:99em;font-size:.88em;font-weight:900;background:#334155;color:#fff}
+#bpPZ .pz-bd.r{background:#b91c1c}#bpPZ .pz-bd.y{background:var(--amb);color:#1b1200}#bpPZ .pz-bd.b{background:#1d4ed8}#bpPZ .pz-bd.g{background:#15803d}#bpPZ .pz-bd.w{background:#6d28d9}
+#bpPZ .pz-go{border:0;border-radius:.8em;padding:.8em .9em;font-weight:900;font-size:1.08em;background:#15803d;color:#fff}
 #bpPZ .pz-go[disabled]{opacity:.5}
-#bpPZ .pz-foot{color:#8a93b0;font-size:.85em;padding:.2em}
-#bpPZ .pz-empty{margin:auto;color:#8a93b0;font-size:1.4em;font-weight:800;text-align:center;padding:2em}
-#bpPZ .m-no{color:#ffb4b4}#bpPZ .m-ex{color:#9ff0bd}#bpPZ .m-nt{color:#ffe08a}
+#bpPZ .pz-ln{background:#1e2740}
+#bpPZ .pz-ln .l b{font-size:1.15em;font-weight:900;overflow-wrap:anywhere}
+#bpPZ .pz-ln .l small{font-size:.88em;font-weight:850}
+/* legenda */
+#bpPZ .pz-leg{background:#0f1626;border:1px solid #1f2a44;border-radius:.9em;padding:.6em .8em;font-size:.82em;color:#cbd5e1}
+#bpPZ .pz-leg b{display:block;margin-bottom:.4em;letter-spacing:.06em;color:#e5e7eb}
+#bpPZ .pz-lg{display:flex;flex-wrap:wrap;gap:.35em .9em;margin-bottom:.35em}
+#bpPZ .pz-lg span{display:inline-flex;align-items:center;gap:.4em;font-weight:700}
+#bpPZ .pz-lg i{display:inline-block;width:.9em;height:.9em;border-radius:.3em;background:var(--k)}
+#bpPZ .pz-foot{color:#7b88a6;font-size:.82em;padding:.1em .2em}
+#bpPZ .pz-empty{margin:3em auto;color:#8a93b0;font-size:1.4em;font-weight:800;text-align:center;padding:1em}
 #pzToast{position:fixed;left:50%;bottom:6%;transform:translateX(-50%);z-index:2147483600;background:#10131f;color:#fff;border:2px solid #6b4fc9;padding:.7em 1.1em;border-radius:.9em;font:800 16px system-ui;max-width:90vw;text-align:center}
 #bp35KDS .k35-t.pz-wait{outline:3px solid #6b4fc9;outline-offset:-3px}
 #bp35KDS .k35-t.pz-wait .k35-go{display:none!important}
@@ -39769,19 +39803,64 @@ function badge(x, now){
   return '<span class="pz-bd ' + (x.start - now <= 10 * 60000 ? 'y' : 'g') + '">Inizia ' + hhmm(x.start) + '</span>';
 }
 
-/* ---------- HTML ---------- */
-function chipHtml(x, i, n, key){
-  var done = x.d.indexOf(key) >= 0, sz = sizeTag(i), mods = modsHtml(i);
-  return '<button type="button" class="pz-chip' + (done ? ' done' : '') + '" data-a="t" data-o="' + E(x.o.id) + '" data-k="' + E(key) + '" style="--c:' + x.col[0] + ';--f:' + x.col[1] + '">' +
-    '<span class="tx"><b>#' + E(x.o.id) + ' ×' + E(i.quantity || 1) + '</b><small>' + E(x.ds.lab) + '</small>' + (sz ? '<i>' + sz + '</i>' : '') + (mods ? '<small>' + mods + '</small>' : '') + '</span><span class="pz-box"></span></button>';
+/* ---------- HTML (stile schermo cucina: scroll unico, colori con significato) ---------- */
+var newIds = {};
+var DST_COL = {rit: '#fb923c', dom: '#22d3ee', tav: '#2dd4bf', plat: '#f472b6'};
+var RANK = {late: 0, now: 1, soon: 2, later: 3};
+function isFresh(id){ var t = newIds[id]; return !!(t && Date.now() - t < 9000); }
+function fm(n){ n = Math.abs(n); return n >= 60 ? Math.floor(n / 60) + 'h' + pad2(n % 60) : n + '′'; }
+function etaMin(x, now){ return isNaN(x.tg.ms) ? null : Math.round((x.tg.ms - now) / 60000); }
+function urg(x, now){
+  if(x.st === 'Pronto' || (x.all && (!x.kit || x.kd))) return 'done';
+  if(x.all) return 'wait';
+  var e = etaMin(x, now);
+  if(e !== null && e < -2) return 'late';
+  if(x.start <= now) return 'now';
+  if(x.start - now <= 10 * 60000) return 'soon';
+  return 'later';
 }
+function badge(x, now){
+  var u = urg(x, now), e = etaMin(x, now);
+  if(u === 'done') return '<span class="pz-bd g">✅ PRONTO</span>';
+  if(u === 'wait') return '<span class="pz-bd w">⏳ attende cucina</span>';
+  if(u === 'late') return '<span class="pz-bd r">⚠️ RITARDO ' + fm(e) + '</span>';
+  if(u === 'now') return '<span class="pz-bd r">🔥 INIZIA ORA</span>';
+  return '<span class="pz-bd ' + (u === 'soon' ? 'y' : 'b') + '">Inizia ' + hhmm(x.start) + '</span>';
+}
+function custOf(o){ var c = String(o.customer_name || '').trim(); return (c && c !== 'Cliente') ? c : ''; }
+function noteOf(o){ try{ return String(splitTimeAndNotes(o.notes).cleanNotes || '').trim(); }catch(e){ return ''; } }
+function nameHtml(n){ try{ return bpNameHtml(n); }catch(e){ return E(n); } }
+function dstChip(ds){ return '<span class="dst" style="--dc:' + (DST_COL[ds.k] || '#94a3b8') + '">' + ds.ico + ' ' + E(ds.lab) + '</span>'; }
+function szHtml(i){ var s = sizeTag(i); return s ? '<i class="sz' + (s === 'BABY' ? ' b' : '') + '">' + s + '</i>' : ''; }
+function etaHtml(x, now){
+  var e = etaMin(x, now); if(e === null) return '';
+  if(x.st === 'Pronto' || x.all) return '';
+  return e < -2 ? '<span class="eta late">⚠️ ritardo ' + fm(e) + '</span>' : '<span class="eta' + (e <= 10 ? ' soon' : '') + '">⏰ tra ' + fm(Math.max(e, 0)) + '</span>';
+}
+/* riga = una pizza di un ordine (si tocca per segnarla fatta) */
+function rowHtml(x, i, n, key, now){
+  var done = x.d.indexOf(key) >= 0, mods = modsHtml(i), cu = custOf(x.o), nt = noteOf(x.o);
+  return '<button type="button" class="pz-row' + (done ? ' done' : '') + (isFresh(x.o.id) ? ' new' : '') + '" data-a="t" data-o="' + E(x.o.id) + '" data-k="' + E(key) + '" style="--oc:' + x.col[0] + ';--of:' + x.col[1] + '">' +
+    '<span class="pz-pill">#' + E(x.o.id) + '</span><span class="pz-rb">' +
+    '<span class="pz-r1"><b class="q">×' + E(i.quantity || 1) + '</b>' + dstChip(x.ds) + szHtml(i) + (cu ? '<span class="cu">👤 ' + E(cu) + '</span>' : '') + '</span>' +
+    '<span class="pz-r2"><span class="tm">⏰ ' + E(x.tg.lab) + '</span>' + (done ? '' : etaHtml(x, now)) + '</span>' +
+    (mods ? '<span class="pz-r3">' + mods + '</span>' : '') + (nt ? '<span class="pz-r3"><span class="m-nt">📝 ' + E(nt) + '</span></span>' : '') +
+    '</span><span class="pz-box"></span></button>';
+}
+function breadRow(x, now){
+  var dn = x.d.indexOf('pane') >= 0, cu = custOf(x.o), nt = noteOf(x.o);
+  return '<button type="button" class="pz-row' + (dn ? ' done' : '') + (isFresh(x.o.id) ? ' new' : '') + '" data-a="t" data-o="' + E(x.o.id) + '" data-k="pane" style="--oc:' + x.col[0] + ';--of:' + x.col[1] + '">' +
+    '<span class="pz-pill">#' + E(x.o.id) + '</span><span class="pz-rb"><span class="pz-r1"><b class="q" style="font-size:1.05em">' + E(breadTxt(x.o)) + '</b>' + dstChip(x.ds) + (cu ? '<span class="cu">👤 ' + E(cu) + '</span>' : '') + '</span>' +
+    '<span class="pz-r2"><span class="tm">⏰ ' + E(x.tg.lab) + '</span>' + (dn ? '' : etaHtml(x, now)) + '</span>' + (nt ? '<span class="pz-r3"><span class="m-nt">📝 ' + E(nt) + '</span></span>' : '') + '</span><span class="pz-box"></span></button>';
+}
+/* riga dentro la scheda ordine */
 function lineHtml(x, i, n){
-  var key = lineKey(i, n), done = x.d.indexOf(key) >= 0, sz = sizeTag(i), mods = modsHtml(i);
-  return '<button type="button" class="pz-ln' + (done ? ' done' : '') + '" data-a="t" data-o="' + E(x.o.id) + '" data-k="' + E(key) + '"><span class="l"><b>' + E(i.quantity || 1) + '× ' + E(baseName(i)) + (sz ? ' · ' + sz : '') + '</b>' + (mods ? '<small>' + mods + '</small>' : '') + '</span><span class="pz-box"></span></button>';
+  var key = lineKey(i, n), done = x.d.indexOf(key) >= 0, mods = modsHtml(i);
+  return '<button type="button" class="pz-ln' + (done ? ' done' : '') + '" data-a="t" data-o="' + E(x.o.id) + '" data-k="' + E(key) + '" style="--oc:#fbbf24"><span class="l"><b>' + E(i.quantity || 1) + '× ' + nameHtml(baseName(i)) + ' ' + szHtml(i) + '</b>' + (mods ? '<small>' + mods + '</small>' : '') + '</span><span class="pz-box"></span></button>';
 }
 function breadLn(x){
   var done = x.d.indexOf('pane') >= 0;
-  return '<button type="button" class="pz-ln' + (done ? ' done' : '') + '" data-a="t" data-o="' + E(x.o.id) + '" data-k="pane"><span class="l"><b>🥖 PANE · ' + E(breadTxt(x.o)) + '</b><small>da preparare per la cucina</small></span><span class="pz-box"></span></button>';
+  return '<button type="button" class="pz-ln' + (done ? ' done' : '') + '" data-a="t" data-o="' + E(x.o.id) + '" data-k="pane" style="--oc:#fbbf24"><span class="l"><b>🥖 PANE · ' + E(breadTxt(x.o)) + '</b><small>da preparare per la cucina</small></span><span class="pz-box"></span></button>';
 }
 function kitLine(x){
   if(!x.kit) return '';
@@ -39792,88 +39871,109 @@ function goBtn(x){
   return '<button type="button" class="pz-go" data-a="go" data-o="' + E(x.o.id) + '" data-n="' + E(x.ds.go) + '">' + E(x.ds.btn) + '</button>';
 }
 function cardHtml(x, expanded, now){
-  var pct = x.units ? Math.round(x.done * 100 / x.units) : (x.all ? 100 : 0);
-  var h = '<div class="pz-card' + (x.st === 'Pronto' ? ' ready' : (x.start <= now && !x.all ? ' now' : '')) + '">' +
-    '<div class="pz-ch"><span class="pz-pill" style="--c:' + x.col[0] + ';--f:' + x.col[1] + '">#' + E(x.o.id) + '</span><span class="pz-ty">' + x.ds.ico + ' ' + E(x.ds.lab) + '</span><span class="pz-tm">' + E(x.tg.lab) + '</span></div>' +
+  var u = urg(x, now), pct = x.units ? Math.round(x.done * 100 / x.units) : (x.all ? 100 : 0), cu = custOf(x.o), nt = noteOf(x.o);
+  var h = '<div class="pz-card u-' + u + (isFresh(x.o.id) ? ' new' : '') + '">' +
+    '<div class="pz-ch"><span class="pz-pill" style="--oc:' + x.col[0] + ';--of:' + x.col[1] + '">#' + E(x.o.id) + '</span>' + dstChip(x.ds) + '<span class="pz-tm">' + E(x.tg.lab) + '</span></div>' +
+    (cu ? '<div class="cu">👤 ' + E(cu) + '</div>' : '') +
     '<div class="pz-bar"><i style="width:' + pct + '%"></i></div>';
   if(expanded){
     h += x.lines.map(function(i, n){ return lineHtml(x, i, n); }).join('');
     if(x.bread) h += breadLn(x);
   }
-  h += '<div class="pz-cf"><span>' + x.done + '/' + x.units + ' pizze' + (x.bread ? ' · 🥖' : '') + '</span>' + kitLine(x) + badge(x, now) + '</div>' + goBtn(x) + '</div>';
+  if(nt) h += '<div class="pz-nt">📝 ' + E(nt) + '</div>';
+  h += '<div class="pz-cf"><span>🍕 ' + x.done + '/' + x.units + (x.bread ? ' · 🥖' : '') + '</span>' + kitLine(x) + badge(x, now) + '</div>' + goBtn(x) + '</div>';
   return h;
 }
 function groupsHtml(list, now){
   var map = {}, order = [];
   list.forEach(function(x){
-    if(x.st === 'Pronto') return;
+    if(urg(x, now) === 'done') return;
+    var u = urg(x, now);
     x.lines.forEach(function(i, n){
       var nm = baseName(i), g = map[nm];
-      if(!g){ g = map[nm] = {name: nm, chips: [], pend: 0, start: Infinity, dop: false}; order.push(g); }
+      if(!g){ g = map[nm] = {name: nm, html: nameHtml(nm), rows: [], pend: 0, start: Infinity, rank: 9}; order.push(g); }
       var key = lineKey(i, n), done = x.d.indexOf(key) >= 0;
-      g.chips.push(chipHtml(x, i, n, key));
-      if(!done){ g.pend += Number(i.quantity || 1); g.start = Math.min(g.start, x.start); g.first = g.first || x; }
+      g.rows.push(rowHtml(x, i, n, key, now));
+      if(!done){ g.pend += Number(i.quantity || 1); g.start = Math.min(g.start, x.start); g.rank = Math.min(g.rank, RANK[u] === undefined ? 3 : RANK[u]); }
     });
     if(x.bread){
-      var g2 = map['🥖 PANE'] || (map['🥖 PANE'] = {name: '🥖 PANE · panini/piadine', chips: [], pend: 0, start: Infinity}); if(order.indexOf(g2) < 0) order.push(g2);
+      var g2 = map['🥖 PANE'] || (map['🥖 PANE'] = {name: '🥖 PANE', html: '🥖 PANE · panini/piadine', rows: [], pend: 0, start: Infinity, rank: 9}); if(order.indexOf(g2) < 0) order.push(g2);
       var dn = x.d.indexOf('pane') >= 0;
-      g2.chips.push('<button type="button" class="pz-chip' + (dn ? ' done' : '') + '" data-a="t" data-o="' + E(x.o.id) + '" data-k="pane" style="--c:' + x.col[0] + ';--f:' + x.col[1] + '"><span class="tx"><b>#' + E(x.o.id) + '</b><small>' + E(breadTxt(x.o)) + '</small></span><span class="pz-box"></span></button>');
-      if(!dn){ g2.pend += 1; g2.start = Math.min(g2.start, x.start); }
+      g2.rows.push(breadRow(x, now));
+      if(!dn){ g2.pend += 1; g2.start = Math.min(g2.start, x.start); g2.rank = Math.min(g2.rank, RANK[u] === undefined ? 3 : RANK[u]); }
     }
   });
-  order.sort(function(a, b){ return (a.pend === 0) - (b.pend === 0) || a.start - b.start; });
+  order.sort(function(a, b){ return (a.pend === 0) - (b.pend === 0) || a.rank - b.rank || a.start - b.start; });
+  var names = ['late', 'now', 'soon', 'later'];
   return order.map(function(g){
-    var tag = g.pend && g.start <= now ? '<span class="pz-tag">PARTI ORA</span>' : '';
-    return '<div class="pz-g' + (g.pend && g.start <= now ? ' now' : '') + (g.pend ? '' : ' fin') + '"><div class="pz-qty">×' + g.pend + '</div><div class="pz-gn"><b>' + E(g.name) + '</b>' + tag + '</div><div class="pz-chips">' + g.chips.join('') + '</div></div>';
+    var u = g.pend ? names[g.rank] || 'later' : 'fin';
+    var tag = g.pend && (u === 'late' || u === 'now') ? '<span class="pz-tag">' + (u === 'late' ? '⚠️ IN RITARDO' : '🔥 PARTI ORA') + '</span>' : (g.pend && u === 'soon' ? '<span class="pz-tag">⏰ tra poco</span>' : '');
+    return '<div class="pz-g u-' + u + (g.pend ? '' : ' fin') + '"><div class="pz-gh"><div class="pz-qty">×' + g.pend + '</div><div class="pz-gn"><b>' + g.html + '</b>' + tag + '</div></div><div class="pz-rows">' + g.rows.join('') + '</div></div>';
   }).join('');
 }
+function legendHtml(){
+  function s(c, t){ return '<span><i style="--k:' + c + '"></i>' + t + '</span>'; }
+  return '<div class="pz-leg"><b>🎨 COLORI</b>' +
+    '<div class="pz-lg">' + s('#ef4444', 'Rosso: inizia ora / in ritardo') + s('#f59e0b', 'Giallo: tra poco (≤10′)') + s('#3b82f6', 'Blu: più tardi') + s('#8b5cf6', 'Viola: attende la cucina') + s('#22c55e', 'Verde: fatto / pronto') + '</div>' +
+    '<div class="pz-lg">' + s('#fb923c', '🛍️ Ritiro') + s('#22d3ee', '🛵 Domicilio') + s('#2dd4bf', '🍽️ Tavolo') + s('#f472b6', '📲 Piattaforma') + '</div>' +
+    '<div class="pz-lg"><span style="color:#fca5a5">🚫 SENZA</span><span style="color:#86efac">➕ EXTRA</span><span style="color:#fde68a">📝 NOTA</span><span><i style="--k:#7c3aed"></i>MAXI</span><span><i style="--k:#0e7490"></i>BABY</span></div>' +
+    '<div class="pz-foot">Il colore del numero #ordine è solo per riconoscere lo stesso ordine fra le pizze.</div></div>';
+}
+function secHead(cls, t, n){ return '<div class="pz-sh ' + cls + '"><span>' + t + '</span><em>' + n + '</em></div>'; }
 function buildHtml(){
   var now = Date.now(), list = model(), view = ls(K_VIEW) === 'ord' ? 'ord' : 'piz';
-  var pend = 0, forno = 0, cap = Number(ls(K_CAP)) || 12;
+  var pend = 0, forno = 0, cap = Number(ls(K_CAP)) || 12, late = 0, ready = 0;
   var ovc = null; try{ ovc = window.__ov ? window.__ov.current() : null; }catch(e){}
-  list.forEach(function(x){ if(x.st === 'Pronto') return; x.lines.forEach(function(i, n){ if(x.d.indexOf(lineKey(i, n)) < 0){ var q = Number(i.quantity || 1); pend += q; if(x.start <= now + BAKE_WINDOW_MIN * 60000) forno += q; } }); });
+  list.forEach(function(x){
+    var u = urg(x, now); if(u === 'late') late++; if(u === 'done'){ ready++; return; }
+    x.lines.forEach(function(i, n){ if(x.d.indexOf(lineKey(i, n)) < 0){ var q = Number(i.quantity || 1); pend += q; if(x.start <= now + BAKE_WINDOW_MIN * 60000) forno += q; } });
+  });
   if(ovc){ forno = ovc.n; cap = ovc.cap; }
-  var top = '<div class="pz-clock" id="pzClock">' + hhmm(now) + '</div>' +
-    '<div class="pz-chip2">🍕 Pizze: ' + pend + '</div>' +
-    '<button type="button" class="pz-chip2 ' + (forno > cap ? 'bad' : (forno > cap - 2 ? 'warn' : '')) + '" data-a="cap" title="Capacità forno">Forno ' + forno + '/' + cap + ' · ' + BAKE_WINDOW_MIN + ' min</button>' +
-    '<div class="pz-sp"></div>' +
-    '<button type="button" class="pz-btn' + (view === 'piz' ? ' on' : '') + '" data-a="v" data-v="piz">Per pizza</button>' +
-    '<button type="button" class="pz-btn' + (view === 'ord' ? ' on' : '') + '" data-a="v" data-v="ord">Per ordine</button>' +
-    (roleNow() === 'manager' ? '<button type="button" class="pz-btn sm" data-a="enf" title="Collega pizzaiolo e cucina">🔗 ' + (enforceOn() ? 'ON' : 'OFF') + '</button>' : '') +
-    '<button type="button" class="pz-btn sm" data-a="m">A−</button><button type="button" class="pz-btn sm" data-a="p">A+</button>' +
-    '<button type="button" class="pz-btn sm" data-a="fs">⛶</button>' +
-    '<button type="button" class="pz-btn sm" data-a="out" title="Cambia utente">🔄</button>' +
-    '<button type="button" class="pz-btn sm" data-a="x">✕</button>';
+  var fcls = forno > cap ? 'bad' : (forno > cap - 2 ? 'warn' : 'ok');
+  var head = '<div class="pz-h1"><div class="pz-clock" id="pzClock">' + hhmm(now) + '</div>' +
+    '<div class="pz-chip2 todo">🍕 Da fare ' + pend + '</div>' +
+    (ready ? '<div class="pz-chip2 ok">✅ Pronti ' + ready + '</div>' : '') +
+    (late ? '<div class="pz-chip2 late">🚨 ' + late + ' in ritardo</div>' : '') +
+    '<div class="pz-sp"></div><button type="button" class="pz-x" data-a="x">✕</button></div>' +
+    '<div class="pz-seg"><button type="button" class="' + (view === 'piz' ? 'on' : '') + '" data-a="v" data-v="piz">🍕 Per pizza</button><button type="button" class="' + (view === 'ord' ? 'on' : '') + '" data-a="v" data-v="ord">📋 Per ordine</button></div>';
+  var tools = '<button type="button" class="pz-btn" data-a="cap" title="Capacità forno">🔥 Forno ' + forno + '/' + cap + '</button>' +
+    (roleNow() === 'manager' ? '<button type="button" class="pz-btn" data-a="enf" title="Collega pizzaiolo e cucina">🔗 ' + (enforceOn() ? 'ON' : 'OFF') + '</button>' : '') +
+    '<button type="button" class="pz-btn" data-a="m">A−</button><button type="button" class="pz-btn" data-a="p">A+</button>' +
+    '<button type="button" class="pz-btn" data-a="fs">⛶</button>' +
+    '<button type="button" class="pz-btn" data-a="out" title="Cambia utente">🔄</button>';
   var warn = colMissing ? '<div class="pz-warn">⚠️ Colonne pz_done / k_done mancanti: esegui pizzaiolo.sql in Supabase. Per ora i segni valgono solo su questo dispositivo e il collegamento con la cucina non è condiviso.</div>' : '';
-  var main, side = '';
-  if(!list.length){ main = '<div class="pz-empty">🍕 Nessuna pizza da preparare</div>'; }
+  var oven = '<div class="pz-oven ' + fcls + '"><span>🔥 Forno</span><div class="bar"><i style="width:' + Math.min(100, Math.round(forno * 100 / Math.max(cap, 1))) + '%"></i></div><b>' + forno + '/' + cap + '</b><small>prossimi ' + BAKE_WINDOW_MIN + '′</small></div>';
+  var work = list.filter(function(x){ return urg(x, now) !== 'done'; }), done = list.filter(function(x){ return urg(x, now) === 'done'; });
+  var readyHtml = done.length ? secHead('grn', '✅ PRONTI · DA CONSEGNARE', done.length) + done.map(function(x){ return cardHtml(x, false, now); }).join('') : '';
+  var body;
+  if(!list.length){ body = oven + '<div class="pz-empty">🍕 Nessuna pizza da preparare</div>'; }
   else if(view === 'piz'){
-    main = groupsHtml(list, now);
-    side = '<div class="pz-sh">ORDINI · PRONTE</div>' + list.map(function(x){ return cardHtml(x, false, now); }).join('') +
-      '<div class="pz-foot">Tocca il quadratino per segnare la pizza fatta. L\'ordine diventa «Pronto» solo quando il pizzaiolo e la cucina hanno finito entrambi.</div>';
+    body = oven + '<div class="pz-cols two"><div class="pz-col">' + secHead('red', '🍕 PIZZE DA FARE', pend) + (groupsHtml(list, now) || '<div class="pz-empty">✅ Tutto fatto</div>') + '</div>' +
+      '<div class="pz-col">' + (work.length ? secHead('blu', '📋 ORDINI IN LAVORAZIONE', work.length) + work.map(function(x){ return cardHtml(x, false, now); }).join('') : '') + readyHtml + '</div></div>' +
+      '<div class="pz-foot">Tocca la riga (o il quadratino) per segnare la pizza fatta. L\'ordine diventa «Pronto» solo quando il pizzaiolo e la cucina hanno finito entrambi.</div>';
   } else {
-    main = list.map(function(x){ return cardHtml(x, true, now); }).join('');
+    body = oven + (work.length ? secHead('blu', '📋 ORDINI IN LAVORAZIONE', work.length) + '<div class="pz-grid">' + work.map(function(x){ return cardHtml(x, true, now); }).join('') + '</div>' : '') +
+      (done.length ? secHead('grn', '✅ PRONTI · DA CONSEGNARE', done.length) + '<div class="pz-grid">' + done.map(function(x){ return cardHtml(x, false, now); }).join('') + '</div>' : '');
   }
-  return {top: top, warn: warn, main: main, side: side, view: view};
+  body += legendHtml();
+  return {head: head, tools: tools, warn: warn, body: body, view: view};
 }
 
 /* ---------- schermata ---------- */
 function paint(){
   if(!pz) return;
   var m; try{ m = buildHtml(); }catch(e){ console.warn('[pz] render', e); return; }
-  var sc = [$('.pz-main', pz), $('.pz-side', pz)].map(function(n){ return n ? n.scrollTop : 0; });
-  $('.pz-top', pz).innerHTML = m.top; $('.pz-wn', pz).innerHTML = m.warn;
-  var body = $('.pz-body', pz), mn = $('.pz-main', pz), sd = $('.pz-side', pz);
-  body.className = 'pz-body' + (m.view === 'ord' ? ' one' : ''); mn.className = 'pz-main' + (m.view === 'ord' ? ' grid' : '');
-  mn.innerHTML = m.main; sd.innerHTML = m.side; sd.style.display = m.view === 'ord' ? 'none' : '';
-  mn.scrollTop = sc[0]; sd.scrollTop = sc[1];
+  var sc = pz.scrollTop;
+  $('.pz-head', pz).innerHTML = m.head; $('.pz-tools', pz).innerHTML = m.tools; $('.pz-wn', pz).innerHTML = m.warn;
+  $('.pz-body', pz).innerHTML = m.body;
+  pz.scrollTop = sc;
 }
 function signature(){
   return allOrders().map(function(o){ return o.id + '|' + o.status + '|' + (Array.isArray(o.pz_done) ? o.pz_done.join('.') : '') + '|' + (o.k_done ? 1 : 0) + '|' + itemsOf(o.id).length; }).join(',') + '|' + Object.keys(lmap()).length;
 }
 function beep(){ try{ var C = window.AudioContext || window.webkitAudioContext, a = new C(), o = a.createOscillator(), g = a.createGain(); o.connect(g); g.connect(a.destination); o.frequency.value = 880; g.gain.value = .15; o.start(); setTimeout(function(){ try{ o.stop(); a.close(); }catch(e){} }, 350); }catch(e){} }
 function checkNew(){
-  var ids = {}, fresh = false; model().forEach(function(x){ ids[x.o.id] = 1; if(seen && !seen[x.o.id] && x.st !== 'Pronto') fresh = true; });
+  var ids = {}, fresh = false; model().forEach(function(x){ ids[x.o.id] = 1; if(seen && !seen[x.o.id] && x.st !== 'Pronto'){ fresh = true; newIds[x.o.id] = Date.now(); } });
   seen = ids; if(fresh) beep();
 }
 function toastMsg(t){ if(!hasDoc) return; var d = $('#pzToast') || document.createElement('div'); d.id = 'pzToast'; d.textContent = t; document.body.appendChild(d); clearTimeout(d._t); d._t = setTimeout(function(){ if(d.parentNode) d.parentNode.removeChild(d); }, 3500); }
@@ -39881,7 +39981,7 @@ function openPZ(){
   if(pz || !hasDoc) return;
   pz = document.createElement('div'); pz.id = 'bpPZ'; pz.className = 'no-print';
   pz.style.setProperty('--pzf', ls(K_FS) || '1');
-  pz.innerHTML = '<div class="pz-top"></div><div class="pz-wn"></div><div class="pz-body"><div class="pz-main"></div><div class="pz-side"></div></div>';
+  pz.innerHTML = '<div class="pz-head"></div><div class="pz-tools"></div><div class="pz-wn"></div><div class="pz-body"></div>';
   document.body.appendChild(pz); document.documentElement.classList.add('bp-pz-on');
   pz.addEventListener('click', onClick);
   seen = null; sig = ''; paint(); checkNew();
