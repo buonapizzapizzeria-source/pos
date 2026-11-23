@@ -41138,5 +41138,40 @@ body.dark-mode #bpKzBar .kz-l,body.dark-mode #bpKzBar b{color:#e2e8f0}
   window.bpVoiceLog = {load: load, export: exportLog, clear: function(){ save([]); }};
 })();
 </script>
+
+<style id="bpStoricoMasonry">
+/* ===== STORICO · layout a muro (masonry): le schede si incastrano, niente vuoti tra una e l'altra ===== */
+html body #allTab #allOrders{
+  display:block!important;
+  grid-template-columns:none!important;
+  column-width:min(100%,330px)!important;
+  column-gap:14px!important;
+  column-fill:balance!important;
+  gap:0!important;
+  width:100%!important;
+  max-width:none!important;
+}
+html body #allTab #allOrders>*{
+  break-inside:avoid;
+  -webkit-column-break-inside:avoid;
+  page-break-inside:avoid;
+  margin:0 0 14px!important;
+  width:100%!important;
+  box-sizing:border-box;
+}
+html body #allTab #allOrders>.order{
+  border-radius:18px!important;
+  box-shadow:0 1px 2px rgba(16,24,40,.06),0 8px 20px -12px rgba(16,24,40,.22)!important;
+  transition:transform .18s ease,box-shadow .18s ease;
+}
+html body #allTab #allOrders>.order:hover{
+  transform:translateY(-2px);
+  box-shadow:0 2px 4px rgba(16,24,40,.08),0 16px 30px -12px rgba(16,24,40,.30)!important;
+}
+@media (prefers-reduced-motion:reduce){
+  html body #allTab #allOrders>.order{transition:none}
+  html body #allTab #allOrders>.order:hover{transform:none}
+}
+</style>
 </body>
 </html>
