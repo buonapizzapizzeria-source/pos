@@ -39531,10 +39531,10 @@ position:fixed;inset:0;z-index:2147483100;background:var(--bg);color:var(--tx);d
 #bpPZ button{font:inherit;color:inherit;cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
 /* ----- testata fissa ----- */
 #bpPZ .pz-head{position:sticky;top:0;z-index:5;background:var(--pn);border-bottom:1px solid var(--ln);padding:.5em .8em .55em;box-shadow:0 6px 18px rgba(0,0,0,.45)}
-#bpPZ .pz-h1{display:flex;align-items:center;gap:.5em;flex-wrap:wrap}
+#bpPZ .pz-h1{display:flex;align-items:center;gap:.35em;flex-wrap:wrap}
 #bpPZ .pz-clock{font-size:2.1em;font-weight:900;letter-spacing:.02em;line-height:1;font-variant-numeric:tabular-nums;margin-inline-end:.15em}
 #bpPZ .pz-sp{flex:1}
-#bpPZ .pz-chip2{background:#1f2937;border:1px solid #374151;border-radius:.7em;padding:.35em .65em;font-weight:850;font-size:.95em;white-space:nowrap}
+#bpPZ .pz-chip2{background:#1f2937;border:1px solid #374151;border-radius:.7em;padding:.28em .5em;font-weight:850;font-size:.85em;white-space:nowrap}
 #bpPZ .pz-chip2.todo{background:#172554;border-color:#1d4ed8;color:#bfdbfe}
 #bpPZ .pz-chip2.ok{background:#052e16;border-color:#15803d;color:#86efac}
 #bpPZ .pz-chip2.warn{background:#3b2a07;border-color:var(--amb);color:#fcd34d}
@@ -39625,6 +39625,20 @@ position:fixed;inset:0;z-index:2147483100;background:var(--bg);color:var(--tx);d
 #bpPZ .pz-lg i{display:inline-block;width:.9em;height:.9em;border-radius:.3em;background:var(--k)}
 #bpPZ .pz-foot{color:#7b88a6;font-size:.82em;padding:.1em .2em}
 #bpPZ .pz-empty{margin:3em auto;color:#8a93b0;font-size:1.4em;font-weight:800;text-align:center;padding:1em}
+#bpPZ .pz-gd{display:flex;flex-direction:column;gap:.35em}
+#bpPZ .pz-gs{display:flex;align-items:center;gap:.6em;background:var(--cd);border:1px solid var(--ln);border-inline-start:.45em solid var(--grn);border-radius:.8em;padding:.45em .6em}
+#bpPZ .pz-gs.mid{border-inline-start-color:var(--amb)}#bpPZ .pz-gs.full,#bpPZ .pz-gs.bad{border-inline-start-color:var(--red)}
+#bpPZ .pz-gs.bad{background:#2a1215}#bpPZ .pz-gs.cur{outline:2px solid #f3f4f6;outline-offset:-2px}
+#bpPZ .gt{flex:none;width:4.4em;font-weight:900;font-size:1.15em;font-variant-numeric:tabular-nums;line-height:1.1}
+#bpPZ .gt small{display:block;font-size:.62em;color:var(--mu);font-weight:700}
+#bpPZ .gm{flex:1;min-width:0}
+#bpPZ .gb{height:.6em;border-radius:99em;background:#0b1220;overflow:hidden}
+#bpPZ .gb i{display:block;height:100%;background:var(--grn)}#bpPZ .mid .gb i{background:var(--amb)}#bpPZ .full .gb i,#bpPZ .bad .gb i{background:var(--red)}
+#bpPZ .gx2{display:flex;flex-wrap:wrap;gap:.25em;margin-top:.3em;min-height:1.2em}
+#bpPZ .gc{background:#1e2740;border-radius:.4em;padding:.05em .45em;font-size:.82em;font-weight:850}
+#bpPZ .ge{color:#4ade80;font-size:.82em;font-weight:800}
+#bpPZ .gn{flex:none;text-align:end;line-height:1.1}#bpPZ .gn b{font-size:1.15em;font-weight:900}#bpPZ .gn small{display:block;font-size:.78em;font-weight:800;color:var(--mu)}
+#bpPZ .bad .gn small{color:#fca5a5}
 #pzToast{position:fixed;left:50%;bottom:6%;transform:translateX(-50%);z-index:2147483600;background:#10131f;color:#fff;border:2px solid #6b4fc9;padding:.7em 1.1em;border-radius:.9em;font:800 16px system-ui;max-width:90vw;text-align:center}
 #bp35KDS .k35-t.pz-wait{outline:3px solid #6b4fc9;outline-offset:-3px}
 #bp35KDS .k35-t.pz-wait .k35-go{display:none!important}
@@ -39881,7 +39895,7 @@ function cardHtml(x, expanded, now){
     if(x.bread) h += breadLn(x);
   }
   if(nt) h += '<div class="pz-nt">📝 ' + E(nt) + '</div>';
-  h += '<div class="pz-cf"><span>🍕 ' + x.done + '/' + x.units + (x.bread ? ' · 🥖' : '') + '</span>' + kitLine(x) + badge(x, now) + '</div>' + goBtn(x) + '</div>';
+  h += '<div class="pz-cf"><span>🍕 ' + x.done + '/' + x.units + (x.bread ? ' · 🥖' : '') + '</span>' + etaHtml(x, now) + kitLine(x) + badge(x, now) + '</div>' + goBtn(x) + '</div>';
   return h;
 }
 function groupsHtml(list, now){
@@ -39914,10 +39928,39 @@ function groupsHtml(list, now){
 function legendHtml(){
   function s(c, t){ return '<span><i style="--k:' + c + '"></i>' + t + '</span>'; }
   return '<div class="pz-leg"><b>🎨 COLORI</b>' +
-    '<div class="pz-lg">' + s('#ef4444', 'Rosso: inizia ora / in ritardo') + s('#f59e0b', 'Giallo: tra poco (≤10′)') + s('#3b82f6', 'Blu: più tardi') + s('#8b5cf6', 'Viola: attende la cucina') + s('#22c55e', 'Verde: fatto / pronto') + '</div>' +
+    '<div class="pz-lg">' + s('#ef4444', 'Rosso: inizia ora / in ritardo') + s('#f59e0b', 'Giallo: tra poco (≤10′)') + s('#3b82f6', 'Blu: più tardi') + s('#8b5cf6', 'Viola: attende la cucina') + s('#22c55e', 'Verde: fatto / pronto') + '</div>' + '<div class="pz-lg">' + s('#22c55e', 'Fascia forno: libera') + s('#f59e0b', 'Fascia forno: ≥60% piena') + s('#ef4444', 'Fascia forno: piena / oltre') + '</div>' +
     '<div class="pz-lg">' + s('#fb923c', '🛍️ Ritiro') + s('#22d3ee', '🛵 Domicilio') + s('#2dd4bf', '🍽️ Tavolo') + s('#f472b6', '📲 Piattaforma') + '</div>' +
     '<div class="pz-lg"><span style="color:#fca5a5">🚫 SENZA</span><span style="color:#86efac">➕ EXTRA</span><span style="color:#fde68a">📝 NOTA</span><span><i style="--k:#7c3aed"></i>MAXI</span><span><i style="--k:#0e7490"></i>BABY</span></div>' +
     '<div class="pz-foot">Il colore del numero #ordine è solo per riconoscere lo stesso ordine fra le pizze.</div></div>';
+}
+
+/* ---------- guida forno: fasce da 15' (solo informativa, non cambia nessun orario) ---------- */
+function guideHtml(now){
+  var OV = window.__ov; if(!OV || !OV.load) return '';
+  var open = ls('bp_pz_guide') !== '0', SL = 15 * 60000, cap = OV.cap();
+  var d0 = new Date(now); d0.setHours(0, 0, 0, 0); var day = d0.getTime(), map = OV.load(day);
+  var cur = Math.floor(now / SL) * SL, last = cur + 8 * SL, k;
+  for(k in map){ if(k !== '__queue' && Number(k) > last && Number(k) < day + 864e5) last = Number(k); }
+  last = Math.min(last, cur + 16 * SL);
+  var head = '<div class="pz-sh blu" data-a="gd" style="cursor:pointer"><span>🕒 GUIDA FORNO · fasce da 15′</span><em>' + (open ? '▾' : '▸') + ' ' + (map.__queue || 0) + ' pizze</em></div>';
+  if(!open) return head;
+  var rows = '';
+  for(var s = cur; s <= last; s += SL){
+    var e = map[s], n = e ? e.n : 0, free = Math.max(0, cap - n), pct = Math.min(100, Math.round(n * 100 / Math.max(cap, 1)));
+    var cls = n > cap ? 'bad' : (n >= cap ? 'full' : (n >= cap * .6 ? 'mid' : 'low'));
+    var chips = e ? e.list.map(function(x){ return '<span class="gc">#' + E(x.o.id) + ' ×' + x.u + '</span>'; }).join('') : '';
+    rows += '<div class="pz-gs ' + cls + (s === cur ? ' cur' : '') + '"><div class="gt">' + (s === cur ? '<b>ORA</b>' : hhmm(s)) + '<small>' + hhmm(s) + '–' + hhmm(s + SL) + '</small></div>' +
+      '<div class="gm"><div class="gb"><i style="width:' + pct + '%"></i></div><div class="gx2">' + (chips || '<span class="ge">libera</span>') + '</div></div>' +
+      '<div class="gn"><b>' + n + '/' + cap + '</b><small>' + (n > cap ? '+' + (n - cap) + ' oltre' : free + ' liberi') + '</small></div></div>';
+  }
+  return head + '<div class="pz-gd">' + rows + '</div>';
+}
+function nextChip(now, cap){
+  try{
+    var OV = window.__ov; if(!OV || !OV.load) return '';
+    var SL = 900000, d0 = new Date(now); d0.setHours(0, 0, 0, 0); var m = OV.load(d0.getTime()), s = Math.floor(now / SL) * SL + SL, b = (m[s] && m[s].n) || 0;
+    return '<div class="pz-chip2 ' + (b > cap ? 'bad' : (b >= cap * .6 ? 'warn' : 'ok')) + '">⏭ ' + hhmm(s) + ' · ' + b + '/' + cap + (b >= cap ? ' PIENA' : ' · ' + (cap - b) + ' liberi') + '</div>';
+  }catch(e){ return ''; }
 }
 function secHead(cls, t, n){ return '<div class="pz-sh ' + cls + '"><span>' + t + '</span><em>' + n + '</em></div>'; }
 function buildHtml(){
@@ -39934,7 +39977,7 @@ function buildHtml(){
     '<div class="pz-chip2 todo">🍕 Da fare ' + pend + '</div>' +
     (ready ? '<div class="pz-chip2 ok">✅ Pronti ' + ready + '</div>' : '') +
     (late ? '<div class="pz-chip2 late">🚨 ' + late + ' in ritardo</div>' : '') +
-    '<div class="pz-sp"></div><button type="button" class="pz-x" data-a="x">✕</button></div>' +
+    nextChip(now, cap) + '<div class="pz-sp"></div><button type="button" class="pz-x" data-a="x">✕</button></div>' +
     '<div class="pz-seg"><button type="button" class="' + (view === 'piz' ? 'on' : '') + '" data-a="v" data-v="piz">🍕 Per pizza</button><button type="button" class="' + (view === 'ord' ? 'on' : '') + '" data-a="v" data-v="ord">📋 Per ordine</button></div>';
   var tools = '<button type="button" class="pz-btn" data-a="cap" title="Capacità forno">🔥 Forno ' + forno + '/' + cap + '</button>' +
     (roleNow() === 'manager' ? '<button type="button" class="pz-btn" data-a="enf" title="Collega pizzaiolo e cucina">🔗 ' + (enforceOn() ? 'ON' : 'OFF') + '</button>' : '') +
@@ -39945,7 +39988,7 @@ function buildHtml(){
   var oven = '<div class="pz-oven ' + fcls + '"><span>🔥 Forno</span><div class="bar"><i style="width:' + Math.min(100, Math.round(forno * 100 / Math.max(cap, 1))) + '%"></i></div><b>' + forno + '/' + cap + '</b><small>prossimi ' + BAKE_WINDOW_MIN + '′</small></div>';
   var work = list.filter(function(x){ return urg(x, now) !== 'done'; }), done = list.filter(function(x){ return urg(x, now) === 'done'; });
   var readyHtml = done.length ? secHead('grn', '✅ PRONTI · DA CONSEGNARE', done.length) + done.map(function(x){ return cardHtml(x, false, now); }).join('') : '';
-  var body;
+  var body; oven += guideHtml(now);
   if(!list.length){ body = oven + '<div class="pz-empty">🍕 Nessuna pizza da preparare</div>'; }
   else if(view === 'piz'){
     body = oven + '<div class="pz-cols two"><div class="pz-col">' + secHead('red', '🍕 PIZZE DA FARE', pend) + (groupsHtml(list, now) || '<div class="pz-empty">✅ Tutto fatto</div>') + '</div>' +
@@ -40004,6 +40047,7 @@ function onClick(e){
   if(a === 't'){ var oid = b.getAttribute('data-o'), o = findOrder(oid); toggle(o ? o.id : oid, b.getAttribute('data-k')); return; }
   if(a === 'go'){ b.disabled = true; var id = b.getAttribute('data-o'), o2 = findOrder(id); setStatus(o2 ? o2.id : id, b.getAttribute('data-n')).then(function(){ paint(); }, function(){ paint(); }); return; }
   if(a === 'v'){ ls(K_VIEW, b.getAttribute('data-v')); paint(); return; }
+  if(a === 'gd'){ ls('bp_pz_guide', ls('bp_pz_guide') === '0' ? '1' : '0'); paint(); return; }
   if(a === 'x'){ closePZ(); return; }
   if(a === 'out'){ closePZ(); try{ doLogout(); }catch(x){} return; }
   if(a === 'fs'){ try{ if(document.fullscreenElement) document.exitFullscreen(); else pz.requestFullscreen(); }catch(x){} return; }
@@ -40150,7 +40194,7 @@ function summary(v){
   var c = cap(), b = booked(v.map, v.sel), tot = b + v.n, st;
   var ttl = lab(v.sel) + '–' + lab(v.sel + SLOT);
   var head = (v.asap ? '⚡ Subito' : '⏰ ' + selTime()) + ' · fascia ' + ttl + ': ';
-  if(tot <= c) st = '<span class="ov-ok">' + b + (v.n ? ' + ' + v.n + ' = ' : '/') + (v.n ? tot + '/' + c : c) + ' · entra ✅</span>';
+  if(tot <= c) st = '<span class="ov-ok">' + b + (v.n ? ' + ' + v.n + ' = ' : '/') + (v.n ? tot + '/' + c : c) + ' · entra ✅ · restano ' + (c - tot) + '</span>';
   else st = '<span class="ov-bd">' + b + (v.n ? ' + ' + v.n + ' = ' + tot : '') + '/' + c + ' · ' + (b >= c ? 'PIENA' : 'non entra') + ' ⛔</span>' + (v.rec ? ' <button type="button" class="ov-btn" data-ovuse="' + v.rec + '">Usa ' + lab(v.rec) + '</button>' : '');
   return head + st;
 }
@@ -40166,8 +40210,12 @@ function chipsHtml(v, count, withAsap){
   }
   return out;
 }
+function inSlot(v){
+  var e = v.map[v.sel]; if(!e || !e.list.length) return '<div class="ov-in" style="font-size:12.5px;font-weight:700;color:#16794b;margin-top:2px">Fascia libera: nessun altro ordine</div>';
+  return '<div class="ov-in" style="font-size:12.5px;font-weight:700;margin-top:2px">Già dentro: ' + e.list.map(function(x){ return '#' + E(x.o.id) + ' ×' + x.u; }).join(' · ') + '</div>';
+}
 function lineHtml(v){
-  return '<div class="ov-sum"><span>🔥 ' + summary(v) + '</span><button type="button" class="ov-btn ov-open" data-ovopen="1">🔥 Forno</button></div>' +
+  return '<div class="ov-sum"><span>🔥 ' + summary(v) + '</span><button type="button" class="ov-btn ov-open" data-ovopen="1">🔥 Forno</button></div>' + inSlot(v) +
     '<div class="ov-row">' + chipsHtml(v, 10, true) + '</div>';
 }
 function bind(root){
