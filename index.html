@@ -6788,7 +6788,7 @@ var PK_DIG = {zero:"0",uno:"1",una:"1",due:"2",tre:"3",quattro:"4",cinque:"5",se
 function pkListen(onText, onState){
  var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
  if(!SR){ alert("Il riconoscimento vocale non è supportato da questo browser. Usa il microfono 🎤 della tastiera."); return null; }
- var r = new SR(); r.lang = bpVoiceLang(); r.interimResults = true; r.continuous = false;
+ var r = new SR(); r.lang = bpVoiceLang(); r.interimResults = true; r.continuous = false; r.maxAlternatives = 5;
  r.onresult = function(e){ var t = ""; for(var i = 0; i < e.results.length; i++) t += e.results[i][0].transcript; onText(t.trim(), e.results[e.results.length - 1].isFinal); };
  r.onend = function(){ onState(false); }; r.onerror = function(){ onState(false); };
  try{ r.start(); onState(true); }catch(err){ onState(false); return null; }
@@ -8427,6 +8427,7 @@ async function toggleCallRecorder(){
  voiceRec.lang = bpVoiceLang();
  voiceRec.continuous = true;
  voiceRec.interimResults = true;
+  voiceRec.maxAlternatives = 5;
  voiceRec.onresult = (ev)=>{
  let txt = '';
  for(let i=0;i<ev.results.length;i++) txt += ev.results[i][0].transcript + ' ';
@@ -8482,6 +8483,37 @@ async function handleAudioFileUpload(input){
  input.value = '';
 }
 
+/* v53: audio -> 16 kHz mono WAV nel browser (Web Audio API) prima dell'upload.
+   Si usa il WAV solo se e' davvero piu' leggero dell'originale (un m4a/opus gia' molto compresso resta com'e'). Qualsiasi errore -> originale. */
+async function gemDownsampleAudio(b64, mime){
+ try{
+  const AC = window.AudioContext || window.webkitAudioContext, OAC = window.OfflineAudioContext || window.webkitOfflineAudioContext;
+  if(!AC || !OAC) return { base64: b64, mimeType: mime, note: '' };
+  const bin = atob(b64), u8 = new Uint8Array(bin.length);
+  for(let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
+  const ac = new AC();
+  let buf;
+  try{ buf = await new Promise((ok, ko) => { const p = ac.decodeAudioData(u8.buffer.slice(0), ok, ko); if(p && p.catch) p.catch(ko); }); }
+  finally{ try{ ac.close(); }catch(e){} }
+  const RATE = 16000, len = Math.max(1, Math.ceil(buf.duration * RATE));
+  const off = new OAC(1, len, RATE); // 1 canale = downmix automatico a mono
+  const src = off.createBufferSource(); src.buffer = buf; src.connect(off.destination); src.start(0);
+  const ch = (await off.startRendering()).getChannelData(0);
+  const wav = new ArrayBuffer(44 + ch.length * 2), dv = new DataView(wav);
+  const ws = (o, s) => { for(let i = 0; i < s.length; i++) dv.setUint8(o + i, s.charCodeAt(i)); };
+  ws(0, 'RIFF'); dv.setUint32(4, 36 + ch.length * 2, true); ws(8, 'WAVE'); ws(12, 'fmt ');
+  dv.setUint32(16, 16, true); dv.setUint16(20, 1, true); dv.setUint16(22, 1, true);
+  dv.setUint32(24, RATE, true); dv.setUint32(28, RATE * 2, true); dv.setUint16(32, 2, true); dv.setUint16(34, 16, true);
+  ws(36, 'data'); dv.setUint32(40, ch.length * 2, true);
+  for(let i = 0, o = 44; i < ch.length; i++, o += 2){ const s = Math.max(-1, Math.min(1, ch[i])); dv.setInt16(o, s < 0 ? s * 0x8000 : s * 0x7fff, true); }
+  const bytes = new Uint8Array(wav); let s2 = '';
+  for(let i = 0; i < bytes.length; i += 0x8000) s2 += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+  const out = btoa(s2);
+  if(out.length >= b64.length) return { base64: b64, mimeType: mime, note: '' }; // l'originale e' gia' piu' leggero
+  return { base64: out, mimeType: 'audio/wav', note: `${Math.round(b64.length / 1024)}KB → ${Math.round(out.length / 1024)}KB` };
+ }catch(e){ try{ bpWarn(e); }catch(_){} return { base64: b64, mimeType: mime, note: '' }; }
+}
+
 function blobToBase64(blob){
  return new Promise((resolve,reject)=>{
  const reader = new FileReader();
@@ -8492,8 +8524,12 @@ function blobToBase64(blob){
 }
 
 /* ================= v46: MOTORE GEMINI (modelli aggiornati, retry intelligenti, schema JSON, timeout) ================= */
-/* NB: gemini-2.5-* e 2.0-* sono stati spenti da Google (16/10/2026): i modelli vengono ora scoperti dinamicamente. */
-const GEM_FALLBACK_MODELS = ['gemini-flash-latest','gemini-3.8-flash','gemini-3.6-flash','gemini-3.5-flash-lite','gemini-3.1-flash-lite','gemini-3.1-pro-preview'];
+/* v54: modelli FISSI (niente piu' scoperta dinamica, che pescava gemini-2.5-pro => errore "no longer available to new users").
+   Principale: gemini-2.5-flash (veloce). Fallback automatico, solo se serve: gemini-3.1-pro-preview. */
+const GEM_PREFERRED_MODEL = 'gemini-2.5-flash';
+const GEM_FALLBACK_MODEL = 'gemini-3.1-pro-preview';
+const GEM_FALLBACK_MODELS = [GEM_PREFERRED_MODEL, GEM_FALLBACK_MODEL];
+try{ localStorage.removeItem('bp_gemini_models_v53'); var __okm = localStorage.getItem('bp_gemini_model_ok'); if(__okm && GEM_FALLBACK_MODELS.indexOf(__okm) < 0) localStorage.removeItem('bp_gemini_model_ok'); }catch(e){}
 const GEM_BAD_MODEL_RE = /image|tts|live|embedding|imagen|veo|audio|robotics|computer-use|omni|lyria|learnlm|gemma|aqa|customtools|-exp|exp-/i;
 const __gemDead = new Set();
 let __gemBusy = false;
@@ -8528,33 +8564,11 @@ function gemFetch(url, opts, timeoutMs){
 }
 
 async function getAvailableGeminiModels(apiKey){
- const CK = 'bp_gemini_models_v46';
- let list = null;
- try{
- const c = JSON.parse(localStorage.getItem(CK) || 'null');
- if(c && Date.now() - c.t < 6 * 3600 * 1000 && Array.isArray(c.list) && c.list.length) list = c.list;
- }catch(e){ bpWarn(e); }
- if(!list){
- try{
- const r = await gemFetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${encodeURIComponent(apiKey)}&pageSize=200`, {}, 2500);
- const d = await r.json();
- if(d && Array.isArray(d.models)){
- const names = d.models
- .filter(m => Array.isArray(m.supportedGenerationMethods) && m.supportedGenerationMethods.includes('generateContent'))
- .map(m => String(m.name || '').replace(/^models\//, ''))
- .filter(n => /^gemini-/.test(n) && !GEM_BAD_MODEL_RE.test(n));
- if(names.length){
- list = gemPickDiverse(gemSortModels(names));
- try{ localStorage.setItem(CK, JSON.stringify({ t: Date.now(), list })); }catch(e){ bpWarn(e); }
- }
- }
- }catch(e){ bpWarn(e); }
- }
- if(!list || !list.length) list = GEM_FALLBACK_MODELS.slice();
- list = list.filter(m => !__gemDead.has(m));
+ /* v54: lista fissa [gemini-2.5-flash, gemini-3.1-pro-preview]. Nessuna chiamata a /models, nessun gemini-2.5-pro. */
+ let list = GEM_FALLBACK_MODELS.filter(m => !__gemDead.has(m));
  if(!list.length){ __gemDead.clear(); list = GEM_FALLBACK_MODELS.slice(); }
  const good = localStorage.getItem('bp_gemini_model_ok');
- if(good && list.includes(good)) list = [good, ...list.filter(m => m !== good)]; // ultimo modello funzionante = primo tentativo (piu' veloce)
+ if(good && list.includes(good)) list = [good, ...list.filter(m => m !== good)]; // ultimo modello funzionante = primo tentativo
  return list;
 }
 
@@ -8568,7 +8582,7 @@ function gemAudioMime(m){
  return s;
 }
 
-const GEM_TEMPERATURE = 0.0; // zero-hallucination: il modello non deve "indovinare" nulla
+const GEM_TEMPERATURE = 0.1; // v53: quasi deterministico ma senza blocchi di ripetizione
 const GEM_AUTO_TIME_MIN = 25; // orario non indicato / relativo ("tra 20 minuti", "prima possibile") => ora attuale + 25 min
 const GEM_SCHEMA = {
   type: 'OBJECT',
@@ -8669,7 +8683,15 @@ function gemNormalizeOrder(o){
   try{ menuList = getActiveMenu() || []; }catch(e){}
   const t = str(o.tipo).toLowerCase();
   const __pl = (function(){ const x = str(o.piattaforma).toLowerCase(); return /deliveroo/.test(x) ? 'Deliveroo' : (/glovo/.test(x) ? 'Glovo' : (/just\s*-?\s*eat/.test(x) ? 'Just Eat' : '')); })();
-  const orderType = __pl ? 'Asporto' : (/consegna|domicilio/.test(t) ? 'Consegna' : (/ritiro|asporto/.test(t) ? 'Asporto' : ''));
+  const __tnum = (function(){ const n = parseInt(str(o.tavolo).replace(/\D/g, ''), 10); return n >= 1 && n <= 99 ? n : 0; })();
+  let __rt = null; try{ if(window.bpvExtractRoute && typeof __gemSrcText === 'string' && __gemSrcText) __rt = window.bpvExtractRoute(__gemSrcText); }catch(_e){}
+  let orderType = __pl ? 'Asporto' : ((__tnum || /tavol/.test(t)) ? 'Tavolo' : (/consegna|domicilio/.test(t) ? 'Consegna' : (/ritiro|asporto|banco/.test(t) ? 'Asporto' : '')));
+  let tableNo = orderType === 'Tavolo' ? (__tnum || '') : '';
+  if(!__pl && __rt){ /* frase esplicita nel testo: tavolo N / al banco battono il modello; ritiro/asporto generico solo se il modello non ha deciso */
+   if(__rt.type === 'Tavolo' && __rt.table){ orderType = 'Tavolo'; tableNo = Number(__rt.table); }
+   else if(__rt.type === 'Asporto' && __rt.banco){ orderType = 'Asporto'; tableNo = ''; }
+   else if(!orderType && __rt.type){ orderType = __rt.type; tableNo = __rt.table ? Number(__rt.table) : ''; }
+  }
 
   const __menuN = Math.max(parseInt(o.numero_menu, 10) || 0, gemMenuCountFromText(__gemSrcText));
   const items = gemSpreadMenuIntent(o.righe, __menuN, menuList).map(r => {
@@ -8720,14 +8742,14 @@ function gemNormalizeOrder(o){
   const __flagNo = (o.ordine_presente === false || /^false$/i.test(str(o.ordine_presente)));
   return {
     noOrder: __flagNo || items.length === 0,
-    customerName: str(o.cliente),
+    customerName: str(o.cliente) || ((orderType === 'Asporto' && __rt && __rt.name) ? __rt.name : ''),
     phone: str(o.telefono).replace(/\D/g, ''),
-    orderType, deliveryTime, __autoTime: autoTime,
+    orderType, tableNo, deliveryTime, __autoTime: autoTime,
     paymentMethod: (function(){ const x = str(o.pagamento).toLowerCase(); return /contant|cash/.test(x) ? 'Contanti' : (/online|carta|pagat/.test(x) ? 'Carta' : ''); })(), cashGiven: 0,
     platform: __pl,
     platformOrderNo: str(o.numero_ordine_piattaforma).replace(/^#/, ''),
     platformTotal: (function(){ const n = parseFloat(String(o.totale_piattaforma == null ? '' : o.totale_piattaforma).replace(',', '.')); return isNaN(n) || n <= 0 ? 0 : Math.round(n * 100) / 100; })(),
-    address: __pl ? '' : str(o.indirizzo),
+    address: (__pl || orderType === 'Tavolo') ? '' : str(o.indirizzo),
     platformAddress: __pl ? str(o.indirizzo) : '',
     platformPhone: __pl ? str(o.telefono_piattaforma).replace(/[^\d+ ]/g, '').replace(/\s+/g, ' ').trim() : '',
     platformCode: __pl ? str(o.codice_verifica).replace(/[^\d ]/g, '').replace(/\s+/g, ' ').trim() : '',
@@ -8753,13 +8775,17 @@ function gemParseJson(txt){
 // Una chiamata a UN modello, con retry mirati. Ritorna {ok, parsed} oppure {ok:false, kind:'fatal'|'dead'|'quota'|'next', msg}
 async function gemCallModel(model, apiKey, parts, timeoutMs){
  let schemaOn = true, thinkOn = true, lastMsg = '';
+ /* v53: thinking spento dove possibile. 2.5-flash/flash-lite: thinkingBudget 0. 2.5-pro non puo' scendere sotto 128. Gemini 3.x: thinkingLevel (minimal per flash, low per pro). */
+ const __thinkCfg = /gemini-2\.5-pro/.test(model) ? { thinkingBudget: 128 }
+   : /gemini-2\.5/.test(model) ? { thinkingBudget: 0 }
+   : /pro/.test(model) ? { thinkingLevel: 'low' } : { thinkingLevel: 'minimal' };
  for(let attempt = 1; attempt <= 3; attempt++){
  let resp, data;
  try{
- const body = { contents: [{ role: 'user', parts }], generationConfig: { responseMimeType: 'application/json', temperature: GEM_TEMPERATURE, maxOutputTokens: 8192 } };
+ const body = { contents: [{ role: 'user', parts }], generationConfig: { responseMimeType: 'application/json', temperature: GEM_TEMPERATURE, maxOutputTokens: 4096 } };
  if(__gemSys) body.systemInstruction = { parts: [{ text: __gemSys }] };
  if(schemaOn) body.generationConfig.responseSchema = GEM_SCHEMA;
- if(thinkOn) body.generationConfig.thinkingConfig = { thinkingLevel: 'low' }; // v47: meno 'ragionamento' = risposta molto piu' veloce
+ if(thinkOn) body.generationConfig.thinkingConfig = __thinkCfg; // v53: zero ragionamento = risposta immediata
  resp = await gemFetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(apiKey)}`,
  { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }, timeoutMs);
  data = await resp.json();
@@ -8783,7 +8809,7 @@ async function gemCallModel(model, apiKey, parts, timeoutMs){
  if(code === 404 || /no longer available|not found|not supported|deprecated|shut ?down/i.test(msg)){
  __gemDead.add(model);
  if(localStorage.getItem('bp_gemini_model_ok') === model) localStorage.removeItem('bp_gemini_model_ok');
- try{ localStorage.removeItem('bp_gemini_models_v46'); }catch(e){}
+ try{ localStorage.removeItem('bp_gemini_models_v53'); }catch(e){}
  return { ok: false, kind: 'dead', msg: lastMsg };
  }
  if(code === 400 && thinkOn){ thinkOn = false; continue; } // il modello/proxy non accetta thinkingConfig
@@ -8816,23 +8842,24 @@ async function gemCallModel(model, apiKey, parts, timeoutMs){
 }
 
 function gemBuildMenuText(){
+ /* v53: menu compatto = id | nome ufficiale | alias (nomi appresi dallo staff). Niente prezzi ne' ingredienti: meno token, risposta piu' veloce. */
+ let al = {}; try{ al = gemAliasLoad(); }catch(e){}
+ const byId = {}; Object.keys(al).forEach(k => { (byId[String(al[k])] = byId[String(al[k])] || []).push(k); });
  return getActiveMenu().map(p => {
- let ings = '';
- try{ ings = parseIngredients(p.description).join(', '); }catch(e){ ings = p.description || ''; }
- const prices = `Normale €${p.price_normal}` + (p.price_maxi ? `, Maxi €${p.price_maxi}` : '');
- return `- ${p.name} [${p.category || 'Menu'}] (${prices})` + (ings ? ` — ingredienti: ${ings}` : '');
+  const a = (byId[String(p.id)] || []).filter(x => x !== gemNorm(p.name)).slice(0, 4);
+  return `${p.id}|${p.name}` + (a.length ? '|' + a.join(',') : '');
  }).join('\n');
 }
 
 function gemBuildPrompt(type){
  let menuText = '', extras = '';
  try{ menuText = gemBuildMenuText(); }catch(e){}
- try{ extras = (getAllKnownIngredients() || []).slice(0, 90).join(', '); }catch(e){}
+ try{ extras = (getAllKnownIngredients() || []).slice(0, 60).join(', '); }catch(e){}
  return `Sei un assistente AI specializzato nella gestione comande e cassa per una pizzeria italiana ("Pizzeria Buona Pizza").
 Il tuo compito è analizzare la trascrizione audio di una telefonata (o un messaggio/foto d'ordine) ed estrarre i dati esatti dell'ordine in un formato JSON strutturato.
 Il cliente parla italiano (a volte arabo o misto): se un nome proprio è in arabo, traslitteralo in lettere latine.
 
-### MENU UFFICIALE DEL LOCALE (nome [categoria] (prezzi) — ingredienti):
+### MENU UFFICIALE DEL LOCALE (formato: id|nome ufficiale|alias noti):
 ${menuText || '(menu non disponibile)'}
 
 ### INGREDIENTI / EXTRA COMUNI (usa questi nomi per le modifiche quando possibile):
@@ -8843,9 +8870,16 @@ Ascolta/leggi TUTTO il contenuto e decidi: il cliente sta ordinando davvero alme
 - SE SÌ: \`ordine_presente\` = true ed estrai tutto normalmente secondo le regole qui sotto.
 - SE NO (richiesta di informazioni su orari/prezzi/menu, numero sbagliato, reclamo, chiamata muta o disturbata, saluti senza ordine, conversazione non pertinente, solo prenotazione di un tavolo senza piatti): \`ordine_presente\` = false, \`righe\` = [], \`numero_menu\` = 0 e tutti gli altri campi vuoti (\"\" / [] / null). NON inventare MAI un ordine, un prodotto, una quantità o un cliente di esempio e NON usare i dati dell'esempio JSON.
 
+### TRASCRIZIONE VOCALE E NOMI DEL MENU (GROUNDING OBBLIGATORIO):
+Il testo puo' arrivare da un riconoscimento vocale italiano e contenere errori fonetici: accenti mancanti, doppie sbagliate, parole unite o spezzate (es. "margerita", "quatro formagi", "diavolla", "prosciuto cotto"). Per OGNI prodotto e ingrediente:
+- confronta la parola udita con la lista del MENU UFFICIALE / degli INGREDIENTI qui sopra, scegli la voce foneticamente piu' vicina e scrivi in \`nome\` il nome copiato carattere per carattere dalla lista (stessa grafia, stesse maiuscole, nessuna abbreviazione).
+- NON inventare mai un nome che non e' nella lista e non tradurlo. Se NESSUNA voce del menu e' foneticamente plausibile, in \`nome\` riporta solo le parole udite, invariate, e metti \`nel_menu\`: false su quella riga (lo staff la correggera' a mano). Per tutte le righe riconosciute \`nel_menu\` e' true.
+
 ### REGOLE CRITICHE DI ESTRAZIONE:
 1. **Tipo Ordine & Orario:**
-   - \`tipo\`: "consegna" (a domicilio) oppure "ritiro" (asporto).
+   - \`tipo\`: "consegna" (a domicilio), "ritiro" (asporto / ritiro al banco: "al banco", "ritiro al banco", "cliente al banco", "ritiro", "da asporto") oppure "tavolo" (consumo in sala: "tavolo uno", "al tavolo 3", "tavolo quattro").
+   - \`tavolo\`: SOLO se \`tipo\` = "tavolo": il numero del tavolo come intero in cifre. Converti i numeri detti a parole (uno=1, due=2, tre=3, quattro=4, cinque=5, sei=6, sette=7, otto=8, nove=9, dieci=10, undici=11, dodici=12, ...). Altrimenti null. La frase "tavolo X" NON e' un prodotto, NON e' una nota e NON va nel nome cliente.
+   - Per "ritiro" / "al banco" non c'e' indirizzo ne' tavolo. Se subito dopo compare un nome ("al banco per Marco", "ritiro Marco") scrivilo in \`cliente\`: non e' un prodotto ne' una nota.
    - \`orario\`: l'ora concordata in formato 24h "HH:MM" (es. "12:30", "20:15"). Se il cliente dice "tra 20 minuti", "prima possibile", "subito" o comunque non indica un orario preciso, metti \`null\`. NON calcolare tu orari relativi: lo fa il sistema.
 
 2. **Dati Cliente:**
@@ -8876,11 +8910,18 @@ Se la foto e' lo scontrino/comanda di una piattaforma di consegna (logo o scritt
 - \`righe\`: TUTTI i prodotti dello scontrino (anche salse, bibite, fritti), con la quantita' di ogni riga ("2x" = quantita 2) e il nome copiato dal menu se esiste. Nelle righe delle piattaforme "Con X" = modifica "+X" e "Senza X" = modifica "-X": separa SEMPRE ogni modifica con una virgola (es. "+cipolla, -piccante", mai "+cipolla -piccante"). Le SALSE stampate come righe a se' (sezione \"SALSE\" della piattaforma, o \"KETCHUP\"/\"MAIONESE\" con prezzo 0,00 sullo scontrino interno) sono BUSTINE singole: ogni salsa e' una riga autonoma con il suo nome (es. nome \"Ketchup\", quantita 2) e MAI una modifica (\`modifiche\`) di un panino, piadina o pizza, anche se nell'ordine ci sono panini/pizze. Solo se la salsa e' scritta DENTRO la riga di un panino (\"con maionese\") e' una modifica. NON trattare "Numero di prodotti", "Totale" o le intestazioni di categoria (es. "BEVANDE (4)") come prodotti.
 Uno scontrino di piattaforma e' sempre un ordine valido: ordine_presente = true.
 
+### REGOLE SPECIFICHE PER CHIAMATE E WHATSAPP (v53):
+- CHIAMATE (italiano / arabo / misto): ignora saluti, convenevoli, esitazioni, ripetizioni e chiacchiere. Estrai SOLO cio' che il cliente CONFERMA: prodotti, quantita', modifiche (senza, aggiunta/extra, ben cotta, tagliata, formato Baby/Famiglia=Maxi), orario di consegna/ritiro e indirizzo. Se il cliente cambia idea, vale l'ultima versione confermata.
+- Se nella chiamata il cliente NON dice il proprio numero di telefono, lascia \`telefono\` = \"\" (il sistema lo ricava dal nome del file audio). Non inventare numeri.
+- WHATSAPP / TESTI SPEZZATI: interpreta le abbreviazioni, es. \"2 marg\" = 2 Margherita, \"s/cipolla\" = senza cipolla (modifica \"-cipolla\"), \"doppia mozz\" = \"+doppia mozzarella\", \"x le 20.30\" / \"per le 20:30\" = orario \"20:30\", \"c/prosciutto\" = con prosciutto (\"+prosciutto\"). Mappa ogni prodotto SOLO su un nome del MENU UFFICIALE (copia esatta). Le righe di saluto o i messaggi senza prodotti non sono ordini.
+- Nessun ordine nell'audio/messaggio => ordine_presente = false, righe = [] e termina subito (nessun altro testo).
+
 ### FORMATO JSON DI RISPOSTA RICHIESTO:
 Restituisci ESCLUSIVAMENTE un oggetto JSON valido con la seguente struttura:
 {
   "ordine_presente": true,
   "tipo": "consegna",
+  "tavolo": null,
   "orario": "12:30",
   "cliente": "Officina Aria 28",
   "telefono": "324669965495",
@@ -8896,6 +8937,7 @@ Restituisci ESCLUSIVAMENTE un oggetto JSON valido con la seguente struttura:
     {
       "quantita": 1,
       "nome": "Quattro Stagioni",
+      "nel_menu": true,
       "formato": "Normale",
       "is_menu": true,
       "modifiche": ""
@@ -8903,6 +8945,7 @@ Restituisci ESCLUSIVAMENTE un oggetto JSON valido con la seguente struttura:
     {
       "quantita": 1,
       "nome": "Prosciutto Cotto",
+      "nel_menu": true,
       "formato": "Maxi",
       "is_menu": false,
       "modifiche": "+doppia mozzarella"
@@ -8957,6 +9000,11 @@ async function analyzeMediaOrTextWithGemini(payloadObj, apiKey){
 
  if(type === 'audio'){
  payloadObj.mimeType = gemAudioMime(payloadObj.mimeType);
+ if(payloadObj.base64 && !payloadObj.__resampled){
+  const __ds = await gemDownsampleAudio(payloadObj.base64, payloadObj.mimeType);
+  payloadObj.base64 = __ds.base64; payloadObj.mimeType = __ds.mimeType; payloadObj.__resampled = true;
+  if(__ds.note) setVoiceMsg(`⏳ ${modeLabel} in corso... (audio 16 kHz mono: ${__ds.note})`, '');
+ }
  if(String(payloadObj.base64 || '').length > 18 * 1024 * 1024) throw new Error('Audio troppo lungo/pesante (max ~13 MB). Registra un messaggio più breve.');
  if(!payloadObj.base64) throw new Error('Audio vuoto: nessun dato registrato.');
  }
@@ -9452,7 +9500,7 @@ function applyExtractedOrderObject(parsed){
 function gemShowReview(parsed, rows, menu){
  gemCloseReview();
  const chips = [];
- if(parsed.orderType && ['Consegna','Asporto'].includes(parsed.orderType)) chips.push('🛵 ' + parsed.orderType);
+ if(parsed.orderType && ['Consegna','Asporto','Tavolo'].includes(parsed.orderType)) chips.push(parsed.orderType === 'Tavolo' ? '🍽️ Tavolo ' + (parsed.tableNo || '?') : '🛵 ' + parsed.orderType);
  if(parsed.deliveryTime) chips.push('⏰ ' + parsed.deliveryTime + (parsed.__autoTime ? ' (auto +' + GEM_AUTO_TIME_MIN + '′)' : '') + ((parsed.__unc || []).includes('deliveryTime') ? ' ❓' : ''));
  if(parsed.platform) chips.push('📲 ' + parsed.platform + (parsed.platformOrderNo ? ' #' + parsed.platformOrderNo : '') + (parsed.platformTotal > 0 ? ' · €' + Number(parsed.platformTotal).toFixed(2) : ''));
  if(parsed.paymentMethod) chips.push('💳 ' + parsed.paymentMethod);
@@ -9661,9 +9709,10 @@ function gemCommitOrder(parsed, finalRows, skipped, learned){
  if(el('phone').value) infoLog.push(`📞 ${esc(el('phone').value)}`);
  if(el('address').value) infoLog.push(`📍 <strong>${esc(el('address').value)}</strong>`);
 
- if(parsed.orderType && ['Consegna','Asporto'].includes(parsed.orderType)){
+ if(parsed.orderType && ['Consegna','Asporto','Tavolo'].includes(parsed.orderType)){
  el('type').value = parsed.orderType;
  toggleAddress();
+ if(parsed.orderType === 'Tavolo'){ try{ if(window.bpvApplyRoute) window.bpvApplyRoute({type: 'Tavolo', table: parsed.tableNo ? String(parsed.tableNo) : ''}); else if(parsed.tableNo && el('tableNo')) el('tableNo').value = parsed.tableNo; }catch(_e){} }
  infoLog.push(`🛵 ${parsed.orderType}`);
  }
  if(parsed.deliveryTime){
@@ -9918,7 +9967,7 @@ function toggleVoiceOrder(){
  voiceRec.lang = bpVoiceLang();
  voiceRec.continuous = true;
  voiceRec.interimResults = true;
- voiceRec.maxAlternatives = 1;
+ voiceRec.maxAlternatives = 5;
 
  let finalTranscript = el('voiceSmartInput').value ? (el('voiceSmartInput').value + ' ') : '';
 
@@ -17065,7 +17114,7 @@ function arKeys(text, minWord){ var ks = [latSkel(text)]; var __pm = String(text
 function arWin(toks, i, maxLen){ var res = []; for(var len = maxLen; len >= 1; len--){ if(i + len > toks.length) continue; var sk = toks.slice(i, i + len).map(tokSkel); if(sk.some(function(x){ return !x; })) continue; res.push({len: len, s: sk.join("")}); } return res; }
 function arFindProduct(toks, i){
  var best = null, menuSaid = toks.some(function(w){ return window.bpMenuWordRx.test(w); });
- arWin(toks, i, 3).forEach(function(w){ if(w.len === 1 && BP_SIZE_WORD[toks[i]]) return;
+ arWin(toks, i, 6).forEach(function(w){ if(w.len === 1 && BP_SIZE_WORD[toks[i]]) return; /* v53: finestra fino a 6 parole, cosi' una pizza dedicata a nome lungo vince sulla pizza base + modifiche */
  getActiveMenu().forEach(function(p){ var lt = toks[i + w.len - 1]; if(w.len > 1){ for(var __k = 0; __k < w.len; __k++){ var __t = toks[i + __k]; if(BP_SIZE_WORD[__t] && (__k === 0 || ingNorm(p.name).indexOf(__t) < 0)) return; } } /* v95-fix1: piccola/lattina = modificatore, non parte del nome */ if(w.len > 1 && AR_IT_NUM[lt] != null && ingNorm(p.name).split(" ").indexOf(AR_IT_AR[lt] || lt) < 0) return; arKeys(p.name).forEach(function(k){ if(skOk(w.s, k)){ var sc = w.len * 10 + k.length - lev(w.s, k) + (AR_HINT ? (ingNorm(p.name).indexOf(AR_HINT) >= 0 ? 15 : (ingNorm(p.category || "").indexOf(AR_HINT) >= 0 ? 6 : 0)) : 0) - (!menuSaid && /^menu\b/.test(ingNorm(p.name)) ? 6 : 0); if(!best || sc > best.sc) best = {p: p, len: w.len, sc: sc}; } }); });
  });
  return best;
@@ -24925,6 +24974,7 @@ try{
  voiceRec.lang = typeof bpVoiceLang === 'function' ? bpVoiceLang() : 'it-IT';
  voiceRec.continuous = true;
  voiceRec.interimResults = true;
+  voiceRec.maxAlternatives = 5;
  voiceRec.onresult = function(ev){
  var txt = '';
  for(var i = 0; i < ev.results.length; i++) txt += ev.results[i][0].transcript + ' ';
@@ -25632,6 +25682,7 @@ try{
  alts.forEach(function(a, i){
  var sc = 0; nrm(a.transcript).split(' ').forEach(function(w){ if(V[w]) sc++; });
  sc += a.confidence * 0.8 - i * 0.02;
+  try{ if(window.bpvAltBonus) sc += window.bpvAltBonus(a.transcript); }catch(e){} /* una voce del menu / tavolo / banco riconosciuti fanno vincere l'alternativa */
  if(sc > bs){ bs = sc; bi = i; }
  });
  if(bi) alts.unshift(alts.splice(bi, 1)[0]);
@@ -25762,7 +25813,7 @@ try{
  var self = this, s = this._s, r;
  try{ r = new Native(); }catch(e){ s.fatal = true; this._err('service-not-allowed'); return this._finish(); }
  s.native = r; s.t0 = Date.now(); s.cur = null; s.switching = false;
- r.lang = this.lang; r.interimResults = true; r.continuous = false; r.maxAlternatives = Math.max(4, this.maxAlternatives || 1);
+ r.lang = this.lang; r.interimResults = true; r.continuous = false; r.maxAlternatives = Math.max(5, this.maxAlternatives || 1);
  r.onstart = function(){ if(!s.started){ s.started = true; self._emit('start'); } clearTimeout(s.wd); UI.set('listen', self._text(), ''); };
  r.onaudiostart = function(){ self._emit('audiostart'); };
  r.onspeechstart = function(){ s.heard = true; UI.talk(); self._emit('speechstart'); };
@@ -26684,7 +26735,7 @@ html{scroll-padding-bottom:calc(150px + env(safe-area-inset-bottom,0px))}
 })();</script>
 <script id="bpIngHelpers">(function(){
  window.arIsPizza = function(p){ try{ return getProductKind(p) === "pizza"; }catch(e){ return /pizz/i.test(String((p && p.category) || "")); } };
- // ingredienti da togliere automaticamente quando il cliente nomina solo un ingrediente (es. "gamberetti" -> Pantera Rosa senza rucola)
+ // FALLBACK dinamico (nessun nome fisso): usato SOLO se la frase non coincide con una pizza del menu live; toglie dalla pizza base gli ingredienti non nominati
  window.arAutoRem = function(p, ing){
  var want = ingNorm(ing);
  return parseIngredients((p && p.description) || "").filter(function(g){
@@ -29000,7 +29051,7 @@ function modelList(){
   function add(m){ if(m && l.indexOf(m) < 0) l.push(m); }
   try{ add(localStorage.getItem('bp_gemini_model_ok')); }catch(e){}
   try{ if(typeof GEM_FALLBACK_MODELS !== 'undefined') GEM_FALLBACK_MODELS.forEach(add); }catch(e){}
-  add('gemini-flash-latest');
+  if(!l.length){ add('gemini-2.5-flash'); add('gemini-3.1-pro-preview'); }
   return l;
 }
 function withTimeout(p, ms){
@@ -42666,5 +42717,610 @@ html.pos64 body #p64Bar button b{font-size:14px!important;font-weight:900!import
  document.addEventListener('input',function(e){if(e.target&&e.target.id==='cashGivenInput')try{paint(true);}catch(x){}},true);
 })();
 </script>
+<script id="bpv-voice-boost">
+/* bpv-voice-boost: upgrade incrementale del lettore vocale (it-IT)
+   1) Tavolo / Ritiro al banco (numeri parlati -> cifre, nome cliente dopo "al banco")
+   2) normalizzazione italiana leggera (accenti, doppie) + aggancio al nome ufficiale del menu
+   3) punteggio delle 5 alternative del riconoscimento (usato da pickAlts)
+   4) mappa di auto-correzione persistente in localStorage (impara dalle modifiche manuali alla trascrizione)
+   Nessuna libreria esterna; tutto sopra le funzioni esistenti (wrapper), niente riscritture. */
+(function(){
+  if(window.__bpvBoost) return; window.__bpvBoost = 1;
+  var CORR_KEY = 'bp_voice_corr_v1';
+  var S = {machine: '', dirty: false};
+
+  function g(id){ return document.getElementById(id); }
+  function warn(e){ try{ bpWarn(e); }catch(_){ try{ console.warn('[bpv]', e); }catch(__){} } }
+  function fire(el, name){ try{ el.dispatchEvent(new Event(name, {bubbles: true})); }catch(_){} }
+  function notify(msg, isErr){
+    try{ if(typeof setVoiceMsg === 'function'){ setVoiceMsg(msg, isErr ? 'error' : 'success'); return; } }catch(e){}
+    try{ if(typeof ssToast === 'function') ssToast(msg, !!isErr); }catch(e){}
+  }
+
+  /* ---------- normalizzazione italiana leggera ---------- */
+  function key(s){
+    s = String(s == null ? '' : s).toLowerCase();
+    try{ s = s.normalize('NFD').replace(/[\u0300-\u036f]/g, ''); }catch(e){}
+    return s.replace(/[’'`´]/g, ' ').replace(/[^a-z0-9\u0600-\u06ff\s]/g, ' ').replace(/\s+/g, ' ').trim();
+  }
+  function ck(s){ return key(s).replace(/([a-z])\1+/g, '$1'); } /* tollera le doppie: margherita = margerita = margheritta */
+  function lev(a, b, max){
+    if(a === b) return 0;
+    var m = a.length, n = b.length;
+    if(Math.abs(m - n) > max) return max + 1;
+    var prev = [], cur, i, j, best;
+    for(j = 0; j <= n; j++) prev[j] = j;
+    for(i = 1; i <= m; i++){
+      cur = [i]; best = i;
+      for(j = 1; j <= n; j++){
+        cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a.charCodeAt(i - 1) === b.charCodeAt(j - 1) ? 0 : 1));
+        if(cur[j] < best) best = cur[j];
+      }
+      if(best > max) return max + 1;
+      prev = cur;
+    }
+    return prev[n];
+  }
+  var WORD_CH = 'A-Za-z\u00C0-\u00FF0-9\u0600-\u06FF';
+  var EDGE = new RegExp('^([^' + WORD_CH + ']*)([\\s\\S]*?)([^' + WORD_CH + ']*)$');
+  function tokenize(text){
+    var toks = [], re = /(\S+)(\s*)/g, m, e;
+    text = String(text == null ? '' : text);
+    toks.lead0 = (text.match(/^\s*/) || [''])[0];
+    while((m = re.exec(text))){ e = EDGE.exec(m[1]); toks.push({lead: e[1], core: e[2], trail: e[3], sp: m[2], k: ck(e[2])}); }
+    return toks;
+  }
+  function joinToks(out, toks){ return (toks.lead0 || '') + out.join(''); }
+
+  /* ---------- numeri parlati -> cifre ---------- */
+  var NUMW = (function(){
+    var o = {zero: 0, uno: 1, due: 2, tre: 3, quattro: 4, cinque: 5, sei: 6, sette: 7, otto: 8, nove: 9, dieci: 10, undici: 11, dodici: 12, tredici: 13, quattordici: 14, quindici: 15, sedici: 16, diciassette: 17, diciotto: 18, diciannove: 19, venti: 20, trenta: 30, quaranta: 40, cinquanta: 50, sessanta: 60, settanta: 70, ottanta: 80, novanta: 90};
+    var tens = {venti: 20, trenta: 30, quaranta: 40, cinquanta: 50, sessanta: 60, settanta: 70, ottanta: 80, novanta: 90}, units = {uno: 1, due: 2, tre: 3, quattro: 4, cinque: 5, sei: 6, sette: 7, otto: 8, nove: 9};
+    Object.keys(tens).forEach(function(t){ var stem = t.slice(0, -1); Object.keys(units).forEach(function(u){ o[t + u] = tens[t] + units[u]; o[stem + u] = tens[t] + units[u]; }); }); /* ventidue, ventuno, ventotto... */
+    return o;
+  })();
+  /* "una" resta fuori di proposito: "tavolo, una margherita" non e' il tavolo 1 */
+  function numTok(w){
+    var k = key(w), n;
+    if(/^\d{1,2}$/.test(k)){ n = parseInt(k, 10); return n >= 1 ? n : null; }
+    if(Object.prototype.hasOwnProperty.call(NUMW, k)){ n = NUMW[k]; return n >= 1 ? n : null; }
+    return null;
+  }
+
+  /* ---------- indice del menu (prodotti + ingredienti) ---------- */
+  var IDX = {sig: '', ents: [], vocab: {}};
+  function buildIndex(){
+    var menu = [], ing = [];
+    try{ menu = getActiveMenu() || []; }catch(e){}
+    try{ ing = getAllKnownIngredients() || []; }catch(e){}
+    var sig = menu.length + ':' + ing.length + ':' + (menu[0] && menu[0].name) + ':' + (menu[menu.length - 1] && menu[menu.length - 1].name);
+    if(IDX.sig === sig && IDX.ents.length) return IDX;
+    var ents = [], vocab = {}, seen = {};
+    function addEnt(official, kind){
+      var name = String(official == null ? '' : official).trim(); if(!name) return;
+      var k = ck(name).replace(/ /g, ''); if(k.length < 5) return; /* troppo corto = troppo rischioso */
+      var id = kind + '|' + k; if(seen[id]) return; seen[id] = 1;
+      ents.push({k: k, off: name, kind: kind, w: key(name).split(' ').length});
+    }
+    function addVocab(s){ key(s).split(' ').forEach(function(w){ if(w.length > 2) vocab[ck(w)] = 1; }); }
+    menu.forEach(function(p){
+      var nm = String(p && p.name || '').trim(); if(!nm) return;
+      addEnt(nm, 'p');
+      var s2 = nm.replace(/^(pizza|panino|piadina|calzone)\s+/i, '').trim(); if(s2 !== nm) addEnt(s2, 'p');
+      addVocab(nm);
+    });
+    ing.forEach(function(x){ addEnt(x, 'i'); addVocab(x); });
+    IDX = {sig: sig, ents: ents, vocab: vocab};
+    return IDX;
+  }
+
+  /* ---------- aggancio al nome ufficiale (accenti, doppie, errori fonetici lievi) ---------- */
+  var PROTECT = {};
+  ('senza piu extra con per tra fra alle ore mezza mezzo quarto uno una due tre quattro cinque sei sette otto nove dieci maxi baby normale famiglia grande piccola pizza pizze panino panini piadina piadine contanti carta bancomat telefono numero consegna domicilio asporto ritiro tavolo banco cliente nome via viale piazza corso largo vicolo strada').split(' ').forEach(function(w){ PROTECT[ck(w)] = 1; });
+  var CTX = {via: 1, viale: 1, piazza: 1, piazzale: 1, corso: 1, vicolo: 1, largo: 1, strada: 1, nome: 1, cliente: 1, chiamo: 1, sono: 1, signor: 1, signora: 1};
+
+  function matchWindow(win, idx){
+    /* ritorna {off, exact, kind, d} oppure null */
+    if(win.some(function(x){ return !x.k; })) return null;
+    var cand = win.map(function(x){ return x.k; }).join('').replace(/ /g, '');
+    if(cand.length < 5) return null;
+    if(win.length === 1 && PROTECT[win[0].k]) return null;
+    var i, e;
+    for(i = 0; i < idx.ents.length; i++){ e = idx.ents[i]; if(e.k === cand) return {off: e.off, exact: true, kind: e.kind, d: 0}; }
+    var lim = cand.length >= 10 ? 2 : (cand.length >= 6 ? 1 : 0);
+    if(!lim) return null;
+    if(win.length === 1 && idx.vocab[win[0].k]) return null; /* e' gia' una parola valida del menu */
+    if(win.some(function(x){ return x.k.length < 3 || PROTECT[x.k]; })) return null; /* mai inghiottire "e", "con", "senza"... in un aggancio approssimativo */
+    var best = null, bd = 99, tie = false, d;
+    for(i = 0; i < idx.ents.length; i++){
+      e = idx.ents[i];
+      if(e.w !== win.length || e.k.charAt(0) !== cand.charAt(0) || Math.abs(e.k.length - cand.length) > lim) continue;
+      d = lev(e.k, cand, lim);
+      if(d <= lim){
+        if(d < bd){ best = e; bd = d; tie = false; }
+        else if(d === bd && e.off !== best.off) tie = true;
+      }
+    }
+    return (best && !tie) ? {off: best.off, exact: false, kind: best.kind, d: bd} : null;
+  }
+  function snap(text){
+    var idx = buildIndex(), src = String(text == null ? '' : text);
+    if(!idx.ents.length || !src) return src;
+    var toks = tokenize(src), out = [], i = 0, ctx = 0, n, hit, win, lit;
+    while(i < toks.length){
+      var t0 = toks[i];
+      if(CTX[key(t0.core)]){ out.push(t0.lead + t0.core + t0.trail + t0.sp); ctx = 2; i++; continue; }
+      if(ctx > 0){ ctx--; out.push(t0.lead + t0.core + t0.trail + t0.sp); i++; continue; }
+      hit = null;
+      for(n = Math.min(4, toks.length - i); n >= 1 && !hit; n--){
+        win = toks.slice(i, i + n);
+        var m = matchWindow(win, idx);
+        if(m){ hit = {n: n, m: m}; }
+      }
+      if(hit){
+        win = toks.slice(i, i + hit.n); lit = win.map(function(x){ return x.core; }).join(' ');
+        if(lit.toLowerCase() === hit.m.off.toLowerCase()){ win.forEach(function(x){ out.push(x.lead + x.core + x.trail + x.sp); }); }
+        else{ out.push(win[0].lead + hit.m.off + win[win.length - 1].trail + win[win.length - 1].sp); }
+        i += hit.n; continue;
+      }
+      out.push(t0.lead + t0.core + t0.trail + t0.sp); i++;
+    }
+    return joinToks(out, toks);
+  }
+
+  /* ---------- tavolo / ritiro al banco ---------- */
+  var NAMESTOP = {};
+  ('il la lo le i gli un una uno dei delle degli del della di da a al alla alle ai con senza per tra fra su in e ed o ma poi anche ancora vorrei voglio vuole prendo prendiamo dammi darmi metti mettimi ordino ordine ordina ordinare grazie prego ok okay allora buongiorno buonasera salve ciao scusi subito presto adesso ora oggi stasera domani mezzogiorno mezza mezzo quarto ore minuti minuto pizza pizze panino panini piadina piadine kebab calzone calzoni menu maxi baby famiglia grande piccola normale extra piu patatine birra birre coca cola acqua fanta sprite bibita bibite lattina carta contanti bancomat pos pago pagato paga telefono tel numero cliente nome via viale piazza corso asporto sporto ritiro tavolo banco consegna domicilio sono signor signora sig').split(' ').forEach(function(w){ NAMESTOP[w] = 1; });
+  function cap(w){ return w.charAt(0).toUpperCase() + w.slice(1).toLowerCase(); }
+  function nameOk(w){
+    var k = key(w); if(!k || k.length < 2) return false;
+    if(NAMESTOP[k] || numTok(k) !== null || /^\d+$/.test(k)) return false;
+    try{ if(typeof BP_ORDER_STOP !== 'undefined' && BP_ORDER_STOP[k]) return false; }catch(e){}
+    if(buildIndex().vocab[ck(k)]) return false; /* e' un prodotto/ingrediente, non un nome */
+    return true;
+  }
+  var TAV = /\b(?:al\s+)?(?:tavol[oa]|tabol[oa])\b(?:\s+(?:numero|nr|num|n)\.?[°º]?(?=[\s\d]))?(?:\s*(\d{1,2})\b|\s+([A-Za-z\u00C0-\u00FF]+)\b)?/i;
+  var BN = /\b(?:(?:cliente|ritiro)\s+)*(?:al|el)\s+banc[oa]\b|\britiro\b|\b(?:(?:da|per)\s+)?a?sporto\b/i;
+  var CONS = /\b(?:consegna|domicilio|portare|portate|mandare|a\s+casa)\b/i;
+  var NAMERX = /^(\s*[,:]?\s*(?:(?:per|a\s+nome\s+di|a\s+nome|di|da|sono|signor[ae]?|sig\.?)\s+)?([A-Za-z\u00C0-\u00FF'’]{2,}))(?:\s+([A-Za-z\u00C0-\u00FF'’]{2,}))?/i;
+  function squeeze(s){ return s.replace(/\s{2,}/g, ' ').trim(); }
+
+  function extractRoute(text){
+    var t = String(text == null ? '' : text), out = {type: '', table: '', name: '', banco: false, cleaned: t}, m, n;
+    if((m = TAV.exec(t))){
+      n = m[1] ? numTok(m[1]) : (m[2] ? numTok(m[2]) : null);
+      out.type = 'Tavolo';
+      if(n){ out.table = String(n); out.cleaned = squeeze(t.slice(0, m.index) + ' ' + t.slice(m.index + m[0].length)); }
+      else out.cleaned = squeeze(t.replace(/\b(?:al\s+)?(?:tavol[oa]|tabol[oa])\b/i, ' '));
+      return out;
+    }
+    if((m = BN.exec(t))){
+      var strong = /banc/i.test(m[0]);
+      if(!strong && CONS.test(t)) return out; /* "a domicilio ... ritiro": decidono i livelli esistenti */
+      out.type = 'Asporto'; out.banco = strong;
+      var end = m.index + m[0].length, tm = NAMERX.exec(t.slice(end)), used = 0;
+      if(tm && nameOk(tm[2])){
+        var ok2 = tm[3] && nameOk(tm[3]);
+        out.name = cap(tm[2]) + (ok2 ? ' ' + cap(tm[3]) : '');
+        used = ok2 ? tm[0].length : tm[1].length;
+      }
+      out.cleaned = squeeze(t.slice(0, m.index) + ' ' + t.slice(end + used));
+      return out;
+    }
+    return out;
+  }
+  var FILLER = {}; ('per il la lo le un una uno ok okay grazie prego allora ecco vorrei voglio prenotare prenoto siamo e ed di da a al alla cliente nome signor signora sig ritiro banco asporto tavolo numero n nr').split(' ').forEach(function(w){ FILLER[w] = 1; });
+  function isRouteOnly(cleaned){
+    var tk = key(cleaned).split(' ').filter(Boolean);
+    return tk.every(function(w){ return !!FILLER[w]; });
+  }
+
+  function applyRoute(r){
+    if(!r || !r.type) return false;
+    var ty = g('type'); if(!ty) return false;
+    var tn = g('tableNo');
+    if(r.type === 'Tavolo'){
+      ty.value = 'Tavolo'; try{ toggleAddress(); }catch(e){ warn(e); } fire(ty, 'change');
+      var ad = g('address'); if(ad) ad.value = '';
+      if(tn && r.table){ tn.value = String(r.table); fire(tn, 'input'); fire(tn, 'change'); } /* i listener esistenti ridisegnano la mappa tavoli */
+      var why = null;
+      try{ why = (window.OpsEngine && OpsEngine._t && OpsEngine._t.saveBlockReason) ? OpsEngine._t.saveBlockReason() : null; }catch(e){ warn(e); }
+      if(why) notify(why, true);
+      else notify(r.table ? '🍽️ Tavolo ' + r.table + ' selezionato' : '🍽️ Tavolo: dì o scegli il numero', false);
+      return true;
+    }
+    ty.value = 'Asporto'; try{ toggleAddress(); }catch(e){ warn(e); } fire(ty, 'change');
+    if(tn && tn.value){ tn.value = ''; fire(tn, 'input'); }
+    var cu = g('customer');
+    if(r.name && cu){ cu.value = r.name; try{ checkAndShowLastOrderBanner(); }catch(e){} }
+    notify('🛍️ Ritiro' + (r.banco ? ' al banco' : '') + (r.name ? ' · 👤 ' + r.name : ''), false);
+    return true;
+  }
+
+  /* ---------- punteggio delle alternative (usato da pickAlts) ---------- */
+  function altBonus(text){
+    var score = 0;
+    try{
+      var r = extractRoute(text);
+      if(r.type === 'Tavolo') score += r.table ? 3 : 1;
+      else if(r.type === 'Asporto') score += (r.banco ? 3 : 1.5) + (r.name ? 1 : 0);
+      var idx = buildIndex(), toks = tokenize(r.type ? r.cleaned : text), i = 0, n, win, m;
+      while(i < toks.length){
+        var hit = null;
+        for(n = Math.min(4, toks.length - i); n >= 1 && !hit; n--){
+          win = toks.slice(i, i + n); m = matchWindow(win, idx);
+          if(m) hit = {n: n, m: m};
+        }
+        if(hit){ score += hit.m.kind === 'p' ? (hit.m.exact ? 3 : 1.2) : (hit.m.exact ? 1 : 0.4); i += hit.n; } else i++;
+      }
+    }catch(e){ warn(e); }
+    return score;
+  }
+
+  /* ---------- correzioni persistenti (localStorage) ---------- */
+  function corrLoad(){ try{ var o = JSON.parse(localStorage.getItem(CORR_KEY) || '{}'); return (o && typeof o === 'object') ? o : {}; }catch(e){ return {}; } }
+  function corrSave(o){
+    try{
+      var ks = Object.keys(o);
+      if(ks.length > 300){ ks.sort(function(a, b){ return (o[a].t || 0) - (o[b].t || 0); }).slice(0, ks.length - 300).forEach(function(k){ delete o[k]; }); }
+      localStorage.setItem(CORR_KEY, JSON.stringify(o));
+    }catch(e){ warn(e); }
+  }
+  function corrApply(text){
+    var src = String(text == null ? '' : text), map = corrLoad(), ks = Object.keys(map);
+    if(!ks.length || !src) return src;
+    var maxN = 1; ks.forEach(function(k){ maxN = Math.max(maxN, k.split(' ').length); });
+    var toks = tokenize(src), out = [], i = 0, n, hit, kk, first, last;
+    while(i < toks.length){
+      hit = null;
+      if(toks[i].k){
+        for(n = Math.min(maxN, toks.length - i); n >= 1 && !hit; n--){
+          kk = toks.slice(i, i + n).map(function(x){ return x.k; }).join(' ');
+          if(map[kk] && map[kk].to) hit = {n: n, to: map[kk].to};
+        }
+      }
+      if(hit){ first = toks[i]; last = toks[i + hit.n - 1]; out.push(first.lead + hit.to + last.trail + last.sp); i += hit.n; }
+      else{ out.push(toks[i].lead + toks[i].core + toks[i].trail + toks[i].sp); i++; }
+    }
+    return joinToks(out, toks);
+  }
+  function cleanEdge(w){ return String(w).replace(/^[^A-Za-z\u00C0-\u00FF0-9\u0600-\u06FF]+|[^A-Za-z\u00C0-\u00FF0-9\u0600-\u06FF]+$/g, ''); }
+  function considerPair(sa, sb){
+    if(!sa.length || !sb.length || sa.length > 3 || sb.length > 3) return null; /* una vera correzione di parola, non una frase riscritta */
+    var A = sa.map(ck).join(' '), B = sb.map(ck).join(' '), A2 = A.replace(/ /g, ''), B2 = B.replace(/ /g, '');
+    if(A2.length < 4 || B2.length < 2) return null;
+    if(/^\d+$/.test(A2) || /^\d+$/.test(B2) || numTok(sa.join('')) !== null || numTok(sb.join('')) !== null) return null; /* cambio di numero = scelta, non errore di ascolto */
+    if(sa.some(function(w){ return NAMESTOP[key(w)] || FILLER[key(w)]; })) return null; /* mai trasformare parole comuni */
+    var vocab = buildIndex().vocab;
+    if(sa.some(function(w){ return vocab[ck(w)]; })) return null; /* l'originale era gia' una parola valida del menu: ha cambiato idea */
+    var d = lev(A2, B2, 99), lim = Math.max(2, Math.floor(Math.max(A2.length, B2.length) * 0.5));
+    if(d > lim) return null; /* troppo diversa: non e' una svista fonetica */
+    var to = sb.join(' ');
+    if(sa.join(' ').toLowerCase() === to.toLowerCase()) return null;
+    var map = corrLoad(), prev = map[A];
+    map[A] = {to: to, n: (prev && prev.to === to) ? (prev.n || 1) + 1 : 1, t: Date.now()};
+    corrSave(map);
+    return {from: sa.join(' '), to: to};
+  }
+  function learnFromEdit(orig, edited){
+    var a = String(orig || '').trim().split(/\s+/).filter(Boolean), b = String(edited || '').trim().split(/\s+/).filter(Boolean), res = [], r;
+    if(!a.length || !b.length) return res;
+    var la = a.map(function(w){ return cleanEdge(w).toLowerCase(); }), lb = b.map(function(w){ return cleanEdge(w).toLowerCase(); });
+    if(a.length === b.length){ /* stesso numero di parole: confronto parola per parola (anche piu' correzioni insieme) */
+      for(var i = 0; i < a.length; i++){ if(la[i] !== lb[i]){ r = considerPair([cleanEdge(a[i])].filter(Boolean), [cleanEdge(b[i])].filter(Boolean)); if(r) res.push(r); } }
+      return res;
+    }
+    var p = 0, s = 0; /* parole unite o spezzate: una sola zona modificata */
+    while(p < a.length && p < b.length && la[p] === lb[p]) p++;
+    while(s < a.length - p && s < b.length - p && la[a.length - 1 - s] === lb[b.length - 1 - s]) s++;
+    r = considerPair(a.slice(p, a.length - s).map(cleanEdge).filter(Boolean), b.slice(p, b.length - s).map(cleanEdge).filter(Boolean));
+    if(r) res.push(r);
+    return res;
+  }
+
+  /* hook sulla trascrizione: capisce quando ritocchi a mano quello che ha scritto il microfono */
+  var VDESC = null;
+  function learn(){
+    var ta = g('voiceSmartInput'); if(!ta || !VDESC) return;
+    var cur = VDESC.get.call(ta);
+    if(S.dirty && S.machine && cur !== S.machine){
+      var rs = learnFromEdit(S.machine, cur);
+      if(rs.length){ try{ if(typeof ssToast === 'function') ssToast('🧠 Imparato: ' + rs.map(function(r){ return '«' + r.from + '» → «' + r.to + '»'; }).join(' · ')); }catch(e){} }
+    }
+    S.machine = cur; S.dirty = false;
+  }
+  function hookTA(){
+    var ta = g('voiceSmartInput'); if(!ta || ta.__bpvHook) return;
+    try{ VDESC = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value'); }catch(e){}
+    if(!VDESC || !VDESC.set) return;
+    ta.__bpvHook = 1;
+    Object.defineProperty(ta, 'value', {configurable: true, enumerable: true,
+      get: function(){ return VDESC.get.call(this); },
+      set: function(v){
+        var nv = v;
+        try{ if(typeof nv === 'string' && nv) nv = corrApply(nv); }catch(e){ warn(e); } /* correzioni gia' imparate: applicate al testo del microfono */
+        VDESC.set.call(this, nv);
+        S.machine = String(nv == null ? '' : nv); S.dirty = false;
+      }});
+    ta.addEventListener('input', function(){ S.dirty = true; });
+    ta.addEventListener('change', learn);
+    ta.addEventListener('blur', learn);
+    S.machine = VDESC.get.call(ta); S.dirty = false;
+  }
+  hookTA();
+  try{ if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', hookTA); }catch(e){}
+  setInterval(function(){ try{ hookTA(); }catch(e){} }, 2500);
+
+  /* ---------- wrapper sopra le funzioni esistenti ---------- */
+  function prep(t){
+    var s = String(t == null ? '' : t);
+    try{ s = corrApply(s); }catch(e){ warn(e); }
+    try{ var r = extractRoute(s); if(r.type) s = r.cleaned; }catch(e){ warn(e); } /* "tavolo tre" / "al banco per Marco" non devono diventare quantita' o prodotti */
+    try{ s = snap(s); }catch(e){ warn(e); }
+    return s;
+  }
+  try{
+    if(typeof arParseOrder === 'function'){ var _ap = arParseOrder; arParseOrder = function(t){ return _ap.call(this, prep(t)); }; }
+    if(typeof processSpokenOrder === 'function'){ var _ps = processSpokenOrder; processSpokenOrder = function(t, isAuto){ return _ps.call(this, prep(t), isAuto); }; }
+    if(typeof extractCustomerAndDeliveryFromText === 'function'){
+      var _ex = extractCustomerAndDeliveryFromText;
+      extractCustomerAndDeliveryFromText = function(raw){
+        var t = corrApply(String(raw == null ? '' : raw)), r = null, res;
+        try{ r = extractRoute(t); }catch(e){ warn(e); }
+        res = _ex.call(this, (r && r.type) ? r.cleaned : t);
+        try{ if(r && r.type) applyRoute(r); }catch(e){ warn(e); } /* dopo i livelli esistenti: l'ultima parola e' la sala/banco */
+        return res;
+      };
+    }
+    if(typeof bpVoiceIsFullOrder === 'function'){
+      var _fo = bpVoiceIsFullOrder;
+      bpVoiceIsFullOrder = function(t){ if(_fo.apply(this, arguments)) return true; return /\b(?:al|el)\s+banc[oa]\b/i.test(String(t || '')); };
+      window.bpVoiceIsFullOrder = bpVoiceIsFullOrder;
+    }
+    if(typeof analyzeMediaOrTextWithGemini === 'function'){
+      var _az = analyzeMediaOrTextWithGemini;
+      analyzeMediaOrTextWithGemini = function(payload, apiKey){
+        try{ if(payload && payload.type === 'text' && payload.text) payload = Object.assign({}, payload, {text: corrApply(payload.text)}); }catch(e){ warn(e); }
+        return _az.call(this, payload, apiKey);
+      };
+    }
+    if(typeof runFullOrderExtraction === 'function'){
+      var _rf = runFullOrderExtraction;
+      runFullOrderExtraction = async function(useAi){
+        try{ learn(); }catch(e){ warn(e); }
+        try{
+          var ta = g('voiceSmartInput'), raw = ta ? ta.value : '';
+          if(raw && raw.trim()){
+            var r = extractRoute(corrApply(raw));
+            if(r.type && isRouteOnly(r.cleaned)){ applyRoute(r); return; } /* solo "tavolo 3" / "al banco per Marco": niente lettore prodotti, niente chiamata Gemini */
+          }
+        }catch(e){ warn(e); }
+        return _rf.apply(this, arguments);
+      };
+    }
+  }catch(e){ warn(e); }
+
+  /* ---------- API ---------- */
+  window.bpvExtractRoute = extractRoute;
+  window.bpvApplyRoute = applyRoute;
+  window.bpvAltBonus = altBonus;
+  window.bpvSnap = snap;
+  window.bpVoiceCorr = {
+    list: function(){ var m = corrLoad(); return Object.keys(m).map(function(k){ return {from: k, to: m[k].to, n: m[k].n || 1}; }); },
+    add: function(from, to){ var A = tokenize(from).map(function(x){ return x.k; }).filter(Boolean).join(' '); if(!A || !to) return false; var m = corrLoad(); m[A] = {to: String(to).trim(), n: 1, t: Date.now()}; corrSave(m); return true; },
+    del: function(from){ var m = corrLoad(), A = tokenize(from).map(function(x){ return x.k; }).filter(Boolean).join(' '); if(m[A]){ delete m[A]; corrSave(m); return true; } return false; },
+    clear: function(){ try{ localStorage.removeItem(CORR_KEY); }catch(e){} },
+    apply: corrApply,
+    learn: learnFromEdit
+  };
+})();
+
+</script>
+<!-- ===== v53 · Smart Input (Strumenti) · restyling mobile POS: griglia 3x2, impostazioni AI a scomparsa, blocco note, chiusura rapida e auto-chiusura dopo estrazione AI ===== -->
+<style id="bpSmartUICss">
+/* --- palette --- */
+#voiceOrderBox{--sm-paper:#fbf8f3;--sm-ink:#1f2328;--sm-mute:#6b6459;--sm-line:#e6dfd3;--sm-green:#0f7b5a;--sm-green2:#0a5f46;--sm-terra:#c4532d;--sm-terra2:#a3401f;--sm-indigo:#3b3fa8;--sm-indigo2:#2c2f86;--sm-red:#b3261e}
+/* --- pannello come "bottom sheet" --- */
+html.pos64.p64-voice #voiceOrderBox:not(.listening){background:var(--sm-paper)!important}
+html.pos64.p64-voice #voiceOrderBox{border-radius:22px 22px 14px 14px!important;padding:0 12px 10px!important;
+ top:calc(max(4px,env(safe-area-inset-top,0px),var(--bp-safe-top,0px)) + 34px)!important;
+ box-shadow:0 -12px 40px rgba(0,0,0,.38)!important;color:var(--sm-ink);animation:bpSmUp .26s cubic-bezier(.2,.8,.2,1)}
+html.pos64.p64-voice.bp-sm-closing #voiceOrderBox{animation:bpSmDown .22s ease forwards!important}
+html.pos64.p64-voice.bp-sm-closing #bpSmBackdrop{opacity:0}
+@keyframes bpSmUp{from{transform:translateY(28px);opacity:0}to{transform:none;opacity:1}}
+@keyframes bpSmDown{from{transform:none;opacity:1}to{transform:translateY(40px);opacity:0}}
+@keyframes bpSmFade{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
+/* --- sfondo scuro: tocca per chiudere --- */
+#bpSmBackdrop{display:none;position:absolute;inset:0;background:rgba(15,12,8,.55);-webkit-backdrop-filter:blur(2px);backdrop-filter:blur(2px);transition:opacity .22s;animation:bpSmFade .2s}
+html.pos64.p64-voice #bpSmBackdrop{display:block}
+/* --- maniglia (trascina in basso) --- */
+#bpSmHandle{position:sticky;top:0;z-index:3;display:flex;justify-content:center;align-items:center;height:26px;margin:0 -12px;background:var(--sm-paper);border-radius:22px 22px 0 0;cursor:grab;touch-action:none;flex:0 0 auto}
+#bpSmHandle i{display:block;width:46px;height:5px;border-radius:9px;background:#cfc6b6}
+html:not(.p64-voice) #bpSmHandle{display:none}
+/* --- intestazione --- */
+#bpSmHead{display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px;flex:0 0 auto;margin:0 0 2px}
+#bpSmTitle{flex:1 1 auto;min-width:0;touch-action:none}
+#bpSmTitle b{display:block;font-size:19px;line-height:1.15;font-weight:900;color:var(--sm-ink);letter-spacing:-.2px}
+#bpSmTitle small{display:block;font-size:12px;color:var(--sm-mute);font-weight:600;margin-top:1px}
+#bpSmTools{display:flex;align-items:center;gap:8px;flex:0 0 auto}
+#bpSmChips{display:flex;align-items:center;gap:8px;flex:1 0 100%}
+#bpSmHead button{margin:0;box-shadow:none!important;background-image:none}
+#voiceOrderBox #bpSmHead button[title="Impostazioni AI Gemini"]{width:46px;height:46px;min-height:46px;padding:0;border-radius:50%;font-size:21px;line-height:1;background:#fff;color:var(--sm-ink);border:1.5px solid var(--sm-line);display:flex;align-items:center;justify-content:center}
+#voiceOrderBox:has(#aiKeyBox:not(.hidden)) #bpSmHead button[title="Impostazioni AI Gemini"]{background:#e7f5ef;border-color:var(--sm-green);color:var(--sm-green2)}
+#voiceOrderBox #bpSmHead #bpSmartBack{min-height:46px;padding:0 16px;border-radius:23px;font-size:14px;font-weight:800;background:var(--sm-terra)!important;color:#fff!important;border:0!important;white-space:nowrap}
+#voiceOrderBox #bpSmHead #bpVsBtn,#voiceOrderBox #bpSmHead #bpMaxBtn{min-height:36px;padding:0 14px;border-radius:18px;font-size:13px;font-weight:700;background:#fff;color:var(--sm-ink);border:1.5px solid var(--sm-line);white-space:nowrap}
+/* --- griglia azioni 3x2 --- */
+html body #voiceOrderBox:not(#bpx) .voice-actions-bar{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:8px!important;flex:0 0 auto}
+html body #voiceOrderBox:not(#bpx) .voice-actions-bar>.voice-btn{min-height:58px!important;padding:6px 4px!important;border-radius:16px!important;border:0;
+ font-size:clamp(12.5px,3.5vw,14.5px)!important;font-weight:800!important;line-height:1.15;color:#fff;display:flex;align-items:center;justify-content:center;text-align:center;
+ white-space:normal!important;word-break:keep-all;overflow-wrap:normal;hyphens:none;box-shadow:0 3px 0 rgba(0,0,0,.16),0 6px 12px rgba(31,35,40,.10)!important;transition:transform .08s}
+html body #voiceOrderBox .voice-actions-bar>.voice-btn:active{transform:translateY(2px);box-shadow:0 1px 0 rgba(0,0,0,.16)!important}
+#voiceOrderBox .voice-actions-bar>#bpInkBtn{background:linear-gradient(160deg,var(--sm-green),var(--sm-green2))}
+#voiceOrderBox .voice-actions-bar>.photo-btn{background:linear-gradient(160deg,var(--sm-terra),var(--sm-terra2))}
+#voiceOrderBox .voice-actions-bar>#voiceOrderBtn:not(.listening){background:linear-gradient(160deg,var(--sm-indigo),var(--sm-indigo2))}
+#voiceOrderBox .voice-actions-bar>.file-btn{background:linear-gradient(160deg,#4b4fbd,var(--sm-indigo2))}
+#voiceOrderBox .voice-actions-bar>#recCallBtn:not(.recording){background:linear-gradient(160deg,#c2362b,#8f1f17)}
+html.pos64.p64-voice.bp-max #voiceOrderBox .voice-actions-bar{grid-template-columns:1fr!important}
+/* --- impostazioni AI a scomparsa --- */
+#voiceOrderBox #aiKeyBox{flex-direction:column;align-items:stretch;gap:8px;background:#fff;border:1.5px solid var(--sm-line);border-radius:16px;padding:12px 14px;box-shadow:0 4px 14px rgba(31,35,40,.08);flex:0 0 auto}
+#voiceOrderBox #aiKeyBox:not(.hidden){animation:bpSmFade .2s ease}
+#voiceOrderBox #aiKeyBox::before{content:"⚙️ Impostazioni AI · Gemini";font-weight:900;font-size:14px;color:var(--sm-ink)}
+#voiceOrderBox #aiKeyBox>span{font-size:12px;color:var(--sm-mute);line-height:1.35}
+#voiceOrderBox #aiKeyBox input[type=password]{width:100%;min-height:46px;border-radius:12px;border:1.5px solid var(--sm-line);padding:0 12px;background:var(--sm-paper)}
+#voiceOrderBox #aiKeyBox>button{align-self:flex-start;min-height:44px;padding:0 20px;border-radius:12px;font-weight:800}
+#voiceOrderBox #aiKeyBox label{font-size:13px;line-height:1.35}
+/* --- anteprima foto / trascrizione --- */
+#voiceOrderBox #imagePreviewBar,#voiceOrderBox #voiceTranscriptBar{border-radius:14px}
+/* --- blocco note --- */
+html.pos64.p64-voice #voiceOrderBox #voiceSmartInput{flex:1 1 auto!important;min-height:26dvh!important;height:auto!important;max-height:none!important;
+ font-size:clamp(18px,5vw,22px)!important;line-height:1.6!important;padding:14px 16px!important;border-radius:16px!important;border:1.5px solid var(--sm-line)!important;
+ background-color:#fffdf8!important;color:var(--sm-ink);box-shadow:inset 0 2px 7px rgba(70,50,15,.09)!important;
+ background-image:repeating-linear-gradient(to bottom,transparent 0,transparent calc(1.6em - 1px),#efe8da calc(1.6em - 1px),#efe8da 1.6em)!important;background-attachment:local;background-origin:content-box;transition:border-color .15s,box-shadow .15s}
+html.pos64.p64-voice #voiceOrderBox #voiceSmartInput:focus{outline:0;border-color:var(--sm-green)!important;box-shadow:inset 0 2px 7px rgba(70,50,15,.09),0 0 0 3px rgba(15,123,90,.18)!important}
+#voiceOrderBox #voiceSmartInput::placeholder{font-size:.78em;line-height:1.5;color:#9a8f7e}
+/* --- barra azioni in basso --- */
+#bpSmFoot{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;flex:0 0 auto;padding-top:2px}
+#bpSmFoot button{min-height:46px!important;margin:0;border-radius:14px;font-size:14px;font-weight:800;white-space:nowrap;padding:0 8px}
+#bpSmFoot .bp-primary{grid-column:1/-1;min-height:58px!important;font-size:18px;border-radius:16px;border:0;color:#fff;background:linear-gradient(160deg,var(--sm-green),var(--sm-green2))!important;box-shadow:0 4px 0 rgba(0,0,0,.18),0 8px 16px rgba(15,123,90,.28)!important;letter-spacing:.2px}
+#bpSmFoot .bp-primary:active{transform:translateY(2px);box-shadow:0 2px 0 rgba(0,0,0,.18)!important}
+#bpSmFoot .bp-ai{grid-column:span 2;background:var(--sm-indigo)!important;color:#fff!important;border:0!important}
+#bpSmFoot .bp-clr{grid-column:span 2;background:#fff!important;color:var(--sm-ink)!important;border:1.5px solid var(--sm-line)!important}
+#bpSmFoot #bpVlogBtn{grid-column:span 3;background:#fff!important;color:var(--sm-ink)!important;border:1.5px solid var(--sm-line)!important}
+#bpSmFoot .bp-trash{grid-column:span 1;background:#fff!important;border:1.5px solid var(--sm-line)!important;font-size:18px}
+</style>
+<script id="bpSmartUIjs">(function(){
+ if(window.__bpSmartUI) return; window.__bpSmartUI = 1;
+ var root = document.documentElement;
+ function $(id){ return document.getElementById(id); }
+ function isOpen(){ return root.classList.contains('p64-voice'); }
+
+ /* chiusura (con breve transizione) */
+ function closeSmart(animated){
+  try{
+   if(!isOpen()){ var b = $('bpSmartBack'); if(b) b.click(); return; }
+   if(animated === false){ root.classList.remove('p64-voice', 'bp-sm-closing'); return; }
+   if(root.classList.contains('bp-sm-closing')) return;
+   root.classList.add('bp-sm-closing');
+   setTimeout(function(){ root.classList.remove('p64-voice', 'bp-sm-closing'); }, 220);
+  }catch(e){ try{ root.classList.remove('p64-voice', 'bp-sm-closing'); }catch(_){} }
+ }
+ window.bpSmartClose = closeSmart;
+
+ /* sfondo scuro: tocca fuori dal pannello = chiudi */
+ function mkBackdrop(){
+  var vb = $('voiceOrderBox'); if(!vb || $('bpSmBackdrop') || !vb.parentNode) return;
+  var bd = document.createElement('div'); bd.id = 'bpSmBackdrop'; bd.setAttribute('aria-hidden', 'true');
+  bd.addEventListener('click', function(){ closeSmart(); });
+  vb.parentNode.insertBefore(bd, vb);
+ }
+ function syncBackdrop(){
+  var vb = $('voiceOrderBox'), bd = $('bpSmBackdrop'); if(!vb || !bd) return;
+  try{ var z = parseInt(getComputedStyle(vb).zIndex, 10); bd.style.zIndex = String(Math.max(1, (isNaN(z) ? 30 : z) - 1)); }catch(e){}
+ }
+
+ /* maniglia + trascina in basso per chiudere */
+ function attachSwipe(node, vb){
+  var y0 = null, dy = 0;
+  node.addEventListener('touchstart', function(e){ if(!e.touches || !e.touches[0]) return; y0 = e.touches[0].clientY; dy = 0; vb.style.transition = 'none'; }, {passive: true});
+  node.addEventListener('touchmove', function(e){ if(y0 == null) return; dy = Math.max(0, e.touches[0].clientY - y0); vb.style.transform = 'translateY(' + dy + 'px)'; }, {passive: true});
+  function end(){
+   if(y0 == null) return;
+   vb.style.transition = 'transform .2s ease';
+   if(dy > 80){
+    vb.style.transform = 'translateY(100%)';
+    setTimeout(function(){ closeSmart(false); vb.style.transform = ''; vb.style.transition = ''; }, 180);
+   }else{
+    vb.style.transform = ''; setTimeout(function(){ vb.style.transition = ''; }, 220);
+   }
+   y0 = null;
+  }
+  node.addEventListener('touchend', end); node.addEventListener('touchcancel', end);
+ }
+ function mkHandle(vb){
+  if($('bpSmHandle')) return;
+  var h = document.createElement('div'); h.id = 'bpSmHandle'; h.setAttribute('role', 'button'); h.setAttribute('aria-label', 'Chiudi (trascina in basso)'); h.innerHTML = '<i></i>';
+  h.addEventListener('click', function(){ closeSmart(); });
+  vb.insertBefore(h, vb.firstChild);
+  attachSwipe(h, vb);
+ }
+
+ /* costruisce intestazione + barra in basso spostando (non clonando) i pulsanti esistenti: ID, onclick e listener restano identici */
+ function build(){
+  try{
+   var vb = $('voiceOrderBox'); if(!vb) return;
+   var bar = vb.querySelector('.voice-actions-bar'); if(!bar || !bar.parentNode) return;
+   mkBackdrop(); mkHandle(vb);
+   var head = $('bpSmHead');
+   if(!head){
+    head = document.createElement('div'); head.id = 'bpSmHead';
+    head.innerHTML = '<div id="bpSmTitle"><b>✨ Ordine rapido</b><small>Testo · foto · voce</small></div><div id="bpSmTools"></div><div id="bpSmChips"></div>';
+    bar.parentNode.insertBefore(head, bar);
+    attachSwipe($('bpSmTitle'), vb);
+   }
+   var tools = $('bpSmTools'), chips = $('bpSmChips');
+   var gear = document.querySelector('#voiceOrderBox button[title="Impostazioni AI Gemini"]');
+   if(gear && gear.parentNode !== tools){ gear.textContent = '⚙️'; gear.setAttribute('aria-label', 'Impostazioni AI'); gear.title = 'Impostazioni AI Gemini'; tools.appendChild(gear); }
+   var back = $('bpSmartBack');
+   if(back){ if(back.parentNode !== tools){ back.style.cssText = ''; tools.appendChild(back); } }
+   else if(!tools.querySelector('#bpSmartBack')){ /* in attesa: lo crea un altro script */ }
+   ['bpVsBtn', 'bpMaxBtn'].forEach(function(id){ var b = $(id); if(b && b.parentNode !== chips){ chips.appendChild(b); } });
+   var ink = $('bpInkBtn'); if(ink && ink.getAttribute('style')) ink.style.cssText = '';
+   /* tools: gear sempre prima di Chiudi */
+   if(back && gear && back.parentNode === tools && gear.parentNode === tools && tools.firstChild !== gear) tools.insertBefore(gear, tools.firstChild);
+
+   /* blocco in basso: Estrai Ordine (principale) + AI + Pulisci + Log voce + cestino */
+   var row = vb.querySelector('.voice-input-row'); if(!row) return;
+   var foot = $('bpSmFoot');
+   if(!foot){ foot = document.createElement('div'); foot.id = 'bpSmFoot'; row.appendChild(foot); }
+   var btns = Array.prototype.slice.call(row.querySelectorAll('button'));
+   btns.forEach(function(b){
+    if(b.parentNode === foot) return;
+    var oc = b.getAttribute('onclick') || '', tx = b.textContent || '';
+    if(oc.indexOf('runFullOrderExtraction(false)') >= 0){ b.classList.add('bp-primary'); b.textContent = '✨ Estrai Ordine'; b.title = 'Estrai l\u2019ordine dal testo (Invio)'; foot.insertBefore(b, foot.firstChild); }
+    else if(oc.indexOf('runFullOrderExtraction(true)') >= 0){ b.classList.add('bp-ai'); foot.appendChild(b); }
+    else if(/Pulisci/.test(tx)){ b.classList.add('bp-clr'); foot.appendChild(b); }
+    else if(b.id === 'bpVlogBtn'){ foot.appendChild(b); }
+    else if(/Svuota log/i.test(b.title || '')){ b.classList.add('bp-trash'); foot.appendChild(b); }
+   });
+   /* ordine fisso: primario, AI, Pulisci, Log voce, cestino */
+   ['.bp-primary', '.bp-ai', '.bp-clr', '#bpVlogBtn', '.bp-trash'].forEach(function(s){ var n = foot.querySelector(s); if(n) foot.appendChild(n); });
+   /* elimina i contenitori ormai vuoti */
+   Array.prototype.slice.call(row.children).forEach(function(c){ if(c !== foot && c.tagName === 'DIV' && !c.querySelector('button, textarea, input')) c.remove(); });
+   if(foot.parentNode === row && row.lastElementChild !== foot) row.appendChild(foot);
+  }catch(e){ try{ console.warn('[bpSmartUI]', e); }catch(_){} }
+ }
+
+ /* Esc chiude (se non c'e' una finestra di controllo aperta sopra) */
+ document.addEventListener('keydown', function(e){
+  if(e.key !== 'Escape' || !isOpen()) return;
+  if(document.querySelector('#gemReviewBack, .modal-backdrop:not(.hidden)')) return;
+  closeSmart();
+ });
+
+ /* auto-chiusura dopo estrazione AI riuscita: l'ordine e' gia' stato inserito/passato alla schermata di controllo */
+ function hook(){
+  if(window.__bpSmHooked) return;
+  var f = window.applyExtractedOrderObject; if(typeof f !== 'function') return;
+  window.__bpSmHooked = 1;
+  window.applyExtractedOrderObject = function(parsed){
+   var r = f.apply(this, arguments);
+   try{
+    if(parsed && parsed.noOrder !== true && isOpen()){
+     try{ if(typeof ssToast === 'function') ssToast('✅ Ordine estratto · controlla e conferma'); }catch(_){}
+     setTimeout(function(){ closeSmart(); }, 120);
+    }
+   }catch(e){}
+   return r;
+  };
+ }
+
+ /* all'apertura: sincronizza sfondo e ricostruisci se serve */
+ try{ new MutationObserver(function(){ if(isOpen()){ build(); syncBackdrop(); } }).observe(root, {attributes: true, attributeFilter: ['class']}); }catch(e){}
+ function init(){ build(); hook(); syncBackdrop(); }
+ if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
+ [600, 1600, 4200].forEach(function(t){ setTimeout(init, t); });
+ setInterval(function(){ build(); hook(); }, 3000);
+})();</script>
+
 </body>
 </html>
