@@ -8341,6 +8341,8 @@ function updateRestoUI(grandTotal){
 function saveGeminiKey(){
  let k = el('geminiApiKey').value.trim();
  localStorage.setItem('bp_gemini_key', k);
+ /* v127: se incolli una chiave vera mentre il proxy è attivo, il proxy si spegne su QUESTO dispositivo: la chiave scritta vale davvero */
+ if(k && k !== 'proxy' && localStorage.getItem('bp_gemini_proxy') === '1'){ localStorage.setItem('bp_gemini_proxy', '0'); var __pc = el('bpGemProxyChk'); if(__pc) __pc.checked = false; var __pw = el('bpGemWarn'); if(__pw) __pw.classList.remove('hidden'); }
  var __direct = k && k !== 'proxy' && localStorage.getItem('bp_gemini_proxy') !== '1';
  if(__direct){
  setVoiceMsg('✅ Chiave AI Gemini salvata! Ora puoi estrarre ordini da Foto/Immagini 📷, Vocali WhatsApp e Testi.<br><b style="color:#b42318">⚠️ Attenzione: la chiave resta in chiaro nella memoria di questo browser (visibile a estensioni e script). Meglio attivare il «proxy sicuro» qui sotto: la chiave non resterà nel dispositivo.</b>', 'success');
@@ -8526,10 +8528,10 @@ function blobToBase64(blob){
 /* ================= v46: MOTORE GEMINI (modelli aggiornati, retry intelligenti, schema JSON, timeout) ================= */
 /* v54: modelli FISSI (niente piu' scoperta dinamica, che pescava gemini-2.5-pro => errore "no longer available to new users").
    Principale: gemini-2.5-flash (veloce). Fallback automatico, solo se serve: gemini-3.1-pro-preview. */
-const GEM_PREFERRED_MODEL = 'gemini-2.5-flash';
+const GEM_PREFERRED_MODEL = 'gemini-3.8-flash'; /* v127: Google: «gemini-2.5-flash non è più disponibile ai nuovi utenti → usa gemini-3.8-flash» */
 const GEM_FALLBACK_MODEL = 'gemini-3.1-pro-preview';
-const GEM_LITE_MODEL = 'gemini-2.5-flash-lite'; /* v125: quota separata e più alta: se flash è in 429, lite risponde */
-const GEM_FALLBACK_MODELS = [GEM_PREFERRED_MODEL, GEM_LITE_MODEL, GEM_FALLBACK_MODEL];
+const GEM_LITE_MODEL = 'gemini-3.5-flash-lite'; /* v125: quota separata e più alta: se flash è in 429, lite risponde */
+const GEM_FALLBACK_MODELS = [GEM_PREFERRED_MODEL, 'gemini-flash-latest', GEM_LITE_MODEL, 'gemini-2.5-flash', GEM_FALLBACK_MODEL]; /* i 2.5 restano come ripiego per i vecchi progetti */
 try{ localStorage.removeItem('bp_gemini_models_v53'); var __okm = localStorage.getItem('bp_gemini_model_ok'); if(__okm && GEM_FALLBACK_MODELS.indexOf(__okm) < 0) localStorage.removeItem('bp_gemini_model_ok'); }catch(e){}
 const GEM_BAD_MODEL_RE = /image|tts|live|embedding|imagen|veo|audio|robotics|computer-use|omni|lyria|learnlm|gemma|aqa|customtools|-exp|exp-/i;
 const __gemDead = new Set();
