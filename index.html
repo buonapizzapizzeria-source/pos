@@ -42551,5 +42551,70 @@ html.p64-ticket body #p64Head>#p64Bar{grid-row:4!important}
   document.addEventListener('input',function(e){ if(e.target&&e.target.id==='customer'&&!e.target.value.trim()) lastKey=''; });
 })();
 </script>
+<style id="bpCashMainCss">
+/* ===== Contanti & resto: tagli fissi 10 · 20 · 50 · 100, sempre visibili ===== */
+#newTab #cashCalcArea,.p64w[data-w="cash"] #cashCalcArea,#cashCalcArea.hidden{display:block!important}
+#cashCalcArea .quick-cash-btns{display:none!important}
+#bpCashMain{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin:6px 0 10px}
+#bpCashMain button{min-height:74px;border-radius:18px;border:3px solid #abefc6;background:#fff;color:#101828;font-weight:900;font-size:28px;line-height:1.1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;touch-action:manipulation;cursor:pointer}
+#bpCashMain button small{font-size:14px;font-weight:800;color:#16794b}
+#bpCashMain button.on{background:#16794b;border-color:#16794b;color:#fff}
+#bpCashMain button.on small{color:#d1fadf}
+#bpCashMain button.ex,#bpCashMain button.clr{font-size:18px;min-height:56px}
+#bpCashMain button.clr{background:#fef3f2;border-color:#fda29b;color:#b42318}
+#bpCashNote{margin:6px 0 8px;padding:8px 10px;border-radius:12px;background:#fff7ec;border:2px dashed #f1d9b5;color:#231815;font-weight:800;font-size:14px}
+#bpCashNote.big{background:#16794b;border:2px solid #16794b;color:#fff;font-size:18px}
+#bpCashNote.bad{background:#fef3f2;border-color:#f04438;color:#b42318}
+</style>
+<script id="bpCashMainJs">
+(function(){
+ function E(i){return document.getElementById(i);}
+ function eur(n){return (Math.round(n*100)/100).toFixed(2).replace('.',',')+' €';}
+ var DEN=[10,20,50,100], sig='';
+ function total(){try{return getGrandTotal();}catch(e){return 0;}}
+ function given(){var i=E('cashGivenInput');return Number((i&&i.value)||0);}
+ function ensure(){
+  var a=E('cashCalcArea');if(!a)return null;
+  var m=E('bpCashMain');
+  if(m&&m.isConnected)return m;
+  m=document.createElement('div');m.id='bpCashMain';
+  var row=a.querySelector('.calc-row');a.insertBefore(m,row?row.nextSibling:a.firstChild);
+  var n=document.createElement('div');n.id='bpCashNote';m.after(n);
+  m.addEventListener('click',function(e){
+   var b=e.target.closest('button');if(!b)return;
+   var v=b.getAttribute('data-v');
+   var pay=E('payment');
+   if(pay&&pay.value!=='Contanti'){pay.value='Contanti';try{onPaymentMethodChange();}catch(x){}}
+   var val=v==='x'?0:(v==='g'?Math.ceil(total()*100)/100:Number(v));
+   var inp=E('cashGivenInput');if(inp){inp.value=val>0?val:'';}
+   try{renderCart();}catch(x){}
+   try{inp&&inp.dispatchEvent(new Event('input',{bubbles:true}));}catch(x){}
+   paint(true);
+  });
+  return m;
+ }
+ function paint(force){
+  var m=ensure();if(!m)return;
+  var t=total(),cur=given(),pay=E('payment'),cash=!pay||pay.value==='Contanti';
+  var h=DEN.map(function(v){
+   var r=(t>0&&v>=t)?'resto '+eur(v-t):(t>0?'mancano '+eur(t-v):'');
+   return '<button type="button" data-v="'+v+'" class="'+(cash&&cur===v?'on':'')+'">'+v+' €<small>'+(r||'&nbsp;')+'</small></button>';
+  });
+  h.push('<button type="button" data-v="g" class="ex'+(cash&&t>0&&cur===Math.ceil(t*100)/100?' on':'')+'">✔ Giusto'+(t>0?' · '+eur(t):'')+'</button>');
+  h.push('<button type="button" data-v="x" class="clr">✖ Azzera</button>');
+  var note='',cls='';
+  if(cash&&cur>0&&t>0){
+   if(cur>t+0.001){note='📝 In nota: [💶 Paga con '+eur(cur)+' · Resto: '+eur(cur-t)+']';cls='big';}
+   else if(cur<t-0.001){note='⚠️ Mancano ancora '+eur(t-cur);cls='bad';}
+   else note='✔ Importo giusto, nessun resto';
+  }else note='Tocca il taglio che il cliente ti dà: il resto va in nota sull\'ordine (stampa termica e telefono).';
+  var s2=h.join('')+'|'+note+cls;
+  if(!force&&s2===sig)return;sig=s2;
+  m.innerHTML=h.join('');var n=E('bpCashNote');if(n){n.textContent=note;n.className=cls;}
+ }
+ setInterval(function(){try{paint(false);}catch(e){}},500);
+ document.addEventListener('input',function(e){if(e.target&&e.target.id==='cashGivenInput')try{paint(true);}catch(x){}},true);
+})();
+</script>
 </body>
 </html>
