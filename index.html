@@ -41426,7 +41426,7 @@ body.dark-mode #bpKzBar .kz-l,body.dark-mode #bpKzBar b{color:#e2e8f0}
       b.innerHTML = '<span class="pb-ic">🗓️</span><span class="pb-tx"><b>Piano orari<i>المواعيد</i></b><span class="pb-sum" id="bpPlanSum">…</span></span><span class="pb-ch">›</span>';
       b.addEventListener('click', openSheet);
     }
-    if(tl.nextElementSibling !== b) tl.parentNode.insertBefore(b, tl.nextSibling);
+    var bk=document.getElementById('p64Back'); if(bk && bk.parentNode===tl){ if(bk.nextElementSibling!==b) tl.insertBefore(b, bk.nextElementSibling); } else if(tl.nextElementSibling !== b) tl.parentNode.insertBefore(b, tl.nextSibling);
     refreshBtn();
   }
   setInterval(function(){ try{ ensureBtn(); }catch(e){} }, 1500);
@@ -42216,7 +42216,12 @@ img.bp-chef{height:1.3em;width:auto;vertical-align:-0.3em;display:inline-block;m
     var add = [], del = [];
     Object.keys(a).forEach(function(k){
       var x = a[k], q = x.q - (b[k] ? b[k].q : 0); if(q <= 0) return;
-      add.push((q > 1 ? q + " " : "") + x.n + (x.s === "Maxi" ? " Maxi" : "") + (x.r.length ? " senza " + x.r.join(", ") : "") + (x.a.length ? " con " + x.a.join(", ") : ""));
+      var isMark = function(m){ return /^\+?\s*solo\b/i.test(String(m)); }, solo = null;
+      try{ solo = bpSoloKeepOf({baseName: x.n, mods: x.r.map(function(r){ return "SENZA " + r; }).concat(x.a.filter(isMark).map(function(m){ return "+" + m; }))}); }catch(e){ solo = null; }
+      var adds = x.a.filter(function(m){ return !isMark(m); }), mod;
+      if(solo !== null){ mod = " solo carne" + adds.concat(solo).map(function(m){ return " e " + m; }).join(""); }  /* kebab SOLO CARNE: «solo carne e salsa bianca e insalata», senza elencare i «senza» */
+      else mod = (x.r.length ? " senza " + x.r.join(", ") : "") + (adds.length ? " con " + adds.join(", ") : "");
+      add.push((q > 1 ? q + " " : "") + x.n + (x.s === "Maxi" ? " Maxi" : "") + mod);
     });
     Object.keys(b).forEach(function(k){
       var q = b[k].q - (a[k] ? a[k].q : 0); if(q > 0) del.push((q > 1 ? q + " " : "") + b[k].n);
@@ -42226,6 +42231,11 @@ img.bp-chef{height:1.3em;width:auto;vertical-align:-0.3em;display:inline-block;m
     if(del.length) parts.push("tolto " + del.slice(0, 2).join(", "));
     return parts.join(". ");
   };
+  /* v9 · أي لمسة على الشاشة (أو زرار المايك) توقف الرد الصوتي فوراً */
+  if(!window.__bpVsStop){ window.__bpVsStop = 1;
+    var bpVsStopNow = function(){ try{ var s = window.speechSynthesis; if(s && (s.speaking || s.pending)) s.cancel(); }catch(e){} };
+    ['pointerdown','touchstart','mousedown','keydown'].forEach(function(ev){ document.addEventListener(ev, bpVsStopNow, {capture:true, passive:true}); });
+  }
   function vsay(text, extra){
     try{
       if(!bpFeat("voiceReply") || !window.speechSynthesis || !text) return;
@@ -42413,9 +42423,39 @@ html.p64-ticket body #p64Head>.topline h2{display:none!important}
 html.p64-ticket body #p64Back{flex:1 1 auto!important;order:-1;height:48px!important;min-height:48px!important;padding:0 18px!important;border-radius:14px!important;font-size:17px!important;font-weight:900!important;background:#1d1209!important;color:#fff!important;border:0!important;box-shadow:0 3px 10px rgba(29,18,9,.35)!important;justify-content:center;display:flex;align-items:center;gap:6px}
 html.p64-ticket body #p64Head>.topline button:not(#p64Back){flex:0 0 44px!important;width:44px!important;height:44px!important;padding:0!important}
 html.p64-ticket body #p64Head>.topline #p64Back+*{margin-inline-start:10px}
+/* v6 · «Torna al menu» e scopa: meta' schermo ciascuno, molto ALTI (dita grosse); freccia piccola in fondo */
+html.p64-ticket body #p64Head>.topline{flex-wrap:nowrap!important;gap:14px!important;margin-bottom:14px!important}
+html.p64-ticket body #p64Back{flex:1 1 0!important;width:auto!important;min-width:0!important;height:88px!important;min-height:88px!important;font-size:22px!important;border-radius:18px!important}
+html.p64-ticket body #p64Head>.topline button:not(#p64Back){flex:1 1 0!important;width:auto!important;min-width:0!important;height:88px!important;min-height:88px!important;font-size:34px!important;border-radius:18px!important}
+html.p64-ticket body #p64Head>.topline button:not(#p64Back):last-child{flex:0 0 56px!important;width:56px!important;font-size:22px!important}
+html.p64-ticket body #p64Head>.topline #p64Back+*{margin-inline-start:0}
+/* v7 · specificita' alta: «Torna al menu» alto come la scopa (batte la regola height:30px di .topline button) */
+html.pos64.p64-ticket body #p64Head>.topline #p64Back{height:88px!important;min-height:88px!important;align-self:stretch!important;font-size:22px!important;border-radius:18px!important;flex:1 1 0!important;width:auto!important;min-width:0!important}
 html.p64-ticket body #p64Head>#bpPlanBtn{grid-column:1/-1!important;grid-row:2!important}
 html.p64-ticket body #p64Head>#bpOrder{grid-row:3!important}
 html.p64-ticket body #p64Head>#p64Bar{grid-row:4!important}
+/* v8 · حذف Piano orari · الشريط العلوي: 3 أزرار بنفس العرض ونفس الارتفاع */
+html body #bpPlanBtn{display:flex!important;align-items:center;justify-content:center}
+html body #bpPlanBtn .pb-sum,html body #bpPlanBtn .pb-ch,html body #bpPlanBtn .pb-tx i{display:none!important}
+html body #bpPlanBtn .pb-tx b{font-size:15px!important;line-height:1.15!important;text-align:center}
+html body #bpPlanBtn .pb-tx{align-items:center!important;text-align:center}
+html.p64-ticket body #p64Head>.topline{display:flex!important;flex-wrap:nowrap!important;align-items:stretch!important;gap:10px!important;margin:0 0 14px!important}
+html.p64-ticket body #p64Head>.topline>button{flex:1 1 0!important;width:auto!important;min-width:0!important;max-width:none!important;height:88px!important;min-height:88px!important;max-height:88px!important;margin:0!important;padding:0 6px!important;box-sizing:border-box!important}
+html.p64-ticket body #p64Head>.topline>#p64Back{font-size:18px!important;line-height:1.15!important;white-space:normal!important;text-align:center!important}
+html.p64-ticket body #p64Head>.topline>button:last-child{display:none!important}
+/* v10 · الدفع في صف لوحده، والنوع (دوميتشيليو · ريتيرو · تافولو) في صف لوحده، وأزرار أطول وأعلى للمس بالصباع التخين */
+html.pos64 body #p64Head>#bpOrder{display:flex!important;flex-direction:column!important;flex-wrap:nowrap!important;gap:8px!important;height:auto!important;min-height:0!important}
+html.pos64 body #bpOrder .bpo-seg{display:grid!important;width:100%!important;gap:8px!important;background:transparent!important;padding:0!important;border-radius:0!important}
+html.pos64 body #bpOrder .bpo-seg.type-seg{grid-template-columns:repeat(3,minmax(0,1fr))!important}
+html.pos64 body #bpOrder .bpo-seg.four{grid-template-columns:repeat(4,minmax(0,1fr))!important}
+html.pos64 body #newTab #bpOrder .bpo-seg button{height:60px!important;min-height:60px!important;padding:0 4px!important;font-size:16px!important;border-radius:14px!important}
+html.pos64 body #bpOrder .bpo-seg button b{display:inline!important;font-size:15px!important;font-weight:900!important}
+html.pos64 body #bpOrder .bpo-seg button .uxi{width:26px!important;height:26px!important}
+html.pos64 body #bpOrder .bpo-seg button.on b{display:inline!important}
+html.pos64 body #p64Bar button{height:54px!important;min-height:54px!important;border-radius:12px!important}
+html.pos64 body #p64Bar button span{font-size:18px!important}
+html.pos64 body #p64Bar button b{font-size:14px!important;font-weight:900!important}
+
 </style>
 <script id="bpSlimCartJs">
 (function(){
