@@ -4530,6 +4530,13 @@ a,label,summary,[role="button"],[onclick],[data-tab],.tabs button,#bpNav *,#bpMo
 .pk-mprev b{font-size:24px;color:#15803d}
 </style>
 <style id="bp-paid-css">.bp-paid-btn{border-radius:14px;font-weight:900}.order-right .bpi.bp-unpaid,#allOrders .bpi.bp-unpaid{background:#d92d20!important;color:#fff!important}.order-right .bpi.bp-is-paid,#allOrders .bpi.bp-is-paid{background:#067647!important;color:#fff!important}</style>
+<style id="bpSafeTop">
+/* ===== iPhone: Dynamic Island / notch — tutto sotto l'area sicura in alto (PWA e Safari) ===== */
+/* env(safe-area-inset-top) vale 0 su desktop e in Safari normale, quindi lì non cambia nulla */
+html body header{border-top:env(safe-area-inset-top,0px) solid transparent!important;box-sizing:border-box}
+html.pos64.p64-ticket body #newTab>.grid>section.panel:nth-child(2){padding-top:calc(8px + env(safe-area-inset-top,0px))!important}
+html body #resPanel,html body #bpCamOv,html body #bpInk{padding-top:env(safe-area-inset-top,0px)!important;box-sizing:border-box}
+</style>
 </head>
  <body>
  <header class="no-print">
@@ -40011,7 +40018,7 @@ html body .ss .ss-bd .ss-dough .ss-ch.dtl .dnm{font-size:13px!important}
 <style id="bp-pizzaiolo-css">
 html.bp-pz-on,html.bp-pz-on body{overflow:hidden}
 #bpPZ{--bg:#0b0f19;--pn:#111827;--cd:#161d2e;--ln:#26324a;--tx:#f3f4f6;--mu:#9aa6c0;--red:#ef4444;--amb:#f59e0b;--blu:#3b82f6;--grn:#22c55e;--pur:#8b5cf6;
-position:fixed;inset:0;z-index:2147483100;background:var(--bg);color:var(--tx);display:block;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;font-size:calc(16px * var(--pzf,1));font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;padding:env(safe-area-inset-top,0) 0 env(safe-area-inset-bottom,0);-webkit-user-select:none;user-select:none}
+position:fixed;inset:0;z-index:2147483645;background:var(--bg);color:var(--tx);display:block;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;font-size:calc(16px * var(--pzf,1));font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;padding:env(safe-area-inset-top,0) 0 env(safe-area-inset-bottom,0);-webkit-user-select:none;user-select:none}
 #bpPZ *{box-sizing:border-box}
 #bpPZ button{font:inherit;color:inherit;cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
 /* ----- testata fissa ----- */
@@ -40097,6 +40104,7 @@ position:fixed;inset:0;z-index:2147483100;background:var(--bg);color:var(--tx);d
 #bpPZ .pz-kc{font-size:.9em;color:var(--mu);font-weight:750}#bpPZ .pz-kc.ok{color:#86efac}
 #bpPZ .pz-bd{margin-inline-start:auto;padding:.2em .7em;border-radius:99em;font-size:.88em;font-weight:900;background:#334155;color:#fff}
 #bpPZ .pz-bd.r{background:#b91c1c}#bpPZ .pz-bd.y{background:var(--amb);color:#1b1200}#bpPZ .pz-bd.b{background:#1d4ed8}#bpPZ .pz-bd.g{background:#15803d}#bpPZ .pz-bd.w{background:#6d28d9}
+#bpPZ .pz-fin{background:#2563eb;width:100%;margin-top:.4em}
 #bpPZ .pz-go{border:0;border-radius:.8em;padding:.8em .9em;font-weight:900;font-size:1.08em;background:#15803d;color:#fff}
 #bpPZ .pz-go[disabled]{opacity:.5}
 #bpPZ .pz-ln{background:#1e2740}
@@ -40129,7 +40137,9 @@ position:fixed;inset:0;z-index:2147483100;background:var(--bg);color:var(--tx);d
 #bp35KDS .k35-t.pz-wait .k35-go{display:none!important}
 #bp35KDS .pz-tg{margin:.3em .5em;padding:.35em .6em;border-radius:.6em;font-weight:900;font-size:.9em;background:#3b2a73;color:#fff}
 #bp35KDS .pz-tg.ok{background:#14532d}
-body[data-role="pizzaiolo"] .status-bar,body[data-role="pizzaiolo"] .order-right button,body[data-role="pizzaiolo"] .order-right a,body[data-role="pizzaiolo"] [data-oacc],body[data-role="pizzaiolo"] [data-orej],body[data-role="pizzaiolo"] [data-route-toggle],body[data-role="pizzaiolo"] #routeBuilderBox,body[data-role="pizzaiolo"] .bp-fab,body[data-role="pizzaiolo"] #bpMoreBtn,body[data-role="pizzaiolo"] #bpQuick{display:none!important}
+/* pizzaiolo: controllo completo sugli ordini (status, accetta/rifiuta, pulsanti). Nascosti solo giri/consegne e note rapide della cassa */
+body[data-role="pizzaiolo"] [data-route-toggle],body[data-role="pizzaiolo"] #routeBuilderBox,body[data-role="pizzaiolo"] #bpQuick{display:none!important}
+body[data-role="pizzaiolo"] #bpPZ .pz-fin{display:block}
 @media print{#bpPZ{display:none!important}}
 
 #ovLine{margin:8px 0 2px;padding:8px 10px;border-radius:14px;background:#fff7ec;border:2px solid #f1d9b5;color:#231815;font-family:inherit}
@@ -40193,7 +40203,7 @@ function findOrder(id){ var s = String(id), a = allOrders(); for(var i = 0; i < 
 function stOf(o){ try{ return normStatus(o.status); }catch(e){ return String(o.status || 'Nuovo'); } }
 function isSvc(i){ try{ return bpIsSvc(i.product_name); }catch(e){ return false; } }
 function roleNow(){ try{ return BP_ROLE; }catch(e){ return window.BP_ROLE || ''; } }
-function canHand(){ var r = roleNow(); return r === 'manager' || r === 'cashier'; }
+function canHand(){ var r = roleNow(); return r === 'manager' || r === 'cashier' || r === 'pizzaiolo'; }
 function enforceOn(){ return ls(K_ENF) !== '0'; }
 function pad2(n){ return (n < 10 ? '0' : '') + n; }
 function hhmm(ms){ var d = new Date(ms); return pad2(d.getHours()) + ':' + pad2(d.getMinutes()); }
@@ -40219,6 +40229,10 @@ async function setStatus(id, st){ if(origUpdate) return origUpdate(id, st); }
 async function setKDone(o, val){
   o.k_done = val; lset('k' + o.id, val);
   try{ var r = await sb.from('orders').update({k_done: val}).eq('id', o.id); if(colErr(r)) colMissing = true; }catch(e){ console.warn('[pz] k_done', e); }
+}
+async function doneAll(o){
+  var rk = reqKeys(o); o.pz_done = rk; lset('p' + o.id, rk);
+  try{ var r = await sb.from('orders').update({pz_done: rk}).eq('id', o.id); if(colErr(r)) colMissing = true; }catch(e){ console.warn('[pz] doneAll', e); }
 }
 async function finalize(o){
   var st = stOf(o);
@@ -40366,6 +40380,7 @@ function kitLine(x){
   return '<span class="pz-kc' + (x.kd ? ' ok' : '') + '">🍳 Cucina: ' + (x.kd ? 'finita ✓' : 'in corso') + '</span>';
 }
 function goBtn(x){
+  if(x.st !== 'Pronto' && canHand() && x.st !== 'Completato' && x.st !== 'Annullato' && x.st !== 'In consegna') return '<button type="button" class="pz-go pz-fin" data-a="fin" data-o="' + E(x.o.id) + '">✅ FINITO · PRONTO</button>';
   if(x.st !== 'Pronto' || !canHand()) return '';
   return '<button type="button" class="pz-go" data-a="go" data-o="' + E(x.o.id) + '" data-n="' + E(x.ds.go) + '">' + E(x.ds.btn) + '</button>';
 }
@@ -40511,7 +40526,6 @@ function openPZ(){
   pz.style.setProperty('--pzf', ls(K_FS) || '1');
   pz.innerHTML = '<div class="pz-head"></div><div class="pz-tools"></div><div class="pz-wn"></div><div class="pz-body"></div>';
   document.body.appendChild(pz); document.documentElement.classList.add('bp-pz-on');
-  pz.addEventListener('click', onClick);
   seen = null; sig = ''; paint(); checkNew();
   tick = setInterval(function(){
     var c = $('#pzClock', pz); if(c) c.textContent = hhmm(Date.now());
@@ -40527,10 +40541,26 @@ function closePZ(){
   pz.remove(); pz = null; document.documentElement.classList.remove('bp-pz-on');
   if(roleNow() === 'pizzaiolo'){ try{ switchTab('orders'); }catch(e){} }
 }
+/* tocchi sulla schermata pizzaiolo: gestiti sulla finestra in fase di cattura (prima di qualsiasi altro script) e su pointerup,
+   così nessun altro handler/overlay/ridisegno può "mangiarsi" il tocco */
+var pdn = null, lastTap = 0;
+window.addEventListener('pointerdown', function(e){ pdn = (pz && pz.contains(e.target)) ? {x: e.clientX, y: e.clientY, t: e.target} : null; }, true);
+window.addEventListener('pointerup', function(e){
+  if(!pz || !pdn) return; var t = pdn.t, d = Math.hypot(e.clientX - pdn.x, e.clientY - pdn.y); pdn = null;
+  if(d > 12) return; lastTap = Date.now();
+  try{ onClick({target: t}); }catch(x){ console.warn('[pz] tap', x); }
+}, true);
+window.addEventListener('click', function(e){
+  if(!pz || !pz.contains(e.target)) return;
+  if(Date.now() - lastTap < 700) return; /* già gestito da pointerup */
+  try{ onClick(e); }catch(x){ console.warn('[pz] click', x); }
+}, true);
 function onClick(e){
   var b = e.target.closest('[data-a]'); if(!b) return; var a = b.getAttribute('data-a');
   if(a === 't'){ var oid = b.getAttribute('data-o'), o = findOrder(oid); toggle(o ? o.id : oid, b.getAttribute('data-k')); return; }
   if(a === 'go'){ b.disabled = true; var id = b.getAttribute('data-o'), o2 = findOrder(id); setStatus(o2 ? o2.id : id, b.getAttribute('data-n')).then(function(){ paint(); }, function(){ paint(); }); return; }
+  if(a === 'fin'){ b.disabled = true; var fid = b.getAttribute('data-o'), fo = findOrder(fid);
+    if(fo){ chain = chain.then(async function(){ try{ await doneAll(fo); await window.updateOrderStatus(fo.id, 'Pronto'); }catch(x){ console.warn('[pz] fin', x); alert('Errore: ' + (x && x.message || x)); } try{ if(typeof loadOrders === 'function') await loadOrders(); }catch(x){} paint(); toastMsg('✅ #' + fo.id + ' pronto — avvisato il responsabile'); }); } return; }
   if(a === 'v'){ ls(K_VIEW, b.getAttribute('data-v')); paint(); return; }
   if(a === 'gd'){ ls('bp_pz_guide', ls('bp_pz_guide') === '0' ? '1' : '0'); paint(); return; }
   if(a === 'x'){ closePZ(); return; }
@@ -40550,6 +40580,7 @@ function installWrapper(){
     try{
       if(st === 'Pronto' && enforceOn()){
         var o = findOrder(id);
+        if(o && roleNow() === 'pizzaiolo' && reqKeys(o).length && !allDone(o)){ await doneAll(o); } /* il pizzaiolo che preme PRONTO ha finito: segna tutte le sue pizze */
         if(o && reqKeys(o).length && stOf(o) !== 'Pronto'){
           if(!allDone(o)){
             var r = roleNow(), forceIt = false;
@@ -40600,6 +40631,9 @@ function init(){
   installWrapper(); installRole();
   if(hasDoc){ setInterval(function(){ try{ mountBtn(); decorKds(); }catch(e){} }, 1500); }
   window.bpOpenPizzaioloScreen = openPZ;
+  /* apre da solo la schermata quando l'utente è pizzaiolo (la funzione bpApplyRole interna non è agganciabile da qui) */
+  if(hasDoc){ try{ var opened = false, chk = function(){ if(document.body && document.body.getAttribute('data-role') === 'pizzaiolo' && !opened){ opened = true; setTimeout(openPZ, 300); } else if(document.body && document.body.getAttribute('data-role') !== 'pizzaiolo'){ opened = false; } };
+    new MutationObserver(chk).observe(document.body, {attributes: true, attributeFilter: ['data-role']}); chk(); }catch(e){ console.warn('[pz] role watch', e); } }
 }
 window.__pz = {h: {pzLines: pzLines, lineKey: lineKey, doneArr: doneArr, targetMs: targetMs, dest: dest, stOf: stOf, allOrders: allOrders, itemsOf: itemsOf, hhmm: hhmm, E: E, ls: ls, findOrder: findOrder, toast: toastMsg}, model: model, buildHtml: buildHtml, toggle: toggle, doneArr: doneArr, allDone: allDone, reqKeys: reqKeys, dest: dest, init: init, flags: function(){ return {colMissing: colMissing}; }};
 init();
@@ -42279,6 +42313,242 @@ img.bp-chef{height:1.3em;width:auto;vertical-align:-0.3em;display:inline-block;m
     }catch(e){}
   }
   addBtns(); setTimeout(addBtns, 1500); setInterval(addBtns, 4000);
+})();
+</script>
+
+<style id="bpSlimCart">
+/* ===== Slim cart: più spazio agli articoli · السلة أوسع والأزرار اللي فوق متضغطة ===== */
+html.pos64 body #newTab>.grid>section.panel:nth-child(2)>#p64Head{
+  display:grid!important;grid-template-columns:auto minmax(0,1fr);gap:4px 6px!important;align-items:center;
+  container-type:inline-size;container-name:slimhead}
+/* riga 1: titolo/strumenti + Piano orari sulla stessa riga */
+html.pos64 body #p64Head>.topline{grid-column:1;grid-row:1;gap:4px!important;margin:0!important}
+html.pos64 body #p64Head>.topline h2{font-size:13px!important;margin:0!important}
+html.pos64 body #p64Head>.topline button{min-height:0!important;height:30px!important;padding:0 8px!important}
+html.pos64 body #p64Head>#bpPlanBtn{grid-column:2;grid-row:1;margin:0!important;min-height:0!important;height:34px;padding:0 10px!important;gap:8px!important;border-radius:12px!important;box-shadow:none!important}
+html.pos64 body #bpPlanBtn .pb-ic{flex:0 0 24px!important;height:24px!important;font-size:15px!important;border-radius:8px!important}
+html.pos64 body #bpPlanBtn .pb-tx{flex-direction:row!important;align-items:center;gap:8px!important;overflow:hidden}
+html.pos64 body #bpPlanBtn .pb-tx b{font-size:12.5px!important;white-space:nowrap}
+html.pos64 body #bpPlanBtn .pb-tx b i{display:none}
+html.pos64 body #bpPlanBtn .pb-sum{font-size:11.5px!important}
+html.pos64 body #bpPlanBtn .pb-ch{font-size:18px!important}
+/* riga 2: tipo + pagamento = UNA sola riga di 7 chip (icona; l'etichetta solo sul selezionato) */
+html.pos64 body #p64Head>#bpOrder{grid-column:1/-1;grid-row:2;display:flex!important;flex-direction:row!important;flex-wrap:nowrap;align-items:stretch;gap:3px!important;height:auto!important;min-height:0!important}
+html.pos64 body #bpOrder .bpo-seg{display:contents!important}
+html.pos64 body #bpOrder .bpo-seg.four>button:first-child{margin-inline-start:7px!important}
+html.pos64 body #newTab #bpOrder .bpo-seg button{flex:1 1 0!important;min-width:0!important;height:34px!important;padding:0 2px!important;gap:4px!important;border-radius:10px!important;justify-content:center}
+html.pos64 body #bpOrder .bpo-seg button b{display:none!important}
+html.pos64 body #newTab #bpOrder .bpo-seg button.on{flex:2.3 1 0!important}
+html.pos64 body #newTab #bpOrder .bpo-seg button.on b{display:inline!important;font-size:12px!important}
+@container slimhead (min-width:540px){
+  html.pos64 body #bpOrder .bpo-seg button b{display:inline!important;font-size:11.5px!important}
+  html.pos64 body #newTab #bpOrder .bpo-seg button.on{flex:1.25 1 0!important}
+}
+/* riga 3: Cliente / Subito / Note / Extra / Resto sottili */
+html.pos64 body #p64Head>#p64Bar{grid-column:1/-1;grid-row:3;gap:3px!important}
+html.pos64 body #p64Bar button{height:28px!important;border-radius:9px!important}
+html.pos64 body #p64Bar button span{font-size:14px!important}
+html.pos64 body #p64Bar button b{font-size:11px!important}
+/* piede più basso: più spazio alla lista */
+html.pos64 body #newTab #p64Foot .actions>button{min-height:40px!important;height:40px!important}
+html.pos64 body #p64Foot .total.rd-total{padding:3px 12px!important}
+html.pos64 body #p64Foot .total.rd-total span:last-child{font-size:22px!important}
+
+/* ===== Annulla / Sospendi: mai sopra il menu · الزراير على جنب ===== */
+html body #bpUR{left:6px!important;bottom:calc(10px + env(safe-area-inset-bottom,0px))!important;gap:4px!important;flex-wrap:wrap;width:64px;justify-content:center;z-index:9000}
+html body #bpUR button{width:30px!important;height:30px!important;font-size:15px!important;box-shadow:0 2px 6px rgba(0,0,0,.3)!important;opacity:.9}
+html body #bpUR button[disabled]{opacity:.3!important}
+html body #bpUR button i{min-width:16px;height:16px;font-size:10px;top:-5px}
+html body #bpUR .bpURt{display:none!important}
+/* telefono: linguetta sul bordo, si apre con un tocco e si richiude da sola */
+@media (max-width:899px){
+  html body #bpUR{left:0!important;bottom:calc(128px + env(safe-area-inset-bottom,0px))!important;width:auto;flex-wrap:nowrap;gap:5px!important;align-items:center;padding:4px 6px 4px 0;border-radius:0 26px 26px 0;background:rgba(29,18,9,.88);transition:transform .22s}
+  html body #bpUR:not(.open){transform:translateX(0);padding:0;background:transparent}
+  html body #bpUR:not(.open)>button:not(.bpURt){display:none!important}
+  html body #bpUR .bpURt{display:flex!important;order:-1;width:20px!important;height:54px!important;border-radius:0 14px 14px 0!important;background:rgba(29,18,9,.72)!important;font-size:16px!important;box-shadow:none!important;opacity:1}
+  html body #bpUR.open .bpURt{background:transparent!important;width:18px!important}
+  html body #bpUR button:not(.bpURt){width:40px!important;height:40px!important;font-size:19px!important}
+}
+
+/* ===== v2 · righe del carrello compatte: più righe visibili ===== */
+html.pos64 body #newTab #cart .cartrow{padding:4px 8px!important;margin:0 0 3px!important;border-radius:10px!important;display:flex!important;align-items:center;gap:6px;min-height:0!important}
+html.pos64 body #newTab #cart .cartrow>div:first-child{flex:1 1 auto;min-width:0;display:flex;flex-wrap:wrap;align-items:center;gap:1px 6px}
+html.pos64 body #newTab #cart .cartrow>div:first-child>strong{font-size:13.5px!important;line-height:1.15}
+html.pos64 body #newTab #cart .cartrow .pill{font-size:9.5px!important;padding:1px 6px!important}
+html.pos64 body #newTab #cart .cartrow .muted{display:flex;align-items:center;gap:4px;margin:0!important;font-size:11px!important;line-height:1.1}
+html.pos64 body #newTab #cart .cartrow .muted strong{font-size:11.5px!important;padding:0 6px!important;line-height:1.35}
+html.pos64 body #newTab #cart .cartrow .cart-mods{display:flex!important;gap:3px;margin:0!important}
+html.pos64 body #newTab #cart .cartrow .cart-mod-btn{width:26px!important;height:22px!important;min-height:0!important;padding:0!important;border-radius:8px!important}
+html.pos64 body #newTab #cart .cartrow>div:first-child>div[style*="flex"]{margin:0!important}
+html.pos64 body #newTab #cart .cartrow .qty{flex:0 0 auto;gap:2px}
+html.pos64 body #newTab #cart .cartrow .qty button{width:28px!important;height:28px!important;min-height:0!important;padding:0!important;font-size:16px!important}
+html.pos64 body #newTab #cart .cartrow .qty strong{font-size:15px!important;min-width:18px;text-align:center}
+
+/* ===== v2 · schede ordini in sospeso in alto, solo sopra il menu: il carrello parte dal bordo alto ===== */
+html.bpTopUp body #bpPar{gap:5px!important;margin-bottom:0!important}
+html.bpTopUp body #bpPar>button{min-height:0!important;height:40px!important;padding-block:2px!important}
+html.bpTopUp body #bpPar .par-t{border-radius:12px!important}
+html.bpTopUp body #bpUR{top:var(--bpur-top)!important;left:var(--bpur-left)!important;bottom:auto!important;width:auto!important;flex-wrap:nowrap!important;padding:0!important;gap:4px!important}
+
+/* ===== v3 · carrello: l'area si allunga fino in fondo (sopra il totale) ===== */
+html.pos64 body #p64Mid>#bpAccCart{background:#fbf7f0!important;border:1.5px solid #eadcc6!important;border-radius:16px!important;padding:6px!important;box-sizing:border-box}
+html.pos64 body #p64Mid>#bpAccCart>.rd-acc-body{min-height:100%;display:flex;flex-direction:column;box-sizing:border-box}
+html.pos64 body #p64Mid #cart{flex:1 1 auto;display:flex;flex-direction:column}
+html.pos64 body #p64Mid #cart>.cartrow{flex:0 0 auto}
+html.pos64 body #p64Mid #cart>p.muted{flex:1 1 auto;display:flex;flex-direction:column;align-items:center;justify-content:center;margin:0!important}
+
+/* ===== v3 · telefono: «Torna al menu» grande, lontano da Svuota ===== */
+html.p64-ticket body #p64Head>.topline{grid-column:1/-1!important;grid-row:1!important;display:flex!important;align-items:center;gap:6px!important}
+html.p64-ticket body #p64Head>.topline h2{display:none!important}
+html.p64-ticket body #p64Back{flex:1 1 auto!important;order:-1;height:48px!important;min-height:48px!important;padding:0 18px!important;border-radius:14px!important;font-size:17px!important;font-weight:900!important;background:#1d1209!important;color:#fff!important;border:0!important;box-shadow:0 3px 10px rgba(29,18,9,.35)!important;justify-content:center;display:flex;align-items:center;gap:6px}
+html.p64-ticket body #p64Head>.topline button:not(#p64Back){flex:0 0 44px!important;width:44px!important;height:44px!important;padding:0!important}
+html.p64-ticket body #p64Head>.topline #p64Back+*{margin-inline-start:10px}
+html.p64-ticket body #p64Head>#bpPlanBtn{grid-column:1/-1!important;grid-row:2!important}
+html.p64-ticket body #p64Head>#bpOrder{grid-row:3!important}
+html.p64-ticket body #p64Head>#p64Bar{grid-row:4!important}
+</style>
+<script id="bpSlimCartJs">
+(function(){
+  var t0=setInterval(function(){
+    var bar=document.getElementById('bpUR'); if(!bar) return; clearInterval(t0);
+    var h=document.createElement('button'); h.type='button'; h.className='bpURt'; h.textContent='›'; h.setAttribute('aria-label','Annulla / Sospendi');
+    bar.insertBefore(h,bar.firstChild);
+    var tm=null;
+    function setOpen(o){ bar.classList.toggle('open',o); h.textContent=o?'‹':'›'; clearTimeout(tm); if(o) tm=setTimeout(function(){setOpen(false);},5000); }
+    h.addEventListener('click',function(e){ e.stopPropagation(); setOpen(!bar.classList.contains('open')); });
+    bar.addEventListener('click',function(e){ if(e.target!==h && bar.classList.contains('open')) setOpen(true); }); /* azione eseguita: resta aperta altri 5s */
+    document.addEventListener('click',function(e){ if(!bar.contains(e.target)) setOpen(false); });
+  },500);
+})();
+</script>
+
+<script id="bpTopUpJs">
+(function(){
+  var H=document.documentElement;
+  function $(s,r){return (r||document).querySelector(s);}
+  function off(){ if(H.classList.contains('bpTopUp')){ H.classList.remove('bpTopUp'); var par=$('#bpPar'); if(par) par.style.width=''; var g=$('#newTab>.grid'); if(g&&g.children[1]) g.children[1].style.marginTop=''; } }
+  function fit(){
+    try{
+      var nt=$('#newTab'), par=$('#bpPar'), g=nt&&nt.querySelector(':scope>.grid');
+      if(!nt||!par||!g||!par.offsetParent||!g.children[1]) return off();
+      var p1=g.children[0], p2=g.children[1];
+      var r1=p1.getBoundingClientRect(), r2=p2.getBoundingClientRect(), rp=par.getBoundingClientRect(), rg=g.getBoundingClientRect();
+      if(!(r2.left-r1.left>250 && r1.width>0 && rp.height>0)) return off();
+      var s=par.offsetHeight?rp.height/par.offsetHeight:1, BAR=140;
+      par.style.width=Math.max(160,(r2.left-rp.left-8-BAR)/s)+'px';
+      p2.style.marginTop=(-(rg.top-rp.top)/s)+'px';
+      H.style.setProperty('--bpur-left',(r2.left-6-BAR)+'px');
+      H.style.setProperty('--bpur-top',(rp.top+(rp.height-30)/2)+'px');
+      H.classList.add('bpTopUp');
+    }catch(e){}
+  }
+  var raf=0; function sched(){ cancelAnimationFrame(raf); raf=requestAnimationFrame(fit); }
+  window.addEventListener('resize',sched); setInterval(fit,1200);
+  var t=setInterval(function(){ var nt=$('#newTab'); if(!nt) return; clearInterval(t); try{ new ResizeObserver(sched).observe(nt); }catch(e){} sched(); },400);
+})();
+</script>
+<script id="bpVoiceCustJs">
+/* ===== Ordine vocale: cliente omonimo / pronuncia simile (Giuliati ≈ Biliati) → scegli dalla rubrica ===== */
+(function(){
+  function norm(s){ return String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z\s]/g,' ').replace(/\s+/g,' ').trim(); }
+  var CLS={b:'B',p:'B',v:'B',f:'B',g:'B',j:'B',c:'K',k:'K',q:'K',x:'K',d:'D',t:'D',m:'M',n:'M',s:'S',z:'S',l:'L',r:'R'};
+  function skel(s){ return norm(s).replace(/[^a-z]/g,'').replace(/gli/g,'l').replace(/gn/g,'n').replace(/sc(?=[ei])/g,'s').replace(/ch|gh/g,'k').split('').map(function(c){return CLS[c]||'';}).join('').replace(/(.)\1+/g,'$1'); }
+  function lev(a,b){ var m=a.length,n=b.length; if(!m)return n; if(!n)return m; var d=[],i,j; for(i=0;i<=m;i++){d[i]=[i];} for(j=1;j<=n;j++)d[0][j]=j;
+    for(i=1;i<=m;i++)for(j=1;j<=n;j++)d[i][j]=Math.min(d[i-1][j]+1,d[i][j-1]+1,d[i-1][j-1]+(a[i-1]===b[j-1]?0:1)); return d[m][n]; }
+  function score(spoken,cand){
+    var a=norm(spoken), c=norm(cand); if(!a||!c) return 0; if(a===c) return 100;
+    var best=0, at=a.split(' '), ct=c.split(' ').concat([c]);
+    at=at.concat([a]);
+    at.forEach(function(x){ if(x.length<3) return; ct.forEach(function(y){ if(y.length<3) return;
+      if(x===y){ best=Math.max(best,90); return; }
+      var sx=skel(x), sy=skel(y);
+      if(sx.length>=3 && sx===sy) best=Math.max(best,80);
+      var L=lev(x,y); if(L<=2 && Math.min(x.length,y.length)>=5) best=Math.max(best,72);
+      else if(L<=1) best=Math.max(best,70);
+      if(sx.length>=4 && sy.length>=4 && lev(sx,sy)<=1) best=Math.max(best,55);
+    }); });
+    return best;
+  }
+  function esc2(s){ try{ return esc(s); }catch(e){ return String(s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); } }
+  var lastKey='', root=null;
+  function close(){ if(root) root.style.display='none'; }
+  function candidates(name){
+    var addr=norm((document.getElementById('address')||{}).value);
+    var out=[]; try{ (customerDirectory||[]).forEach(function(c){ if(!c||!c.name) return; var sc=score(name,c.name); if(sc>=55){ if(addr&&c.address&&norm(c.address).indexOf(addr.split(' ').slice(0,3).join(' '))>=0) sc+=15; out.push({p:c,sc:sc}); } }); }catch(e){}
+    out.sort(function(a,b){ return b.sc-a.sc || (b.p.ordersCount||0)-(a.p.ordersCount||0); });
+    return out.slice(0,8);
+  }
+  function show(name,list){
+    if(!root){ root=document.createElement('div'); root.id='bpCustPick';
+      root.innerHTML='<div class="cp-bd"></div><div class="cp-sh"></div>'; document.body.appendChild(root);
+      var st=document.createElement('style'); st.textContent='#bpCustPick{position:fixed;inset:0;z-index:2147483200;display:flex;align-items:flex-end;justify-content:center}#bpCustPick .cp-bd{position:absolute;inset:0;background:rgba(20,10,3,.55)}#bpCustPick .cp-sh{position:relative;width:min(100%,520px);max-height:80vh;overflow:auto;background:#fffaf3;border-radius:22px 22px 0 0;padding:14px;box-shadow:0 -10px 36px rgba(0,0,0,.4)}@media(min-width:700px){#bpCustPick{align-items:center}#bpCustPick .cp-sh{border-radius:22px}}#bpCustPick h3{margin:0 0 4px;font-size:18px;font-weight:900}#bpCustPick small.s{display:block;opacity:.7;font-weight:700;margin-bottom:8px}#bpCustPick button{display:block;width:100%;text-align:start;border:2px solid #e2cdb4;background:#fff;border-radius:14px;padding:9px 12px;margin-bottom:7px;font-size:15px;color:#1d1209}#bpCustPick button b{font-size:16px}#bpCustPick button span{display:block;font-size:13px;font-weight:700;opacity:.8;margin-top:2px}#bpCustPick button.new{background:#f3e6d3;border-style:dashed}#bpCustPick button.x{background:transparent;border:0;text-align:center;opacity:.7}'; document.head.appendChild(st);
+      root.addEventListener('click',function(e){
+        if(e.target.closest('[data-x]')){ resolved[root._key]=null; close(); return; }
+        if(e.target.classList.contains('cp-bd')){ close(); return; }
+        var b=e.target.closest('[data-i]'); if(!b) return;
+        var p=root._list[Number(b.getAttribute('data-i'))]; resolved[root._key]=p; close();
+        try{ applyCustomerSuggestion(p); }catch(err){ console.warn(err); }
+      });
+    }
+    root._list=list.map(function(x){return x.p;});
+    var h='<h3>👤 Quale cliente? · أنهي زبون؟</h3><small class="s">Ho sentito «'+esc2(name)+'» · سمعت «'+esc2(name)+'»</small>';
+    list.forEach(function(x,i){ var c=x.p, last=''; try{ var lo=findLastOrderForCustomer(c.name,c.phone,c.address); if(lo&&lo.items) last=' · 🍕 '+lo.items.slice(0,2).map(function(it){return it.quantity+'× '+splitProductAndMods(it.product_name).baseName;}).join(', '); }catch(e){}
+      h+='<button type="button" data-i="'+i+'"><b>'+esc2(c.name)+'</b>'+(c.ordersCount?' <small>('+c.ordersCount+')</small>':'')+'<span>'+(c.address?'📍 '+esc2(c.address):'')+(c.phone?'  📞 '+esc2(c.phone):'')+esc2(last)+'</span></button>'; });
+    h+='<button type="button" class="new" data-x="1">➕ Cliente nuovo · «'+esc2(name)+'» (زبون جديد)</button>';
+    root.querySelector('.cp-sh').innerHTML=h; root.style.display='flex';
+  }
+  var resolved={};
+  var STOPA={via:1,viale:1,piazza:1,corso:1,vicolo:1,strada:1,cascina:1,frazione:1,numero:1,lodi:1,vecchio:1,lodivecchio:1,monsignor:1,monsignore:1};
+  function toks(a){ return String(a||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9\s]/g,' ').split(/\s+/).filter(Boolean); }
+  /* «via Perosi 15» (detto a voce) ≈ «Via Perosi Monsignor L, 15, 26855 Lodi Vecchio LO» (rubrica) */
+  function addrMatch(sp,cand){
+    var s=toks(sp), c=toks(cand); if(!s.length||!c.length) return false;
+    var words=s.filter(function(w){return /^[a-z]{3,}$/.test(w)&&!STOPA[w];});
+    var nums=s.filter(function(w){return /^\d{1,3}[a-z]?$/.test(w);});
+    if(!words.length) return false;
+    var ok=words.some(function(w){ return c.some(function(x){
+      if(!/^[a-z]{3,}$/.test(x)||STOPA[x]) return false; if(x===w) return true;
+      if(Math.min(w.length,x.length)>=5&&lev(w,x)<=2) return true;
+      var k1=skel(w),k2=skel(x); return k1.length>=3&&k1===k2; }); });
+    if(!ok) return false;
+    return nums.length? nums.some(function(n){return c.indexOf(n)>=0;}) : true;
+  }
+  function dominant(arr){
+    var a=arr.slice().sort(function(x,y){ return (y.p.phone?1:0)-(x.p.phone?1:0) || String(y.p.address||'').length-String(x.p.address||'').length || (y.p.ordersCount||0)-(x.p.ordersCount||0); });
+    var top=a[0]; if(!top) return null;
+    var same=a.every(function(x){ return norm(x.p.name)===norm(top.p.name) && (!x.p.phone||!top.p.phone||normalizePhoneKey(x.p.phone)===normalizePhoneKey(top.p.phone)); });
+    return same?top.p:null;
+  }
+  function useProfile(p){
+    try{ applyCustomerSuggestion(p); }catch(e){ console.warn(e); return; }
+    try{ bpFlash('✅ '+p.name+(p.address?' · '+p.address:'')); }catch(e){}
+  }
+  function check(){
+    try{
+      var nm=((document.getElementById('customer')||{}).value||'').trim();
+      if(!nm){ lastKey=''; return; }
+      if(root&&root.style.display==='flex') return;
+      var addr=((document.getElementById('address')||{}).value||'').trim();
+      var key=norm(nm)+'|'+toks(addr).join(' ');
+      if(Object.prototype.hasOwnProperty.call(resolved,key)){ var r=resolved[key]; if(r) useProfile(r); return; }
+      if(key===lastKey) return;
+      lastKey=key;
+      var list=candidates(nm); if(!list.length) return;
+      var ph=normalizePhoneKey((document.getElementById('phone')||{}).value);
+      if(ph.length>=6 && list.some(function(x){return normalizePhoneKey(x.p.phone)===ph;})) return; /* telefono già preciso */
+      list.forEach(function(x){ x.a=!!(addr&&x.p.address&&addrMatch(addr,x.p.address)); });
+      var strong=list.filter(function(x){ return x.sc>=90 || (x.sc>=70&&x.a); });
+      var am=strong.filter(function(x){return x.a;});
+      var pick=null;
+      if(am.length) pick=dominant(am);                    /* nome + via combaciano → completa da solo */
+      else if(!addr && strong.length) pick=dominant(strong); /* solo il nome, un solo cliente → completa da solo */
+      if(pick){ resolved[key]=pick; useProfile(pick); return; }
+      if(root) root._key=key; show(nm,list); if(root) root._key=key;
+    }catch(e){ console.warn(e); }
+  }
+  function wrap(name){ var f=window[name]; if(typeof f!=='function'||f.__bpvc) return; var w=async function(){ var r=await f.apply(this,arguments); setTimeout(check,60); return r; }; w.__bpvc=1; window[name]=w; }
+  var t=setInterval(function(){ if(typeof runFullOrderExtraction==='function'&&typeof customerDirectory!=='undefined'){ clearInterval(t); wrap('runFullOrderExtraction'); wrap('gemCommitOrder'); } },500);
+  document.addEventListener('input',function(e){ if(e.target&&e.target.id==='customer'&&!e.target.value.trim()) lastKey=''; });
 })();
 </script>
 </body>
