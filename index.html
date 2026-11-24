@@ -8528,7 +8528,8 @@ function blobToBase64(blob){
    Principale: gemini-2.5-flash (veloce). Fallback automatico, solo se serve: gemini-3.1-pro-preview. */
 const GEM_PREFERRED_MODEL = 'gemini-2.5-flash';
 const GEM_FALLBACK_MODEL = 'gemini-3.1-pro-preview';
-const GEM_FALLBACK_MODELS = [GEM_PREFERRED_MODEL, GEM_FALLBACK_MODEL];
+const GEM_LITE_MODEL = 'gemini-2.5-flash-lite'; /* v125: quota separata e più alta: se flash è in 429, lite risponde */
+const GEM_FALLBACK_MODELS = [GEM_PREFERRED_MODEL, GEM_LITE_MODEL, GEM_FALLBACK_MODEL];
 try{ localStorage.removeItem('bp_gemini_models_v53'); var __okm = localStorage.getItem('bp_gemini_model_ok'); if(__okm && GEM_FALLBACK_MODELS.indexOf(__okm) < 0) localStorage.removeItem('bp_gemini_model_ok'); }catch(e){}
 const GEM_BAD_MODEL_RE = /image|tts|live|embedding|imagen|veo|audio|robotics|computer-use|omni|lyria|learnlm|gemma|aqa|customtools|-exp|exp-/i;
 const __gemDead = new Set();
@@ -8609,7 +8610,20 @@ const GEM_SCHEMA = {
           nome:      { type: 'STRING' },
           formato:   { type: 'STRING', enum: ['Normale', 'Maxi', 'Baby'] },
           is_menu:   { type: 'BOOLEAN' },
-          modifiche: { type: 'STRING' }
+          modifiche: { type: 'STRING' },
+          gusti: {
+            type: 'ARRAY',
+            items: {
+              type: 'OBJECT',
+              properties: {
+                quarti:    { type: 'INTEGER' },
+                nome:      { type: 'STRING' },
+                nel_menu:  { type: 'BOOLEAN' },
+                modifiche: { type: 'STRING' }
+              },
+              required: ['quarti', 'nome']
+            }
+          }
         },
         required: ['quantita', 'nome', 'formato', 'is_menu', 'modifiche']
       }
@@ -8696,6 +8710,25 @@ function gemNormalizeOrder(o){
   const __menuN = Math.max(parseInt(o.numero_menu, 10) || 0, gemMenuCountFromText(__gemSrcText));
   const items = gemSpreadMenuIntent(o.righe, __menuN, menuList).map(r => {
     r = r || {};
+    /* v122: pizza a gusti / metà metà = UNA riga con i quarti (mai quantità N, mai righe separate) */
+    const __gs = (Array.isArray(r.gusti) ? r.gusti : []).filter(g => g && str(g.nome));
+    const __n0 = str(r.nome), __txt0 = __n0 + ' ' + str(r.modifiche);
+    if(__gs.length || /(^|\s)(2|3|4|due|tre|quattro)\s+gusti\b|\bmet[àa]\s*(e|\/)?\s*met[àa]\b|\b(divisa|diviso)\s+a\s+met[àa]\b|^\s*gust[io]\s*$/i.test(__txt0)){
+      const __W = { due: 2, tre: 3, quattro: 4 };
+      const __mm = /(\d|due|tre|quattro)\s+gusti\b/i.exec(__txt0);
+      let __N = __mm ? (/^\d/.test(__mm[1]) ? parseInt(__mm[1], 10) : __W[__mm[1].toLowerCase()]) : (/met[àa]/i.test(__txt0) ? 2 : 0);
+      const __sum = __gs.reduce((a, g) => a + Math.max(parseInt(g.quarti, 10) || 1, 1), 0);
+      if(!(__N >= 2 && __N <= 4)) __N = (__sum >= 2 && __sum <= 4) ? __sum : 4;
+      const __fm = str(r.formato).toLowerCase();
+      return {
+        name: __N === 2 ? 'Pizza metà metà' : 'Pizza ' + __N + ' gusti',
+        quantity: Math.max(parseInt(r.quantita, 10) || 1, 1),
+        size: /maxi/.test(__fm) ? 'Maxi' : (/baby|bambin|piccol/.test(__fm) ? 'Baby' : 'Normale'),
+        menu: false, removed: [], added: [],
+        rawText: __n0, confidence: 'high',
+        gusti: __gs, gustiN: __N, gustiText: __gs.length ? '' : __txt0
+      };
+    }
     let nome = str(r.nome);
     let __tail = '';
     if(!menuList.some(p => gemNorm(p.name) === gemNorm(nome))){
@@ -8898,6 +8931,15 @@ Il testo puo' arrivare da un riconoscimento vocale italiano e contenere errori f
 
 4. **Campi incerti (\`uncertainFields\`):** se telefono, indirizzo, nome cliente, orario o note non sono chiari al 100% (audio disturbato, ambiguo, dedotto), inserisci il nome del campo in \`uncertainFields\`. Usa SOLO questi nomi: "cliente", "telefono", "indirizzo", "orario", "note". Se sei sicuro di tutto: [].
 
+5. **PIZZE A GUSTI / METÀ E METÀ (REGOLA CRITICA):** "quattro gusti", "4 gusti", "tre gusti", "3 gusti", "due gusti", "metà e metà", "metà X e metà Y", "mezza X mezza Y", "divisa a metà", "diviso in quattro" indicano UNA SOLA pizza divisa in parti: MAI una quantità. Il numero in "quattro gusti" NON è quantità 4 e la parola "gusti" NON è un prodotto del menu.
+   - Crea UNA SOLA riga: \`nome\` = "Pizza 4 gusti" (oppure "Pizza 3 gusti", "Pizza metà metà" se sono 2 parti), \`quantita\` = numero di pizze intere (di solito 1), \`formato\` come al solito.
+   - Compila \`gusti\` con un elemento per ogni gusto: \`quarti\` (quante parti occupa), \`nome\`, \`nel_menu\`, \`modifiche\`. La somma dei \`quarti\` DEVE essere uguale al numero di parti (4, 3 o 2); "il resto" / "gli altri" = le parti rimanenti.
+     Esempi: "uno X, il resto Y" con 4 gusti => X quarti 1, Y quarti 3; "1/4 diavola, 1/4 tonno, 2/4 margherita" => 1, 1, 2; "metà X e metà Y" => 1 e 1 (su 2 parti).
+   - NON creare righe separate per i gusti e NON metterli in \`note\`. Se un gusto non è una pizza del menu ma sono ingredienti (es. "uno würstel e patatine") metti in \`nome\` gli ingredienti ("Würstel e Patatine") e \`nel_menu\` = false; i gusti che sono pizze del menu hanno \`nel_menu\` = true e il nome copiato dal menu.
+   - Esempio: "Una pizza quattro gusti, uno würstel e patatine e il resto margherita" => una sola riga: {"quantita":1,"nome":"Pizza 4 gusti","formato":"Normale","is_menu":false,"modifiche":"","gusti":[{"quarti":1,"nome":"Würstel e Patatine","nel_menu":false,"modifiche":""},{"quarti":3,"nome":"Margherita","nel_menu":true,"modifiche":""}]}
+   - Esempio metà e metà: "una pizza metà margherita e metà diavola" / "una pizza divisa a metà margherita e diavola" => UNA sola riga: {"quantita":1,"nome":"Pizza metà metà","formato":"Normale","is_menu":false,"modifiche":"","gusti":[{"quarti":1,"nome":"Margherita","nel_menu":true,"modifiche":""},{"quarti":1,"nome":"Diavola","nel_menu":true,"modifiche":""}]}. "divisa" / "diviso" NON è la pizza Diavola.
+   - \`formato\` (Baby / Maxi-Famiglia) e \`quantita\` si riferiscono alla pizza intera, non al singolo gusto; le modifiche di un solo gusto ("senza pomodoro", "più zola") vanno in \`modifiche\` di QUEL gusto. Più pizze a gusti diverse = una riga ciascuna.
+
 ### ORDINI DA PIATTAFORME (Deliveroo, Glovo, Just Eat):
 Se la foto e' lo scontrino/comanda di una piattaforma di consegna (logo o scritte "Deliveroo", "Glovo", "Just Eat" / "JustEat"), compila anche questi campi:
 - \`piattaforma\`: esattamente "Deliveroo", "Glovo" o "Just Eat". Se non e' una piattaforma: "".
@@ -8958,7 +9000,7 @@ Restituisci ESCLUSIVAMENTE un oggetto JSON valido con la seguente struttura:
 function gemHasContent(p){ return !!(p && (p.noOrder || (Array.isArray(p.items) && p.items.length) || p.customerName || p.address || p.phone)); }
 function gemRunHedged(models, apiKey, parts, timeoutMs, hedgeMs, onStart){
  return new Promise(resolve => {
- let next = 0, inflight = 0, done = false, lastErr = '', lastKind = '', emptyRes = null, hedgeT = null;
+ let next = 0, inflight = 0, done = false, lastErr = '', lastKind = '', emptyRes = null, hedgeT = null, errs = [];
  const finish = v => { if(done) return; done = true; clearTimeout(hedgeT); resolve(v); };
  const launch = () => {
  if(done || next >= models.length) return false;
@@ -8972,10 +9014,10 @@ function gemRunHedged(models, apiKey, parts, timeoutMs, hedgeMs, onStart){
  if(gemHasContent(r.parsed)){ finish({ parsed: r.parsed, model: m }); return; }
  emptyRes = r.parsed;
  }else{
- lastErr = r.msg; lastKind = r.kind;
+ lastErr = r.msg; lastKind = r.kind; errs.push(((function(){ try{ return localStorage.getItem('bp_gemini_proxy') === '1' ? 'PROXY' : 'CHIAVE DIRETTA'; }catch(e){ return ''; } })()) + ' · ' + m + ': ' + String(r.msg || r.kind).slice(0, 160)); /* v125: errore reale di Google per ogni modello */
  if(r.kind === 'fatal'){ finish({ error: { kind: 'fatal', msg: r.msg } }); return; }
  }
- if(!launch() && inflight === 0) finish(emptyRes ? { parsed: emptyRes } : { error: { kind: lastKind, msg: lastErr } });
+ if(!launch() && inflight === 0) finish(emptyRes ? { parsed: emptyRes } : { error: { kind: lastKind, msg: lastErr, detail: errs.join(' | ') } });
  });
  return true;
  };
@@ -9021,7 +9063,7 @@ async function analyzeMediaOrTextWithGemini(payloadObj, apiKey){
  __gemSrcText = type === 'text' ? String(payloadObj.text || '') : '';
  const timeoutMs = type === 'audio' ? 60000 : 30000;
  const models = await getAvailableGeminiModels(apiKey);
- let parsed = null, lastError = '', lastKind = '';
+ let parsed = null, lastError = '', lastKind = '', __gemDetail = '';
  const started = [];
  if(!__tick) __tick = setInterval(() => setVoiceMsg(`${__lbl} · ${Math.round((Date.now() - __t0) / 1000)}s`, ''), 1000);
  const hr = await gemRunHedged(models, apiKey, parts, timeoutMs, type === 'audio' ? 15000 : 9000, m => {
@@ -9032,7 +9074,7 @@ async function analyzeMediaOrTextWithGemini(payloadObj, apiKey){
  if(hr.parsed){
  parsed = hr.parsed;
  if(hr.model){ try{ localStorage.setItem('bp_gemini_model_ok', hr.model); }catch(e){ bpWarn(e); } }
- }else if(hr.error){ lastError = hr.error.msg; lastKind = hr.error.kind; }
+ }else if(hr.error){ lastError = hr.error.msg; lastKind = hr.error.kind; __gemDetail = hr.error.detail || ''; }
 
  if(!parsed){
  if(type === 'text' && el('voiceSmartInput').value.trim()){
@@ -9040,8 +9082,8 @@ async function analyzeMediaOrTextWithGemini(payloadObj, apiKey){
  processSpokenOrder(el('voiceSmartInput').value.trim(), false);
  return;
  }
- if(lastKind === 'quota') throw new Error('Limite richieste Gemini raggiunto (quota). Riprova tra circa un minuto.');
- throw new Error(lastError || 'Server AI momentaneamente occupato. Riprova.');
+ if(lastKind === 'quota') throw new Error('Limite richieste Gemini raggiunto (quota). Riprova tra circa un minuto.' + (__gemDetail ? ' — Dettaglio Google: ' + __gemDetail : ''));
+ throw new Error((lastError || 'Server AI momentaneamente occupato. Riprova.') + (__gemDetail ? ' — Dettaglio Google: ' + __gemDetail : ''));
  }
 
  if(type === 'image'){
@@ -9472,7 +9514,13 @@ function applyExtractedOrderObject(parsed){
  if(parsed.transcript) el('voiceSmartInput').value = parsed.transcript;
  const menu = getActiveMenu();
  if(parsed.address) parsed.address = gemCleanAddress(parsed.address);
- const items = (Array.isArray(parsed.items) ? parsed.items : []).filter(it => String(it.name || it.rawText || '').trim());
+ let items = (Array.isArray(parsed.items) ? parsed.items : []).filter(it => String(it.name || it.rawText || '').trim());
+ const __gItems = items.filter(it => it && it.gustiN);
+ if(__gItems.length){ /* v122: le pizze a gusti vanno nel carrello come UNA riga (voce/AI), il resto passa dalla revisione */
+ items = items.filter(it => !(it && it.gustiN)); parsed.items = items;
+ __gItems.forEach(it => { try{ window.bpGustiFromAI(it); }catch(e){ bpWarn(e); } });
+ if(!items.length){ gemCommitOrder(parsed, [], []); return; }
+ }
  items.forEach(it => {
  it.__rem0 = (it.removed || []).slice(); it.__add0 = (it.added || []).slice();
  it.removed = (it.removed || []).map(gemIngAlias); it.added = (it.added || []).map(gemIngAlias);
@@ -13846,6 +13894,7 @@ try{
  window.bpAutoEnableGeminiProxy = async function(){
  if(__gemProbed) return; __gemProbed = true;
  if(localStorage.getItem('bp_gemini_proxy') !== null) return; // scelta gia' fatta (anche "no"): rispettala
+ try{ localStorage.setItem('bp_gemini_proxy', '0'); }catch(e){} return; /* v126: niente attivazione automatica del proxy: ogni dispositivo usa la PROPRIA chiave Gemini (quota separata) */
  if(await probeProxy()){ applyProxyState(true); console.info('[bp] proxy Gemini attivato automaticamente'); }
  };
 })();
@@ -17175,10 +17224,112 @@ window.bpMenuSplit = function(q){
 /* v120: pizza metà metà a voce/testo (IT + AR). Formule: «metà metà A B», «metà A e metà B», «mezza A mezza B», «una metà e metà A B»,
    «نص A ونص B», «ميتا ميتا A B». Per ogni metà: senza / più / +ingrediente. Maxi/famiglia ovunque nella frase.
    Nome dubbio (più pizze vicine) = la metà resta «da scegliere»: window.bpHalfAsk apre i pulsanti da toccare. */
+/* v122: pizza a gusti da voce/AI. Una sola pizza «N gusti» / «metà metà» (mai quantità N): ogni quarto = pizza del menu oppure «personalizzato» (ingredienti dettati) su base Margherita + nota. */
+window.bpSplitNote = function(parts, force){
+  var n = parts.length, order = [], map = {}, any = parts.some(function(x){ return x.custom; }), out = "";
+  var cap = function(t){ return String(t).split(/\s+/).map(function(w, i){ return (i && /^(e|ed|di|con)$/i.test(w)) ? w.toLowerCase() : w.charAt(0).toUpperCase() + w.slice(1); }).join(" "); }; /* v124: «Würstel e Patatine», non «Wurstel E Patatine» */
+  if(any || force){
+    parts.forEach(function(x){
+      var __cw = x.words || [], label = x.custom ? cap(((x.add && x.add.length && x.add.length === __cw.length) ? x.add : __cw).join(" e ")) : String((x.p && x.p.name) || "?");
+      if(force){ if(x.add && x.add.length && !x.custom) label += " +" + x.add.join(" +"); if(x.rem && x.rem.length) label += " senza " + x.rem.join(", "); }
+      var k = (x.custom ? "c:" : "p:") + label;
+      if(!map[k]){ map[k] = {l: label, n: 0}; order.push(k); }
+      map[k].n++;
+    });
+    out = order.map(function(k){ return map[k].n + "/" + n + " " + map[k].l; }).join(", ");
+  }
+  if(parts.extraNote) out = out ? out + " · " + parts.extraNote : parts.extraNote;
+  return out;
+};
+/* aggiunge UNA riga: prodotto «Quattro Gusti» a listino (se esiste) con la nota dei quarti, altrimenti la riga composta «Pizza N gusti: ¼ A / ¼ B…» */
+window.bpSplitAdd = function(parts, qty, size){
+  var n = parts.length, qg = null;
+  if(n === 4){ getActiveMenu().forEach(function(p){ if(!qg && /^(pizza\s+)?(quattro|4)\s+gusti$/.test(ingNorm(p.name))) qg = p; }); }
+  if(qg){
+    var sz = (size === "Maxi" && Number(qg.price_maxi) > 0) ? "Maxi" : "Normale", before = {};
+    cart.forEach(function(v, k){ before[k] = v.qty; });
+    ssCartAdd(qg, sz, qty || 1, [], [], false);
+    var note = window.bpSplitNote(parts, true);
+    cart.forEach(function(v, k){ if(String(v.menu_id) === String(qg.id) && (!(k in before) || v.qty > before[k]) && note){ v.itemNote = (v.itemNote && v.itemNote !== note) ? v.itemNote + " | " + note : note; } });
+    return true;
+  }
+  return window.bpHalfAdd && window.bpHalfAdd(parts, qty, size);
+};
+/* «quattro gusti» senza nessun gusto detto: apre la schermata Pizza a gusti già sul tipo giusto */
+window.bpGustiScreen = function(n){
+  try{ if(window.bp36 && window.bp36.openGusti) window.bp36.openGusti(); }catch(e){ bpWarn(e); }
+  try{ var btn = document.querySelector('#bp36G [data-gm="' + (n === 2 ? "mm" : "g" + n) + '"]'); if(btn) btn.click(); }catch(e){ bpWarn(e); }
+  try{ ssToast("🍕 Scegli i " + n + " gusti"); }catch(e){}
+};
+/* Gemini: riga «Pizza N gusti» con l'elenco dei quarti (it.gusti) → una sola pizza nel carrello */
+window.bpGustiFromAI = function(it){
+  var N = Math.min(Math.max(Number(it.gustiN) || 4, 2), 4), size = it.size === "Maxi" ? "Maxi" : "Normale", qty = Math.min(Math.max(parseInt(it.quantity, 10) || 1, 1), 50);
+  var pizzas = getActiveMenu().filter(function(p){ return arIsPizza(p) && !/^\s*men[uù]\b/i.test(p.name); });
+  var base = null; pizzas.forEach(function(p){ if(!base && ingNorm(String(p.name).replace(/^\s*pizza\s+/i, "")) === "margherita") base = p; });
+  var parts = [], gs = Array.isArray(it.gusti) ? it.gusti : [], total = 0;
+  var cp = function(x){ return {p: x.p, rem: x.rem, add: x.add, pendRem: x.pendRem, exact: x.exact, custom: x.custom, words: x.words}; };
+  if(!gs.length && it.gustiText){ /* il modello non ha dato i quarti: provo con il parser locale */
+    try{ var hh = []; window.bpHalfPre(arTok(String(it.gustiText)).filter(function(w){ return w !== "e" && w !== "ed"; }), hh); if(hh.length) parts = hh[0]; }catch(e){ bpWarn(e); }
+  }else{
+    var known = ingUnique(getAllKnownIngredients());
+    gs.forEach(function(g){
+      var n = Math.min(Math.max(parseInt(g.quarti, 10) || 1, 1), N - total); if(n <= 0) return;
+      var nm = String(g.nome || "").trim(), mods = {add: [], rem: []};
+      try{ mods = gemParseMods(String(g.modifiche || "")); }catch(e){}
+      var mi = (g.nel_menu === false || /^false$/i.test(String(g.nel_menu))) ? {prod: null} : gemMatchInfo(nm, pizzas), part;
+      if(mi.prod){ part = {p: mi.prod, rem: (mods.rem || []).slice(), add: (mods.add || []).slice(), pendRem: [], exact: !!mi.sure}; }
+      else{
+        var words = nm.split(/\s+(?:e|ed|con)\s+|\s*[,+]\s*/i).map(function(w){ return w.trim(); }).filter(Boolean), ings = [];
+        words.forEach(function(w){ var k = ingNorm(w), hit = known.filter(function(x){ return ingNorm(x) === k; })[0]; if(hit && ings.indexOf(hit) < 0) ings.push(hit); });
+        part = {p: base, rem: [], add: ings.concat(mods.add || []), pendRem: [], custom: true, words: words.length ? words : [nm]};
+      }
+      parts.push(part); for(var q = 1; q < n; q++) parts.push(cp(part));
+      total += n;
+    });
+    while(parts.length && parts.length < N) parts.push(cp(parts[parts.length - 1])); /* «il resto» */
+    var fb = base || (parts.filter(function(x){ return x.p; })[0] || {}).p;
+    parts.forEach(function(x){ if(!x.p) x.p = fb; });
+    if(parts.some(function(x){ return !x.p; })) parts = [];
+  }
+  if(!parts.length || parts.screen){ window.bpGustiScreen(N); return; }
+  parts.size = size;
+  if(it.size === "Baby") parts.extraNote = "BABY";
+  var item = {half: true, parts: parts, qty: qty, size: size};
+  if(parts.some(function(x){ return x.unres; })){ window.bpHalfAsk(item); return; }
+  var ok = false; try{ ok = window.bpSplitAdd(parts, qty, size); }catch(e){ bpWarn(e); }
+  if(!ok) window.bpSplitFallback(parts, qty, size);
+  renderCart();
+  try{ ssToast("✅ " + qty + "× Pizza " + (N === 2 ? "metà metà" : N + " gusti") + ": " + window.bpSplitNote(parts, true)); }catch(e){}
+};
+/* v124: se la riga unica non si può comporre (prezzo/menu), la pizza resta UNA sola riga «Pizza N gusti: ¼ A / ¼ B» con la nota dei quarti: mai una pizza per gusto */
+window.bpSplitFallback = function(parts, qty, size){
+  var n = parts.length, fr = {2: "½", 3: "⅓", 4: "¼"}[n] || "", sz = size === "Maxi" ? "Maxi" : "Normale", q = Math.max(parseInt(qty, 10) || 1, 1);
+  var vals = parts.map(function(x){ try{ return Number(pkSizePrice(x.p, sz)) || 0; }catch(e){ return 0; } });
+  var price = Math.max.apply(null, vals.concat([0]));
+  var name = "Pizza " + (n === 2 ? "metà metà" : n + " gusti") + ": " + parts.map(function(x){ return fr + " " + String((x.p && x.p.name) || "?"); }).join(" / ");
+  var note = ""; try{ note = window.bpSplitNote(parts, true); }catch(e){}
+  var key = ["gf", n, sz, name, note].join("|"), ex = cart.get(key);
+  if(ex) ex.qty += q;
+  else cart.set(key, {menu_id: null, name: name, category: (parts[0] && parts[0].p && parts[0].p.category) || "Pizza", baseDesc: "", size: sz, basePrice: price, extraPrice: 0, price: price, qty: q, removedIngs: [], addedIngs: [], itemNote: note});
+  return true;
+};
 window.bpHalfPre = function(toks, store){
   var HW = function(w){ return /^(met[àa]['’]?|mezz[aoe]|half|ميتا|ميتاه|نص|نصف|ونص|ونصف|النص|النصف|والنص|والنصف)$/.test(w || ""); };
   var FILL = {primo: 1, prima: 1, secondo: 1, seconda: 1, la: 1, il: 1, lo: 1, l: 1, di: 1, gusto: 1, gusti: 1, poi: 1, pizza: 1, pizze: 1, e: 1, ed: 1, "و": 1, "ثم": 1, "بعدين": 1, "وبعدين": 1, "بيتزا": 1, "بيتسا": 1, "بيتزه": 1, "بيتسه": 1, "اول": 1, "الاول": 1, una: 1, un: 1, uno: 1, gli: 1, terzo: 1, terza: 1, quarto: 1, quarta: 1, stesso: 1, "الثالث": 1, "الثالثه": 1, "التالت": 1, "التالته": 1, "تالت": 1, "ثالث": 1, "الرابع": 1, "الرابعه": 1, "رابع": 1, primo: 1, secondo: 1, altro: 1, altra: 1, altri: 1, altre: 1, resto: 1, restante: 1, rimanente: 1, "البريمو": 1, "بريمو": 1, "البريما": 1, "بريما": 1, "السكوندو": 1, "سكوندو": 1, "السكوندا": 1, "سكوندا": 1, "الاخر": 1, "الاخري": 1, "الاخره": 1, "اخر": 1, "اخري": 1, "الباقي": 1, "الباقيه": 1, "باقي": 1, "الاولي": 1, "تاني": 1, "التاني": 1, "التانيه": 1, "ثاني": 1, "الثاني": 1, "الثانيه": 1};
   var isMaxi = function(w){ return !!AR_MAXI[w] || /^(maxi|maxy|xl|gigante|grande)$/.test(w || ""); };
+  /* v124: «divisa a metà X e Y» = «metà metà X Y»; «diviso in quattro / in 4» = «4 gusti»; la parola «divisa» non è un prodotto (prima veniva letta come «Diavola» = pizza in più) */
+  (function(){
+    var o = [], DV = /^(divisa|diviso|divisi|divise|spezzata|spezzato|spaccata|spaccato|tagliata|tagliato)$/, NUMW = {due: 2, tre: 3, quattro: 4}, k, j, n;
+    for(k = 0; k < toks.length; k++){
+      if(!DV.test(toks[k])){ o.push(toks[k]); continue; }
+      j = k + 1; if(/^(a|in|per)$/.test(toks[j] || "")) j++;
+      if(HW(toks[j])){ o.push(toks[j], toks[j]); k = j; continue; }
+      n = NUMW[toks[j]] || (/^[2-4]$/.test(toks[j] || "") ? Number(toks[j]) : 0);
+      if(n){ o.push(String(n)); if(!/^(gusti|gusto)$/.test(toks[j + 1] || "")) o.push("gusti"); k = j; continue; }
+      if(j > k + 1) k = j - 1; /* «divisa a» senza altro: butto la parola «divisa» e l'eventuale «a» */
+    }
+    toks = o;
+  })();
   var pizzas = function(){ return getActiveMenu().filter(function(p){ return arIsPizza(p) && !/^\s*men[uù]\b/i.test(p.name); }); };
   var skOf = function(a){ return a.map(tokSkel).join(""); };
   var fullKey = function(p){ return latSkel(String(p.name).replace(/^\s*pizza\s+/i, "")); };
@@ -17208,13 +17359,14 @@ window.bpHalfPre = function(toks, store){
   var ingAt = function(j, pool, strict){ var lim = toks.length; for(var k = j + 1; k < toks.length; k++){ if(HW(toks[k]) || isMaxi(toks[k])){ lim = k; break; } } var g = arFindIng(toks.slice(0, lim), j, pool, strict);
     if(g && g.len > 1){ var nx = prodAt(j + 1); if(nx && arIsPizza(nx.p)) g = arFindIng(toks.slice(0, j + 1), j, pool, strict); } /* «senza origano diavola»: «diavola» è la pizza, non parte dell'ingrediente */
     return g; };
+  var cntTok = function(w){ if(!w) return 0; var m = /^([1-4])\/4$/.exec(w); if(m) return Number(m[1]); if(/^[1-4]$/.test(w)) return Number(w); var n = AR_NUM[w]; if(n == null) n = AR_IT_NUM[w]; return (n >= 1 && n <= 4) ? n : 0; };
   var REST = /^(resto|restante|restanti|rimanente|rimanenti|altri|altre|tutti|tutte|tutto|الباقي|الباقيه|باقي|الباقين|الكل|كلهم)$/, PFX = /^(l|un|d|dell|all|nell)['’]/;
   var tryGroup = function(start, N, gus){
     N = N || 2;
-    var j = start, parts = [], pc = null, mode = null, size = null, end = start, hw = gus ? 2 : 0, afterHW = false, seen = {}, restF = false;
+    var j = start, parts = [], pc = null, mode = null, size = null, end = start, hw = gus ? 2 : 0, afterHW = false, seen = {}, restF = false, pend = 0, cust = null, restDone = false, fresh = true;
     while(j < toks.length){
       var w = toks[j];
-      if(HW(w)){ if(gus || parts.length >= N) break; hw++; afterHW = true; mode = null; j++; end = j - 1; continue; }
+      if(HW(w)){ if(gus && parts.length < N){ if(restDone) break; pend = Math.min(2, N - parts.length); fresh = true; cust = null; mode = null; j++; end = j - 1; continue; } if(gus || parts.length >= N) break; hw++; afterHW = true; mode = null; j++; end = j - 1; continue; }
       if(pc && !seen[j] && (w.charAt(0) === "+" || w.charAt(0) === "-") && w.length > 1){ seen[j] = 1; mode = w.charAt(0) === "+" ? "e" : "r"; continue; }
       if(pc && arIsSenza(w)){ mode = "r"; j++; end = j - 1; continue; }
       if(pc && (AR_EXTRA[w] || w === "extra" || w === "con") && ingAt(j + 1, all, false)){ mode = "e"; j++; end = j - 1; continue; }
@@ -17226,26 +17378,55 @@ window.bpHalfPre = function(toks, store){
         mode = null;
       }
       if(isMaxi(w)){ size = "Maxi"; mode = null; j++; end = j - 1; continue; }
-      if(AR_BABY[w] || AR_NORM[w]){ mode = null; j++; end = j - 1; continue; }
-      if(gus && parts.length < N && REST.test(w.replace(PFX, ""))){ restF = true; mode = null; j++; continue; } /* «il resto X» / «gli altri X» / «tutti X» */
+      if(AR_BABY[w] || AR_NORM[w]){ if(AR_BABY[w]) parts.baby = true; mode = null; j++; end = j - 1; continue; }
+      if(gus && parts.length < N){ var __cn = cntTok(w); if(__cn){ if(restDone) break; pend = Math.min(__cn, N - parts.length); fresh = true; cust = null; mode = null; j++; end = j - 1; continue; } } /* «uno X», «due Y», «1/4 X», «2/4 Y», «un quarto X»: quanti quarti */
+      if(gus && parts.length < N && REST.test(w.replace(PFX, ""))){ restF = true; fresh = true; mode = null; j++; continue; } /* «il resto X» / «gli altri X» / «tutti X» */
       if(FILL[w] || FILL[w.replace(PFX, "")]){ if(parts.length >= N) break; mode = null; j++; continue; } /* anche «l'altro», «un'altra» */
       if(parts.length >= N) break;
       var f = prodAt(j);
+      if(f && f.len > 1){ var __k2 = resolveName(skOf(toks.slice(j, j + f.len))); if(!(__k2 && __k2.exact)){ var __s1 = resolveName(skOf([w])); if(__s1 && __s1.exact) f = {p: __s1.p, len: 1}; } } /* v124 */
       if(f && (!arIsPizza(f.p) || /^\s*men[uù]\b/i.test(f.p.name))) f = null;
+      if(f && gus && restDone) break;
       if(f){
         var r = resolveName(skOf(toks.slice(j, j + f.len))) || {p: f.p};
         pc = {p: r.p || PH(), rem: [], add: [], pendRem: [], exact: !!r.exact};
         if(r.opts) pc.unres = {q: toks.slice(j, j + f.len).join(" "), opts: r.opts};
-        parts.push(pc); j += f.len; end = j - 1; mode = null; afterHW = false; continue;
+        parts.push(pc); if(gus && pend > 1){ var __pi = parts.length - 1, __cc = Math.min(pend, N - parts.length + 1); for(var __q = 1; __q < __cc; __q++){ var __cp = {p: pc.p, rem: pc.rem, add: pc.add, pendRem: pc.pendRem, exact: pc.exact}; if(pc.unres) __cp.dupOf = __pi; parts.push(__cp); } } pend = 0; cust = null; fresh = false; if(restF) restDone = true;
+        j += f.len; end = j - 1; mode = null; afterHW = false; continue;
+      }
+      if(gus && parts.length <= N && tokSkel(w) && AR_NUM[w] == null && !/^\d+$/.test(w)){ /* «uno würstel e patatine»: gli ingredienti dettati sono UN quarto personalizzato (base Margherita); un ingrediente dopo una pizza la completa */
+        var __gi = arFindIng(toks.slice(0, j + 1), j, all, false); /* una sola parola alla volta */
+        if(__gi && !arKeys(__gi.ing, 2).some(function(k){ return lev(tokSkel(w), k) <= (w.length >= 6 ? 2 : 1); })) __gi = null;
+        if(__gi){
+          if(cust && !fresh){ if(cust.add.indexOf(__gi.ing) < 0) cust.add.push(__gi.ing); cust.words.push(w); }
+          else if(fresh && parts.length < N){
+            if(restDone) break;
+            var __ci = parts.length; cust = {p: null, rem: [], add: [__gi.ing], pendRem: [], custom: true, words: [w]}; parts.push(cust);
+            var __cc2 = Math.min(pend || 1, N - __ci); for(var __q2 = 1; __q2 < __cc2; __q2++) parts.push({p: null, rem: cust.rem, add: cust.add, pendRem: cust.pendRem, custom: true, words: cust.words, twin: __ci});
+            pend = 0; fresh = false; if(restF) restDone = true;
+          }
+          else if(pc && !pc.custom && !restDone){ if(pc.add.indexOf(__gi.ing) < 0 && pc.pendRem.indexOf(__gi.ing) < 0) pc.add.push(__gi.ing); }
+          else break;
+          j++; end = j - 1; mode = null; continue;
+        }
       }
       /* nome non riconosciuto: solo dentro una frase di metà → proposte da toccare */
       if(hw >= 2 && tokSkel(w) && AR_NUM[w] == null && !/^\d+$/.test(w)){
         var cs = cand(tokSkel(w), true);
         if(cs.length){ pc = {p: PH(), rem: [], add: [], pendRem: [], unres: {q: w, opts: cs.slice(0, 6)}}; parts.push(pc); j++; end = j - 1; mode = null; afterHW = false; continue; }
+          if(gus && pend && parts.length < N && !restDone){ var __ci2 = parts.length; cust = {p: null, rem: [], add: [], pendRem: [], custom: true, words: [w]}; parts.push(cust); var __cc3 = Math.min(pend, N - __ci2); for(var __q3 = 1; __q3 < __cc3; __q3++) parts.push({p: null, rem: cust.rem, add: cust.add, pendRem: cust.pendRem, custom: true, words: cust.words, twin: __ci2}); pend = 0; fresh = false; if(restF) restDone = true; j++; end = j - 1; mode = null; continue; }
       }
       break;
     }
-    while(restF && parts.length >= 1 && parts.length < N){ var lp = parts[parts.length - 1], cp = {p: lp.p, rem: lp.rem.slice(), add: lp.add.slice(), pendRem: lp.pendRem.slice(), exact: lp.exact}; if(lp.unres || lp.dupOf != null) cp.dupOf = (lp.dupOf != null ? lp.dupOf : parts.length - 1); parts.push(cp); }
+    var __cus = parts.filter(function(x){ return x.custom; });
+    if(__cus.length){
+      var baseP = null; pizzas().forEach(function(p){ if(!baseP && latSkel(String(p.name).replace(/^\s*pizza\s+/i, "")) === latSkel("margherita")) baseP = p; });
+      if(!baseP){ var __fp = parts.filter(function(x){ return !x.custom && x.p && x.p.name !== "❓"; })[0]; if(__fp) baseP = __fp.p; }
+      parts.forEach(function(x, xi){ if(!x.custom) return; if(baseP){ x.p = baseP; return; } x.p = PH(); if(x.twin != null) x.dupOf = x.twin; else x.unres = {q: x.words.join(" "), opts: pizzas().slice(0, 6)}; });
+    }
+    while(restF && parts.length >= 1 && parts.length < N){ var lp = parts[parts.length - 1], cp = {p: lp.p, rem: lp.rem.slice(), add: lp.add.slice(), pendRem: lp.pendRem.slice(), exact: lp.exact}; if(lp.custom){ cp.custom = true; cp.words = lp.words; } if(lp.unres || lp.dupOf != null) cp.dupOf = (lp.dupOf != null ? lp.dupOf : parts.length - 1); parts.push(cp); }
+    if(gus && parts.length === 0){ var __sp = []; for(var __kk = 0; __kk < N; __kk++) __sp.push({p: PH(), rem: [], add: [], pendRem: []}); __sp.screen = true; __sp.size = size; return {parts: __sp, end: start - 1}; } /* «quattro gusti» da solo: mai quantità 4 */
+    if(gus && parts.length < N){ var __ch = []; parts.forEach(function(x){ if(x.p && x.p.name !== "❓" && __ch.indexOf(x.p) < 0) __ch.push(x.p); }); while(parts.length < N) parts.push({p: PH(), rem: [], add: [], pendRem: [], unres: {q: "?", opts: (__ch.length ? __ch : pizzas()).slice(0, 6)}}); } /* quarti non detti: li chiedo a pulsanti */
     if(parts.length !== N) return null;
     if(hw < 2 && parts.some(function(x){ return !x.exact; })) return null; /* un solo «mezza/metà»: solo con nomi esatti (evita «mezza porzione di patatine») */
     parts.size = size;
@@ -17259,6 +17440,10 @@ window.bpHalfPre = function(toks, store){
     if(gn && GW(toks[i + 1])){ /* v121: «3 gusti» / «4 gusti»: primo/secondo/terzo…, «il resto X» */
       var g3 = tryGroup(i + 2, gn, true);
       if(g3){ if(out.length && isMaxi(out[out.length - 1])){ g3.parts.size = "Maxi"; out.pop(); } store.push(g3.parts); out.push("§hh" + (store.length - 1)); i = Math.max(g3.end, i + 1) + 1; continue; }
+    }
+    if(/^[1-3]\/4$/.test(toks[i] || "")){ /* «1/4 X, 1/4 Y, 2/4 Z» senza dire «quattro gusti»: è comunque una sola pizza a 4 gusti */
+      var g4 = tryGroup(i, 4, true);
+      if(g4 && !g4.parts.screen){ if(out.length && isMaxi(out[out.length - 1])){ g4.parts.size = "Maxi"; out.pop(); } store.push(g4.parts); out.push("§hh" + (store.length - 1)); i = Math.max(g4.end, i) + 1; continue; }
     }
     if(HW(toks[i])){
       var gr = tryGroup(i);
@@ -17300,8 +17485,8 @@ window.bpHalfAsk = function(it){
   var has = function(p, ing){ var k = ingNorm(ing); return parseIngredients((p && p.description) || "").some(function(g){ return ingNorm(g) === k; }); };
   var finish = function(){
     parts.forEach(function(x){ if(x.dupOf != null && parts[x.dupOf] && !parts[x.dupOf].unres){ x.p = parts[x.dupOf].p; x.rem = (parts[x.dupOf].rem || []).slice(); } });
-    var ok = false; try{ ok = window.bpHalfAdd && window.bpHalfAdd(parts, it.qty, it.size); }catch(e){ bpWarn(e); }
-    if(!ok) parts.forEach(function(x){ ssCartAdd(x.p, "Normale", it.qty, x.rem, [], false); });
+    var ok = false; try{ ok = window.bpSplitAdd(parts, it.qty, it.size); }catch(e){ bpWarn(e); }
+    if(!ok) window.bpSplitFallback(parts, it.qty, it.size);
     renderCart();
     try{ ssToast("✅ " + it.qty + "× Pizza " + (parts.length === 2 ? "metà metà" : parts.length + " gusti") + ": " + parts.map(function(x){ return "½ " + x.p.name; }).join(" / ") + (it.size === "Maxi" ? " Maxi" : "")); }catch(e){}
   };
@@ -17321,7 +17506,7 @@ function arParseOrder(text){
  var pendSz = null, pendBaby = false, __hh = [], toks = window.bpHalfPre(arTok(text).filter(function(w){ return w !== "e" && w !== "ed"; }), __hh), items = [], cur = null, mode = null, pq = null, last = -1, solo = false, pendMenu = false, all = ingUnique(getAllKnownIngredients()); AR_HINT = null;
  for(var i = 0; i < toks.length; i++){
  var w = toks[i];
- if(w.indexOf("§hh") === 0){ var __hp = __hh[Number(w.slice(3))]; items.push({half: true, parts: __hp, qty: pq || 1, explicit: true, size: __hp.size || (pendSz === "Maxi" ? "Maxi" : "Normale"), rem: [], add: [], menu: false, p: {name: "Pizza " + (__hp.length === 2 ? "metà metà" : __hp.length + " gusti") + ": " + __hp.map(function(x){ return ({2: "½", 3: "⅓", 4: "¼"})[__hp.length] + " " + x.p.name; }).join(" / "), category: "Pizza"}}); pq = null; pendSz = null; pendBaby = false; cur = null; mode = null; pendMenu = false; last = -1; continue; }
+ if(w.indexOf("§hh") === 0){ var __hp = __hh[Number(w.slice(3))]; items.push({half: true, screen: !!__hp.screen, parts: __hp, qty: pq || 1, explicit: true, size: __hp.size || (pendSz === "Maxi" ? "Maxi" : "Normale"), rem: [], add: [], menu: false, p: {name: "Pizza " + (__hp.length === 2 ? "metà metà" : __hp.length + " gusti") + ": " + __hp.map(function(x){ return ({2: "½", 3: "⅓", 4: "¼"})[__hp.length] + " " + x.p.name; }).join(" / "), category: "Pizza"}}); if((__hp.baby || pendBaby) && !__hp.screen) __hp.extraNote = "BABY"; if(__hp.screen){ items[items.length - 1].p.name = "Pizza " + (__hp.length === 2 ? "metà metà" : __hp.length + " gusti") + " · scegli i gusti"; } pq = null; pendSz = null; pendBaby = false; cur = null; mode = null; pendMenu = false; last = -1; continue; }
  if(window.bpMenuWordRx.test(w)){ var __nx = arFindProduct(toks, i + 1); if(!(__nx && /^menu\b/.test(ingNorm(__nx.p.name)))){ pendMenu = true; continue; } }
  if(AR_GEN_MAP[w]){ AR_HINT = AR_GEN_MAP[w]; continue; }
  if(AR_LAT_GEN[w]) AR_HINT = AR_LAT_GEN[w];
@@ -17436,7 +17621,7 @@ function arProcess(text, auto){
    if(__dn.length){ var __ne = document.getElementById("notes"); if(__ne){ var __cur = String(__ne.value || "").trim(), __add = __dn.join(", "); if(__cur.toLowerCase().indexOf(__add) < 0) __ne.value = __cur ? __cur + " · " + __add : __add; } }
   }
  }catch(e){ bpWarn(e); }
- items.forEach(function(it){ if(it.half && it.parts.some(function(x){ return x.unres; })){ try{ window.bpHalfAsk(it); }catch(e){ bpWarn(e); } return; } if(it.half){ var __ok = false; try{ __ok = window.bpHalfAdd && window.bpHalfAdd(it.parts, it.qty, it.size); }catch(e){ bpWarn(e); } if(!__ok) it.parts.forEach(function(x){ ssCartAdd(x.p, "Normale", it.qty, x.rem, [], false); }); } else bpSsAddItem(it); });
+ items.forEach(function(it){ if(it.half && it.screen){ try{ window.bpGustiScreen(it.parts.length); }catch(e){ bpWarn(e); } return; } if(it.half && it.parts.some(function(x){ return x.unres; })){ try{ window.bpHalfAsk(it); }catch(e){ bpWarn(e); } return; } if(it.half){ var __ok = false; try{ __ok = window.bpSplitAdd(it.parts, it.qty, it.size); }catch(e){ bpWarn(e); } if(!__ok) window.bpSplitFallback(it.parts, it.qty, it.size); } else bpSsAddItem(it); });
  renderCart();
  choices.forEach(function(c){ bpShowChoice(c.ing, c.opts, function(p){ var rem = arAutoRem(p, c.ing); ssCartAdd(p, "Normale", c.qty, rem, []); var ek = p.id + "-Normale-" + (rem.length ? rem.join("_") : "base"); var en = cart.get(ek); if(en){ en.removedIngs = rem.slice(); } renderCart(); try{ ssToast(p.name + (rem.length ? " · senza " + rem.join(", ") : " · nessuna rimozione (" + (p.description || "descrizione vuota") + ")")); }catch(x){} }); });
  msg = "✅ " + items.map(function(it){ return it.qty + "× " + (it.menu ? "🍟🥤 Menu " : "") + it.p.name + (it.size === "Maxi" ? (Number(it.p.price_maxi) > 0 ? " Maxi" : " ⚠️ Maxi non a listino (aggiunta Normale)") : "") + (it.baby ? " (baby)" : "") + (it.rem.length ? " · 🚫 " + it.rem.join(", ") : "") + (it.add.length ? " · ➕ " + it.add.join(", ") : ""); }).join(" | ");
@@ -19979,9 +20164,10 @@ openCartIngModal = function(key){
    var price = gPrice(); if(price == null) return false;
    var sel = G.slots.slice(), names = sel.map(function(p){ return p.name; }), fr = GM[__md].fr;
    var name = 'Pizza ' + GM[__md].label + ': ' + names.map(function(n, i){ return fr + ' ' + n + gModTxt(i); }).join(' / ');
-   var key = ['g', __md, G.size, sel.map(function(p){ return p.id; }).join('+'), '', name].join('|'), ex = cart.get(key);
+   var __sn = ''; try{ __sn = window.bpSplitNote ? window.bpSplitNote(parts) : ''; }catch(e){}
+   var key = ['g', __md, G.size, sel.map(function(p){ return p.id; }).join('+'), __sn, name].join('|'), ex = cart.get(key);
    if(ex) ex.qty += (qty || 1);
-   else cart.set(key, {menu_id: null, name: name, category: sel[0].category || 'Pizza', baseDesc: '', size: G.size, basePrice: price, extraPrice: 0, price: price, qty: (qty || 1), removedIngs: [], addedIngs: [], itemNote: ''});
+   else cart.set(key, {menu_id: null, name: name, category: sel[0].category || 'Pizza', baseDesc: '', size: G.size, basePrice: price, extraPrice: 0, price: price, qty: (qty || 1), removedIngs: [], addedIngs: [], itemNote: __sn});
    return true;
   } finally { G.mode = sv.mode; G.slots = sv.slots; G.mods = sv.mods; G.size = sv.size; G.qty = sv.qty; G.note = sv.note; G.priceOv = sv.priceOv; G.menuAdd = sv.menuAdd; }
  };
