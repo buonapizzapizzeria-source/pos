@@ -30767,8 +30767,18 @@ body[data-role="viewer"] #ordersTab button[onclick*="selectReadyDeliveries"],
 body[data-role="viewer"] .k35-go,
 body[data-role="viewer"] #kitchenChips,
 body[data-role="viewer"] .bp-fab,body[data-role="viewer"] #bpMoreBtn,body[data-role="viewer"] #bpQuick,
-body[data-role="viewer"] #userBar button:not([onclick*="doLogout"]){display:none!important}
+body[data-role="viewer"] #userBar button:not(#bp35LateBtn):not(#pkUiMinus):not(#pkUiPlus):not(#bpStrRm):not(#userEmail):not([onclick*="doLogout"]){display:none!important}
 </style>
+<style id="bpStaffBarCss">
+/* v122-staff: pizzaiolo / kebabbaro (ruoli kitchen e viewer) - in «Strumenti» solo:
+   Cambia utente (👥), Allarme ritardi (🚨), A− / A+ (zoom interfaccia), Readme (📖) e l'account.
+   Niente stampa/impostazioni stampa, niente 🛡️ Accessi staff, niente tema, lingua, notifiche, audio, layout. */
+body[data-role="kitchen"] #userBar>*:not(#bp35LateBtn):not(#pkUiMinus):not(#pkUiPlus):not(#bpStrRm):not(#userEmail):not([onclick*="doLogout"]),
+body[data-role="viewer"] #userBar>*:not(#bp35LateBtn):not(#pkUiMinus):not(#pkUiPlus):not(#bpStrRm):not(#userEmail):not([onclick*="doLogout"]),
+body[data-role="kitchen"] #bpHdrR>:not(#userBar),
+body[data-role="viewer"] #bpHdrR>:not(#userBar){display:none!important}
+</style>
+
 <script id="bpViewerGuard">
 (function(){
  function viewer(){ return document.body && document.body.getAttribute('data-role') === 'viewer'; }
