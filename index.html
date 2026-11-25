@@ -40290,6 +40290,20 @@ html body .ss .ss-bd .ss-qx.on:has(.bp-badge)::after{content:"\2713";position:ab
  window.bpDoughImg=function(kd){ return img(kd==="i"?"ig":"gf"); };
 })();
 </script>
+<script id="bpKebabImg">
+/* v-kebab: immagine unica images/kebab.png per ogni ingrediente/aggiunta "Kebab" o "Carne" (stesso stile .ing-real delle altre foto) */
+(function(){
+ var SRC="images/kebab.png";
+ function isK(n){ var s=String(n==null?"":n).toLowerCase(); return /\bkebab\b|\bkebap\b|\bcarne\b|d[o\u00f6]ner|\u0643\u0628\u0627\u0628|\u0644\u062d\u0645/.test(s) && !/panin|piadin|pizza|men[u\u00f9]|menu|solo carne|salumi|salame/.test(s); }
+ function img(n){ return '<img class="ing-real bp-kebabimg" alt="Kebab" decoding="async" src="'+SRC+'" onerror="this.onerror=null;this.outerHTML=\'\u{1F959}\'">'; }
+ window.bpKebabIsK=isK;
+ ["ingIcon","bpPh","bpQIcon"].forEach(function(fn){
+  var o=window[fn]; if(typeof o!=="function") return;
+  window[fn]=function(n){ return isK(n) ? img(n) : o.apply(this,arguments); };
+ });
+ try{ var st=document.createElement("style"); st.textContent=".bp-kebabimg{object-fit:cover}"; document.head.appendChild(st); }catch(e){}
+})();
+</script>
 <style id="bp-mic-pro">
 /* Mic grande e distinto (fuori dal box) */
 html body #bpMenu .bpm-top #bpmMic{
