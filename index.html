@@ -8220,11 +8220,25 @@ function bpAddExtra(d){
  e.value = d === 0 ? '' : String(Math.round((getExtraAmount() + d) * 100) / 100);
  renderCart();
 }
+/* v-fix: quarti uguali si raggruppano nel nome: 2 quarti Margherita = "½ Margherita", 3 = "¾ Margherita" (mai "¼ Margherita / ¼ Margherita") */
+window.bpGroupGusti = function(texts, n){
+ var order = [], cnt = {};
+ texts.forEach(function(t){ if(cnt[t] == null){ cnt[t] = 0; order.push(t); } cnt[t]++; });
+ var F = {2: {1: "½"}, 3: {1: "⅓", 2: "⅔"}, 4: {1: "¼", 2: "½", 3: "¾"}};
+ if(order.length < 2) return texts.map(function(t){ return ((F[n] && F[n][1]) || "") + " " + t; }).join(" / ");
+ return order.map(function(t){ var k = cnt[t]; return (k >= n ? "" : (((F[n] && F[n][k]) || (k + "/" + n)) + " ")) + t; }).join(" / ");
+};
+/* v-fix: legge anche i nomi raggruppati: "¾ Margherita / ¼ Wurstel" = 3 quarti + 1 quarto */
+window.bpExpandGusti = function(raw, N){
+ var m = String(raw).match(/^([½⅓¼⅔¾])\s*/), v = m ? {"¼": .25, "⅓": 1 / 3, "½": .5, "⅔": 2 / 3, "¾": .75}[m[1]] : 0;
+ return v ? Math.max(1, Math.round(v * N)) : 1;
+};
 /* pizza a gusti: "Pizza metà metà: ½ Margherita / ½ Diavola" (vecchio formato con " + " ancora letto) */
 function bpGustiInfo(baseName){
  var m = String(baseName || '').match(/^Pizza\s+(metà metà|\d\s*gusti):\s*(.+)$/i);
  if(!m) return null;
- var parts = m[2].split(/\s+\/\s+|\s+\+\s+/).map(function(x){ return x.replace(/^[½⅓¼⅔¾]\s*/, '').trim(); }).filter(Boolean);
+ var __N = /metà/i.test(m[1]) ? 2 : (parseInt(m[1], 10) || 4), parts = [];
+ m[2].split(/\s+\/\s+|\s+\+\s+/).forEach(function(x){ var k = window.bpExpandGusti(x, __N), t = x.replace(/^[½⅓¼⅔¾]\s*/, '').trim(); if(t) for(var q = 0; q < k; q++) parts.push(t); });
  if(parts.length < 2) return null;
  return {label: m[1].toUpperCase(), parts: parts, unit: /metà/i.test(m[1]) ? 'METÀ' : 'GUSTO'};
 }
@@ -17175,17 +17189,19 @@ function bpTyStem(s){ var m = /(calzon|panin|piadin|pizz)/.exec(s); return m ? m
 function bpTyAdj(p, w, i, toks){
  var spk = "", calz = false;
  for(var k = 0; k < w.len; k++){ var t = toks[i + k]; if(AR_GEN_MAP[t]) spk = AR_GEN_MAP[t]; else if(AR_LAT_GEN[t]) spk = AR_LAT_GEN[t]; if(tokSkel(t) === "klsn") calz = true; }
+ var __ex = !!(spk || calz);
  if(!spk && !calz && AR_HINT) spk = AR_HINT;
  if(calz) spk = "calzon";
  var nm = ingNorm(p.name), ps = bpTyStem(nm), adj = 0;
+ if(__ex && ps && ps !== spk) return -1000; /* "menu panino kebab" non puo' essere "Menu Piadina Kebab" (scheletri simili) */
  if(ps === "calzon" && spk !== "calzon") adj -= (spk ? 30 : 4);
  else if(spk && ps && ps !== spk) adj -= 12;
  return adj - nm.length * 0.01;
 }
 function arFindProduct(toks, i){
  var best = null, menuSaid = toks.some(function(w){ return window.bpMenuWordRx.test(w); });
- arWin(toks, i, 6).forEach(function(w){ if(w.len === 1 && BP_SIZE_WORD[toks[i]]) return; /* v53: finestra fino a 6 parole, cosi' una pizza dedicata a nome lungo vince sulla pizza base + modifiche */
- getActiveMenu().forEach(function(p){ var lt = toks[i + w.len - 1]; if(w.len > 1){ for(var __k = 0; __k < w.len; __k++){ var __t = toks[i + __k]; if(BP_SIZE_WORD[__t] && (__k === 0 || ingNorm(p.name).indexOf(__t) < 0)) return; } } /* v95-fix1: piccola/lattina = modificatore, non parte del nome */ if(w.len > 1 && AR_IT_NUM[lt] != null && ingNorm(p.name).split(" ").indexOf(AR_IT_AR[lt] || lt) < 0) return; var __adj = bpTyAdj(p, w, i, toks); arKeys(p.name).forEach(function(k){ if(skOk(w.s, k)){ var sc = w.len * 10 + k.length - lev(w.s, k) + __adj + ((AR_HINT && (menuSaid || !/^menu\b/.test(ingNorm(p.name)))) ? (ingNorm(p.name).indexOf(AR_HINT) >= 0 ? 15 : (ingNorm(p.category || "").indexOf(AR_HINT) >= 0 ? 6 : 0)) : 0) - (!menuSaid && /^menu\b/.test(ingNorm(p.name)) ? 6 : 0); if(!best || sc > best.sc) best = {p: p, len: w.len, sc: sc}; } }); });
+ arWin(toks, i, 6).forEach(function(w){ if(w.len === 1 && BP_SIZE_WORD[toks[i]]) return; if(w.len > 1 && window.bpMenuWordRx.test(toks[i + w.len - 1])) return; /* "menu" in coda appartiene all'articolo dopo */ /* v53: finestra fino a 6 parole, cosi' una pizza dedicata a nome lungo vince sulla pizza base + modifiche */
+ getActiveMenu().forEach(function(p){ var lt = toks[i + w.len - 1]; if(w.len > 1){ for(var __k = 0; __k < w.len; __k++){ var __t = toks[i + __k]; if(BP_SIZE_WORD[__t] && (__k === 0 || ingNorm(p.name).indexOf(__t) < 0)) return; } } /* v95-fix1: piccola/lattina = modificatore, non parte del nome */ if(w.len > 1 && AR_IT_NUM[lt] != null && ingNorm(p.name).split(" ").indexOf(AR_IT_AR[lt] || lt) < 0) return; var __adj = bpTyAdj(p, w, i, toks); if(__adj <= -500) return; arKeys(p.name).forEach(function(k){ if(skOk(w.s, k)){ var sc = w.len * 10 + k.length - lev(w.s, k) + __adj + ((AR_HINT && (menuSaid || !/^menu\b/.test(ingNorm(p.name)))) ? (ingNorm(p.name).indexOf(AR_HINT) >= 0 ? 15 : (ingNorm(p.category || "").indexOf(AR_HINT) >= 0 ? 6 : 0)) : 0) - (!menuSaid && /^menu\b/.test(ingNorm(p.name)) ? 6 : 0); if(!best || sc > best.sc) best = {p: p, len: w.len, sc: sc}; } }); });
  });
  return best;
 }
@@ -17327,7 +17343,7 @@ window.bpSplitFallback = function(parts, qty, size){
   var n = parts.length, fr = {2: "½", 3: "⅓", 4: "¼"}[n] || "", sz = size === "Maxi" ? "Maxi" : "Normale", q = Math.max(parseInt(qty, 10) || 1, 1);
   var vals = parts.map(function(x){ try{ return Number(pkSizePrice(x.p, sz)) || 0; }catch(e){ return 0; } });
   var price = Math.max.apply(null, vals.concat([0]));
-  var name = "Pizza " + (n === 2 ? "metà metà" : n + " gusti") + ": " + parts.map(function(x){ return fr + " " + String((x.p && x.p.name) || "?"); }).join(" / ");
+  var name = "Pizza " + (n === 2 ? "metà metà" : n + " gusti") + ": " + window.bpGroupGusti(parts.map(function(x){ return String((x.p && x.p.name) || "?"); }), n);
   var note = ""; try{ note = window.bpSplitNote(parts, true); }catch(e){}
   var key = ["gf", n, sz, name, note].join("|"), ex = cart.get(key);
   if(ex) ex.qty += q;
@@ -17527,7 +17543,7 @@ function arParseOrder(text){
  var pendSz = null, pendBaby = false, __hh = [], toks = window.bpHalfPre(arTok(text).filter(function(w){ return w !== "e" && w !== "ed" && w !== "اي"; }), __hh), items = [], cur = null, mode = null, pq = null, last = -1, solo = false, pendMenu = false, all = ingUnique(getAllKnownIngredients()); AR_HINT = null;
  for(var i = 0; i < toks.length; i++){
  var w = toks[i];
- if(w.indexOf("§hh") === 0){ var __hp = __hh[Number(w.slice(3))]; items.push({half: true, screen: !!__hp.screen, parts: __hp, qty: pq || 1, explicit: true, size: __hp.size || (pendSz === "Maxi" ? "Maxi" : "Normale"), rem: [], add: [], menu: false, p: {name: "Pizza " + (__hp.length === 2 ? "metà metà" : __hp.length + " gusti") + ": " + __hp.map(function(x){ return ({2: "½", 3: "⅓", 4: "¼"})[__hp.length] + " " + x.p.name; }).join(" / "), category: "Pizza"}}); if((__hp.baby || pendBaby) && !__hp.screen) __hp.extraNote = "BABY"; if(__hp.screen){ items[items.length - 1].p.name = "Pizza " + (__hp.length === 2 ? "metà metà" : __hp.length + " gusti") + " · scegli i gusti"; } pq = null; pendSz = null; pendBaby = false; cur = null; mode = null; pendMenu = false; last = -1; continue; }
+ if(w.indexOf("§hh") === 0){ var __hp = __hh[Number(w.slice(3))]; items.push({half: true, screen: !!__hp.screen, parts: __hp, qty: pq || 1, explicit: true, size: __hp.size || (pendSz === "Maxi" ? "Maxi" : "Normale"), rem: [], add: [], menu: false, p: {name: "Pizza " + (__hp.length === 2 ? "metà metà" : __hp.length + " gusti") + ": " + window.bpGroupGusti(__hp.map(function(x){ return x.p.name; }), __hp.length), category: "Pizza"}}); if((__hp.baby || pendBaby) && !__hp.screen) __hp.extraNote = "BABY"; if(__hp.screen){ items[items.length - 1].p.name = "Pizza " + (__hp.length === 2 ? "metà metà" : __hp.length + " gusti") + " · scegli i gusti"; } pq = null; pendSz = null; pendBaby = false; cur = null; mode = null; pendMenu = false; last = -1; continue; }
  if(window.bpMenuWordRx.test(w)){ var __nx = arFindProduct(toks, i + 1); if(!(__nx && /^menu\b/.test(ingNorm(__nx.p.name)))){ pendMenu = true; continue; } }
  if(AR_GEN_MAP[w]){ AR_HINT = AR_GEN_MAP[w]; continue; }
  if(AR_LAT_GEN[w]) AR_HINT = AR_LAT_GEN[w];
@@ -17554,10 +17570,10 @@ function arParseOrder(text){
  var f = arFindProduct(toks, i);
  if(f && f.len === 1 && !AR_HINT && tokSkel(toks[i]) === "kb"){ var __ms = pendMenu || window.bpMenuWordRx.test(toks[i - 1] || ""), __kp = getActiveMenu().filter(function(p){ return /\bke[bp]ab\b/.test(ingNorm(p.name)) && /^men[uù]\b/i.test(p.name) === !!__ms; }); if(__kp.length > 1){ items.push({choice: true, noRem: true, title: __ms ? "Quale menu kebab?" : "Quale kebab?", ing: "Kebab", qty: pq || 1, opts: __kp}); cur = null; pq = null; pendMenu = false; pendSz = null; pendBaby = false; mode = null; last = i + 1; continue; } } /* «kebab» da solo: più prodotti kebab → scegli con i bottoni (mai una pizza a caso) */
  if(AR_IT_GEN[toks[i]] && (!f || f.len === 1 || ingNorm(f.p.name).indexOf(toks[i]) !== 0)) continue; /* parola generica ("pizza") non è un prodotto: evita falso match con "Pazza" */
- if(f && cur && !solo && f.len === 1 && arIsPizza(f.p) && ingNorm(f.p.name).split(" ").length > 1){ /* parola singola che è anche un ingrediente ("patatine") dopo una pizza = EXTRA, non un'altra pizza (es. "Wurstel e Patatine") */
+ if(f && cur && !solo && !AR_HINT && !pendMenu && f.len === 1 && arIsPizza(f.p) && ingNorm(f.p.name).split(" ").length > 1){ /* parola singola che è anche un ingrediente ("patatine") dopo una pizza = EXTRA, non un'altra pizza (es. "Wurstel e Patatine") */
  var ihp = arFindIng(toks, i, all); if(ihp && ihp.len >= f.len) f = null;
  }
- if(f && cur && !arIsPizza(f.p) && pq == null && !(/\b(acqua|coca|fanta|sprite|birra|red bull|monster|te pesca|te limone)\b/.test(ingNorm(f.p.name)) && ingNorm(f.p.name).split(" ").indexOf(w) >= 0)){ var ihx = arFindIng(toks, i, all); if(ihx && ihx.len >= f.len) f = null; } /* v96-fix3: con un numero davanti ("una patatine", "un menu piadina kebab") o una bibita, è un NUOVO articolo, non un extra */
+ if(f && cur && !arIsPizza(f.p) && pq == null && !AR_HINT && !pendMenu && !(/\b(acqua|coca|fanta|sprite|birra|red bull|monster|te pesca|te limone)\b/.test(ingNorm(f.p.name)) && ingNorm(f.p.name).split(" ").indexOf(w) >= 0)){ var ihx = arFindIng(toks, i, all); if(ihx && ihx.len >= f.len) f = null; } /* v96-fix3: con un numero davanti ("una patatine", "un menu piadina kebab") o una bibita, è un NUOVO articolo, non un extra */
  if(f){
  if(cur && cur.p === f.p && last === i && pq == null){ i += f.len - 1; last = i + 1; continue; }
  var soloRem = [];
@@ -17694,6 +17710,72 @@ window.bpCleanOrderText = function(raw){
 };
 var _psoOrig = processSpokenOrder;
 processSpokenOrder = function(t, isAuto){ var tt = String(t || ""); try{ tt = window.bpCleanOrderText(tt) || tt; }catch(e){ bpWarn(e); } var hit = false; try{ hit = AR_RX.test(tt) || arParseOrder(tt).length > 0; }catch(e){ hit = AR_RX.test(tt); } return hit ? arProcess(tt, isAuto) : _psoOrig(tt, isAuto); };
+/* v-route: voce -> tipo ordine. "tavolo" senza numero = primo tavolo libero; "asporto" = ritiro; "consegna" = domicilio + apre la scheda Cliente. Funziona anche con le parole in lettere arabe (تافولو / داسبورتو / كونسينيا) */
+var BP_ROUTE_NUMS = {uno:1, una:1, un:1, due:2, tre:3, quattro:4, cinque:5, sei:6, sette:7, otto:8, nove:9, dieci:10, undici:11, dodici:12, "واحد":1, "اتنين":2, "اثنين":2, "تلاتة":3, "ثلاثة":3, "اربعة":4, "أربعة":4, "خمسة":5, "ستة":6, "سبعة":7, "تمانية":8, "ثمانية":8, "تسعة":9, "عشرة":10};
+var BP_ROUTE_FILL = {}; ("per il la lo le un una uno ok okay grazie prego allora ecco vorrei voglio e ed di da a al alla numero n nr num سلام شكرا لو سمحت") .split(" ").forEach(function(w){ BP_ROUTE_FILL[w] = 1; });
+window.bpVoiceRoute = function(raw){
+ var s = String(raw == null ? "" : raw); try{ s = bpArDigits(s); }catch(e){}
+ var l = " " + s.toLowerCase().replace(/[،,.;!?؟]/g, " ").replace(/\s+/g, " ") + " ";
+ l = l.replace(/\bpag\w*\s+(?:alla\s+)?consegna\b/g, " "); /* "paga alla consegna" = pagamento, non tipo ordine */
+ var RX = {
+  Tavolo: /(?:^|\s)(?:al\s+)?(?:tavol[oa]|tabol[oa]|تافولو|تافولا|تابولو|تابولا|طاولة|طاوله|ترابيزة|ترابيزه)(?=\s|$)/,
+  Asporto: /(?:^|\s)(?:(?:da|per)\s+|d')?a?sporto(?=\s|$)|(?:^|\s)ritiro(?=\s|$)|(?:^|\s)(?:داسبورتو|دا\s+اسبورتو|اسبورتو|أسبورتو|ريتيرو)(?=\s|$)/,
+  Consegna: /(?:^|\s)(?:consegna|domicilio)(?=\s|$)|(?:^|\s)(?:كونسينيا|كونسينا|كونسيغنا|كونسنيا|دوميتشيليو|دوميسيليو|توصيل|ديليفري|دليفري)(?=\s|$)/
+ }, best = null;
+ ["Tavolo", "Consegna", "Asporto"].forEach(function(k){ var m = RX[k].exec(l); if(m && (!best || m.index < best.m.index)) best = {type: k, m: m}; });
+ if(!best) return null;
+ var end = best.m.index + best.m[0].length, before = l.slice(0, best.m.index), after = l.slice(end), table = "";
+ if(best.type === "Tavolo"){
+  var mm = /^\s*(?:(?:numero|num|nr|n)\.?°?\s*)?(\d{1,2})(?=\s|$)/.exec(after);
+  if(mm){ table = String(Number(mm[1])); after = after.slice(mm[0].length); }
+  else {
+   var wm = /^\s*(?:(numero|num|nr|n)\.?°?\s*)?(\S+)(?=\s|$)/.exec(after);
+   if(wm && BP_ROUTE_NUMS[wm[2]] != null && (wm[1] || !after.slice(wm[0].length).trim())){ table = String(BP_ROUTE_NUMS[wm[2]]); after = after.slice(wm[0].length); } /* "tavolo due" solo se detto in fondo o con "numero": altrimenti "tavolo due menu..." sono 2 menu */
+  }
+ }
+ var rest = (before + " " + after).replace(/\s+/g, " ").trim();
+ return {type: best.type, table: table, rest: rest};
+};
+window.bpVoiceApplyRoute = function(r){
+ var $ = function(id){ return document.getElementById(id); };
+ if(r.type === "Tavolo"){
+  var n = r.table, auto = false;
+  if(!n){ try{ var T = window.OpsEngine._t, occ = T.occupiedTables(), cnt = T.tableCount(); for(var k = 1; k <= cnt; k++){ if(!occ[String(k)]){ n = String(k); auto = true; break; } } }catch(e){ bpWarn(e); } }
+  try{ if(window.bpvApplyRoute) window.bpvApplyRoute({type: "Tavolo", table: n || ""}); else { $("type").value = "Tavolo"; try{ toggleAddress(); }catch(e){} if(n && $("tableNo")) $("tableNo").value = n; } }catch(e){ bpWarn(e); }
+  try{ ssToast(n ? ("🍽️ Tavolo " + n + (auto ? " (primo libero)" : "")) : "🍽️ Tavolo: tutti occupati, scegli il numero", !n); }catch(e){}
+  return;
+ }
+ if(r.type === "Asporto"){ try{ if(window.bpvApplyRoute) window.bpvApplyRoute({type: "Asporto"}); else { $("type").value = "Asporto"; try{ toggleAddress(); }catch(e){} } }catch(e){ bpWarn(e); } return; }
+ /* Consegna: tipo = domicilio, poi apre la scheda Cliente per inserire nome / telefono / indirizzo */
+ try{ var ty = $("type"); if(ty){ ty.value = "Consegna"; try{ toggleAddress(); }catch(e){} ty.dispatchEvent(new Event("change", {bubbles: true})); var tn = $("tableNo"); if(tn && tn.value){ tn.value = ""; tn.dispatchEvent(new Event("input", {bubbles: true})); } } }catch(e){ bpWarn(e); }
+ try{ ssToast("🛵 Consegna: inserisci i dati del cliente"); }catch(e){}
+ setTimeout(function(){
+  try{
+   var cb = $("p64CartBar"), tk = document.querySelector(".p64-ticket");
+   if(cb && !tk && cb.offsetParent !== null) cb.click();
+   setTimeout(function(){
+    var b = document.querySelector('#p64Bar [data-w="cust"]'), w = $("p64Win");
+    if(b){ if(!(w && w.getAttribute("data-open") === "cust")) b.click(); }
+    else { var c = $("customer"); if(c){ try{ c.scrollIntoView({block: "center"}); }catch(e){} c.focus(); } }
+   }, cb && !tk ? 250 : 0);
+  }catch(e){ bpWarn(e); }
+ }, 350);
+};
+window.bpVoiceRouteFlow = function(text){
+ var r = window.bpVoiceRoute(text); if(!r) return false;
+ if(bpVoiceIsFullOrder(r.rest)) return false; /* ha anche telefono/indirizzo/orario...: resta il percorso ordine completo */
+ var words = r.rest.split(" ").filter(function(w){ return w && !BP_ROUTE_FILL[w]; });
+ if(r.type !== "Consegna") window.bpVoiceApplyRoute(r);
+ if(words.length){ var cl = r.rest; try{ cl = window.bpCleanOrderText(r.rest) || r.rest; }catch(e){ bpWarn(e); } try{ arProcess(cl, false); }catch(e){ bpWarn(e); } }
+ if(r.type === "Consegna") window.bpVoiceApplyRoute(r);
+ return true;
+};
+var __bsf0 = bpVoiceSmartFinal;
+bpVoiceSmartFinal = function(text){ try{ if(window.bpVoiceRouteFlow(text)) return "add"; }catch(e){ bpWarn(e); } return __bsf0(text); };
+window.bpVoiceSmartFinal = bpVoiceSmartFinal;
+var __pso2 = processSpokenOrder;
+processSpokenOrder = function(t, isAuto){ try{ if(window.bpVoiceRouteFlow(t)) return true; }catch(e){ bpWarn(e); } return __pso2(t, isAuto); };
+
 function ssParseTime(t){
  var s = bpArDigits(t).toLowerCase();
  if(/دلوقتي|حالا|الان|فورا|بسرعه|subito|adesso|prima possibile/.test(s)) return "asap";
@@ -20153,7 +20235,7 @@ openCartIngModal = function(key){
  var price = gPrice(); if(price == null || !G.edit) return;
  var oldKey = G.edit.key, old = cart.get(oldKey) || {};
  var m = G.mode, sel = G.slots.slice(), names = sel.map(function(p){ return p.name; }), fr = GM[m].fr;
- var name = 'Pizza ' + GM[m].label + ': ' + names.map(function(n, i){ return fr + ' ' + n + gModTxt(i); }).join(' / ');
+ var name = 'Pizza ' + GM[m].label + ': ' + window.bpGroupGusti(names.map(function(n, i){ return n + gModTxt(i); }), names.length);
  var note = G.note.trim();
  var key = ['g', m, G.size, sel.map(function(p){ return p.id; }).join('+'), note, name].join('|') + (G.priceOv != null ? '|p' + G.priceOv : '');
  var ni = Object.assign({}, old, {menu_id: null, name: name, category: old.category || sel[0].category || 'Pizza', baseDesc: '', size: G.size, basePrice: price, extraPrice: 0, price: price, qty: G.qty, itemNote: note});
@@ -20169,7 +20251,7 @@ openCartIngModal = function(key){
  function gAdd(){
  var price = gPrice(); if(price == null) return;
  var m = G.mode, sel = G.slots.slice(), names = sel.map(function(p){ return p.name; });
- var fr = GM[m].fr, name = 'Pizza ' + GM[m].label + ': ' + names.map(function(n, i){ return fr + ' ' + n + gModTxt(i); }).join(' / ');
+ var fr = GM[m].fr, name = 'Pizza ' + GM[m].label + ': ' + window.bpGroupGusti(names.map(function(n, i){ return n + gModTxt(i); }), names.length);
  var key = ['g', m, G.size, sel.map(function(p){ return p.id; }).join('+'), G.note.trim(), name].join('|'), ex = cart.get(key);
  if(ex) ex.qty += G.qty;
  else cart.set(key, {menu_id: null, name: name, category: sel[0].category || 'Pizza', baseDesc: '', size: G.size, basePrice: price, extraPrice: 0, price: price, qty: G.qty, removedIngs: [], addedIngs: [], itemNote: G.note.trim()});
@@ -20185,7 +20267,7 @@ openCartIngModal = function(key){
    if(G.size === 'Maxi' && !maxiOk()) G.size = 'Normale';
    var price = gPrice(); if(price == null) return false;
    var sel = G.slots.slice(), names = sel.map(function(p){ return p.name; }), fr = GM[__md].fr;
-   var name = 'Pizza ' + GM[__md].label + ': ' + names.map(function(n, i){ return fr + ' ' + n + gModTxt(i); }).join(' / ');
+   var name = 'Pizza ' + GM[__md].label + ': ' + window.bpGroupGusti(names.map(function(n, i){ return n + gModTxt(i); }), names.length);
    var __sn = ''; try{ __sn = window.bpSplitNote ? window.bpSplitNote(parts) : ''; }catch(e){}
    var key = ['g', __md, G.size, sel.map(function(p){ return p.id; }).join('+'), __sn, name].join('|'), ex = cart.get(key);
    if(ex) ex.qty += (qty || 1);
@@ -22189,11 +22271,12 @@ try{
  var m = String(baseName || '').match(/^Pizza\s+(metà metà|\d\s*gusti):\s*(.+)$/i);
  if(!m) return null;
  var parts = [], mods = [];
- m[2].split(/\s+\/\s+|\s+\+\s+/).forEach(function(raw){
- raw = raw.replace(/^[½⅓¼⅔¾]\s*/, '').trim(); if(!raw) return;
+ var __N2 = /metà/i.test(m[1]) ? 2 : (parseInt(m[1], 10) || 4);
+ m[2].split(/\s+\/\s+|\s+\+\s+/).forEach(function(raw0){
+ var __k = window.bpExpandGusti(raw0, __N2), raw = raw0.replace(/^[½⅓¼⅔¾]\s*/, '').trim(); if(!raw) return;
  var mm = raw.match(/^(.*?)\s*\[(.*)\]\s*$/), nm = mm ? mm[1].trim() : raw;
  if(!nm) return;
- parts.push(nm); mods.push(mm ? mm[2].split(',').map(function(x){ return x.trim(); }).filter(Boolean) : []);
+ for(var __q = 0; __q < __k; __q++){ parts.push(nm); mods.push(mm ? mm[2].split(',').map(function(x){ return x.trim(); }).filter(Boolean) : []); }
  });
  if(parts.length < 2) return null;
  return {label: m[1].toUpperCase(), parts: parts, mods: mods, unit: /metà/i.test(m[1]) ? 'METÀ' : 'GUSTO'};
@@ -41748,52 +41831,157 @@ body.dark-mode #bpKzBar .kz-l,body.dark-mode #bpKzBar b{color:#e2e8f0}
 })();
 </script>
 <script id="bp-voicelog">
-/* Log voce: salva ogni trascrizione + cosa ha capito il programma + cosa è stato davvero salvato (correzioni). Solo su questo dispositivo (localStorage). */
+/* Log voce v2: ogni inserimento vocale riceve un NUMERO DI REGISTRO (capture_id). Più inserimenti prima del salvataggio = stesso registro.
+   Al salvataggio: numero ordine collegato + differenze tra "cosa ha capito" e "cosa hai salvato" (correzioni). Sync su Supabase (tabella voice_log) con coda offline. */
 (function(){
-  var KEY = "bp_voice_log_v1", MAX = 300;
+  var KEY = "bp_voice_log_v1", MAX = 400, QKEY = "bp_vl_unsynced", DKEY = "bp_device_id";
   function load(){ try{ return JSON.parse(localStorage.getItem(KEY) || "[]") || []; }catch(e){ return []; } }
   function save(a){ try{ localStorage.setItem(KEY, JSON.stringify(a.slice(-MAX))); }catch(e){} paint(); }
   function v(id){ var e = document.getElementById(id); return e ? String(e.value || "") : ""; }
+  function iso(){ return new Date().toISOString(); }
+  function dev(){
+    var d = ""; try{ d = localStorage.getItem(DKEY) || ""; }catch(e){}
+    if(!d){ var ua = navigator.userAgent || "", kind = (/iPad|Tablet|SM-T/i.test(ua) || (/Android/i.test(ua) && !/Mobile/i.test(ua))) ? "tablet" : (/Mobi|Android|iPhone/i.test(ua) ? "phone" : "desktop"); d = kind + "-" + Math.random().toString(36).slice(2, 6); try{ localStorage.setItem(DKEY, d); }catch(e){} }
+    return d;
+  }
+  function who(){ var u = document.getElementById("userEmail"); return u ? String(u.textContent || "").trim() : ""; }
   function snap(){
     var items = [];
-    try{ items = [...cart.values()].map(function(x){ return {name: x.name, size: x.size, qty: x.qty, price: x.price, removed: x.removedIngs || [], added: x.addedIngs || [], note: x.itemNote || ""}; }); }catch(e){}
+    try{ items = [...cart.values()].map(function(x){ return {name: x.name, size: x.size, qty: x.qty, price: x.price, menu: !!x.menu, removed: x.removedIngs || [], added: x.addedIngs || [], note: x.itemNote || ""}; }); }catch(e){}
     return {customer: v("customer"), phone: v("phone"), address: v("address"), type: v("type"), payment: v("payment"), notes: v("notes"), items: items};
   }
-  var pending = null; /* indice/id della voce in attesa di essere salvata */
-  function record(text){
-    text = String(text || "").trim(); if(!text) return;
-    var a = load(), last = a[a.length - 1];
-    var lang = ""; try{ lang = bpVoiceLang(); }catch(e){}
-    if(last && !last.order_id && last.text === text){ last.parsed = snap(); }
-    else { a.push({id: Date.now(), ts: new Date().toISOString(), lang: lang, text: text, parsed: snap(), final: null, order_id: null}); }
-    pending = a[a.length - 1].id; save(a);
+  /* ---- differenze (fase 2) ---- */
+  function bkey(i){ return (i.menu ? "M|" : "") + String(i.name || "").toLowerCase().trim() + "|" + (i.size || ""); }
+  function lst(a){ return (a || []).map(function(x){ return String(x).toLowerCase().trim(); }).sort().join(","); }
+  function group(items){ var g = {}; (items || []).forEach(function(i){ var k = bkey(i); (g[k] = g[k] || []).push(i); }); return g; }
+  function sumq(a){ return a.reduce(function(s, i){ return s + (Number(i.qty) || 0); }, 0); }
+  function nm(i){ return (i.menu ? "Menu " : "") + String(i.name || ""); }
+  function diff(p, f){
+    var d = []; if(!p || !f) return d;
+    var pg = group(p.items), fg = group(f.items), keys = {}, rem = [], add = [];
+    Object.keys(pg).concat(Object.keys(fg)).forEach(function(k){ keys[k] = 1; });
+    Object.keys(keys).forEach(function(k){
+      var P = pg[k] || [], F = fg[k] || [];
+      if(!P.length){ add.push({name: nm(F[0]), qty: sumq(F)}); return; }
+      if(!F.length){ rem.push({name: nm(P[0]), qty: sumq(P)}); return; }
+      var pq = sumq(P), fq = sumq(F);
+      if(pq !== fq) d.push({t: "qty", name: nm(P[0]), from: pq, to: fq});
+      if(P.length === 1 && F.length === 1 && (lst(P[0].removed) !== lst(F[0].removed) || lst(P[0].added) !== lst(F[0].added)))
+        d.push({t: "ing", name: nm(P[0]), rem_from: P[0].removed || [], rem_to: F[0].removed || [], add_from: P[0].added || [], add_to: F[0].added || []});
+    });
+    rem.slice().forEach(function(r){ /* un prodotto tolto + uno aggiunto con stessa quantità = SCAMBIO: il segnale di apprendimento più forte */
+      var j = -1; for(var i = 0; i < add.length; i++){ if(add[i].qty === r.qty){ j = i; break; } }
+      if(j >= 0){ d.push({t: "swap", heard: r.name, wanted: add[j].name, qty: r.qty}); add.splice(j, 1); rem.splice(rem.indexOf(r), 1); }
+    });
+    rem.forEach(function(r){ d.push({t: "removed", name: r.name, qty: r.qty}); });
+    add.forEach(function(r){ d.push({t: "added", name: r.name, qty: r.qty}); });
+    ["type", "payment", "customer", "phone", "address", "notes"].forEach(function(k){
+      var a = String(p[k] || "").trim(), b = String(f[k] || "").trim();
+      if(a.toLowerCase() !== b.toLowerCase()) d.push({t: a ? "field" : "field_filled", field: k, from: a, to: b});
+    });
+    return d;
   }
-  /* dopo l'estrazione */
+  window.bpVoiceLogDiff = diff;
+  /* ---- sync Supabase con coda offline ---- */
+  var offUntil = 0, flushing = false, flushTimer = 0;
+  function qload(){ try{ return JSON.parse(localStorage.getItem(QKEY) || "[]") || []; }catch(e){ return []; } }
+  function qsave(q){ try{ localStorage.setItem(QKEY, JSON.stringify(q)); }catch(e){} }
+  function dirty(cid){ if(!cid) return; var q = qload(); if(q.indexOf(cid) < 0){ q.push(cid); qsave(q); } sched(1500); }
+  function sched(ms){ clearTimeout(flushTimer); flushTimer = setTimeout(flush, ms); }
+  function row(x){ return {capture_id: x.capture_id, order_id: x.order_id != null ? String(x.order_id) : null, device: x.device || "", user_email: x.user || "", lang: x.lang || "", entries: x.entries || [], heard_text: x.text || "", parsed: x.parsed || null, final: x.final || null, diff: x.diff || null, ok: x.ok == null ? null : !!x.ok, status: x.status || "open", created_at: x.ts, updated_at: iso()}; }
+  async function flush(){
+    if(flushing || Date.now() < offUntil) return;
+    var client = null; try{ client = (typeof sb !== "undefined") ? sb : null; }catch(e){}
+    if(!client || navigator.onLine === false) return;
+    var q = qload(); if(!q.length) return;
+    flushing = true;
+    try{
+      var a = load(), rows = q.map(function(id){ return a.filter(function(x){ return x.capture_id === id; })[0]; }).filter(Boolean).map(row);
+      if(rows.length){
+        var r = await client.from("voice_log").upsert(rows, {onConflict: "capture_id"});
+        if(r && r.error){
+          var m = String(r.error.message || "") + " " + String(r.error.code || "");
+          if(/42P01|does not exist|schema cache|relation/i.test(m)){ offUntil = Date.now() + 3600000; if(!window.__vlSqlNote){ window.__vlSqlNote = 1; try{ ssToast("🗂️ Registro voce: solo su questo dispositivo. Per Supabase crea la tabella voice_log (pulsante 📋 SQL sotto il microfono).", true); }catch(e){} } }
+          else offUntil = Date.now() + 60000;
+          return;
+        }
+      }
+      var sent = {}; q.forEach(function(id){ sent[id] = 1; }); qsave(qload().filter(function(id){ return !sent[id]; }));
+    }catch(e){ offUntil = Date.now() + 60000; }
+    finally{ flushing = false; }
+    if(qload().length) sched(20000);
+  }
+  window.addEventListener("online", function(){ sched(800); });
+  setInterval(function(){ if(qload().length) flush(); }, 45000);
+  /* ---- registro ---- */
+  var pending = null; /* id del registro in attesa di essere salvato */
+  function cur(a){ return pending ? a.filter(function(z){ return z.id === pending; })[0] : null; }
+  function newCid(){ return "vl-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 6); }
+  function scheduleParsed(id){
+    var n = 0;
+    (function tick(){
+      var open = !!document.getElementById("gemReviewBack"); /* schermata di revisione AI ancora aperta: aspetta la tua conferma */
+      if(open && n++ < 40){ setTimeout(tick, 1500); return; }
+      try{ var a = load(), x = a.filter(function(z){ return z.id === id; })[0]; if(x && !x.final){ x.parsed = snap(); x.updated = iso(); save(a); dirty(x.capture_id); } }catch(e){}
+    })();
+  }
+  function record(text, src, fresh){
+    text = String(text || "").trim(); if(!text) return;
+    var a = load(), x = cur(a), now = Date.now(), lang = ""; try{ lang = bpVoiceLang(); }catch(e){}
+    if(x && !x.final_order_saved && fresh){ x.status = "abandoned"; x.updated = iso(); dirty(x.capture_id); x = null; pending = null; } /* carrello svuotato = ordine nuovo */
+    if(x){
+      var le = x.entries[x.entries.length - 1];
+      if(le && (le.text === text || now - le.t < 1200)){ /* stesso inserimento visto da due punti del programma */ }
+      else x.entries.push({ts: iso(), t: now, text: text, lang: lang, src: src || ""});
+    } else {
+      var eid = null; try{ eid = editingOrderId || null; }catch(e){}
+      x = {id: now, capture_id: newCid(), ts: iso(), lang: lang, device: dev(), user: who(), entries: [{ts: iso(), t: now, text: text, lang: lang, src: src || ""}], text: text, parsed: null, final: null, diff: null, ok: null, order_id: eid, status: "open"};
+      a.push(x);
+    }
+    x.text = x.entries.map(function(e){ return e.text; }).join(" ⏎ ");
+    x.updated = iso(); pending = x.id; save(a); dirty(x.capture_id); scheduleParsed(x.id);
+  }
+  function wrap(name, mk){ try{ var o = window[name]; if(typeof o !== "function") return; window[name] = mk(o); }catch(e){} }
+  /* punti di ingresso: percorso AI, microfono menu, riquadro assistente */
   try{
     var __rfe = runFullOrderExtraction;
     runFullOrderExtraction = async function(){
-      var text = ""; try{ text = document.getElementById("voiceSmartInput").value; }catch(e){}
+      var text = "", fresh = false; try{ text = document.getElementById("voiceSmartInput").value; }catch(e){} try{ fresh = cart.size === 0; }catch(e){}
       var r = await __rfe.apply(this, arguments);
-      setTimeout(function(){ try{ record(text); }catch(e){} }, 500);
+      setTimeout(function(){ try{ record(text, "ai", fresh); }catch(e){} }, 500);
       return r;
     };
   }catch(e){}
-  /* appena prima del salvataggio: cosa c'è davvero nell'ordine (= dopo le tue correzioni) */
+  try{
+    var __bsf = bpVoiceSmartFinal;
+    bpVoiceSmartFinal = function(t){ var fresh = false; try{ fresh = cart.size === 0; }catch(e){} var m = __bsf.apply(this, arguments); try{ if(m !== "search") record(t, "voice", fresh); }catch(e){} return m; };
+    window.bpVoiceSmartFinal = bpVoiceSmartFinal;
+  }catch(e){}
+  try{
+    var __pso = processSpokenOrder;
+    processSpokenOrder = function(t, isAuto){ var fresh = false; try{ fresh = cart.size === 0; }catch(e){} var r = __pso.apply(this, arguments); try{ record(t, "box", fresh); }catch(e){} return r; }; /* anche le frasi NON capite: sono le piu' utili per imparare */
+  }catch(e){}
+  /* appena prima del salvataggio: cosa c'è davvero nell'ordine (= dopo le tue correzioni) + differenze */
   document.addEventListener("click", function(e){
     try{
-      if(!e.target.closest || !e.target.closest("#saveOrder") || !pending) return;
-      var a = load(), x = a.filter(function(z){ return z.id === pending; })[0];
-      if(x){ x.final = snap(); x.saved_at = new Date().toISOString(); x.saved_id_before = window.__lastSavedOrderId || null; save(a); }
+      if(!e.target.closest || !e.target.closest("#saveOrder, #savePrintOrderBtn") || !pending) return;
+      var a = load(), x = cur(a); if(!x) return;
+      if(!x.parsed) x.parsed = snap();
+      x.final = snap(); x.saved_at = iso(); x.saved_id_before = window.__lastSavedOrderId || null;
+      x.diff = diff(x.parsed, x.final); x.ok = x.diff.filter(function(d){ return d.t !== "field_filled"; }).length === 0;
+      x.updated = iso(); save(a); dirty(x.capture_id);
     }catch(er){}
   }, true);
   /* numero ordine dopo il salvataggio */
   setInterval(function(){
     try{
       var id = window.__lastSavedOrderId; if(!id || !pending) return;
-      var a = load(), x = a.filter(function(z){ return z.id === pending; })[0];
-      if(x && x.final && !x.order_id && id !== x.saved_id_before){ x.order_id = id; save(a); pending = null; }
+      var a = load(), x = cur(a);
+      if(x && x.final && id !== x.saved_id_before){ x.order_id = id; x.final_order_saved = true; x.status = "saved"; x.updated = iso(); save(a); dirty(x.capture_id); pending = null; }
     }catch(er){}
   }, 1000);
+  /* ---- esporta / SQL ---- */
+  var SQL = "create table if not exists voice_log (\n capture_id text primary key,\n order_id text,\n device text,\n user_email text,\n lang text,\n entries jsonb not null default '[]',\n heard_text text,\n parsed jsonb,\n final jsonb,\n diff jsonb,\n ok boolean,\n status text default 'open',\n created_at timestamptz,\n updated_at timestamptz default now()\n);\ncreate index if not exists voice_log_order on voice_log (order_id);\ncreate index if not exists voice_log_created on voice_log (created_at);\nalter table voice_log enable row level security;\ndrop policy if exists \"vl_all\" on voice_log;\ncreate policy \"vl_all\" on voice_log for all to authenticated using (true) with check (true);";
   function exportLog(){
     var a = load(); if(!a.length){ alert("Log vuoto"); return; }
     var s = JSON.stringify(a, null, 1), d = new Date(), nm = "voice_log_" + d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0") + ".json";
@@ -41801,19 +41989,24 @@ body.dark-mode #bpKzBar .kz-l,body.dark-mode #bpKzBar b{color:#e2e8f0}
     try{ if(navigator.clipboard) navigator.clipboard.writeText(s); }catch(e){}
   }
   function paint(){
-    var b = document.getElementById("bpVlogBtn"); if(b) b.textContent = "🗂️ Log voce (" + load().length + ")";
+    var b = document.getElementById("bpVlogBtn"); if(!b) return;
+    var a = load(), fixed = a.filter(function(x){ return x.diff && !x.ok; }).length;
+    b.textContent = "🗂️ Log voce (" + a.length + (fixed ? " · ✏️" + fixed : "") + ")";
   }
   function mount(){
     var ta = document.getElementById("voiceSmartInput"); if(!ta || document.getElementById("bpVlogBtn")) return;
     var w = document.createElement("div"); w.style.cssText = "display:flex;gap:6px;margin:6px 0;flex-wrap:wrap";
     var b = document.createElement("button"); b.type = "button"; b.id = "bpVlogBtn"; b.className = "secondary"; b.onclick = exportLog;
+    var q = document.createElement("button"); q.type = "button"; q.className = "secondary"; q.textContent = "📋 SQL"; q.title = "Copia lo script SQL per creare la tabella voice_log su Supabase";
+    q.onclick = function(){ try{ navigator.clipboard.writeText(SQL); alert("Script SQL copiato. Incollalo nello SQL Editor di Supabase ed eseguilo (una volta sola)."); }catch(e){ prompt("Copia questo SQL:", SQL); } };
     var c = document.createElement("button"); c.type = "button"; c.className = "secondary"; c.textContent = "🗑️"; c.title = "Svuota log";
     c.onclick = function(){ if(confirm("Svuotare il log voce?")){ save([]); } };
-    w.appendChild(b); w.appendChild(c); ta.parentNode.insertBefore(w, ta.nextSibling); paint();
+    w.appendChild(b); w.appendChild(q); w.appendChild(c); ta.parentNode.insertBefore(w, ta.nextSibling); paint();
   }
   mount(); setTimeout(mount, 1500); setTimeout(mount, 4000);
-  window.bpVoiceLog = {load: load, export: exportLog, clear: function(){ save([]); }};
+  window.bpVoiceLog = {load: load, export: exportLog, clear: function(){ save([]); }, sql: SQL, flush: flush};
 })();
+
 </script>
 
 <style id="bpStoricoMasonry">
