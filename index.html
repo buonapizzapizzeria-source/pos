@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+<!-- BUILD: voice-v2026-11-25-b2 (avola+maxi, tests 30/30) -->
 <html lang="it">
  <head>
  <meta charset="utf-8"/>
@@ -17438,6 +17439,8 @@ window.bpHalfPre = function(toks, store){
     var j = start, parts = [], pc = null, mode = null, size = null, end = start, hw = gus ? 2 : 0, afterHW = false, seen = {}, restF = false, pend = 0, cust = null, restDone = false, fresh = true;
     while(j < toks.length){
       var w = toks[j];
+      /* v-maxi1: «maxi» dopo la frase di metà/gusti (anche quando le parti sono già complete) e' la dimensione */
+      if(!gus && parts.length >= N && isMaxi(w) && !HW(w)){ size = "Maxi"; j++; end = j - 1; continue; }
       if(HW(w)){ if(gus && parts.length < N){ if(restDone) break; pend = Math.min(2, N - parts.length); fresh = true; cust = null; mode = null; j++; end = j - 1; continue; } if(gus || parts.length >= N) break; hw++; afterHW = true; mode = null; j++; end = j - 1; continue; }
       if(pc && !seen[j] && (w.charAt(0) === "+" || w.charAt(0) === "-") && w.length > 1){ seen[j] = 1; mode = w.charAt(0) === "+" ? "e" : "r"; continue; }
       if(pc && arIsSenza(w)){ mode = "r"; j++; end = j - 1; continue; }
@@ -17649,7 +17652,7 @@ window.bpLogUnk = function(spoken, unknown, confirmed){
  }catch(e){}
 };
 window.bpUnparsedWords = function(toks){
- var WORDS_OK = {porzione:1,porzioni:1,grazie:1,favore:1,prego:1,buongiorno:1,buonasera:1,ciao:1,scusi:1,subito:1,adesso:1,presto:1,dopo:1,minuti:1,ore:1,euro:1,sono:1,siamo:1,voglio:1,vorrei:1,avere:1,aggiungi:1,aggiunto:1,metti:1,togli:1,numero:1,telefono:1,cliente:1,indirizzo:1,questo:1,quella:1,quello:1,resto:1,gusti:1,gusto:1,quarto:1,quarti:1,"metà":1,meta:1,divisa:1,diviso:1,pizza:1,pizze:1,tavolo:1,asporto:1,consegna:1,ritiro:1,domicilio:1,senza:1,contanti:1,carta:1,sono:1,vorrei:1,voglio:1,anche:1,poi:1,stesso:1,altro:1,altra:1,mangia:1,qui:1,Pineta:0};
+ var WORDS_OK = {maxi:1,normale:1,porzione:1,porzioni:1,grazie:1,favore:1,prego:1,buongiorno:1,buonasera:1,ciao:1,scusi:1,subito:1,adesso:1,presto:1,dopo:1,minuti:1,ore:1,euro:1,sono:1,siamo:1,voglio:1,vorrei:1,avere:1,aggiungi:1,aggiunto:1,metti:1,togli:1,numero:1,telefono:1,cliente:1,indirizzo:1,questo:1,quella:1,quello:1,resto:1,gusti:1,gusto:1,quarto:1,quarti:1,"metà":1,meta:1,divisa:1,diviso:1,pizza:1,pizze:1,tavolo:1,asporto:1,consegna:1,ritiro:1,domicilio:1,senza:1,contanti:1,carta:1,sono:1,vorrei:1,voglio:1,anche:1,poi:1,stesso:1,altro:1,altra:1,mangia:1,qui:1,Pineta:0};
  var V = {}, add = function(x){ String(x || "").toLowerCase().split(/[^a-zà-ùa-z0-9]+/).forEach(function(w){ if(w) V[w] = 1; }); };
  try{ getActiveMenu().forEach(function(p){ add(p.name); add(p.description); }); }catch(e){}
  try{ getAllKnownIngredients().forEach(add); }catch(e){}
@@ -43936,6 +43939,7 @@ html.pos64 body #p64Bar button b{font-size:14px!important;font-weight:900!import
   window.BP_ASR_RULES = [
     {id: "wurstel-variants", re: /\b(io\s+sto\s+al|yo\s+sto\s+al|fuster|wurstal|wustel|wurstell|vurstel)\b/gi, to: "wurstel", src: "لوج 00:14 و00:47 وإملاء المستخدم"},
     {id: "wurstel-e-patatine", re: /\bwurstel\s+(?:e\s+)?patatin[iea]\b/gi, to: "Wurstel e Patatine", src: "قايمة المنيو وإملاء المستخدم"},
+    {id: "avola-diavola", re: /\bd?['’ ]?avola\b/gi, to: "Diavola", src: "الموبايل: Diavola اتسمعت d'Avola"},
     {id: "mangia-qui-tavolo", re: /\bmangia\s+qui\b/gi, to: "tavolo", src: "لوج 15:37:00 (Pineta mangia qui)"},
     {id: "patatine-da-3", re: /\bpatatin[iea]\s+da\s+3(?:\s*(?:€|euro))?\b/gi, to: "Patatine Fritte", src: "لوج 19:11:05 (patatine da €3)"},
     {id: "patatine-da-9", re: /\bpatatin[iea]\s+da\s+9(?:\s*(?:€|euro))?\b/gi, to: "Tonno patatine", src: "سعر 9€ = Tonno patatine في المنيو"},
