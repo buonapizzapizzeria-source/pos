@@ -2,18 +2,8 @@
 <html lang="it">
  <head>
  <meta charset="utf-8"/>
-<style id="bpBootCover">
-html:not(.bp-ready)::before{content:"";position:fixed;inset:0;z-index:2147483600;background:#f5ecdb;pointer-events:none;animation:bpCoverOut .01s 4s forwards}
-html:not(.bp-ready)::after{content:"";position:fixed;left:50%;top:50%;width:38px;height:38px;margin:-19px 0 0 -19px;border:4px solid #e2d3b3;border-top-color:#a83226;border-radius:50%;z-index:2147483601;pointer-events:none;animation:bpSpin .8s linear infinite,bpCoverOut .01s 4s forwards}
-html.bp-ready::before{content:"";position:fixed;inset:0;z-index:2147483600;background:#f5ecdb;pointer-events:none;opacity:0;transition:opacity .18s}
-@keyframes bpSpin{to{transform:rotate(360deg)}}
-@keyframes bpCoverOut{to{opacity:0;visibility:hidden}}
-</style>
-<script id="bpBootCoverJs">(function(){var d=document.documentElement,t0=Date.now(),done=0;
-function go(){if(done)return;done=1;requestAnimationFrame(function(){requestAnimationFrame(function(){d.classList.add('bp-ready')})})}
-function chk(){if(done)return;var ready=document.readyState==='complete'&&document.getElementById('bp93Strip')&&!d.classList.contains('bp-boot');
-if(ready||Date.now()-t0>2800)go();else setTimeout(chk,60)}
-chk();window.addEventListener('load',function(){setTimeout(chk,0)});window.addEventListener('pageshow',go);})();</script>
+
+
 
 <script src="images.js"></script>
 <script>if(!window.__BPI)window.__BPI=new Proxy([],{get:function(t,k){return(typeof k==="string"&&/^\d+$/.test(k))?"":t[k]}});</script>
@@ -6624,7 +6614,7 @@ function openIngPicker(cfg){
  qb.classList.remove("hidden");
  var activeQ = QUICK.filter(function(x){ return cfg.added.has(x[0]); });
  var badge = activeQ.length ? ' <i class="pk-bdg" style="background:#b54708;color:#fff">' + activeQ.length + '</i>' : '';
- var bodyH = soloBtn() + QUICK.map(function(x){ var qp = isKeb ? ingPrice(x[0]) : x[2]; return '<button type="button" class="pk-qk' + (cfg.added.has(x[0]) ? " on" : "") + '" data-q="' + esc(x[0]) + '">' + x[1] + ' ' + esc(x[0]) + (qp ? ' <span class="pk-price">+ ' + euro(qp) + '</span>' : '') + '</button>'; }).join("") + '<button type="button" class="pk-qk" data-qedit="' + qkind + '" title="Modifica extra rapidi" style="opacity:.85">✏️</button>';
+ var bodyH = soloBtn() + QUICK.map(function(x){ var qp = isKeb ? ingPrice(x[0]) : x[2]; return '<button type="button" class="pk-qk' + (cfg.added.has(x[0]) ? " on" : "") + '" data-q="' + esc(x[0]) + '">' + (x[3] ? '<img class="pk-qk-img" alt="" src="' + x[3] + '">' : x[1]) + ' ' + esc(x[0]) + (qp ? ' <span class="pk-price">+ ' + euro(qp) + '</span>' : '') + '</button>'; }).join("") + '<button type="button" class="pk-qk" data-qedit="' + qkind + '" title="Modifica extra rapidi" style="opacity:.85">✏️</button>';
  qb.innerHTML = '<button type="button" class="pk-qacc" id="pkQaccBtn">⚡ Rapidi' + badge + '<i>' + (_qOpen ? '▴' : '▾') + '</i></button>' +
  '<div class="pk-qacc-body' + (_qOpen ? '' : ' hidden') + '" id="pkQaccBody">' + bodyH + '</div>';
  var qaccBtn = document.getElementById('pkQaccBtn');
@@ -22171,32 +22161,113 @@ try{
  var QK = 'bp_item_quick_v1';
  var QDEF = {kebab: [['Ketchup','🥫',0],['Maionese','🥚',0],['Patatine','🍟',0],['Poco piccante','🌶️',0],['Doppio piccante','🔥',0],['Mozzarella','🧀',0]], pizza: [['Ben cotta', '🔥', 0], ['Doppia mozzarella', '🧀', 2], ['Poco mozzarella', '🧀', 0]], altro: []};
  function qLoad(){ var c = null; try{ c = JSON.parse(localStorage.getItem(QK) || 'null'); }catch(e){} if(!c || !Array.isArray(c.pizza) || !Array.isArray(c.altro)) c = JSON.parse(JSON.stringify(QDEF)); if(!Array.isArray(c.kebab)) c.kebab = JSON.parse(JSON.stringify(QDEF.kebab)); return c; }
- function qSave(c){ try{ localStorage.setItem(QK, JSON.stringify(c)); }catch(e){} }
+ function qSave(c){ try{ c._u = Date.now(); localStorage.setItem(QK, JSON.stringify(c)); }catch(e){} try{ if(window.bpQkPush) window.bpQkPush(); }catch(e){} }
  window.bpQuickGet = function(kind){
  var c = qLoad(), k = String(kind || ''), L;
  if(k.indexOf('kebab') === 0){
  var seen = {}; L = c.kebab.concat(k === 'kebab:pizza' ? c.pizza : []).filter(function(x){ var n = String(x[0]).toLowerCase(); if(seen[n]) return false; seen[n] = 1; return true; });
  } else L = (k === 'pizza' ? c.pizza : c.altro);
- return L.map(function(x){ return [x[0], x[1] || '➕', x[2] || 0]; });
+ return L.map(function(x){ return [x[0], x[1] || '➕', x[2] || 0, x[3] || '']; });
  };
  var qTab = 'pizza';
  function qDraw(){
- var s = el('bpQkSheet'); if(!s) return; var c = qLoad(), L = c[qTab];
+ var s = el('bpQkSheet'); if(!s) return; var c = qLoad(), L = c[qTab], canE = qkIsMgr();
  var h = '<div class="sh"><div style="display:flex;gap:8px;align-items:center"><b style="flex:1;font-size:17px">✏️ Extra rapidi · إضافات سريعة</b><button type="button" class="secondary" data-q="close">✖</button></div>' +
  '<div style="display:flex;gap:6px;margin:10px 0"><button type="button" class="' + (qTab === 'pizza' ? 'blue' : 'secondary') + '" data-q="tab" data-v="pizza">🍕 Pizze</button><button type="button" class="' + (qTab === 'kebab' ? 'blue' : 'secondary') + '" data-q="tab" data-v="kebab">🥙 Kebab</button><button type="button" class="' + (qTab === 'altro' ? 'blue' : 'secondary') + '" data-q="tab" data-v="altro">🥙 Altri prodotti</button></div>' +
  '<div class="muted" style="margin-bottom:6px">Il prezzo segue «Gestione Aggiunte». · السعر حسب إعدادات الإضافات</div>';
  if(!L.length) h += '<p class="muted">Nessun extra rapido.</p>';
  L.forEach(function(x, i){
- h += '<div class="r"><span class="n">' + esc((x[1] || '➕') + ' ' + x[0]) + (x[2] ? ' <small>+' + euro(x[2]) + '</small>' : '') + '</span>' +
- '<button type="button" class="secondary" data-q="up" data-i="' + i + '">↑</button><button type="button" class="secondary" data-q="dn" data-i="' + i + '">↓</button>' +
- '<button type="button" class="secondary" data-q="ren" data-i="' + i + '">✏️</button><button type="button" class="secondary" style="color:#b42318" data-q="del" data-i="' + i + '">🗑️</button></div>';
+ var tile = '<span class="qk-tile' + (x[3] ? ' has' : '') + '"' + (canE ? ' data-q="photo" data-i="' + i + '"' : '') + ' title="Tocca per la foto · اضغط للصورة">' + (x[3] ? '<img class="qk-ph" alt="" src="' + x[3] + '">' : '<span class="qk-em">' + esc(x[1] || '➕') + '</span>') + '<b class="qk-nm">' + esc(x[0]) + '</b>' + (x[3] && canE ? '<button type="button" class="qk-x" data-q="nophoto" data-i="' + i + '">✖</button>' : '') + '</span>';
+  h += '<div class="r"><span class="n">' + tile + (x[2] ? ' <small>+' + euro(x[2]) + '</small>' : '') + '</span>' +
+ (canE ? '<button type="button" class="secondary" data-q="up" data-i="' + i + '">↑</button><button type="button" class="secondary" data-q="dn" data-i="' + i + '">↓</button>' +
+ '<button type="button" class="secondary" data-q="ren" data-i="' + i + '">✏️</button><button type="button" class="secondary" style="color:#b42318" data-q="del" data-i="' + i + '">🗑️</button>' : '') + '</div>';
  });
- h += '<div style="display:flex;gap:8px;margin-top:12px"><button type="button" class="green" data-q="add">＋ Aggiungi</button><button type="button" class="secondary" data-q="rst">↺ Ripristina</button></div></div>';
+ h += (canE ? '<div style="display:flex;gap:8px;margin-top:12px"><button type="button" class="green" data-q="add">＋ Aggiungi</button><button type="button" class="secondary" data-q="rst">↺ Ripristina</button></div>' : '') + '</div>';
  s.innerHTML = h;
  }
  function qParse(t){ var m = String(t).trim().match(/^(\p{Extended_Pictographic}\S*)\s+(.+)$/u); return m ? [m[2].trim(), m[1], 0] : [String(t).trim(), '➕', 0]; }
  function qRedraw(){ try{ if(window.__pkQuickRedraw) window.__pkQuickRedraw(); }catch(e){ warn(e); } try{ if(typeof ssRedrawTop === 'function' && el('ssBar') && ss.stack[ss.stack.length - 1] === 'cust') ssRedrawTop(); }catch(e){ warn(e); } }
- window.bpQuickEdit = function(kind){
+ function pickPhoto(idx){
+  var inp = document.getElementById('bpQkPhoto');
+  if(!inp){
+   inp = document.createElement('input'); inp.type = 'file'; inp.accept = 'image/*'; inp.id = 'bpQkPhoto';
+   inp.style.display = 'none'; document.body.appendChild(inp);
+   inp.addEventListener('change', function(){
+    var f = inp.files && inp.files[0]; inp.value = ''; if(!f) return;
+    var at = Number(inp.getAttribute('data-i'));
+    var r = new FileReader();
+    r.onload = function(){
+     var im = new Image();
+     im.onload = function(){
+      var S = 160, cv = document.createElement('canvas'); cv.width = S; cv.height = S;
+      var m = Math.min(im.width, im.height), g = cv.getContext('2d');
+      g.drawImage(im, (im.width - m) / 2, (im.height - m) / 2, m, m, 0, 0, S, S);
+      var cc = qLoad(), LL = cc[qTab];
+      if(LL && LL[at]){ LL[at][3] = cv.toDataURL('image/jpeg', 0.8); qSave(cc); qDraw(); qRedraw(); }
+     };
+     im.src = r.result;
+    };
+    r.readAsDataURL(f);
+   });
+  }
+  inp.setAttribute('data-i', idx); inp.click();
+}
+(function(){
+ var st2 = document.createElement('style');
+ st2.textContent = '#bpQkSheet .r .n{display:flex;align-items:center;gap:6px}' +
+  '#bpQkSheet .qk-tile{position:relative;display:flex;align-items:center;flex:1;min-width:0;min-height:58px;border-radius:12px;overflow:hidden;background:#f2f4f7;padding:0 12px;cursor:pointer}' +
+  '#bpQkSheet .qk-ph{position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover;z-index:0}' +
+  '#bpQkSheet .qk-tile.has::before{content:"";position:absolute;inset:0;background:linear-gradient(90deg,rgba(0,0,0,.7),rgba(0,0,0,.1));z-index:1}' +
+  '#bpQkSheet .qk-em{position:relative;z-index:2;font-size:22px;margin-inline-end:8px}' +
+  '#bpQkSheet .qk-nm{position:relative;z-index:2;font-weight:900;font-size:17px;line-height:1.1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}' +
+  '#bpQkSheet .qk-tile.has .qk-nm{color:#fff;text-shadow:0 1px 4px rgba(0,0,0,.85)}' +
+  '#bpQkSheet .qk-x{position:absolute;top:5px;inset-inline-end:5px;z-index:3;width:28px;height:28px;padding:0;border:0;border-radius:50%;background:rgba(0,0,0,.6);color:#fff;font-size:12px}' +
+  'body.dark-mode #bpQkSheet .qk-tile{background:#334155}' +
+  '.pk-qk-img{width:24px;height:24px;border-radius:6px;object-fit:cover;vertical-align:middle;display:inline-block;margin-inline-end:4px}';
+ document.head.appendChild(st2);
+})();
+/* ---------- مزامنة الإضافات السريعة + ترتيبها مع كل الأجهزة (bp36_data · quick_extras) ---------- */
+  var QK_LAYOUT = 'bp_ext_layout_v1', QK_REMOTE = 'quick_extras', qkPushT = 0;
+  function qkIsMgr(){ try{ var r = window.BP_ROLE; if(r === undefined) r = BP_ROLE; return r === 'manager'; }catch(e){ return false; } }
+  window.bpIsMgrRole = qkIsMgr;
+  function qkLayout(){ try{ return JSON.parse(localStorage.getItem(QK_LAYOUT) || 'null'); }catch(e){ return null; } }
+  function qkStamp(){ return Math.max((qLoad()._u || 0), ((qkLayout() || {})._u || 0)); }
+  function qkDoPush(){
+   try{
+    if(typeof sb === 'undefined' || !sb) return;
+    if(!qkIsMgr()) return;
+    var row = {quick: qLoad(), layout: qkLayout(), _u: qkStamp()};
+    sb.from('bp36_data').upsert({key: QK_REMOTE, data: row, updated_at: new Date().toISOString()})
+      .then(function(r){ if(r && r.error) warn(r.error); }, warn);
+   }catch(e){ warn(e); }
+  }
+  window.bpQkPush = function(){ clearTimeout(qkPushT); qkPushT = setTimeout(qkDoPush, 800); };
+  function qkPull(){
+   try{
+    if(typeof sb === 'undefined' || !sb) return;
+    sb.from('bp36_data').select('data').eq('key', QK_REMOTE).maybeSingle().then(function(r){
+     if(!r || r.error) return;
+     var d = r.data && r.data.data;
+     if(!d){ qkDoPush(); return; }
+     var remote = d._u || 0, local = qkStamp();
+     if(remote > local){
+      try{ if(d.quick) localStorage.setItem(QK, JSON.stringify(d.quick)); }catch(e){}
+      try{ if(d.layout){ localStorage.setItem(QK_LAYOUT, JSON.stringify(d.layout)); if(window.bpLayoutReload) window.bpLayoutReload(); } }catch(e){}
+      try{ var s = el('bpQkSheet'); if(s && s.classList.contains('show')) qDraw(); }catch(e){}
+      qRedraw();
+     } else if(local > remote) qkDoPush();
+    }, warn);
+   }catch(e){ warn(e); }
+  }
+  (function(){
+   var iv = setInterval(function(){
+    if(typeof sb === 'undefined' || !sb) return;
+    clearInterval(iv); qkPull();
+    try{ sb.channel('bp-qk').on('postgres_changes', {event: '*', schema: 'public', table: 'bp36_data', filter: 'key=eq.' + QK_REMOTE}, function(){ qkPull(); }).subscribe(); }catch(e){}
+   }, 1000);
+   document.addEventListener('visibilitychange', function(){ if(!document.hidden) qkPull(); });
+  })();
+  window.bpQuickEdit = function(kind){
  qTab = kind === 'pizza' ? 'pizza' : (String(kind).indexOf('kebab') === 0 ? 'kebab' : 'altro');
  var s = el('bpQkSheet');
  if(!s){
@@ -22211,10 +22282,13 @@ try{
  var k = b.getAttribute('data-q'), i = Number(b.getAttribute('data-i')), c = qLoad(), L = c[qTab];
  if(k === 'close'){ s.classList.remove('show'); qRedraw(); return; }
  if(k === 'tab'){ qTab = b.getAttribute('data-v'); qDraw(); return; }
- if(k === 'up' && i > 0) L.splice(i - 1, 0, L.splice(i, 1)[0]);
+ if(!qkIsMgr()) return;
+  if(k === 'up' && i > 0) L.splice(i - 1, 0, L.splice(i, 1)[0]);
  else if(k === 'dn' && i < L.length - 1) L.splice(i + 1, 0, L.splice(i, 1)[0]);
- else if(k === 'del'){ if(!confirm('Eliminare?')) return; L.splice(i, 1); }
- else if(k === 'ren'){ var v = prompt('Emoji + nome (es. 🔥 Ben cotta):', (L[i][1] || '') + ' ' + L[i][0]); if(v && v.trim()){ var p = qParse(v); L[i] = [p[0], p[1], L[i][2] || 0]; } }
+ else if(k === 'photo'){ pickPhoto(i); return; }
+  else if(k === 'nophoto'){ if(!confirm('Rimuovere la foto?')) return; delete L[i][3]; }
+  else if(k === 'del'){ if(!confirm('Eliminare?')) return; L.splice(i, 1); }
+ else if(k === 'ren'){ var v = prompt('Emoji + nome (es. 🔥 Ben cotta):', (L[i][1] || '') + ' ' + L[i][0]); if(v && v.trim()){ var p = qParse(v); L[i] = [p[0], p[1], L[i][2] || 0, L[i][3] || '']; } }
  else if(k === 'add'){ var t = prompt('Nome extra rapido (es. 🌶️ Salsa piccante):'); if(t && t.trim()) L.push(qParse(t)); }
  else if(k === 'rst'){ if(!confirm('Ripristinare gli extra rapidi predefiniti?')) return; c = JSON.parse(JSON.stringify(QDEF)); }
  qSave(c); qDraw(); qRedraw();
@@ -22242,7 +22316,12 @@ try{
  var KEY = 'bp_ext_layout_v1';
  function load(){ var c = null; try{ c = JSON.parse(localStorage.getItem(KEY) || 'null'); }catch(e){} c = c || {}; return Object.assign({hide: {}, order: {}, alias: {}, glabel: {}, add: [], move: {}, price: {}}, c); }
  var L = load();
- function save(){ try{ localStorage.setItem(KEY, JSON.stringify(L)); }catch(e){} rebuild(); }
+ function save(){
+  var mg = window.bpIsMgrRole ? window.bpIsMgrRole() : true;
+  if(!mg){ try{ if(window.bpFlash) window.bpFlash('🔒 الترتيب للمدير بس · Solo il responsabile'); }catch(e){} window.bpLayoutReload(); return; }
+  try{ L._u = Date.now(); localStorage.setItem(KEY, JSON.stringify(L)); }catch(e){} rebuild(); try{ if(window.bpQkPush) window.bpQkPush(); }catch(e){}
+}
+  window.bpLayoutReload = function(){ try{ L = load(); rebuild(); }catch(e){ warn(e); } };
  window.bpIngOrig = function(n){ return origOf(n); };
  window.bpIngOrderSet = function(key, names){ if(window.bpLayoutApi && window.bpLayoutApi.setIng(key, names.map(origOf))){ delete L.order[key]; save(); return true; } return false; };
  var rev = {};
