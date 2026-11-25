@@ -24530,7 +24530,7 @@ try{(function(){
  new MutationObserver(function(){
  var o = rt.classList.contains('p64-voice');
  if(o && !vopen){ try{ history.pushState({bpVoice: 1}, ''); }catch(e){} }
- else if(!o && vopen && history.state && history.state.bpVoice){ window.__bpSkipToast = 1; setTimeout(function(){ window.__bpSkipToast = 0; }, 700); try{ history.back(); }catch(e){} }
+ else if(!o && vopen && history.state && history.state.bpVoice){ window.__bpSkipToast = 1; setTimeout(function(){ window.__bpSkipToast = 0; }, 700); window.__bpSelfBack = 1; setTimeout(function(){ window.__bpSelfBack = 0; }, 1500); try{ history.back(); }catch(e){ window.__bpSelfBack = 0; } }
  vopen = o; fab();
  }).observe(rt, {attributes: true, attributeFilter: ['class']});
  window.addEventListener('popstate', function(){ if(rt.classList.contains('p64-voice')) rt.classList.remove('p64-voice'); });
@@ -25036,6 +25036,8 @@ try{
 
  /* 2. إصلاح زر الرجوع (Back) في الأندرويد والآيفون لإغلاق شاشة السلة والنوافذ الفرعية */
  window.addEventListener('popstate', function(e){
+ /* il history.back() fatto dalla chiusura automatica del pannello 🤖 NON deve chiudere la finestra di controllo ordine né altre finestre */
+ if(window.__bpSelfBack){ window.__bpSelfBack = 0; return; }
  if(document.documentElement.classList.contains('p64-ticket')){
  document.documentElement.classList.remove('p64-ticket');
  e.stopImmediatePropagation();
