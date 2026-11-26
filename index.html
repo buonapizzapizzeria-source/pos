@@ -23731,16 +23731,15 @@ function addGift(id){
  renderCart();
 }
 async function paint(){
- var b=el('loyaltyBox'); if(!b) return;
+ var b=el('loyaltyBox'); if(!b) return; paintStrip();
  if(!active()||/consegna/i.test(el('type').value||'')){ b.innerHTML=''; return; }
  var st=null; try{ st=await stats(el('phone').value); }catch(e){ b.innerHTML='<div class="extra-box">🎁 Fedeltà: impossibile leggere i punti ('+esc(e.message||'errore')+')</div>'; return; }
  if(!st){ b.innerHTML='<div class="extra-box" style="border-color:#16794b">🎁 <b>Promo fedeltà attiva</b> · inserisci il telefono del cliente per vedere i punti</div>'; return; }
- st55=st; var left=st.avail-giftInCart();
+ st55=st; st55k=normalizePhoneKey(el('phone').value); paintStrip(); var left=st.avail-giftInCart();
  b.innerHTML=card(st)+'<div class="extra-box" style="border-color:#16794b"><b>🎁 Fedeltà</b> · '+st.pts+' punti ('+euro(st.spend)+' di pizza) · premi guadagnati: '+st.earned+' · usati: '+st.gifts+' · <b>disponibili: '+Math.max(0,left)+'</b>'
  +(left<0?'<div class="notice error" style="margin-top:6px">⚠️ Regali nel carrello oltre i premi disponibili.</div>':'')
  +(left<=0?'<div class="muted">Mancano '+st.toNext+' punti (= '+euro(st.toNext*CFG.eur)+' di pizza) al prossimo premio. I punti di questo ordine si contano dopo il salvataggio.</div>':'')
  +(left>0?'<div style="margin-top:6px;display:flex;flex-wrap:wrap;gap:6px">'+(giftItems().map(function(m){return '<button type="button" class="green btn-sm" data-gift55="'+esc(m.id)+'">🎁 '+esc(m.name)+' in regalo</button>'}).join('')||'<span class="muted">Nessun premio trovato nel menu: controlla i nomi in 🎁 Promo.</span>')+'</div>':'')+'</div>';
- b.querySelectorAll('[data-gift55]').forEach(function(g){ g.onclick=function(){ addGift(g.dataset.gift55); }; });
 }
 /* v56: Carta Buona Fedeltà (stesso disegno della pagina online) */
 (function(){ if(document.getElementById('bplcCss')) return; var c=document.createElement('style'); c.id='bplcCss';
@@ -23753,9 +23752,25 @@ async function paint(){
  +'.bplc .lr svg{flex:1 1 0;min-width:0;max-width:56px;height:auto;aspect-ratio:1}'
  +'.bplc .lr svg:not(.on){opacity:.22;filter:grayscale(1)}.bplc .lr svg.on{filter:drop-shadow(0 3px 4px rgba(0,0,0,.35))}'
  +'.bplc .lf{display:grid;grid-template-columns:1.3fr .8fr 1fr;gap:8px;padding-top:10px;border-top:1px solid rgba(255,255,255,.12)}'
- +'.bplc .lf b{display:block;font-size:14px;line-height:1.25;margin-top:2px;overflow-wrap:anywhere}';
+ +'.bplc .lf b{display:block;font-size:14px;line-height:1.25;margin-top:2px;overflow-wrap:anywhere}'+'.bpls{background:linear-gradient(160deg,#3b1e15,#220f09);color:#fff;border-radius:14px;padding:8px 12px;margin:0 0 8px;display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;font-size:14px}'+'.bpls .r{display:flex;gap:2px}.bpls svg{width:20px;height:20px}.bpls svg:not(.on){opacity:.25;filter:grayscale(1)}'+'.bpls b{font-variant-numeric:tabular-nums}.bpls .pl{color:#8fe3a8;font-weight:800}.bpls .gf{background:#16794b;color:#fff;border:0;border-radius:10px;padding:7px 10px;font-weight:800;font-size:14px}'+'.bpls .ok{background:rgba(22,121,75,.35);border-radius:10px;padding:4px 8px;font-weight:800}.bpls .wr{background:#b42318;border-radius:10px;padding:4px 8px;font-weight:800}.cf-bd .bpls{margin:8px 0}';
  document.head.appendChild(c); })();
-var st55=null, PZ='<path d="M6 13Q32 3 58 13L32 61Z" fill="#f8c24a"/><path d="M4 9Q32-2 60 9L58 16Q32 7 6 16Z" fill="#d9893b"/><circle cx="23" cy="26" r="5.5" fill="#c0392b"/><circle cx="41" cy="26" r="5.5" fill="#c0392b"/><circle cx="32" cy="41" r="5" fill="#c0392b"/><circle cx="32" cy="21" r="2.6" fill="#2e8b3d"/><circle cx="27" cy="35" r="2" fill="#2e8b3d"/>';
+var st55=null, st55k='', PZ='<path d="M6 13Q32 3 58 13L32 61Z" fill="#f8c24a"/><path d="M4 9Q32-2 60 9L58 16Q32 7 6 16Z" fill="#d9893b"/><circle cx="23" cy="26" r="5.5" fill="#c0392b"/><circle cx="41" cy="26" r="5.5" fill="#c0392b"/><circle cx="32" cy="41" r="5" fill="#c0392b"/><circle cx="32" cy="21" r="2.6" fill="#2e8b3d"/><circle cx="27" cy="35" r="2" fill="#2e8b3d"/>';
+function cartPizza(){ var t=0; cart.forEach(function(v){ if(/Regalo fedeltà/i.test(v.itemNote||'')) return; if(/pizz/i.test(v.category||'')||/^pizza\b/i.test(v.name||'')) t+=Number(v.price||0)*Number(v.qty||1); }); return t; }
+function strip(conf){
+ if(!active()||/consegna/i.test((el('type')&&el('type').value)||'')) return '';
+ var st=st55; if(!st||normalizePhoneKey(el('phone').value)!==st55k) return '<div class="bpls">🎁 Promo fedeltà · scrivi il telefono del cliente per vedere le fette</div>';
+ var pts=CFG.pts, cyc=Math.max(0,Math.min(pts,st.pts-st.earned*pts)), r='';
+ for(var i=0;i<Math.min(pts,10);i++) r+='<svg class="'+(i<(pts>10?Math.round(cyc/pts*10):cyc)?'on':'')+'" viewBox="0 0 64 64">'+PZ+'</svg>';
+ var add=Math.floor((st.spend+cartPizza())/CFG.eur+1e-9)-st.pts, inC=giftInCart(), left=st.avail-inC;
+ var h='<div class="bpls"><span class="r">'+r+'</span><b>'+cyc+'/'+pts+'</b>'+(add>0?'<span class="pl">+'+add+' con questo ordine</span>':'');
+ if(inC) h+='<span class="ok">🎁 '+inC+' regalo nel carrello ✓</span>';
+ if(left<0) h+='<span class="wr">⚠️ regali oltre il disponibile</span>';
+ else if(left>0) h+=conf?'<span class="wr">🎁 '+left+' regalo da usare! → ✎ Modifica</span>':giftItems().map(function(m){return '<button type="button" class="gf" data-gift55="'+esc(m.id)+'">🎁 '+esc(m.name)+'</button>'}).join('');
+ return h+'</div>';
+}
+window.bpLoyStrip=function(conf){ try{ return strip(conf); }catch(e){ return ''; } };
+function paintStrip(){ var c=el('cart'); if(!c) return; var w=el('bpLoyStrip'); if(!w){ w=document.createElement('div'); w.id='bpLoyStrip'; c.parentNode.insertBefore(w,c); } w.innerHTML=strip(false); }
+document.addEventListener('click',function(e){ var g=e.target.closest&&e.target.closest('[data-gift55]'); if(g){ e.preventDefault(); addGift(g.dataset.gift55); } });
 function card(st){
  var pts=CFG.pts, cyc=Math.max(0,Math.min(pts,st.pts-st.earned*pts)), n=Math.min(pts,10), on=pts>10?Math.round(cyc/pts*10):cyc, r='';
  for(var i=0;i<n;i++) r+='<svg class="'+(i<on?'on':'')+'" viewBox="0 0 64 64">'+PZ+'</svg>';
@@ -36303,7 +36318,7 @@ body.qs-lock{overflow:hidden}
    var dupH='';
    if(dup){dupH='<div class="cf-dup">⚠️ '+(dup.kind==='same'?'ORDINE IDENTICO già inserito':'Questo cliente ha già un ordine aperto')+' (#'+esc(String(dup.o.id))+', '+Math.max(1,Math.round(dup.mins))+' min fa) · '+(dup.kind==='same'?'الأوردر ده متسجّل قبل كده':'العميل عنده أوردر مفتوح')+'</div>';}
    root.innerHTML='<div class="cf-top '+esc(ty)+'"><span class="cf-ty">'+icon+' '+esc(String(ty).toUpperCase())+(ty==='Tavolo'&&tbl?' '+esc(tbl):'')+(ed?' · MODIFICA':'')+'</span><span class="cf-tm">⏰ '+esc(tm||'Subito')+'</span></div>'
-    +'<div class="cf-bd">'+dupH+((nm||ph||ad)?'<div class="cf-cu">'+(nm?'👤 '+esc(nm):'')+(ph?'<small>📞 '+esc(ph)+'</small>':'')+(ad&&ty==='Consegna'?'<small>📍 '+esc(ad)+'</small>':'')+'</div>':'')+items+'</div>'
+    +'<div class="cf-bd">'+dupH+((nm||ph||ad)?'<div class="cf-cu">'+(nm?'👤 '+esc(nm):'')+(ph?'<small>📞 '+esc(ph)+'</small>':'')+(ad&&ty==='Consegna'?'<small>📍 '+esc(ad)+'</small>':'')+'</div>':'')+(window.bpLoyStrip?bpLoyStrip(true):'')+items+'</div>'
     +'<div class="cf-ft"><div class="cf-tt"><span>'+esc(pay)+(fee?' · 🛵 '+euro(fee):'')+'</span><b>'+euro(tot)+'</b></div><div class="cf-bt"><button type="button" class="cf-no" data-no>✎ Modifica</button><button type="button" class="cf-ok'+(dup?' warn':'')+'" data-ok>'+(dup?'⚠️ SALVA COMUNQUE':'✔ CONFERMA')+'</button></div></div>';
    root.className='';document.body.classList.add('qs-lock');
   });
