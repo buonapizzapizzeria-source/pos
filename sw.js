@@ -1,10 +1,13 @@
-const CACHE = 'bp-pos-v236';
+const CACHE = 'bp-pos-v237';
+// v237: anche i file accanto alla pagina (images.js, manifest, icona) restano in cache per l'offline
+const ASSETS = ['images.js', 'manifest.json', 'apple-touch-icon.png'];
 const CDN = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2';
 
 self.addEventListener('install', (e) => {
   e.waitUntil((async () => {
     const c = await caches.open(CACHE);
     try { await c.add(new Request('./', { cache: 'reload' })); } catch (err) {}
+    for (const a of ASSETS) { try { await c.add(new Request(a, { cache: 'reload' })); } catch (err) {} }
     try { const r = await fetch(new Request(CDN, { mode: 'no-cors' })); await c.put(CDN, r); } catch (err) {}
     self.skipWaiting();
   })());
@@ -22,7 +25,8 @@ self.addEventListener('fetch', (e) => {
   const url = new URL(req.url);
   const isDoc = url.origin === location.origin && (req.mode === 'navigate' || url.pathname.endsWith('.html') || url.pathname.endsWith('/'));
   const isLib = url.hostname === 'cdn.jsdelivr.net';
-  if (!isDoc && !isLib) return;                       // mai toccare Supabase / Gemini / API
+  const isAsset = url.origin === location.origin && !isDoc && !url.pathname.endsWith('sw.js') && /\.(js|json|png|webp|jpg|jpeg|svg|woff2?)$/i.test(url.pathname);
+  if (!isDoc && !isLib && !isAsset) return;                       // mai toccare Supabase / Gemini / API
   e.respondWith((async () => {
     try {
       // le pagine HTML: sempre dalla rete, ignorando la cache HTTP del browser
@@ -32,7 +36,10 @@ self.addEventListener('fetch', (e) => {
       return r;
     } catch (err) {
       const m = await caches.match(req, { ignoreSearch: true });
-      return m || (await caches.match('./')) || (await caches.match(CDN)) || Response.error();
+      if (m) return m;
+      if (isDoc) return (await caches.match('./')) || Response.error();
+      if (isLib) return (await caches.match(CDN)) || Response.error();
+      return Response.error();   // mai una pagina HTML al posto di uno script
     }
   })());
 });
