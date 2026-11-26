@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>فحص البيلد · Buona Pizza</title>
+<style>
+:root{--bg:#f6f7f9;--card:#fff;--tx:#1d2433;--mut:#667085;--ok:#067647;--okb:#ecfdf3;--bad:#b42318;--badb:#fef3f2;--warn:#b54708;--warnb:#fffaeb;--bd:#e4e7ec}
+@media (prefers-color-scheme:dark){:root{--bg:#111418;--card:#1b2027;--tx:#e8ecf1;--mut:#98a2b3;--okb:#0b2a1b;--badb:#2d1210;--warnb:#2b2110;--bd:#2c333d;--ok:#47cd89;--bad:#f97066;--warn:#fdb022}}
+*{box-sizing:border-box}body{margin:0;font:15px/1.5 system-ui,-apple-system,"Segoe UI",Tahoma,sans-serif;background:var(--bg);color:var(--tx);padding:16px}
+h1{font-size:20px;margin:0 0 4px}.mut{color:var(--mut);font-size:13px}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:14px;margin:12px 0}
+.big{font-size:22px;font-weight:800;padding:16px;border-radius:12px;text-align:center}
+.ok{background:var(--okb);color:var(--ok)}.bad{background:var(--badb);color:var(--bad)}.warn{background:var(--warnb);color:var(--warn)}
+button{font:inherit;font-weight:700;padding:12px 18px;border-radius:10px;border:0;background:#175cd3;color:#fff;width:100%}
+ul{margin:6px 0;padding-inline-start:20px}li{margin:4px 0;word-break:break-word}
+code{font-family:ui-monospace,Menlo,monospace;font-size:12px;direction:ltr;unicode-bidi:embed}
+iframe{position:absolute;width:390px;height:800px;left:-9999px;top:0;border:0}
+</style>
+</head>
+<body>
+<h1>🧪 فحص البيلد قبل الرفع</h1>
+<div class="mut">بيفتح <code>index.html</code> في صندوق معزول (من غير تسجيل دخول ومن غير ما يلمس بيانات الجهاز) ويدوّر على أخطاء JavaScript.</div>
+<div class="card"><button id="go">ابدأ الفحص</button></div>
+<div id="out"></div>
+<script>
+(function(){
+var TARGET = new URLSearchParams(location.search).get('f') || 'index.html';
+var WAIT = 9000;
+var out = document.getElementById('out');
+function esc(s){return String(s).replace(/[&<>]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;'}[c];});}
+function card(cls,title,items){var h='<div class="card"><b class="'+cls+'" style="background:none">'+title+'</b>';if(items&&items.length)h+='<ul>'+items.map(function(i){return'<li><code>'+esc(i)+'</code></li>';}).join('')+'</ul>';out.insertAdjacentHTML('beforeend',h+'</div>');}
+
+/* runs inside the sandbox before any app script: memory storage, error capture */
+var PRE = '<script>(function(){'+
+ 'function M(){var d={};return{getItem:function(k){return Object.prototype.hasOwnProperty.call(d,k)?d[k]:null},setItem:function(k,v){d[k]=String(v)},removeItem:function(k){delete d[k]},clear:function(){d={}},key:function(i){return Object.keys(d)[i]||null},get length(){return Object.keys(d).length}}}'+
+ 'try{Object.defineProperty(window,"localStorage",{value:M(),configurable:true})}catch(e){}'+
+ 'try{Object.defineProperty(window,"sessionStorage",{value:M(),configurable:true})}catch(e){}'+
+ 'try{window.print=function(){};window.alert=function(){};window.confirm=function(){return false};window.prompt=function(){return null}}catch(e){}'+
+ 'function S(t,m){try{parent.postMessage({bpchk:1,t:t,m:String(m).slice(0,400)},"*")}catch(e){}}'+
+ 'window.addEventListener("error",function(e){if(e.target&&e.target!==window){var u=e.target.src||e.target.href||"";if(u&&u.split("#")[0]!==document.baseURI.split("#")[0])S("res",u);return}S("err",(e.message||"error")+" @"+(e.lineno||"?"))},true);'+
+ 'window.addEventListener("unhandledrejection",function(e){var r=e.reason;S("rej",r&&(r.message||r))});'+
+ 'var ce=console.error;console.error=function(){try{S("cerr",Array.prototype.map.call(arguments,function(a){return a&&a.message?a.message:(typeof a==="object"?"[obj]":a)}).join(" "))}catch(e){}return ce.apply(console,arguments)};'+
+ '})();<\/script>';
+
+var POST = '<script>setTimeout(function(){var f=["renderCart","loadOrders","doSaveOrder","renderOrderList","buildReceiptHtml","loadMenu","updateOrderStatus","showApp","printReceiptWindow"];'+
+ 'var miss=f.filter(function(n){try{return typeof window[n]!=="function"}catch(e){return true}});'+
+ 'parent.postMessage({bpchk:1,t:"done",build:window.BP_BUILD||"",miss:miss,login:!!document.getElementById("loginScreen"),app:!!document.getElementById("app")},"*")},'+WAIT+');<\/script>';
+
+document.getElementById('go').onclick = function(){
+ this.disabled = true; this.textContent = '⏳ جاري الفحص (حوالي 15 ثانية)…'; out.innerHTML='';
+ fetch(TARGET+'?nocache='+Date.now(),{cache:'no-store'}).then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.text();}).then(run).catch(function(e){
+  out.innerHTML='<div class="big bad">❌ مش قادر أفتح '+esc(TARGET)+'<br><small>'+esc(e.message)+'</small></div>';});
+};
+
+function run(html){
+ var t0 = performance.now();
+ /* 1) static syntax check of every inline script (nothing runs) */
+ var syn=[], n=0, re=/<script([^>]*)>([\s\S]*?)<\/script>/gi, m;
+ while((m=re.exec(html))){var a=m[1]; if(/\bsrc=/.test(a)||/type=["']?(application\/ld\+json|text\/template|application\/json)/i.test(a)) continue; n++;
+  try{ new Function(m[2]); }catch(e){ var id=(a.match(/id=["']?([\w-]+)/)||[])[1]||('#'+n); syn.push(id+' → '+e.message); } }
+ var size=(html.length/1024/1024).toFixed(2);
+
+ /* 2) run the page in a sandbox */
+ var errs=[], res=[], secFail=0;
+ var base = new URL(TARGET, location.href).href;
+ var doc = html.replace(/<head[^>]*>/i, function(h){return h+'<base href="'+base+'">'+PRE;});
+ doc = doc.replace(/<\/body>(?![\s\S]*<\/body>)/i, POST+'</body>');
+ if(doc.indexOf(POST)<0) doc += POST;
+ var fr = document.createElement('iframe');
+ fr.setAttribute('sandbox','allow-scripts');
+ var finished=false;
+ function onMsg(ev){var d=ev.data; if(!d||!d.bpchk||ev.source!==fr.contentWindow) return;
+  if(d.t==='res'){res.push(d.m);return;}
+  if(d.t==='done'){finish(d);return;}
+  if(/sezione non caricata/i.test(d.m)) secFail++;
+  errs.push(d.m);
+ }
+ window.addEventListener('message',onMsg);
+ setTimeout(function(){ if(!finished) finish(null); }, WAIT+8000);
+ document.body.appendChild(fr);
+ fr.srcdoc = doc;
+
+ function finish(d){
+  if(finished) return; finished=true; window.removeEventListener('message',onMsg); fr.remove();
+  var sec=((performance.now()-t0)/1000).toFixed(1);
+  /* errors caused only by a missing external file are listed apart */
+  var real = errs.filter(function(e){return !/Failed to fetch|NetworkError|Load failed|ERR_|serviceWorker|ServiceWorker|SecurityError|The operation is insecure/i.test(e);});
+  var net = errs.filter(function(e){return real.indexOf(e)<0;});
+  var bad = syn.length || real.length || !d || (d.miss&&d.miss.length);
+  var warn = !bad && (res.length || net.length);
+  out.innerHTML = '<div class="big '+(bad?'bad':warn?'warn':'ok')+'">'+(bad?'❌ في مشاكل، ما ترفعش':warn?'⚠️ سليم، بس في ملاحظات':'✅ سليم، جاهز للرفع')+'</div>';
+  card('', '📦 البيلد: '+esc(d&&d.build||'؟')+' · الحجم '+size+' MB · '+n+' سكريبت · '+sec+' ث');
+  card(syn.length?'bad':'ok', (syn.length?'❌ أخطاء صياغة: ':'✅ الصياغة سليمة في كل السكريبتات')+(syn.length||''), syn);
+  if(!d) card('bad','❌ الصفحة ما خلصتش تحميل في الوقت');
+  else card(d.miss.length?'bad':'ok', d.miss.length?'❌ دوال أساسية ناقصة':'✅ الدوال الأساسية موجودة (السلة، الطلبات، الحفظ، الطباعة، المنيو)', d.miss);
+  card(real.length?'bad':'ok', real.length?('❌ أخطاء وقت التشغيل: '+real.length+(secFail?(' (منها '+secFail+' قسم ما اتحملش)'):'')):'✅ مفيش أخطاء وقت التشغيل', real.slice(0,25));
+  if(res.length) card('warn','⚠️ ملفات خارجية ما اتحملتش (ممكن تكون ناقصة على GitHub)', res);
+  if(net.length) card('warn','ℹ️ أخطاء شبكة/صندوق معزول (عادي في الفحص)', net.slice(0,10));
+  var b=document.getElementById('go'); b.disabled=false; b.textContent='🔁 افحص تاني';
+ }
+}
+})();
+</script>
+</body>
+</html>
