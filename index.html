@@ -4158,6 +4158,15 @@ html.pos64.p64-ticket .calc-box.rd-pay button{min-height:40px!important;padding:
  .v46-pro .rc-ing-row { font-size:15px!important; font-weight:800!important; }
  .v46-pro .rc-total-bar { background:#000!important; color:#fff!important; }
  .v46-pro .rc-review, .v46-pro .rc-table-head { display:none!important; }
+
+/* v-card: sezioni raggruppate nella scheda ordine */
+.bp-card-grouped{padding:6px 8px}
+.bp-card-grouped .rc-sec{margin:6px 0 2px}
+.order .rc-sec-h{font-size:14px!important;padding:4px 10px!important;letter-spacing:.8px!important}
+.bp-card-fx{font-size:12.5px;font-weight:900;padding:2px 6px;margin:2px 0;border:1.5px dashed #000;border-radius:6px}
+.bp-card-go{margin:8px 0 2px;border:3px solid #000;border-radius:8px;overflow:hidden;background:#fff;color:#000}
+.bp-card-go-h{background:#000;color:#fff;text-align:center;font-size:13px;font-weight:950;letter-spacing:1px;padding:3px 0}
+.bp-card-go-b{font-size:17px;font-weight:950;line-height:1.3;text-align:center;padding:5px 8px}
 </style>
  <style id="bpV93boot">html.bp-boot header{height:30px!important;min-height:0!important;padding-top:0!important;padding-bottom:0!important;overflow:hidden!important;border-bottom:0!important;transition:none!important}html.bp-boot header>*{visibility:hidden}</style><script id="bpV93bootJs">document.documentElement.classList.add('bp-boot')</script>
 <style id="bp-gusti-fix">
@@ -11887,6 +11896,40 @@ function renderOrderItemLineWithIcons(i){
  `;
 }
 
+/* v-card: articoli della scheda ordine (Ordini aperti + Storico) raggruppati come lo scontrino termico:
+   PIZZE / PANINI / DOLCI / BUSTINE / FRITTI / BEVANDE (con conteggio) + extra/servizio + CONTROLLO BORSA */
+function bpCardGroupedItems(items){
+ try{
+  var G = {pizza: [], panino: [], dolce: [], bustina: [], fritto: [], bevanda: [], servizio: []};
+  items.forEach(function(i){
+   var w = {k: 'panino'}; try{ w = bpWorkCat(i); }catch(e){}
+   var k = w.panz ? 'fritto' : (G[w.k] ? w.k : 'panino');
+   G[k].push(i);
+  });
+  var q = function(a){ return a.reduce(function(n, i){ return n + Number(i.quantity||1); }, 0); };
+  var sec = function(ico, title, n, arr, extra){
+   if(!arr.length) return '';
+   return '<div class="rc-sec bp-card-sec"><div class="rc-sec-h"><span>' + ico + ' ' + title + '</span><span>' + n + '</span></div>' +
+    arr.map(renderOrderItemLineWithIcons).join('') + (extra || '') + '</div>';
+  };
+  var FP = {total: 0}; try{ FP = bpFriedPlan(items); }catch(e){}
+  var fxt = '';
+  if(FP.pizza && FP.pizza.n) fxt += '<div class="bp-card-fx">🍕 + PATATINE SU PIZZA × ' + FP.pizza.n + ' (da friggere)</div>';
+  if(FP.menu && FP.menu.n) fxt += '<div class="bp-card-fx">🍟🥤 patatine dei menu × ' + FP.menu.n + '</div>';
+  var out = '';
+  out += sec('🍕', 'PIZZE', q(G.pizza), G.pizza);
+  out += sec('🥙', 'PANINI &amp; PIADINE', q(G.panino), G.panino);
+  out += sec('🍰', 'DOLCI', q(G.dolce), G.dolce);
+  out += sec('🧂', 'BUSTINE', q(G.bustina), G.bustina);
+  if(G.fritto.length || fxt) out += sec('🍟', 'FRITTI · DA FRIGGERE', (FP.total || q(G.fritto)), G.fritto, fxt);
+  out += sec('🥤', 'BEVANDE', q(G.bevanda), G.bevanda);
+  if(G.servizio.length) out += '<div class="rc-sec bp-card-sec">' + G.servizio.map(renderOrderItemLineWithIcons).join('') + '</div>';
+  var go = []; try{ go = bpGoSummary(items) || []; }catch(e){}
+  if(go.length) out += '<div class="bp-card-go"><div class="bp-card-go-h">CONTROLLO BORSA</div><div class="bp-card-go-b">' + go.map(esc).join(' + ') + '</div></div>';
+  return out ? '<div class="order-items-box bp-card-grouped">' + out + '</div>' : '';
+ }catch(e){ try{ bpWarn(e); }catch(_){} return ''; }
+}
+
 function renderOrderList(id, list, isOpenTab=false){
  let box=el(id);box.innerHTML='';
  /* v101: ruolo "viewer" (pizzaiolo / kebabbaro): solo ordini del giorno corrente (il giorno cambia alle 05:00) */
@@ -11911,7 +11954,7 @@ function renderOrderList(id, list, isOpenTab=false){
 
  let items=itemsByOrder.get(o.id)||[];
  let itemsHtml=items.length
- ? `<div class="order-items-box">${items.map(i=>renderOrderItemLineWithIcons(i)).join('')}</div>`
+ ? (bpCardGroupedItems(items) || `<div class="order-items-box">${items.map(i=>renderOrderItemLineWithIcons(i)).join('')}</div>`)
  : `<div class="muted" style="margin:6px 0">Nessun articolo caricato · clicca Ricevuta</div>`;
  let phoneHtml=o.phone?`<a href="tel:${esc(o.phone)}">📞 ${esc(o.phone)}</a>`:'';
  let addrHtml=o.address?`<a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(normalizeDeliveryAddress(o.address))}" target="_blank">📍 ${esc(o.address)}</a>`:'';
