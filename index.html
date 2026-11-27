@@ -27119,7 +27119,7 @@ function onClick(e){var t=e.target.closest('[data-a],[data-f],[data-s]');if(!t)r
  else if(a==='use'&&x){var c=x.c;close();try{switchTab('new')}catch(z){}setTimeout(function(){setF('customer',c.name);setF('phone',c.phone);setF('address',c.address);var n=document.getElementById('notes');if(n&&c.note&&n.value.toLowerCase().indexOf(c.note.toLowerCase())<0)setF('notes',(n.value?n.value+', ':'')+c.note);if(document.activeElement)document.activeElement.blur()},200)}}
 /* ---- punti di ingresso ---- */
 function mount(){
- var sh=$('#bpMore .sheet');if(sh&&!$('#rbMore',sh)){var f=sh.querySelector('button'),b=document.createElement('button');b.type='button';b.id='rbMore';if(f)b.className=f.className;b.innerHTML='<span style="font-size:24px;display:block">📒</span><span>Rubrica</span>';b.onclick=function(){var m=$('#bpMore');if(m)m.classList.add('hidden');open()};sh.appendChild(b)}
+ var sh=$('#bpMore .sheet');if(sh&&!$('#rbMore',sh)){var f=sh.querySelector('button'),b=document.createElement('button');b.type='button';b.id='rbMore';if(f)b.className=f.className;b.innerHTML='<span class="i">📒</span><span class="l">Rubrica</span>';b.onclick=function(){var m=$('#bpMore');if(m)m.classList.add('hidden');open()};sh.appendChild(b)}
  var body=$('#rdAccCust .rd-acc-body')||$('#rdAccCust');if(body&&!$('#rbCust')){var c=document.createElement('button');c.type='button';c.id='rbCust';c.textContent='📒 Rubrica clienti · دفتر العملاء';c.style.cssText='width:100%;min-height:46px;margin:0 0 8px;border-radius:12px;font-weight:900;border:2px solid var(--bp-brand,#d92d20);background:var(--bp-card,#fff);color:var(--bp-ink,#101828)';c.onclick=open;body.prepend(c)}}
 setInterval(mount,1000);setInterval(function(){if($('#rbOv')&&!$('.rb-s'))list()},4000);
 window.bpRubrica=open;
@@ -44914,5 +44914,269 @@ try{(function(){
 })()}catch(e){console.error('[call-log]',e)}
 </script>
 <!-- BP-CALLLOG:END -->
+<!-- BP-RUBRICA-NAV:START · Rubrica visibile su tablet (solo manager e cashier) -->
+<script id="bpRubricaNav">
+try{(function(){
+ if(window.__bpRbNav)return;window.__bpRbNav=1;
+ function ok(){return window.BP_ROLE==='manager'||window.BP_ROLE==='cashier'}
+ function tick(){
+  try{
+   var nav=document.getElementById('bpNav'),btn=document.getElementById('bpRbNav'),wide=window.matchMedia('(min-width:900px)').matches;
+   if(nav&&!nav.classList.contains('hidden')&&wide&&ok()){
+    if(!btn){btn=document.createElement('button');btn.type='button';btn.id='bpRbNav';btn.className='bpn-item sec';btn.title='Rubrica clienti';
+     btn.innerHTML='<span class="i">📒</span><span class="l">Rubrica</span>';
+     btn.onclick=function(){if(window.bpRubrica)window.bpRubrica()};nav.appendChild(btn)}
+   }else if(btn){btn.remove()}
+   var rm=document.getElementById('rbMore');if(rm)rm.style.display=ok()?'':'none';
+   var rc=document.getElementById('rbCust');if(rc)rc.style.display=ok()?'':'none';
+   try{['manager','cashier'].forEach(function(r){if(BP_TABS[r]&&BP_TABS[r].indexOf('calls')<0)BP_TABS[r].push('calls')})}catch(e){}
+   var cb=document.querySelector('.tabs [data-tab="calls"]');if(cb)cb.classList.toggle('hidden',!ok());
+  }catch(e){}
+ }
+ setInterval(tick,800);window.addEventListener('resize',tick);
+})()}catch(e){console.error('[rb-nav]',e)}
+</script>
+<!-- BP-RUBRICA-NAV:END -->
+
+<!-- BP-TRACKCFG:START (portato dalla versione 51) -->
+<style id="bpTCcss">
+#bpTC .th{flex-wrap:wrap}#bpTC .grp input[type=text]{box-sizing:border-box;max-width:100%}#bpTC .qz input[type=radio]{width:20px;height:20px;vertical-align:middle}
+#bpTC{position:fixed;inset:0;z-index:2147483200;display:flex;align-items:flex-end;justify-content:center;background:rgba(20,10,3,.6);font-family:inherit}
+#bpTC.hide{display:none}
+#bpTC .tb{width:min(100%,720px);max-height:94vh;display:flex;flex-direction:column;background:#fffaf3;color:#1d1209;border-radius:22px 22px 0 0;overflow:hidden}
+@media(min-width:700px){#bpTC{align-items:center}#bpTC .tb{border-radius:22px}}
+#bpTC .th{display:flex;gap:6px;padding:12px;background:#a8291f;color:#fff;align-items:center;flex-wrap:wrap}
+#bpTC .th b{flex:1 1 100%;font-size:17px}
+#bpTC .th button{flex:1;min-height:40px;border:0;border-radius:999px;background:#ffffff26;color:#fff;font-weight:900;font-size:13px}
+#bpTC .th button.on{background:#fff;color:#a8291f}
+#bpTC .tbd{flex:1;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:10px}
+#bpTC .tf{display:flex;gap:8px;padding:10px 12px calc(10px + env(safe-area-inset-bottom,0px));border-top:1px solid #ead9bf}
+#bpTC .tf button{flex:1;min-height:46px;font-weight:900;border-radius:14px}
+#bpTC .grp{background:#fff;border:1.5px solid #ead9bf;border-radius:16px;padding:10px 12px;display:grid;grid-template-columns:1fr 1fr;gap:8px}
+#bpTC .grp label{font-size:12px;font-weight:800;display:flex;flex-direction:column;gap:3px}
+#bpTC .grp label.ck{flex-direction:row;align-items:center;gap:8px;font-size:14px}
+#bpTC .grp label.w{grid-column:1/-1}
+#bpTC input,#bpTC select,#bpTC textarea{width:100%;min-height:40px;border:1.5px solid #e2cfa8;border-radius:10px;padding:6px 8px;font:inherit;font-size:14px;background:#fff;color:#1d1209}
+#bpTC input[type=checkbox]{width:22px;min-height:22px}
+#bpTC .row{display:flex;gap:6px;align-items:flex-start;background:#fff;border:1.5px solid #ead9bf;border-radius:14px;padding:6px}
+#bpTC .row textarea{min-height:44px;resize:vertical}
+#bpTC .row button{min-width:40px;min-height:40px;padding:0;border-radius:10px;font-size:16px}
+#bpTC .im{width:44px;height:44px;flex:0 0 44px;border-radius:10px;border:1.5px dashed #c9a56a;display:grid;place-items:center;background:#fff8ec center/cover no-repeat;font-size:18px;cursor:pointer}
+#bpTC .pv{background:#f6f4ef;border-radius:16px;padding:12px;text-align:center;font-weight:700;min-height:70px;--spd:350ms;overflow:hidden}
+#bpTC .pv .mi{display:block;max-width:100%;max-height:120px;margin:0 auto 6px;border-radius:12px}
+#bpTC .pv.side .mi{display:inline-block;width:50px;height:50px;margin:0 8px 0 0;vertical-align:middle;object-fit:cover}
+#bpTC .hint{font-size:12px;color:#7a5a3a;font-weight:700;line-height:1.5}
+#bpTC .lcp{border-radius:18px;padding:14px;color:#fff;background:linear-gradient(160deg,#3b1e15,#220f09)}
+#bpTC .lcp.th-gold{background:linear-gradient(160deg,#b8860b,#5c3d00)}#bpTC .lcp.th-red{background:linear-gradient(160deg,#c8102e,#6b0718)}#bpTC .lcp.th-green{background:linear-gradient(160deg,#1f7a4d,#0b3b24)}#bpTC .lcp.th-blue{background:linear-gradient(160deg,#1c5fd6,#0b2a66)}#bpTC .lcp.th-light{background:#fff;color:#1f2328;border:1.5px solid #f0d9a8}
+.bptc-a-out{animation:var(--ao) var(--spd) ease-in forwards}.bptc-a-in{animation:var(--ai) var(--spd) ease-out both}
+@keyframes tcfo{to{opacity:0}}@keyframes tcfi{from{opacity:0}}@keyframes tcso{to{opacity:0;transform:translateX(-40px)}}@keyframes tcsi{from{opacity:0;transform:translateX(40px)}}
+@keyframes tcuo{to{opacity:0;transform:translateY(-18px)}}@keyframes tcui{from{opacity:0;transform:translateY(18px)}}@keyframes tczo{to{opacity:0;transform:scale(.6)}}@keyframes tczi{from{opacity:0;transform:scale(.6)}}
+@keyframes tcflo{to{transform:rotateX(90deg)}}@keyframes tcfli{from{transform:rotateX(-90deg)}}@keyframes tcbo{to{opacity:0;transform:scale(.8)}}@keyframes tcbi{0%{opacity:0;transform:scale(.3)}60%{opacity:1;transform:scale(1.12)}100%{transform:scale(1)}}
+@keyframes tcblo{to{opacity:0;filter:blur(8px)}}@keyframes tcbli{from{opacity:0;filter:blur(8px)}}
+.bptc-cel{position:fixed;top:-50px;font-size:30px;z-index:2147483600;pointer-events:none;animation:bptccf linear forwards}@keyframes bptccf{to{transform:translateY(110vh) rotate(360deg)}}
+
+/* v132 · editor messaggi: elenco leggibile + scheda di scrittura a tutto schermo */
+#bpTC .th{padding:10px 12px;gap:6px}#bpTC .th b{font-size:15px}#bpTC .th button{min-height:36px;font-size:12.5px;padding:0 8px}
+#bpTC .tb{position:relative}
+#bpTC details.opt{background:#fff;border:1.5px solid #ead9bf;border-radius:16px;overflow:hidden}
+#bpTC details.opt summary{list-style:none;cursor:pointer;padding:12px 14px;font-weight:900;font-size:14px;display:flex;align-items:center;gap:8px}
+#bpTC details.opt summary::-webkit-details-marker{display:none}
+#bpTC details.opt summary small{margin-inline-start:auto;font-weight:800;color:#a8291f;background:#fff1ec;border-radius:99px;padding:3px 10px;font-size:12px}
+#bpTC details.opt summary::after{content:'▾';color:#a8291f}#bpTC details.opt[open] summary::after{content:'▴'}
+#bpTC details.opt .grp{border:0;border-top:1.5px dashed #ead9bf;border-radius:0}
+#bpTC .lkw label{display:flex;flex-direction:column;gap:4px;font-size:12px;font-weight:800}
+#bpTC .lsth{position:sticky;top:-12px;z-index:2;display:flex;gap:8px;align-items:center;background:#fffaf3;padding:8px 0}
+#bpTC .lsth .lc1{display:flex;flex-direction:column;align-items:center;line-height:1;min-width:44px}
+#bpTC .lsth .lc1 b{font-size:22px;color:#a8291f}#bpTC .lsth .lc1 small{font-size:10px;font-weight:800;color:#7a5a3a}
+#bpTC .lsth input{flex:1;min-width:0;border-radius:99px;padding:0 14px}
+#bpTC .lsth .addb{flex:0 0 auto;min-height:42px;border:0;border-radius:99px;padding:0 16px;font-weight:900;background:#1f7a4d;color:#fff}
+#bpTC .its{display:flex;flex-direction:column;gap:8px}
+#bpTC .it{display:flex;gap:10px;align-items:flex-start;background:#fff;border:1.5px solid #ead9bf;border-inline-start:5px solid #e8590c;border-radius:14px;padding:12px;cursor:pointer;transition:transform .12s,box-shadow .12s;-webkit-tap-highlight-color:transparent}
+#bpTC .it:active{transform:scale(.985);box-shadow:0 4px 14px rgba(168,41,31,.15)}
+#bpTC .it.hid{display:none}
+#bpTC .it .no{flex:0 0 auto;min-width:24px;height:24px;border-radius:99px;background:#fff1ec;color:#a8291f;font-size:12px;font-weight:900;display:grid;place-items:center}
+#bpTC .it .ith{width:46px;height:46px;flex:0 0 46px;object-fit:cover;border-radius:10px}
+#bpTC .it .tx{flex:1;min-width:0;font-size:16px;font-weight:700;line-height:1.45;white-space:pre-wrap;overflow-wrap:anywhere}
+#bpTC .it .tx i{color:#b09272;font-weight:600}
+#bpTC .it .pen{flex:0 0 auto;color:#c9a56a;font-size:18px}
+#bpTC .emp{text-align:center;padding:24px;color:#7a5a3a;font-weight:700}
+#bpTC .esh{position:absolute;inset:0;z-index:5;background:rgba(29,18,9,.55);display:flex;align-items:flex-end;opacity:0;pointer-events:none;transition:opacity .2s}
+#bpTC .esh.on{opacity:1;pointer-events:auto}
+#bpTC .ebx{width:100%;max-height:100%;overflow-y:auto;background:#fffaf3;border-radius:22px 22px 0 0;padding:12px 14px calc(14px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:10px;transform:translateY(30px);transition:transform .25s cubic-bezier(.2,.9,.3,1.2)}
+#bpTC .esh.on .ebx{transform:none}
+#bpTC .ehd{display:flex;align-items:center;gap:6px}
+#bpTC .ehd b{flex:1;text-align:center;font-size:15px}
+#bpTC .ehd button{min-width:42px;min-height:42px;border:0;border-radius:12px;background:#f2e6d3;color:#1d1209;font-size:22px;font-weight:900;padding:0}
+#bpTC .ehd .edone{padding:0 16px;font-size:15px;background:#a8291f;color:#fff}
+#bpTC .estage{background:radial-gradient(circle at 30% 0,#fff,#f3ece0);border:1.5px solid #ead9bf;border-radius:18px;padding:10px 12px 14px}
+#bpTC .elab{font-size:11px;font-weight:900;color:#7a5a3a;margin-bottom:6px}
+#bpTC .epv{text-align:center;font-weight:700;font-size:15px;line-height:1.45;color:#1f2328;overflow-wrap:anywhere}
+#bpTC .epv .mi{display:block;max-width:100%;max-height:140px;margin:0 auto 6px;border-radius:12px}
+#bpTC .epv.side .mi{display:inline-block;width:54px;height:54px;object-fit:cover;margin:0 8px 0 0;vertical-align:middle}
+#bpTC .epv.fx{text-align:start;background:linear-gradient(135deg,#fff3e3,#ffe4d1);border:1.5px solid #e8590c;color:#7a2e0e;border-radius:14px;padding:10px 12px}
+#bpTC .epv.fx small{display:block;font-size:11px;font-weight:800;opacity:.75}#bpTC .epv.fx p{margin:4px 0 0;font-size:14.5px}
+#bpTC #bpTCet{min-height:130px;font-size:18px!important;line-height:1.5;font-weight:600;border-radius:16px;padding:12px 14px;resize:vertical;border:2px solid #e8590c}
+#bpTC .ecnt{font-size:12px;font-weight:800;color:#7a5a3a;text-align:end;margin-top:-4px}#bpTC .ecnt.warn{color:#b54708}
+#bpTC .emo{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding-bottom:2px}#bpTC .emo::-webkit-scrollbar{display:none}
+#bpTC .emo button{flex:0 0 auto;min-width:42px;min-height:42px;border:1.5px solid #ead9bf;border-radius:12px;background:#fff;font-size:20px;padding:0}
+#bpTC .eact{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+#bpTC .eact button{min-height:44px;border:0;border-radius:12px;background:#f2e6d3;color:#1d1209;font-weight:900;font-size:14px}
+#bpTC .eact .edel{background:#fef3f2;color:#b42318}
+@media(min-width:700px){#bpTC .esh{align-items:center;justify-content:center}#bpTC .ebx{max-width:560px;border-radius:22px}}
+</style>
+<script id="bpTrackCfg">
+try{(function(){
+var KEY='track_cfg',ST=['Nuovo','In preparazione','Pronto','In consegna','Completato','Annullato'];
+var D_ALL=['Ottima scelta! 😋','Il pizzaiolo approva 👨‍🍳👍','Gusto da vero intenditore 🤌','Mmm… già sentiamo il profumo! 👃','Mangiare bene è una cosa seria 😌','Il tuo stomaco ti ringrazia 🙏','Sorriso garantito 😄'],D_PH={
+ 'Nuovo':['Il pizzaiolo sta leggendo il tuo ordine 👀','Controlliamo che sia tutto perfetto ✅'],
+ 'In preparazione':['Stendiamo la tua pizza a mano 🤌','Il forno è a 450°, ci siamo! 🔥','Ingredienti freschi, tanto amore ❤️'],
+ 'Pronto':['È appena uscita dal forno, vieni finché è bollente! 🔥','Ti aspettiamo con un sorriso 😄'],
+ 'In consegna':['Il fattorino sta arrivando da te 🛵','Tieni il citofono a portata di mano 😉'],
+ 'Completato':['Buon appetito! Ci vediamo alla prossima fetta 🍕','Grazie di aver scelto Buona Pizza ❤️'],
+ 'Annullato':['Ci dispiace! Chiamaci se hai domande 📞']
+},D_FX=[
+['🍕','Secondo la tradizione, la Margherita nasce a Napoli nel 1889 in onore della Regina Margherita.'],['🍕','Pomodoro, mozzarella e basilico: la Margherita ha i colori della bandiera italiana 🇮🇹'],['🍕','Nel 2017 l’arte del pizzaiuolo napoletano è diventata Patrimonio UNESCO.'],['🍕','La Pizza Napoletana è STG: una Specialità Tradizionale Garantita in tutta Europa.'],['🍕','La parola «pizza» compare già in un documento di Gaeta dell’anno 997.'],['🍕','La Marinara non ha pesce: era la pizza dei marinai, con aglio, origano e pomodoro.'],['🍕','La Quattro Stagioni ha quattro spicchi, uno per ogni stagione dell’anno.'],['🍕','«Calzone» viene da «calza»: è la pizza ripiegata a forma di mezzaluna.'],
+['🌾','L’impasto napoletano tradizionale ha solo 4 ingredienti: farina, acqua, sale e lievito.'],['🌾','Una lievitazione lunga rende la pizza più leggera e più digeribile.'],['🌾','Le bollicine nel cornicione sono anidride carbonica prodotta dal lievito.'],['🌾','Il bordo gonfio della pizza si chiama «cornicione».'],['🌾','Le macchioline scure sul bordo si chiamano «leopardatura»: segno di una bella cottura.'],['🌾','La pizza napoletana si stende a mano: niente mattarello, per non schiacciare l’aria.'],['🌾','La farina «00» è la più finemente macinata.'],['🌾','Il sale rinforza il glutine e tiene a bada il lievito.'],['🌾','Il glutine crea una rete elastica che trattiene l’aria: per questo l’impasto si allunga senza rompersi.'],
+['🧀','«Mozzarella» viene da «mozzare»: la pasta si stacca a mano, pezzo per pezzo.'],['🧀','Il fior di latte è fatto con latte vaccino, la bufala con latte di bufala.'],['🧀','La Mozzarella di Bufala Campana è DOP.'],['🧀','La mozzarella è una «pasta filata»: la cagliata si lavora e si allunga in acqua calda.'],['🧀','Treccia, bocconcini e ciliegine: la mozzarella ha tante forme!'],['🧀','I pizzaioli fanno sgocciolare la mozzarella fresca, così la pizza non diventa acquosa.'],['🧀','Il nome «Gorgonzola» viene da un paese vicino a Milano.'],['🧀','Grana Padano e Parmigiano Reggiano sono due formaggi DOP diversi.'],
+['🔥','Una pizza napoletana cuoce in 60–90 secondi!'],['🔥','Nel forno a legna la temperatura può superare i 450°C.'],['🔥','La pala per infornare la pizza si chiama… «pala»!'],['🔥','Il calore arriva da sotto (la pietra) e da sopra (la cupola): così la pizza cuoce in modo uniforme.'],['🔥','Il pizzaiolo gira la pizza nel forno per cuocerla uguale da ogni lato.'],
+['🍅','Il pomodoro è arrivato in Europa dalle Americhe nel Cinquecento.'],['🍅','Il Pomodoro San Marzano dell’Agro Sarnese-Nocerino è DOP.'],['🍅','«Basilico» viene dal greco e vuol dire «regale» 👑'],['🍅','L’olio extravergine si mette spesso a crudo, per non perdere il profumo.'],['🍅','L’origano è il profumo classico della Marinara.'],
+['🤓','«Döner kebab» in turco vuol dire «carne che gira» 🥙'],['🤓','Pizza con würstel e patatine: la preferita dei bambini italiani! 🍟'],['🤓','La pizza va mangiata subito: il suo momento migliore sono i primi minuti.'],['🤓','Una pizza «a portafoglio» si piega in quattro e si mangia per strada, alla napoletana.'],['🤓','Ogni pizza è fatta a mano: non ce ne sono due uguali 🤌']];
+var ANIM=[['fade','Dissolvenza'],['slide','Scorri di lato'],['up','Sale dal basso'],['zoom','Zoom'],['flip','Giro (flip)'],['bounce','Rimbalzo'],['blur','Sfocatura'],['type','Macchina da scrivere'],['none','Nessuna']];
+var AN={fade:['tcfo','tcfi'],slide:['tcso','tcsi'],up:['tcuo','tcui'],zoom:['tczo','tczi'],flip:['tcflo','tcfli'],bounce:['tcbo','tcbi'],blur:['tcblo','tcbli']};
+function I(t){return {t:t,img:''}}
+/* Pacchetto messaggi nuovi (1) */
+var PACK=1,N_PHR=["Capolavoro in arrivo! 🎨🍕", "La fame ha trovato il suo nemico 🦸‍♂️🍕", "Calda, filante e irresistibile 🔥🧀", "Mani in pasta e cuore nel forno ❤️🔥", "Stasera si mangia alla grande! 🙌😋", "Il profumo sta già facendo il giro del quartiere 🌬️🍕", "Qualità che si sente al primo morso 👌🤤", "Prepariamo il tuo sorriso, fetta dopo fetta 😄🍕", "Zero stress, ci pensiamo noi alla cena 🛋️✨", "Impasto leggero, gusto gigante 🪶💥", "La felicità ha la forma di una pizza tonda ⭕❤️", "Fatta al momento, solo per te ⏱️👨‍🍳", "Croccante fuori, morbida dentro: perfezione! 💯🍕", "L'attesa sta per essere premiata 🏆😋", "Ingredienti veri, passione vera 🌿🍅", "Anche il forno è contento di questa scelta 🔥😊", "Quando la pizza chiama, noi rispondiamo! 📞🍕", "Un morso e passa tutta la stanchezza 🔋🤤", "Da Buona Pizza ogni ordine è speciale ⭐🏠", "Il segreto? Tanto amore in ogni impasto 💕🌾", "Tra poco si va in tavola! 🍽️🚀", "Gusto autentico, senza scorciatoie ✅👨‍🍳", "La serata prende subito una bella piega 🌙🍕", "Filante al punto giusto 🧀✨", "Buon appetito in anticipo! 😋🥂"],
+N_FX=["🍕 La pizza Diavola si chiama così per il salame piccante che «scalda» il palato! 🌶️", "🍕 La Capricciosa nasce a Roma negli anni '50 ed è un tripudio di sapori.", "🍕 La pizza Quattro Formaggi unisce spesso mozzarella, gorgonzola, fontina e parmigiano.", "🍕 La pizza Bismark prende il nome dal cancelliere tedesco, famoso per amare le uova! 🍳", "🍕 La Napoli classica ha alici, capperi e origano: un tuffo nel mare! 🌊", "🌾 L'idratazione dell'impasto è il segreto per una pizza soffice e mai pesante 💧", "🌾 L'impasto riposa al fresco per maturare lentamente e sviluppare più aroma ❄️", "🌾 Un buon cornicione deve essere alveolato, cioè pieno di piccole bolle d'aria 🫧", "🌾 Il lievito madre dona alla pizza un profumo unico e una crosta più dorata ✨", "🌾 Stendere la pizza dal centro verso l'esterno spinge l'aria nei bordi 👐", "🧀 La parola «fior di latte» indica la mozzarella fresca di latte vaccino 🥛", "🧀 Il Gorgonzola DOP è uno dei formaggi erborinati più antichi al mondo, nato vicino a Lodi e Milano! 🗺️", "🧀 La Provola affumicata viene esposta al fumo di paglia per avere il suo aroma tipico 💨", "🧀 Il Parmigiano Reggiano stagiona almeno 12 mesi prima di arrivare sulle nostre tavole ⏳", "🔥 Nei forni ad alta temperatura lo shock termico fa gonfiare il cornicione in pochi secondi ⚡", "🔥 La pala del pizzaiolo era tradizionalmente in legno, oggi spesso è forata per far cadere la farina in eccesso.", "🔥 Cuocere la pizza alla giusta temperatura evita che la mozzarella bruci 🌡️", "🍅 Le foglie di basilico non vanno mai tagliate col coltello, ma spezzate a mano per non ossidarle 🌿", "🍅 L'origano di montagna ha un profumo molto più intenso rispetto a quello di pianura ⛰️", "🍅 I pomodori pelati vengono raccolti solo in estate quando sono ben maturi al sole ☀️", "🤓 Il kebab viene cotto su uno spiedo verticale che gira lentamente per mantenere la carne succosa 🥙", "🤓 La salsa allo yogurt per il kebab rinfresca il palato ed equilibra le spezie 🥣", "🤓 Il cartone della pizza ha dei piccoli fori laterali per far uscire il vapore e non ammorbidirla 📦", "🤓 L'Italia è il paese con il maggior numero di pizze diverse al mondo: oltre 200 varianti! 🇮🇹", "🤓 Mangiare la pizza con le mani permette di sentirne subito la fragranza e la temperatura 🖐️🍕"],
+N_LOY=["🍕 Ogni pizza ti avvicina alla tua prossima pizza gratis! 🎁", "⭐ Colleziona i tuoi punti fedeltà: la fedeltà da Buona Pizza ha sempre un buon sapore! 😋", "🎯 Un altro passo verso il tuo premio: continua così! 🏆", "❤️ Grazie per averci scelto ancora: i clienti affezionati sono la nostra famiglia! 🏠", "🔥 Più ordini, più gusti, più vantaggi con la tua Carta Fedeltà! ✨", "🎉 Controlla i tuoi timbri: potresti essere vicinissimo al tuo regalo! 🍕", "👑 Sei un vero VIP di Buona Pizza: grazie per la tua fiducia! 🙌", "💡 Ricorda: ogni ordine conta per sbloccare la tua ricompensa! 🔓🍕", "🥂 La tua fame ti premia: accumula punti ad ogni consegna! 🛵💨", "🌟 Clienti speciali meritano regali speciali: grazie di cuore da tutto lo staff! 👨‍🍳❤️"],
+N_ST={"Nuovo": ["Ordine ricevuto: la magia sta per cominciare ✨", "Mettiti comodo, adesso tocca a noi 😌"], "In preparazione": ["Il tuo ordine sta prendendo forma 👨‍🍳", "Un tocco alla volta, tutto con cura 🤌"], "Pronto": ["Missione compiuta: il tuo ordine ti aspetta! 🎯", "Caldo caldo, manchi solo tu 😍"], "In consegna": ["Profumo in viaggio verso casa tua 🛵💨", "Apparecchia pure, siamo per strada 🍽️"], "Completato": ["Speriamo ti sia piaciuta fino all’ultima fetta 😋", "La prossima serata pizza? Noi ci siamo! 🙌"]};
+function nk(t){return String(t||'').toLowerCase().replace(/[^\p{L}\p{N}]/gu,'')}
+function addNew(arr,texts){var seen={},n=0;arr.forEach(function(x){seen[nk(x.t)]=1});texts.forEach(function(t){var k=nk(t);if(!seen[k]){seen[k]=1;arr.push(I(t));n++}});return n}
+function addPack(c){var n=addNew(c.phr.all,N_PHR)+addNew(c.fx.list,N_FX);if(!c.loy.list)c.loy.list=[];n+=addNew(c.loy.list,N_LOY);
+ Object.keys(N_ST).forEach(function(k){if(!c.phr.st[k])c.phr.st[k]=[];n+=addNew(c.phr.st[k],N_ST[k])});if(Number(c.phr.nmix)===3)c.phr.nmix=8;c.pack=PACK;return n}
+var N_QUIZ=[{"q": "In quale città nasce, secondo la tradizione, la Margherita?", "a": ["Napoli", "Roma", "Milano"], "ok": 0, "info": "La tradizione la lega a Napoli e al 1889, in onore della Regina Margherita 👑"}, {"q": "Quale di queste pizze classiche non ha la mozzarella?", "a": ["Marinara", "Margherita", "Quattro Formaggi"], "ok": 0, "info": "La Marinara è semplice: pomodoro, aglio, origano e olio 🍅"}, {"q": "Come si chiama il bordo gonfio della pizza?", "a": ["Cornicione", "Cornice", "Corona"], "ok": 0, "info": "È il cornicione: soffice e pieno di bolle d’aria 🫧"}, {"q": "Quanto cuoce una pizza napoletana nel forno a legna?", "a": ["60–90 secondi", "10 minuti", "20 minuti"], "ok": 0, "info": "Forno caldissimo e cottura velocissima 🔥"}, {"q": "Cosa rende piccante la pizza Diavola?", "a": ["Il salame piccante", "Il basilico", "La mozzarella"], "ok": 0, "info": "Il salame piccante scalda il palato 🌶️"}, {"q": "Con quale latte si fa il fior di latte?", "a": ["Latte di mucca", "Latte di capra", "Latte di pecora"], "ok": 0, "info": "Con latte vaccino. La bufala invece usa latte di bufala 🥛"}, {"q": "In che anno l’arte del pizzaiuolo napoletano è entrata nel Patrimonio UNESCO?", "a": ["2017", "1999", "1985"], "ok": 0, "info": "Dal 2017 è Patrimonio Culturale Immateriale dell’Umanità 🌍"}, {"q": "Quali sono i 4 ingredienti dell’impasto napoletano tradizionale?", "a": ["Farina, acqua, sale, lievito", "Farina, uova, latte, sale", "Farina, burro, zucchero, lievito"], "ok": 0, "info": "Pochi ingredienti, tanta pazienza 🌾"}, {"q": "Che forma ha il calzone?", "a": ["A mezzaluna", "Quadrata", "A stella"], "ok": 0, "info": "È la pizza ripiegata a mezzaluna 🌙"}, {"q": "Cosa vuol dire «döner kebab» in turco?", "a": ["Carne che gira", "Pane caldo", "Salsa bianca"], "ok": 0, "info": "La carne gira lentamente sullo spiedo verticale 🥙"}];
+function defs(){var st={};ST.forEach(function(k){st[k]=(D_PH[k]||[]).map(I)});
+ var d={phr:{on:true,sec:6,anim:'fade',spd:350,size:15,mix:true,nmix:3,order:'rnd',imgPos:'top',all:D_ALL.map(I),st:st},
+  fx:{on:true,title:'💡 Lo sapevi?',sec:8,anim:'fade',spd:350,order:'rnd',imgPos:'top',list:D_FX.map(function(f){return I(f[0]+' '+f[1])})},
+  loy:{on:true,title:'Carta Buona Fedeltà',sub:'بطاقة الولاء',theme:'dark',anim:'pop',cele:'clap',celFirst:false,logo:'',banner:'',
+   mGift:'🎁 Hai {regali} da usare nel prossimo ordine!',mPend:'🍕 Le fette di questo ordine arrivano appena il locale lo conferma.',mMiss:'Ancora {n} {fw} e la prossima {premio} è tua! 💪',mCel:'👏 Bravo {nome}! Sei a {fette}/{tot} fette',mWin:'🎉 Hai vinto {premio}!',list:[]}};
+ d.quiz={on:true,title:'🎯 Quiz della Pizza',list:JSON.parse(JSON.stringify(N_QUIZ))};
+ addPack(d);return d;}
+var NOTE='';
+var C=null,tab='phr',lk='__all',pvT=0,E=function(i){return document.getElementById(i)};
+function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+function merge(a,b){Object.keys(b||{}).forEach(function(k){a[k]=b[k]});return a}
+async function load(){C=defs();NOTE='';try{var r=await sb.from('bp36_data').select('data').eq('key',KEY).maybeSingle();var c=r&&r.data&&r.data.data&&r.data.data.cfg;
+ if(c){merge(C.phr,c.phr);merge(C.fx,c.fx);merge(C.loy,c.loy);ST.forEach(function(k){if(!C.phr.st[k])C.phr.st[k]=[]});
+  if(!c.loy||!c.loy.list)C.loy.list=[];C.pack=c.pack||0;
+  if(c.quiz){merge(C.quiz,c.quiz)}
+  if(C.pack<PACK){var n=addPack(C);if(n)NOTE='✨ Aggiunti '+n+' nuovi messaggi · اتضافت '+n+' رسالة جديدة. Premi «💾 Salva» per pubblicarli.'}
+  else if(!c.quiz)NOTE='🎯 Nuovo Quiz pronto · الكويز الجديد جاهز. Premi «💾 Salva» per pubblicarlo.'}
+ else if(r&&!r.error)NOTE='✨ Nuovi messaggi pronti · الرسائل الجديدة جاهزة. Premi «💾 Salva» per pubblicarli.'}catch(e){}}
+function sel(k,v,opts){return '<select data-k="'+k+'">'+opts.map(function(o){return '<option value="'+o[0]+'"'+(String(v)===o[0]?' selected':'')+'>'+o[1]+'</option>'}).join('')+'</select>'}
+function ck(k,v,t){return '<label class="ck w"><input type="checkbox" data-k="'+k+'"'+(v!==false?' checked':'')+'> '+t+'</label>'}
+function num(k,v,t,mn,mx){return '<label>'+t+'<input type="number" data-k="'+k+'" value="'+esc(v)+'" min="'+mn+'" max="'+mx+'"></label>'}
+function txt(k,v,t){return '<label class="w">'+t+'<input type="text" data-k="'+k+'" value="'+esc(v)+'"></label>'}
+var Q='',EI=-1,optOpen=false;
+function list(arr){
+ var h='<div class="lsth"><div class="lc1"><b>'+arr.length+'</b><small>messaggi</small></div><input type="search" data-q placeholder="🔎 Cerca nei messaggi…" value="'+esc(Q)+'"><button type="button" class="addb" data-add="1">＋ Nuovo</button></div><div class="its">';
+ h+=arr.map(function(x,i){var hide=Q&&String(x.t).toLowerCase().indexOf(Q.toLowerCase())<0;
+  return '<div class="it'+(hide?' hid':'')+'" data-open="'+i+'"><span class="no">'+(i+1)+'</span>'+(x.img?'<img class="ith" src="'+x.img+'" alt="">':'')+'<div class="tx">'+(x.t?esc(x.t):'<i>Messaggio vuoto · tocca per scrivere</i>')+'</div><span class="pen">✎</span></div>'}).join('');
+ return h+'</div>'+(arr.length?'':'<div class="emp">Nessun messaggio. Tocca «＋ Nuovo» per scrivere il primo.</div>');}
+function curArr(){return tab==='loy'?C.loy.list:tab==='fx'?C.fx.list:(lk==='__all'?C.phr.all:C.phr.st[lk])}
+function motion(o){return '<details class="opt"'+(optOpen?' open':'')+'><summary>⚙️ Tempi e animazione <small>'+(Number(o.sec)||6)+'s · '+((ANIM.filter(function(a){return a[0]===o.anim})[0]||ANIM[0])[1])+'</small></summary><div class="grp">'+ck('on',o.on,'Mostra sulla pagina di tracking')+num('sec',o.sec,'Cambia ogni (secondi)',2,60)+num('spd',o.spd,'Durata transizione (ms)',100,3000)
+ +'<label>Animazione'+sel('anim',o.anim,ANIM)+'</label><label>Ordine'+sel('order',o.order,[['rnd','Casuale'],['seq','In sequenza']])+'</label><label>Foto'+sel('imgPos',o.imgPos,[['top','Sopra il testo'],['side','Accanto al testo']])+'</label>'}
+function quizHtml(){var z=C.quiz;
+ return '<div class="grp">'+ck('on',z.on,'Mostra il quiz sulla pagina di tracking')+txt('title',z.title,'Titolo del riquadro')+'</div>'
+ +'<div class="lsth"><div class="lc1"><b>'+z.list.length+'</b><small>domande</small></div><span style="flex:1"></span><button type="button" class="addb" data-qzadd="1">＋ Nuova</button></div>'
+ +z.list.map(function(x,i){return '<div class="grp qz" style="margin-top:10px"><label class="w">Domanda '+(i+1)+'<input type="text" data-qz="'+i+'" data-qf="q" value="'+esc(x.q)+'"></label>'
+  +[0,1,2].map(function(j){return '<label class="w"><span><input type="radio" name="qzok'+i+'" data-qz="'+i+'" data-qf="ok" value="'+j+'"'+(Number(x.ok)===j?' checked':'')+'> Risposta '+(j+1)+' <small>(segna quella giusta)</small></span><input type="text" data-qz="'+i+'" data-qf="a'+j+'" value="'+esc((x.a||[])[j]||'')+'"></label>'}).join('')
+  +'<label class="w">Curiosità dopo la risposta<input type="text" data-qz="'+i+'" data-qf="info" value="'+esc(x.info||'')+'"></label>'
+  +'<button type="button" class="secondary" data-qzdel="'+i+'" style="grid-column:1/-1;min-height:44px">🗑 Elimina domanda</button></div>'}).join('');}
+function quizInput(t){var x=C.quiz.list[+t.getAttribute('data-qz')],f=t.getAttribute('data-qf');if(!x)return;if(f==='ok')x.ok=+t.value;else if(f.charAt(0)==='a'){if(!x.a)x.a=['','',''];x.a[+f.charAt(1)]=t.value}else x[f]=t.value}
+function paint(){
+ var b=E('bpTCb'),h='';[].forEach.call(document.querySelectorAll('#bpTC .th [data-tab]'),function(x){x.classList.toggle('on',x.getAttribute('data-tab')===tab)});
+ if(tab==='phr'){var o=C.phr;h='<div class="pv" id="bpTCpv"></div>'+motion(o)+num('size',o.size,'Grandezza testo (px)',11,30)+ck('mix',o.mix,'Mescola anche le frasi generali')+num('nmix',o.nmix,'Quante frasi generali per stato',0,20)+'</div></details>'
+  +'<div class="lkw"><label>📂 Lista'+sel('__lk',lk,[['__all','⭐ Frasi generali (tutti gli stati)']].concat(ST.map(function(s){return [s,'Stato: '+s+' ('+(C.phr.st[s]||[]).length+')']})))+'</label></div>'+list(curArr());}
+ else if(tab==='fx'){var f=C.fx;h='<div class="pv" id="bpTCpv"></div>'+motion(f)+txt('title',f.title,'Titolo del riquadro')+'</div></details>'+list(f.list);}
+ else if(tab==='quiz'){h=quizHtml();}
+ else{var l=C.loy;h='<div class="lcp th-'+esc(l.theme)+'" id="bpTCl">'+(l.banner?'<img src="'+l.banner+'" style="width:100%;max-height:110px;object-fit:cover;border-radius:12px;margin-bottom:8px">':'')+'<b>'+esc(l.title)+'</b><div style="font-size:11px;opacity:.7">'+esc(l.sub)+'</div><div style="font-size:26px;margin-top:6px">🍕🍕🍕<span style="opacity:.25">🍕🍕</span></div></div>'
+  +'<div class="grp">'+ck('on',l.on,'Mostra la carta fedeltà sul tracking')+txt('title',l.title,'Titolo')+txt('sub',l.sub,'Sottotitolo')
+  +'<label>Colore'+sel('theme',l.theme,[['dark','Cioccolato'],['gold','Oro'],['red','Rosso'],['green','Verde'],['blue','Blu'],['light','Chiaro']])+'</label>'
+  +'<label>Animazione fette'+sel('anim',l.anim,[['pop','Pop'],['bounce','Cade e rimbalza'],['spin','Gira'],['glow','Brilla sempre']])+'</label>'
+  +'<label>Festa (nuove fette)'+sel('cele',l.cele,[['clap','👏 Applausi'],['confetti','🎊 Coriandoli'],['stars','⭐ Stelle'],['pizza','🍕 Pioggia di pizza'],['none','Nessuna']])+'</label>'
+  +'<label><span>&nbsp;</span><button type="button" id="bpTCtest" class="secondary">▶ Prova festa</button></label>'
+  +ck('celFirst',l.celFirst,'Festa anche all’apertura della pagina (se ha già fette)')
+  +'<label class="w">Logo<div style="display:flex;gap:6px"><div class="im" data-limg="logo"'+(l.logo?' style="background-image:url('+l.logo+')"':'')+'>'+(l.logo?'':'🖼️')+'</div><div class="im" data-limg="banner" style="flex:1;'+(l.banner?'background-image:url('+l.banner+')':'')+'">'+(l.banner?'':'🖼️ Banner')+'</div></div></label>'
+  +txt('mMiss',l.mMiss,'Messaggio fette mancanti')+txt('mGift',l.mGift,'Messaggio regalo disponibile')+txt('mPend',l.mPend,'Messaggio ordine in attesa')+txt('mCel',l.mCel,'Messaggio festa (nuove fette)')+txt('mWin',l.mWin,'Messaggio festa (regalo vinto)')
+  +'<div class="hint w" style="grid-column:1/-1">Segnaposto: {n} fette mancanti · {fw} fetta/fette · {premio} · {regali} · {fette} · {tot} · {nome}</div></div>'
+  +'<div class="hint" style="margin-top:14px"><b>💌 Messaggi Carta fedeltà · رسائل كارت الولاء</b></div>'+list(l.list);}
+ if(NOTE)h='<div class="hint" role="status" style="background:#ecfdf3;color:#05603a;border-radius:12px;padding:10px 12px;font-weight:800">'+esc(NOTE)+'</div>'+h;
+ b.innerHTML=h;pv();
+}
+function obj(){return C[tab]}
+function swap(el,x,o,first){var html=(x.img?'<img class="mi" src="'+x.img+'">':'')+'<span>'+esc(x.t)+'</span>',spd=Number(o.spd)||350;el.style.setProperty('--spd',spd+'ms');el.classList.toggle('side',o.imgPos==='side');
+ if(first||o.anim==='none'){el.innerHTML=html;return}
+ if(o.anim==='type'){el.innerHTML=html;var s=el.querySelector('span'),full=x.t||'',i=0;s.textContent='';clearInterval(el._tw);el._tw=setInterval(function(){if(i>=full.length)return clearInterval(el._tw);s.textContent=full.slice(0,++i)},Math.max(15,Math.min(60,spd/Math.max(1,full.length)*4)));return}
+ var a=AN[o.anim]||AN.fade;el.style.setProperty('--ao',a[0]);el.style.setProperty('--ai',a[1]);el.classList.remove('bptc-a-in');el.classList.add('bptc-a-out');
+ setTimeout(function(){el.innerHTML=html;el.classList.remove('bptc-a-out');void el.offsetWidth;el.classList.add('bptc-a-in')},spd)}
+function pv(){clearInterval(pvT);var el=E('bpTCpv');if(!el)return;var o=obj(),arr=curArr().filter(function(x){return x.t||x.img}),i=0;if(tab==='phr')el.style.fontSize=(Number(o.size)||15)+'px';
+ if(!arr.length){el.textContent='(lista vuota)';return}swap(el,arr[0],o,true);pvT=setInterval(function(){if(!E('bpTCpv'))return clearInterval(pvT);i=(i+1)%arr.length;swap(el,arr[i],o)},Math.max(2,Number(o.sec)||6)*1000)}
+function pick(cb){var f=document.createElement('input');f.type='file';f.accept='image/*';f.onchange=function(){var fl=f.files[0];if(!fl)return;var rd=new FileReader();rd.onload=function(){var im=new Image();im.onload=function(){var m=480,k=Math.min(1,m/Math.max(im.width,im.height)),c=document.createElement('canvas');c.width=Math.round(im.width*k);c.height=Math.round(im.height*k);c.getContext('2d').drawImage(im,0,0,c.width,c.height);cb(c.toDataURL('image/jpeg',.72))};im.src=rd.result};rd.readAsDataURL(fl)};f.click()}
+function cele(kind){var Em={clap:['👏','🙌','🍕'],stars:['⭐','✨','🌟'],pizza:['🍕','🔥'],confetti:['🎊','🎉','✨']}[kind];if(!Em)return;for(var i=0;i<24;i++){var d=document.createElement('i');d.className='bptc-cel';d.textContent=Em[i%Em.length];d.style.left=Math.random()*96+'vw';d.style.animationDuration=(1.6+Math.random()*1.2)+'s';d.style.animationDelay=(Math.random()*.6)+'s';document.body.appendChild(d);setTimeout(function(x){x.remove()},3600,d)}}
+async function save(){var b=E('bpTCs'),st=E('bpTCst');var js=JSON.stringify(C);if(js.length>1500000){alert('⚠️ Troppe foto o foto troppo grandi ('+Math.round(js.length/1024)+' KB). Togline qualcuna.');return}
+ b.disabled=true;b.textContent='Salvataggio…';try{var r=await sb.from('bp36_data').upsert({key:KEY,data:{cfg:C},updated_at:new Date().toISOString()});if(r&&r.error)throw r.error;b.textContent='✅ Salvato · تم الحفظ';if(NOTE){NOTE='';paint()}setTimeout(function(){b.textContent='💾 Salva'},1800)}
+ catch(e){alert('❌ Non salvato: '+((e&&e.message)||e));b.textContent='💾 Salva'}b.disabled=false}
+var EMO=['🍕','🔥','😋','🤌','❤️','👨‍🍳','👍','😄','🎉','🙏','⏳','🛵','🧀','🍅','🌶️','🥙','🍟','✨','💪','👀'];
+function edPv(){var x=curArr()[EI];if(!x)return;var o=obj(),pv=E('bpTCepv');var inner=(x.img?'<img class="mi" src="'+x.img+'">':'')+'<span>'+(esc(x.t)||'<i style="opacity:.5">Scrivi qui sotto…</i>')+'</span>';
+ pv.className='epv'+(tab==='fx'?' fx':'')+(o.imgPos==='side'?' side':'');pv.innerHTML=tab==='fx'?'<small>'+esc(C.fx.title||'💡 Lo sapevi?')+'</small><p>'+inner+'</p>':inner;
+ if(tab==='phr')pv.style.fontSize=(Number(o.size)||15)+'px';else pv.style.fontSize='';
+ var n=String(x.t||'').length,c=E('bpTCecnt');c.textContent=n+' caratteri'+(n>(tab==='fx'?140:80)?' · un po’ lungo, si legge meglio corto':'');c.className='ecnt'+(n>(tab==='fx'?140:80)?' warn':'');}
+function edOpen(i){var arr=curArr();if(i<0||i>=arr.length)return;EI=i;var e=E('bpTCe');e.classList.add('on');
+ E('bpTCeh').textContent=(tab==='fx'?'Curiosità ':'Messaggio ')+(i+1)+' / '+arr.length;var x=arr[i],ta=E('bpTCet');ta.value=x.t||'';
+ E('bpTCeimg').textContent=x.img?'🗑 Togli foto':'🖼️ Aggiungi foto';edPv();setTimeout(function(){ta.focus();ta.setSelectionRange(ta.value.length,ta.value.length)},60);}
+function edClose(){var e=E('bpTCe');if(e)e.classList.remove('on');EI=-1;paint();}
+function build(){var m=document.createElement('div');m.id='bpTC';m.className='hide';
+ m.innerHTML='<div class="tb"><div class="th"><b>📱 Pagina tracking · رسائل صفحة المتابعة</b><button type="button" data-tab="phr">💬 Frasi</button><button type="button" data-tab="fx">💡 Lo sapevi?</button><button type="button" data-tab="loy">🍕 Carta fedeltà</button><button type="button" data-tab="quiz">🎯 Quiz</button></div><div class="tbd" id="bpTCb"></div>'
+ +'<div class="esh" id="bpTCe"><div class="ebx"><div class="ehd"><button type="button" data-ego="-1" aria-label="Precedente">‹</button><b id="bpTCeh"></b><button type="button" data-ego="1" aria-label="Successivo">›</button><button type="button" class="edone" data-edone="1">✓ Fatto</button></div>'
+ +'<div class="estage"><div class="elab">👁 Così lo vede il cliente</div><div id="bpTCepv" class="epv"></div></div>'
+ +'<textarea id="bpTCet" placeholder="Scrivi il messaggio…"></textarea><div id="bpTCecnt" class="ecnt"></div>'
+ +'<div class="emo">'+EMO.map(function(x){return '<button type="button" data-emo="'+x+'">'+x+'</button>'}).join('')+'</div>'
+ +'<div class="eact"><button type="button" id="bpTCeimg" data-eimg="1"></button><button type="button" data-emv="-1">↑ Sposta su</button><button type="button" data-emv="1">↓ Sposta giù</button><button type="button" class="edel" data-edel="1">🗑 Elimina</button></div></div></div>'
+ +'<div class="tf"><button type="button" class="secondary" id="bpTCx">Chiudi</button><button type="button" class="secondary" id="bpTCr">↺ Predefiniti</button><button type="button" id="bpTCs">💾 Salva</button></div></div>';
+ document.body.appendChild(m);
+ m.addEventListener('click',function(e){var t=e.target;if(t===m)return close();var tb=t.closest('.th [data-tab]');if(tb){tab=tb.getAttribute('data-tab');paint();return}
+  var arr=curArr(),a;
+  if(t.closest('[data-qzadd]')){C.quiz.list.unshift({q:'',a:['','',''],ok:0,info:''});paint();return}
+  if((a=t.closest('[data-qzdel]'))){if(confirm('Eliminare questa domanda?')){C.quiz.list.splice(+a.getAttribute('data-qzdel'),1);paint()}return}
+  if((a=t.closest('[data-add]'))){arr.push(I(''));Q='';paint();edOpen(arr.length-1);return}
+  if((a=t.closest('[data-open]'))){edOpen(+a.getAttribute('data-open'));return}
+  if(t.closest('[data-edone]')||t.id==='bpTCe'){edClose();return}
+  if((a=t.closest('[data-ego]'))){var ni=EI+(+a.getAttribute('data-ego'));if(ni>=0&&ni<arr.length)edOpen(ni);return}
+  if((a=t.closest('[data-emo]'))){var ta=E('bpTCet'),st=ta.selectionStart||ta.value.length,en=ta.selectionEnd||st,em=a.getAttribute('data-emo');ta.value=ta.value.slice(0,st)+em+ta.value.slice(en);arr[EI].t=ta.value;ta.focus();ta.setSelectionRange(st+em.length,st+em.length);edPv();return}
+  if(t.closest('[data-eimg]')){var x0=arr[EI];if(x0.img){x0.img='';edOpen(EI)}else pick(function(u){x0.img=u;edOpen(EI)});return}
+  if((a=t.closest('[data-emv]'))){var d=+a.getAttribute('data-emv'),k2=EI+d;if(k2>=0&&k2<arr.length){var y=arr[EI];arr[EI]=arr[k2];arr[k2]=y;edOpen(k2)}return}
+  if(t.closest('[data-edel]')){if(confirm('Eliminare questo messaggio?')){arr.splice(EI,1);if(!arr.length){edClose();return}edOpen(Math.min(EI,arr.length-1))}return}
+  if((a=t.closest('summary'))){setTimeout(function(){var d2=document.querySelector('#bpTC details.opt');optOpen=!!(d2&&d2.open)},0)}
+  if((a=t.closest('[data-del]'))){arr.splice(+a.getAttribute('data-del'),1);paint();return}
+  if((a=t.closest('[data-up]'))){var i=+a.getAttribute('data-up');if(i>0){var x=arr[i];arr[i]=arr[i-1];arr[i-1]=x;paint()}return}
+  if((a=t.closest('[data-img]'))){var j=+a.getAttribute('data-img');if(arr[j].img){if(confirm('Togliere la foto?')){arr[j].img='';paint()}}else pick(function(u){arr[j].img=u;paint()});return}
+  if((a=t.closest('[data-limg]'))){var k=a.getAttribute('data-limg');if(C.loy[k]){if(confirm('Togliere la foto?')){C.loy[k]='';paint()}}else pick(function(u){C.loy[k]=u;paint()});return}
+  if(t.id==='bpTCtest')cele(C.loy.cele)});
+ m.addEventListener('input',function(e){var t=e.target;if(t.hasAttribute('data-qz')){quizInput(t);return}if(t.id==='bpTCet'&&EI>=0){curArr()[EI].t=t.value;edPv();return}
+  if(t.hasAttribute('data-q')){Q=t.value;[].forEach.call(document.querySelectorAll('#bpTCb .it'),function(r){var x=curArr()[+r.getAttribute('data-open')];r.classList.toggle('hid',!!Q&&String(x&&x.t||'').toLowerCase().indexOf(Q.toLowerCase())<0)});return}});
+ m.addEventListener('change',function(e){var t=e.target,k=t.getAttribute('data-k');if(t.hasAttribute('data-qz')){quizInput(t);return}if(t.hasAttribute('data-t')){pv();return}if(!k)return;
+  if(k==='__lk'){lk=t.value;Q='';paint();return}
+  var o=obj(),v=t.type==='checkbox'?t.checked:(t.type==='number'?Number(t.value):t.value);o[k]=v;if(tab==='loy'&&/^(theme|title|sub)$/.test(k))paint();else pv()});
+ E('bpTCx').onclick=close;E('bpTCs').onclick=save;E('bpTCr').onclick=function(){if(confirm('Ripristinare le frasi e le impostazioni predefinite? (poi premi Salva)')){C=defs();paint()}};}
+function close(){clearInterval(pvT);var e0=E('bpTCe');if(e0)e0.classList.remove('on');EI=-1;var m=E('bpTC');if(m)m.classList.add('hide')}
+async function open(){if(!E('bpTC'))build();var m=E('bpTC');m.classList.remove('hide');E('bpTCb').innerHTML='<div class="hint">Caricamento…</div>';await load();paint()}
+window.bpOpenTrackCfg=open;
+function mount(){var grid=document.querySelector('#settingsTab .bp-set-grid');if(!grid||E('bpTCcard'))return;var c=document.createElement('div');c.className='bp-set-card';c.id='bpTCcard';c.style.borderTopColor='#a8291f';
+ c.innerHTML='<div class="bp-set-head"><span class="bp-set-ico" style="background:#fff1ec;color:#a8291f">📱</span><h3>Pagina tracking · رسائل صفحة المتابعة</h3></div><p class="bp-set-desc">Frasi, «Lo sapevi?», foto, animazioni, tempi e carta fedeltà che il cliente vede mentre aspetta l’ordine.</p><button type="button" style="min-height:44px;font-weight:900;width:100%">✏️ Personalizza</button>';
+ var ob=c.querySelector('button:not(.bp-rm)');if(ob)ob.onclick=open;grid.appendChild(c)}
+setInterval(mount,1500);
+})()}catch(e){console.error('[bp] track cfg',e)}
+</script>
+<!-- BP-TRACKCFG:END -->
 </body>
 </html>
