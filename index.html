@@ -4799,9 +4799,14 @@ html body #resPanel,html body #bpCamOv,html body #bpInk{padding-top:env(safe-are
  Analisi ed estrazione automatica dei dati in corso...
  </span>
  </div>
+ <div style="display:flex;flex-direction:column;gap:6px;flex:none">
+ <button class="secondary btn-sm" id="orderImgRetry" onclick="retryOrderImage()" type="button" title="Rimanda la stessa foto all'AI · أعد قراءة نفس الصورة">
+ 🔄 Rileggi
+ </button>
  <button class="secondary btn-sm" onclick="el('imagePreviewBar').classList.add('hidden')" type="button">
  ✖
  </button>
+ </div>
  </div>
  <div class="voice-input-row">
  <textarea id="voiceSmartInput" placeholder="📝 Incolla qui un testo WhatsApp, usa il microfono 🎤 o incolla una foto (Ctrl+V). Es: 'Marco, via Roma 10 Lodi Vecchio, tel 3331234567, per le 20:30 consegna 2 Margherita, 1 Panino Kebab senza cipolla più patatine pago con 50 euro'"></textarea>
@@ -7172,9 +7177,9 @@ function rdTimerInfo(o){
  if(m){
  var d = new Date(created); d.setHours(Number(m[1]), Number(m[2]), 0, 0);
  if(o.is_scheduled && o.scheduled_at){ var sd = new Date(o.scheduled_at); if(!isNaN(sd.getTime())) d = sd; }
- var diff = d.getTime() - now;
- if(diff > 600000) return {cls: "ok", main: "⏳ " + rdFmt(diff), sub: pre + " · ore " + t};
- if(diff > 0) return {cls: "warn", main: "🔥 " + rdFmt(diff), sub: pre + " · ore " + t};
+ var diff = d.getTime() - now - (deliv ? (Number(window.BP_DEP_LEAD_MIN) || 0) * 60000 : 0); /* consegne: conto alla rovescia fino all'USCITA */
+ if(diff > 600000) return {cls: "ok", main: "⏳ " + rdFmt(diff), sub: (deliv ? "all'uscita · consegna" : pre) + " · ore " + t};
+ if(diff > 0) return {cls: "warn", main: "🔥 " + rdFmt(diff), sub: (deliv ? "all'uscita · consegna" : pre) + " · ore " + t};
  return {cls: "late", main: "🚨 +" + rdFmt(diff), sub: "IN RITARDO · " + lbl + " ore " + t};
  }
  var el_ = now - created;
@@ -7494,6 +7499,22 @@ function compressImageToBase64(file, maxSide=2000){
  });
 }
 
+
+/* Rileggi: rimanda all'AI la stessa foto già caricata (utile se la prima lettura è stata interrotta o è andata male) */
+async function retryOrderImage(){
+ var c = window.__bpLastOrderImg, st = el('orderImgStatus'), btn = el('orderImgRetry');
+ if(!c){ if(st) st.textContent = '⚠️ Nessuna foto salvata: caricala di nuovo.'; return; }
+ var apiKey = (el('geminiApiKey')?.value || localStorage.getItem('bp_gemini_key') || '').trim();
+ if(!apiKey){ try{ el('aiKeyBox').classList.remove('hidden'); el('geminiApiKey').focus(); }catch(e){} if(st) st.textContent = '🔑 Inserisci la Gemini API Key per rileggere la foto.'; return; }
+ if(btn){ if(btn.disabled) return; btn.disabled = true; }
+ if(st) st.textContent = '⏳ Rilettura della stessa foto in corso...';
+ try{
+  await analyzeMediaOrTextWithGemini({type: 'image', base64: c.base64, mimeType: c.mimeType}, apiKey);
+ }catch(e){ if(st) st.textContent = '❌ ' + (e && e.message ? e.message : 'Errore') + ' — riprova con «Rileggi».'; }
+ finally{ if(btn) btn.disabled = false; }
+}
+window.retryOrderImage = retryOrderImage;
+
 async function processUploadedOrderImage(file){
  let apiKey = (el('geminiApiKey')?.value || localStorage.getItem('bp_gemini_key') || '').trim();
  let compressed;
@@ -7501,6 +7522,7 @@ async function processUploadedOrderImage(file){
  catch(e){ el('orderImgStatus').textContent = '❌ Immagine non leggibile: ' + e.message; return; }
 
  el('orderImgThumb').src = compressed.dataUrl;
+ window.__bpLastOrderImg = compressed; /* ultima foto: «Rileggi» la rimanda all'AI senza ricaricarla */
  el('imagePreviewBar').classList.remove('hidden');
 
  if(!apiKey){
@@ -7521,6 +7543,8 @@ async function processUploadedOrderImage(file){
 
 /* ================= CALCOLO URGENZA & ORDINAMENTO AUTOMATICO PER ORARIO DI CONSEGNA ================= */
 function __fmMin(n){ n = Math.abs(n); return n >= 60 ? Math.floor(n / 60) + 'h ' + (n % 60) + 'min' : n + ' min'; }
+/* Anticipo di uscita per le CONSEGNE: l'orario del cliente = consegnato al cliente; l'ordine deve essere pronto e il fattorino parte N minuti prima (default 5) */
+window.BP_DEP_LEAD_MIN = (function(){ try{ var r = localStorage.getItem('bp_dep_lead_min'), v = Number(r); if(r !== null && v >= 0 && v <= 30) return v; }catch(e){} return 5; })();
 function getOrderUrgencyMeta(o){
  var parsed = splitTimeAndNotes(o.notes), tStr = parsed.time || 'Prima possibile';
  var st = normStatus(o.status), isDone = ['Completato','Annullato'].indexOf(st) >= 0;
@@ -7537,7 +7561,9 @@ function getOrderUrgencyMeta(o){
  badgeText: late ? '🚨 SUBITO (attesa ' + wait + ' min)' : '⚡ SUBITO (' + wait + ' min fa)'};
  }
  var d = new Date(created); d.setHours(Number(m[1]), Number(m[2]), 0, 0);
- var tgt = isNaN(schedTs) ? d.getTime() : schedTs, diff = Math.round((tgt - now) / 60000), tm = tgt / 60000;
+ var tgt = isNaN(schedTs) ? d.getTime() : schedTs;
+  var __isDel = /consegna|domicilio/i.test(o.order_type || ''), __lead = (__isDel && !isDone) ? (Number(window.BP_DEP_LEAD_MIN) || 0) : 0, __dep = tgt - __lead * 60000; /* uscita = consegna − anticipo */
+  var diff = Math.round((__dep - now) / 60000), tm = __dep / 60000;
  if(!isNaN(schedTs) && !isDone && diff > 0 && new Date(schedTs).toDateString() !== new Date(now).toDateString()){
   var __d0 = new Date(now); __d0.setHours(0,0,0,0); var __d1 = new Date(schedTs); __d1.setHours(0,0,0,0);
   var __days = Math.round((__d1.getTime() - __d0.getTime()) / 86400000);
@@ -7546,11 +7572,11 @@ function getOrderUrgencyMeta(o){
  if(!isDone && st !== 'In consegna' && window.bpShiftHides && window.bpShiftHides(tgt, diff)) return {type:'future', shiftHidden:true, timeLabel:tStr, sortMinutes:tm, diffMinutes:diff, isUrgent:false, isOverdue:false, cardClass:'', badgeClass:'urg-badge-scheduled', badgeText: window.bpShiftBadge(tgt, diff, tStr)};
  if(isDone) return {type:'done', timeLabel:tStr, sortMinutes:tm, diffMinutes:diff, isUrgent:false, isOverdue:false, cardClass:'', badgeClass:'time-badge', badgeText:'⏰ ' + tStr};
  if(diff < 0) return {type:'overdue', timeLabel:tStr, sortMinutes: tm - 1000000, diffMinutes:diff, isUrgent:true, isOverdue:true,
- cardClass:'urg-overdue', badgeClass:'urg-badge-overdue', badgeText:'🚨 ' + tStr + ' · IN RITARDO DI ' + __fmMin(diff)};
+ cardClass:'urg-overdue', badgeClass:'urg-badge-overdue', badgeText:'🚨 ' + tStr + (__isDel ? ' · DOVEVI USCIRE ' + __fmMin(diff) + ' FA' : ' · IN RITARDO DI ' + __fmMin(diff))};
  if(diff <= 25) return {type:'soon', timeLabel:tStr, sortMinutes:tm, diffMinutes:diff, isUrgent:true, isOverdue:false,
- cardClass:'urg-soon', badgeClass:'urg-badge-soon', badgeText: diff === 0 ? '🔥 ' + tStr + ' · ADESSO!' : '🔥 ' + tStr + ' · tra ' + diff + ' min'};
+ cardClass:'urg-soon', badgeClass:'urg-badge-soon', badgeText: __isDel ? (diff === 0 ? '🔥 ' + tStr + ' · ESCI ORA!' : '🔥 ' + tStr + ' · esci tra ' + diff + ' min') : (diff === 0 ? '🔥 ' + tStr + ' · ADESSO!' : '🔥 ' + tStr + ' · tra ' + diff + ' min')};
  return {type:'scheduled', timeLabel:tStr, sortMinutes:tm, diffMinutes:diff, isUrgent:false, isOverdue:false,
- cardClass:'', badgeClass:'urg-badge-scheduled', badgeText:'⏰ ' + tStr + ' (tra ' + __fmMin(diff) + ')'};
+ cardClass:'', badgeClass:'urg-badge-scheduled', badgeText:'⏰ ' + tStr + (__isDel ? ' (esci tra ' : ' (tra ') + __fmMin(diff) + ')'};
 }
 
 function sortOpenOrdersList(list){
@@ -7610,7 +7636,7 @@ function checkUrgentOrdersAlert(openList){
  parts.push(`🚨 ${overdueList.length} in ritardo (${overdueList.map(x=>`#${x.order.id} ore ${x.meta.timeLabel}`).join(', ')})`);
  }
  if(soonList.length){
- parts.push(`🔥 ${soonList.length} in consegna entro 20 min (${soonList.map(x=>`#${x.order.id} ore ${x.meta.timeLabel}`).join(', ')})`);
+ parts.push(`🔥 ${soonList.length} da far uscire entro 20 min (${soonList.map(x=>`#${x.order.id} ore ${x.meta.timeLabel}`).join(', ')})`);
  }
 
  el('urgencyBannerTitle').textContent = overdueList.length
@@ -8711,10 +8737,35 @@ function gemRomeTimePlus(minutes){
 }
 
 /* Prosciutto = Prosciutto cotto: sulla pizza Prosciutto (non crudo) l'extra "prosciutto"/"prosciutto cotto"/"cotto" e' l'ingrediente base, mai un'aggiunta */
-function gemDedupeBaseExtras(prodName, add){
+function gemDedupeBaseExtras(prodName, add, prod){
   const nm = String(prodName || '').toLowerCase();
-  if(!/prosciutto/.test(nm) || /crudo/.test(nm)) return add || [];
-  return (add || []).filter(a => !/^\s*(prosciutto(\s+cotto)?|cotto)\s*$/i.test(String(a).normalize('NFD').replace(/[\u0300-\u036f]/g, '')));
+  let out = add || [];
+  if(/prosciutto/.test(nm) && !/crudo/.test(nm)) out = out.filter(a => !/^\s*(prosciutto(\s+cotto)?|cotto)\s*$/i.test(String(a).normalize('NFD').replace(/[\u0300-\u036f]/g, '')));
+  /* Ordini piattaforma (Deliveroo/Glovo/Just Eat) e AI: «+cipolla +piccante» su un prodotto che LI HA GIA' nella ricetta non è un'aggiunta a pagamento.
+     Si tolgono gli extra i cui ingredienti sono tutti già nella descrizione del prodotto (anche per «Menu X» → si guarda il prodotto base «X»).
+     «doppia/extra/più…» restano extra veri. */
+  try{
+    const STOP = /^(di|del|della|dei|al|alla|e|con|il|la|lo|le|un|una)$/;
+    const tok = t => ingNorm(t).replace(/[^a-z0-9 ]/g, ' ').split(' ').filter(w => w && !STOP.test(w)).map(w => w.length > 3 ? w.replace(/[aeio]$/, '') : w);
+    let base = [];
+    const descOf = p => (p && p.description) ? parseIngredients(p.description) : [];
+    base = descOf(prod);
+    if(!base.length){
+      const plain = String(prodName || '').replace(/^\s*men[uù]\s+/i, '').trim().toLowerCase();
+      const alt = (typeof allMenu !== 'undefined' ? allMenu : []).find(p => String(p.name || '').trim().toLowerCase() === plain && p !== prod);
+      base = descOf(alt);
+    }
+    const bt = new Set(); base.forEach(x => tok(x).forEach(w => bt.add(w)));
+    if(bt.size){
+      out = out.filter(a => {
+        const raw = ingNorm(a);
+        if(/\b(doppi[ao]|extra|piu|ancora|abbondante|tanta|tanto)\b/.test(raw)) return true;
+        const t = tok(a); if(!t.length) return true;
+        return !t.every(w => bt.has(w));
+      });
+    }
+  }catch(e){ try{ bpWarn(e); }catch(_e){} }
+  return out;
 }
 
 /* MENU DISTRIBUTIVO: "due menu pizza: una X e una Y" => il Menu vale per TUTTE le pizze Normale fino a coprire il numero richiesto */
@@ -8813,7 +8864,7 @@ function gemNormalizeOrder(o){
     if(size !== 'Normale') isMenu = false;
     const mods = gemParseMods([str(r.modifiche), __tail].filter(Boolean).join(', '));
     const __pm = menuList.find(p => gemNorm(p.name) === gemNorm(nome));
-    mods.add = gemDedupeBaseExtras(__pm ? __pm.name : nome, mods.add);
+    mods.add = gemDedupeBaseExtras(__pm ? __pm.name : nome, mods.add, __pm);
     return {
       name: nome,
       quantity: Math.max(parseInt(r.quantita, 10) || 1, 1),
@@ -9863,7 +9914,7 @@ function gemCommitOrder(parsed, finalRows, skipped, learned){
  let rem = (Array.isArray(r.rem) ? r.rem : []).map(cleanIng).filter(Boolean);
  let add = (Array.isArray(r.add) ? r.add : []).map(cleanIng).filter(Boolean);
  try{ if(window.bpSmartExtras){ let __rr = window.bpSmartExtras([...rem.map(x => 'senza ' + x), ...add].join(' '), prod, rem, add); rem = __rr.removed; add = __rr.added; } }catch(_e){}
- add = gemDedupeBaseExtras(prod.name, add);
+ add = gemDedupeBaseExtras(prod.name, add, prod);
  const __before = new Map(); cart.forEach((v, k) => __before.set(k, v.qty));
 addVoiceItemToCart(prod, size, price, qty, rem, add);
 // chiave REALE della riga nel carrello (con extra a pagamento la chiave cambia: ingredienti canonici + "ext2"), cosi' Menu/Baby si applicano alla riga giusta
@@ -39060,11 +39111,11 @@ html body #newTab #bpmGrid .bpm-tile .bp-prep .pp-t,html body #newTab #bpmGrid .
   if(!groups.length&&!unknown.length) h+='<div style="margin-top:6px;color:#667085">'+esc(bi('Nessuna consegna aperta.','لا توجد أوردرات توصيل مفتوحة.'))+'</div>';
   groups.forEach(function(g,i){
    var lo=Math.min.apply(null,g.map(function(x){return x.t;})), hi=Math.max.apply(null,g.map(function(x){return x.t;})), dep=cfg.dir==='late'?hi:lo;
-   h+='<div style="margin-top:8px;padding:8px;border-radius:12px;background:#fff;border:1px solid #d6bbfb"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><b>'+esc(bi('Giro','خط'))+' '+(i+1)+(g.length>1?' · '+g.length+' '+esc(bi('consegne','توصيلات')):' · '+esc(bi('da solo','لوحده')))+' · '+esc(bi('esce alle','يخرج الساعة'))+' '+hhmm(dep)+' · '+money(g)+'</b>'
+   h+='<div style="margin-top:8px;padding:8px;border-radius:12px;background:#fff;border:1px solid #d6bbfb"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><b>'+esc(bi('Giro','خط'))+' '+(i+1)+(g.length>1?' · '+g.length+' '+esc(bi('consegne','توصيلات')):' · '+esc(bi('da solo','لوحده')))+' · '+esc(bi('esce alle','يخرج الساعة'))+' '+hhmm(dep-(window.BP_DEP_LEAD_MIN||0))+' · '+money(g)+'</b>'
     +(g.length>1?'<button data-g="'+i+'" style="padding:8px 12px;border-radius:10px;border:0;background:#7a5af8;color:#fff;font-weight:700">'+esc(bi('Crea giro','اعمل خط'))+'</button>':'')+'</div>';
    g.forEach(function(x){
     var mv=x.t>dep?' <span style="color:#b54708">⏩ '+esc(bi('anticipa da '+hhmm(x.t)+' a '+hhmm(dep),'قدّمه من '+hhmm(x.t)+' إلى '+hhmm(dep)))+'</span>':(x.t<dep?' <span style="color:#b54708">⏪ '+esc(bi('posticipa da '+hhmm(x.t)+' a '+hhmm(dep),'أخّره من '+hhmm(x.t)+' إلى '+hhmm(dep)))+'</span>':'');
-    var late=(nowM-x.t)>=5&&(nowM-x.t)<180;
+    var late=(nowM-(x.t-(window.BP_DEP_LEAD_MIN||0)))>=5&&(nowM-x.t)<180;
     h+='<div style="margin-top:4px">• #'+esc(x.id)+' · '+hhmm(x.t)+(x.name?' · '+esc(x.name):'')+' · '+esc(x.addr)+(late?' <b style="color:#d92d20">🔴 '+esc(bi('in ritardo','متأخر'))+'</b>':'')+(x.d!=null?' <span style="color:#667085">('+Math.round(x.d*1000)+' m)</span>':'')+mv+'</div>';
    });
    h+='</div>';
@@ -41349,7 +41400,7 @@ body[data-role="pizzaiolo"] #bpPZ .pz-fin{display:block}
 (function(){
 if(window.__bpPZ) return; window.__bpPZ = 1;
 var K_LOCAL='bp_pz_local', K_ENF='bp_pz_enforce', K_CAP='bp_pz_cap', K_FS='bp_pz_f', K_VIEW='bp_pz_view';
-var BAKE_WINDOW_MIN = 15, PER_PIZZA_MIN = 1.2, DELIVERY_MIN = 10;
+var BAKE_WINDOW_MIN = 15, PER_PIZZA_MIN = 1.2, DELIVERY_MIN = (window.BP_DEP_LEAD_MIN != null ? Number(window.BP_DEP_LEAD_MIN) : 5);
 var PAL = [['#1f7a9e','#fff'],['#e0a21a','#1b1500'],['#c2457c','#fff'],['#3c9a5f','#fff'],['#7b5cc9','#fff'],['#d9622b','#fff'],['#2e8f8f','#fff'],['#a8a23a','#1b1500']];
 var hasDoc = (typeof document !== 'undefined' && document && document.body);
 var colMissing = false, pz = null, tick = 0, sig = '', force = 0, seen = null, chain = Promise.resolve(), wake = null;
@@ -41484,17 +41535,18 @@ var RANK = {late: 0, now: 1, soon: 2, later: 3};
 function isFresh(id){ var t = newIds[id]; return !!(t && Date.now() - t < 9000); }
 function fm(n){ n = Math.abs(n); return n >= 60 ? Math.floor(n / 60) + 'h' + pad2(n % 60) : n + '′'; }
 function etaMin(x, now){ return isNaN(x.tg.ms) ? null : Math.round((x.tg.ms - now) / 60000); }
+function depMin(x, now){ var e = etaMin(x, now); return e === null ? null : e - (x.ds && x.ds.k === 'dom' ? DELIVERY_MIN : 0); } /* minuti all'USCITA per le consegne */
 function urg(x, now){
   if(x.st === 'Pronto' || (x.all && (!x.kit || x.kd))) return 'done';
   if(x.all) return 'wait';
-  var e = etaMin(x, now);
+  var e = depMin(x, now);
   if(e !== null && e < -2) return 'late';
   if(x.start <= now) return 'now';
   if(x.start - now <= 10 * 60000) return 'soon';
   return 'later';
 }
 function badge(x, now){
-  var u = urg(x, now), e = etaMin(x, now);
+  var u = urg(x, now), e = depMin(x, now);
   if(u === 'done') return '<span class="pz-bd g">✅ PRONTO</span>';
   if(u === 'wait') return '<span class="pz-bd w">⏳ attende cucina</span>';
   if(u === 'late') return '<span class="pz-bd r">⚠️ RITARDO ' + fm(e) + '</span>';
@@ -41973,7 +42025,7 @@ init();
 (function(){
 if(window.__bpOV) return;
 var P = window.__pz, H = P && P.h; if(!H) return; window.__bpOV = 1;
-var SLOT = 15 * 60000, DOM_LEAD = 10 * 60000, CAP_KEY = 'bp_pz_cap';
+var SLOT = 15 * 60000, DOM_LEAD = (window.BP_DEP_LEAD_MIN != null ? Number(window.BP_DEP_LEAD_MIN) : 5) * 60000, CAP_KEY = 'bp_pz_cap';
 var hasDoc = (typeof document !== 'undefined' && document && document.body);
 var ov = null, timer = 0, openSlot = null;
 function $(s, r){ if(!hasDoc) return null; return (r || document).querySelector(s); }
