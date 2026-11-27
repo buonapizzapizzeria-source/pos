@@ -1,4 +1,4 @@
-const CACHE = 'bp-pos-v242';
+const CACHE = 'bp-pos-v243';
 // v237: anche i file accanto alla pagina (images.js, manifest, icona) restano in cache per l'offline
 const ASSETS = ['images.js', 'manifest.json', 'apple-touch-icon.png'];
 const CDN = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2';
