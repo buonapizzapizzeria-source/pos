@@ -32,12 +32,59 @@ h1{font-size:22px;margin:0 0 4px}
 .cancel .big{filter:grayscale(1)}
 .rb{display:block;text-align:center;margin-top:14px;padding:12px;border-radius:12px;background:var(--ok);color:#fff;font-weight:800;text-decoration:none}
 @keyframes bpflash{0%{box-shadow:0 0 0 0 rgba(18,183,106,.7)}100%{box-shadow:0 0 0 22px rgba(18,183,106,0)}}.bpflash{animation:bpflash 1.1s ease-out 2}
+.lc{background:linear-gradient(160deg,#3b1e15,#220f09);color:#fff;border-radius:20px;padding:14px 14px 12px;box-shadow:0 8px 22px rgba(60,20,5,.28)}
+.lc small{display:block;font-size:10.5px;letter-spacing:.9px;text-transform:uppercase;opacity:.65;font-weight:700}
+.lc .lh{display:flex;align-items:center;gap:10px}
+.lc .lh img{width:38px;height:38px;border-radius:9px;flex:0 0 auto}
+.lc .lh>div:nth-child(2){flex:1;min-width:0}
+.lc .lh b{font-size:16px;line-height:1.15;display:block}
+.lc .lh .lt{text-align:right;flex:0 0 auto}
+.lc .lh .lt b{font-size:20px;font-variant-numeric:tabular-nums}
+.lc .lr{display:flex;justify-content:space-between;gap:4px;margin:14px 0 12px}
+.lc .lr svg{flex:1 1 0;min-width:0;max-width:56px;height:auto;aspect-ratio:1;transition:transform .2s}
+.lc .lr svg:not(.on){opacity:.22;filter:grayscale(1)}
+.lc .lr svg.on{filter:drop-shadow(0 3px 4px rgba(0,0,0,.35))}
+.lc .lf{display:grid;grid-template-columns:1.3fr .8fr 1fr;gap:8px;padding-top:10px;border-top:1px solid rgba(255,255,255,.12)}
+.lc .lf b{display:block;font-size:14px;line-height:1.25;margin-top:2px;overflow-wrap:anywhere}
+.lm{font-size:12.5px;color:var(--mut);margin:8px 2px 0;line-height:1.4}
+.lc{margin-top:14px;text-align:left}.lc .lr svg.pop{animation:lpop .7s ease-out}@keyframes lpop{0%{transform:scale(.3)}60%{transform:scale(1.25)}100%{transform:scale(1)}}
+.lenc{margin:8px 2px 0;font-size:14px;line-height:1.4;text-align:center;font-weight:700;color:#f8c24a}
+.sap{margin-top:12px;background:linear-gradient(135deg,#fff3e3,#ffe4d1);border:1.5px solid #e8590c;color:#7a2e0e;border-radius:14px;padding:10px 12px;cursor:pointer;transition:opacity .35s}
+.sap small{display:block;font-size:11px;letter-spacing:.8px;text-transform:uppercase;font-weight:800;opacity:.75}
+.sap p{margin:4px 0 0;font-size:14.5px;font-weight:650;line-height:1.4}
+.sap.f{opacity:0}
+@media(prefers-color-scheme:dark){.sap{background:linear-gradient(135deg,#2e2016,#2a1a12);color:#ffd9b8}}
+
+.ico{width:84px;height:84px;margin:4px auto 6px;display:block}
+.ico *{transform-box:fill-box;transform-origin:center}
+.hg-t{animation:hgspin 3s ease-in-out infinite;transform-origin:50% 50%}
+@keyframes hgspin{0%,40%{transform:rotate(0)}60%,100%{transform:rotate(180deg)}}
+.hg-s{animation:hgsand 3s ease-in-out infinite}
+@keyframes hgsand{0%,40%{opacity:1}50%{opacity:.2}60%,100%{opacity:1}}
+.dough{animation:dspin 2.6s linear infinite}
+@keyframes dspin{to{transform:rotate(360deg)}}
+.fl{animation:fl .5s ease-in-out infinite alternate}
+.fl2{animation:fl .38s ease-in-out infinite alternate-reverse}
+@keyframes fl{0%{transform:scale(1,.88) rotate(-4deg)}100%{transform:scale(1.08,1.12) rotate(4deg)}}
+.st{animation:steam 2.2s ease-out infinite;opacity:0}
+.st:nth-of-type(2){animation-delay:.7s}.st:nth-of-type(3){animation-delay:1.4s}
+@keyframes steam{0%{opacity:0;transform:translateY(6px)}30%{opacity:.8}100%{opacity:0;transform:translateY(-14px)}}
+.phr{margin:0 2px 14px;text-align:center;font-weight:700;font-size:15px;min-height:44px;transition:opacity .35s}
+.phr.f{opacity:0}
+.eta{margin:10px 0 0;text-align:center;font-size:14px;font-weight:700;color:var(--run)}
+.sapw{margin:0 0 14px}.sapw:empty{display:none}
+@media(prefers-reduced-motion:reduce){.hg-t,.hg-s,.dough,.fl,.fl2,.st{animation:none}.st{opacity:.5}}
 </style>
 </head>
 <body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="pzs" viewBox="0 0 64 64"><path d="M6 13Q32 3 58 13L32 61Z" fill="#f8c24a"/><path d="M4 9Q32-2 60 9L58 16Q32 7 6 16Z" fill="#d9893b"/><circle cx="23" cy="26" r="5.5" fill="#c0392b"/><circle cx="41" cy="26" r="5.5" fill="#c0392b"/><circle cx="32" cy="41" r="5" fill="#c0392b"/><circle cx="32" cy="21" r="2.6" fill="#2e8b3d"/><circle cx="27" cy="35" r="2" fill="#2e8b3d"/></symbol></svg>
 <div class="wrap">
   <div class="brand">🍕 Buona Pizza</div>
   <div id="root"><div class="card err">Caricamento…</div></div>
+  <div class="phr" id="phr"></div>
+  <div class="sapw" id="sapT"></div>
+  <div id="root2"></div>
+  <div id="loyT"></div>
   <p class="upd" id="upd"></p>
 </div>
 
@@ -67,8 +114,129 @@ var HEAD = {
   'Annullato':['❌','Ordine annullato','Chiamaci se hai domande.']
 };
 
+
+/* ---- Carta fedeltà sul tracking: telefono salvato da order.html su questo telefono ---- */
+var LOYT=null, loySt=null, loyPrev=null, loyOrd=null;
+function loyEsc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+async function loyLoad(o){
+  loyOrd=o; var c={}; try{c=JSON.parse(localStorage.getItem('bp_cust')||'{}')||{}}catch(_){}
+  if(!c.p||/consegna/i.test(String(o.order_type||''))){ loyPaintT(); return; }
+  try{ var r=await sb.rpc('get_loyalty_status',{p_phone:c.p}); if(!r.error&&r.data){ loyPrev=LOYT; LOYT=r.data; LOYT._n=c.n||''; } }catch(_){}
+  loyPaintT();
+}
+function loyPaintT(){
+  var box=document.getElementById('loyT'), L=LOYT; if(!box) return;
+  if(!L||!L.active||!L.valid||(loyOrd&&/consegna/i.test(String(loyOrd.order_type||'')))){ box.innerHTML=''; return; }
+  var pts=Number(L.pts||5), cyc=Math.max(0,Math.min(pts,Number(L.cycle||0))), n=Math.min(pts,10), on=pts>10?Math.round(cyc/pts*10):cyc;
+  var old=loyPrev?Math.max(0,Math.min(pts,Number(loyPrev.cycle||0))):on, s='';
+  for(var i=0;i<n;i++) s+='<svg class="'+(i<on?'on':'')+(i<on&&i>=old?' pop':'')+'" viewBox="0 0 64 64"><use href="#pzs"/></svg>';
+  var prem=(L.gifts||[]).map(function(g){return g.name}).join(' / ')||'Pizza Margherita', st=loyOrd&&loyOrd.status, avail=Number(L.avail||0), miss=Number(L.to_next||0);
+  var msg = avail>0 ? '🎁 Hai '+(avail>1?avail+' regali':'un regalo')+' da usare nel prossimo ordine!'
+    : ((loyOrd&&loyOrd.pending&&st==='Nuovo') ? '🍕 Le fette di questo ordine arrivano appena il locale lo conferma.'
+    : (miss>0 ? 'Ancora '+miss+(miss>1?' fette':' fetta')+' e la prossima '+loyEsc(prem)+' è tua! 💪' : ''));
+  box.innerHTML='<div class="lc"><div class="lh"><img alt="" src="icone/apple-touch-icon.png" onerror="this.style.display=\'none\'"><div><b>Carta Buona Fedeltà</b><small>بطاقة الولاء</small></div><div class="lt"><small>Fette</small><b>'+cyc+'/'+pts+'</b></div></div>'
+   +'<div class="lr">'+s+'</div><div class="lf"><div><small>Premio</small><b>'+loyEsc(prem)+'</b></div><div><small>Mancanti</small><b>'+miss+'</b></div><div><small>Cliente</small><b>'+loyEsc(L._n||'—')+'</b></div></div></div>'
+   +(msg?'<p class="lenc">'+msg+'</p>':'');
+}
+var FACTS=[
+['🍕','Secondo la tradizione, la Margherita nasce a Napoli nel 1889 in onore della Regina Margherita.'],['🍕','Pomodoro, mozzarella e basilico: la Margherita ha i colori della bandiera italiana 🇮🇹'],['🍕','Nel 2017 l’arte del pizzaiuolo napoletano è diventata Patrimonio UNESCO.'],['🍕','La Pizza Napoletana è STG: una Specialità Tradizionale Garantita in tutta Europa.'],['🍕','La parola «pizza» compare già in un documento di Gaeta dell’anno 997.'],['🍕','La Marinara non ha pesce: era la pizza dei marinai, con aglio, origano e pomodoro.'],['🍕','La Quattro Stagioni ha quattro spicchi, uno per ogni stagione dell’anno.'],['🍕','«Calzone» viene da «calza»: è la pizza ripiegata a forma di mezzaluna.'],
+['🌾','L’impasto napoletano tradizionale ha solo 4 ingredienti: farina, acqua, sale e lievito.'],['🌾','Una lievitazione lunga rende la pizza più leggera e più digeribile.'],['🌾','Le bollicine nel cornicione sono anidride carbonica prodotta dal lievito.'],['🌾','Il bordo gonfio della pizza si chiama «cornicione».'],['🌾','Le macchioline scure sul bordo si chiamano «leopardatura»: segno di una bella cottura.'],['🌾','La pizza napoletana si stende a mano: niente mattarello, per non schiacciare l’aria.'],['🌾','La farina «00» è la più finemente macinata.'],['🌾','Il sale rinforza il glutine e tiene a bada il lievito.'],['🌾','Il glutine crea una rete elastica che trattiene l’aria: per questo l’impasto si allunga senza rompersi.'],
+['🧀','«Mozzarella» viene da «mozzare»: la pasta si stacca a mano, pezzo per pezzo.'],['🧀','Il fior di latte è fatto con latte vaccino, la bufala con latte di bufala.'],['🧀','La Mozzarella di Bufala Campana è DOP.'],['🧀','La mozzarella è una «pasta filata»: la cagliata si lavora e si allunga in acqua calda.'],['🧀','Treccia, bocconcini e ciliegine: la mozzarella ha tante forme!'],['🧀','I pizzaioli fanno sgocciolare la mozzarella fresca, così la pizza non diventa acquosa.'],['🧀','Il nome «Gorgonzola» viene da un paese vicino a Milano.'],['🧀','Grana Padano e Parmigiano Reggiano sono due formaggi DOP diversi.'],
+['🔥','Una pizza napoletana cuoce in 60–90 secondi!'],['🔥','Nel forno a legna la temperatura può superare i 450°C.'],['🔥','La pala per infornare la pizza si chiama… «pala»!'],['🔥','Il calore arriva da sotto (la pietra) e da sopra (la cupola): così la pizza cuoce in modo uniforme.'],['🔥','Il pizzaiolo gira la pizza nel forno per cuocerla uguale da ogni lato.'],
+['🍅','Il pomodoro è arrivato in Europa dalle Americhe nel Cinquecento.'],['🍅','Il Pomodoro San Marzano dell’Agro Sarnese-Nocerino è DOP.'],['🍅','«Basilico» viene dal greco e vuol dire «regale» 👑'],['🍅','L’olio extravergine si mette spesso a crudo, per non perdere il profumo.'],['🍅','L’origano è il profumo classico della Marinara.'],
+['🤓','«Döner kebab» in turco vuol dire «carne che gira» 🥙'],['🤓','Pizza con würstel e patatine: la preferita dei bambini italiani! 🍟'],['🤓','La pizza va mangiata subito: il suo momento migliore sono i primi minuti.'],['🤓','Una pizza «a portafoglio» si piega in quattro e si mangia per strada, alla napoletana.'],['🤓','Ogni pizza è fatta a mano: non ce ne sono due uguali 🤌']];
+var FQ=null,FLAST=null;
+function factNext(){
+  /* ordine casuale, nessuna ripetizione prima di averle viste tutte, categorie mescolate */
+  if(!FQ||!Object.keys(FQ).some(function(k){return FQ[k].length})){
+    FQ={};FACTS.forEach(function(f){(FQ[f[0]]=FQ[f[0]]||[]).push(f)});
+    Object.keys(FQ).forEach(function(k){var a=FQ[k];for(var i=a.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1)),t=a[i];a[i]=a[j];a[j]=t}});
+  }
+  var ks=Object.keys(FQ).filter(function(k){return FQ[k].length}),ok=ks.filter(function(k){return k!==FLAST});
+  var pool=ok.length?ok:ks,k=pool[Math.floor(Math.random()*pool.length)];
+  FLAST=k;return FQ[k].shift();
+}
+var FTM=0;
+function factsMount(host){
+  if(!host)return;
+  clearInterval(FTM);
+  host.innerHTML='<div class="sap" role="button" aria-label="Prossima curiosità"><small>💡 Lo sapevi?</small><p></p></div>';
+  var box=host.firstChild,p=box.querySelector('p'),busyF=false;
+  function show(first){
+    if(busyF)return;var f=factNext();
+    function set(){p.textContent=f[0]+' '+f[1];box.classList.remove('f');busyF=false}
+    if(first){set();return}
+    busyF=true;box.classList.add('f');setTimeout(set,350)}
+  show(true);
+  box.onclick=function(){clearInterval(FTM);show();FTM=setInterval(tick,8000)};
+  function tick(){if(!document.body.contains(box)){clearInterval(FTM);return}show()}
+  FTM=setInterval(tick,8000);
+}
+window.BPFACTS={mount:factsMount,list:FACTS};
+
+/* ====== FASE 3: icone animate, frasi per stato, tempo stimato ====== */
+/* --- frasi per stato: modificale qui (2-3 per stato + le generiche) --- */
+var PH_ALL=['Ottima scelta! 😋','Il pizzaiolo approva 👨‍🍳👍','Gusto da vero intenditore 🤌','Mmm… già sentiamo il profumo! 👃','Mangiare bene è una cosa seria 😌','Il tuo stomaco ti ringrazia 🙏','Sorriso garantito 😄'];
+var PH={
+ 'Nuovo':['Il pizzaiolo sta leggendo il tuo ordine 👀','Controlliamo che sia tutto perfetto ✅'],
+ 'In preparazione':['Stendiamo la tua pizza a mano 🤌','Il forno è a 450°, ci siamo! 🔥','Ingredienti freschi, tanto amore ❤️'],
+ 'Pronto':['È appena uscita dal forno, vieni finché è bollente! 🔥','Ti aspettiamo con un sorriso 😄'],
+ 'In consegna':['Il fattorino sta arrivando da te 🛵','Tieni il citofono a portata di mano 😉'],
+ 'Completato':['Buon appetito! Ci vediamo alla prossima fetta 🍕','Grazie di aver scelto Buona Pizza ❤️'],
+ 'Annullato':['Ci dispiace! Chiamaci se hai domande 📞']
+};
+var phSt=null,phLast='',phTM=0,phQ=[];
+function phNext(){
+  if(!phQ.length){
+    var base=(PH[phSt]||[]).slice(),gen=(phSt==='Completato'||phSt==='Annullato')?[]:PH_ALL.slice();
+    for(var i=gen.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1)),t=gen[i];gen[i]=gen[j];gen[j]=t}
+    phQ=base.concat(gen.slice(0,3));
+    for(var k=phQ.length-1;k>0;k--){var m=Math.floor(Math.random()*(k+1)),u=phQ[k];phQ[k]=phQ[m];phQ[m]=u}
+    if(phQ.length>1&&phQ[0]===phLast){phQ.push(phQ.shift())}
+  }
+  return phLast=phQ.shift();
+}
+function phShow(first){
+  var el=document.getElementById('phr'); if(!el) return;
+  var f=phNext();
+  if(first){el.textContent=f;return}
+  el.classList.add('f'); setTimeout(function(){el.textContent=f;el.classList.remove('f')},350);
+}
+function phSet(st){
+  if(st===phSt) return; phSt=st; phQ=[]; clearInterval(phTM); phShow(true);
+  if(st!=='Completato'&&st!=='Annullato') phTM=setInterval(function(){phShow(false)},6000);
+}
+/* --- icone animate (SVG + CSS, niente GIF) --- */
+function icoSvg(st,pend){
+  if(pend&&st==='Nuovo'||st==='Nuovo')
+    return '<svg class="ico" viewBox="0 0 64 64"><g class="hg-t"><path d="M16 6h32M16 58h32" stroke="#8a5a2b" stroke-width="5" stroke-linecap="round"/><path d="M20 8c0 14 12 16 12 24S20 42 20 56M44 8c0 14-12 16-12 24s12 10 12 24" fill="none" stroke="#8a5a2b" stroke-width="3"/><path class="hg-s" d="M23 12h18c-2 8-9 10-9 14-0-4-7-6-9-14Z" fill="#f8c24a"/><path class="hg-s" d="M32 40c4 4 8 8 9 14H23c1-6 5-10 9-14Z" fill="#f8c24a"/></g></svg>';
+  if(st==='In preparazione')
+    return '<svg class="ico" viewBox="0 0 64 64"><g class="dough"><circle cx="32" cy="32" r="22" fill="#f3d9a4" stroke="#d9a85c" stroke-width="3"/><circle cx="32" cy="32" r="15" fill="#f8e6bd"/><circle cx="26" cy="28" r="2" fill="#e9c680"/><circle cx="38" cy="36" r="2" fill="#e9c680"/><circle cx="33" cy="26" r="1.6" fill="#e9c680"/></g><g class="fl"><path d="M50 58c-6-4-7-10-3-16 1 4 4 4 5 2 4 4 4 10-2 14Z" fill="#e8590c"/><path d="M50 58c-3-2-3-5-1-8 2 2 4 4 1 8Z" fill="#f8c24a"/></g></svg>';
+  if(st==='Pronto')
+    return '<svg class="ico" viewBox="0 0 64 64"><path class="st" d="M22 22c-3-4 3-6 0-10" fill="none" stroke="#9aa3ad" stroke-width="2.5" stroke-linecap="round"/><path class="st" d="M32 22c-3-4 3-6 0-10" fill="none" stroke="#9aa3ad" stroke-width="2.5" stroke-linecap="round"/><path class="st" d="M42 22c-3-4 3-6 0-10" fill="none" stroke="#9aa3ad" stroke-width="2.5" stroke-linecap="round"/><g transform="translate(6 14) scale(.9)"><use href="#pzs"/></g></svg>';
+  return null;
+}
+/* --- tempo stimato --- */
+var PREP_MIN=20;
+async function prepLoad(){ try{ var r=await sb.rpc('get_prep_settings'); if(!r.error&&r.data&&Number(r.data.min)>0) PREP_MIN=Number(r.data.min); }catch(_){} }
+function fmtHM(d){return d.toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'})}
+function etaHtml(o){
+  var st=o.status||'Nuovo';
+  if(st!=='Nuovo'&&st!=='In preparazione') return '';
+  if(/^\d\d:\d\d$/.test(String(o.pickup_time||''))) return '🕒 Ritiro previsto alle '+o.pickup_time;
+  var cr=o.created_at||o.date||null, cd=cr?new Date(cr):null;
+  if(!cd||isNaN(cd)) return '🕒 Tempo medio di preparazione: circa '+PREP_MIN+' minuti';
+  var left=Math.ceil((cd.getTime()+PREP_MIN*60000-Date.now())/60000);
+  return left>0 ? '🕒 Pronto tra circa '+left+' min' : 'Ci vuole qualche minuto in più, ma ne vale la pena! 🙏';
+}
+var lastO=null;
+function etaTick(){ var el=document.getElementById('eta'); if(el&&lastO) el.innerHTML=etaHtml(lastO); }
+setInterval(etaTick,20000);
+prepLoad();
+var loyKey='';
 function render(o){
-  var st = o.status || 'Nuovo';
+  try{ var lk=(o.status||'')+'|'+(o.pending?1:0); if(lk!==loyKey){ loyKey=lk; loyLoad(o); } }catch(_){}
+  var st = o.status || 'Nuovo'; lastO=o;
   var h = (o.pending && st==='Nuovo') ? ['⏳','In attesa di conferma','Il locale sta per confermare il tuo ordine.'] : (HEAD[st] || HEAD['Nuovo']);
   var steps = flow(o.order_type), idx = steps.findIndex(function(s){return s[0]===st});
   var list = '';
@@ -81,16 +249,24 @@ function render(o){
   var items = (o.items||[]).map(function(i){
     return '<div><span>'+esc(i.qty)+'× '+esc(i.name)+(i.size&&i.size!=='Normale'?' ('+esc(i.size)+')':'')+'</span></div>';
   }).join('');
+  var ic = icoSvg(st, o.pending);
+  var eta = etaHtml(o);
   root.innerHTML =
    '<div class="card '+(st==='Annullato'?'cancel':'')+'">'+
-     '<div class="big">'+h[0]+'</div>'+
+     (ic || '<div class="big">'+h[0]+'</div>')+
      '<h1 style="text-align:center">'+esc(h[1])+'</h1>'+
      '<p class="sub" style="text-align:center">'+(o.first_name?'Ciao '+esc(o.first_name)+'. ':'')+esc(h[2])+'</p>'+
+     '<p class="eta" id="eta">'+eta+'</p>'+
      list+(st==='Completato'?'<a class="rb" href="rate.html?t='+encodeURIComponent(token)+'">⭐ Valuta il tuo ordine</a>':'')+
-   '</div>'+
+   '</div>';
+  document.getElementById('root2').innerHTML =
    '<div class="card"><strong>Ordine #'+esc(o.id)+'</strong>'+
      '<div class="items" style="margin-top:8px">'+items+'</div>'+
      '<div class="tot"><span>Totale</span><span>'+euro(o.total)+'</span></div></div>';
+  phSet(st);
+  var sw=document.getElementById('sapT'), fin=(st==='Completato'||st==='Annullato');
+  if(fin){ clearInterval(FTM); sw.innerHTML=''; } else if(!sw.firstChild){ factsMount(sw); }
+  if(fin) document.getElementById('phr').style.display = (st==='Annullato'?'none':''); else document.getElementById('phr').style.display='';
   document.getElementById('upd').textContent = 'Aggiornato alle '+new Date().toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'})+' · si aggiorna da solo';
 }
 
