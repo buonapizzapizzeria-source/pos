@@ -2828,6 +2828,14 @@ html:not(.x) body .bp-theme-btn{width:42px!important;height:42px;min-height:42px
 .bpn-b{position:absolute;top:3px;right:50%;margin-right:-24px;min-width:19px;height:19px;border-radius:99px;background:#101828;color:#fff;font-size:11px;font-weight:900;display:flex;align-items:center;justify-content:center;padding:0 5px;border:2px solid var(--bp-card)}
 .bpn-b.warn{background:var(--bp-brand)}
 .bpn-item.on .bpn-b{background:#fff;color:var(--bp-brand2);border-color:transparent}
+/* v2.1 · badge Pizzaiolo: grigio = presto, arancio = tra poco, rosso = parti ora / in ritardo */
+.bpn-b.pz-later,.bpn-item.on .bpn-b.pz-later{background:#667085;color:#fff}
+.bpn-b.pz-soon,.bpn-item.on .bpn-b.pz-soon{background:#f59e0b;color:#101828}
+.bpn-b.pz-now,.bpn-b.pz-late,.bpn-item.on .bpn-b.pz-now,.bpn-item.on .bpn-b.pz-late{background:#d92d20;color:#fff;animation:bpPzPulse 1.2s ease-in-out infinite}
+@keyframes bpPzPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.2)}}
+.pz-cnt{display:inline-flex;align-items:center;justify-content:center;min-width:26px;height:26px;padding:0 7px;margin-left:8px;border-radius:99px;font-size:14px;font-weight:900;color:#fff;background:#667085}
+.pz-cnt.pz-soon{background:#f59e0b;color:#101828}
+.pz-cnt.pz-now,.pz-cnt.pz-late{background:#d92d20;animation:bpPzPulse 1.2s ease-in-out infinite}
 @media(min-width:900px){
  #bpNav{left:0;top:var(--bp-hdr,60px);bottom:0;width:86px;flex-direction:column;gap:6px;padding:12px 7px;border-right:1px solid var(--bp-line);overflow-y:auto}
  #bpNav .bpn-more{display:none}
@@ -18898,9 +18906,9 @@ openCartIngModal = function(key){
  var more = document.createElement('div'); more.id = 'bpMore'; more.className = 'hidden no-print';
  document.body.appendChild(nav); document.body.appendChild(more);
  function num(sel){ var e = $(sel); var n = e ? parseInt(e.textContent, 10) : 0; return isNaN(n) ? 0 : n; }
- function badge(t){ if(t === 'orders') return [num('#openCountBadge'), 0]; if(t === 'kitchen') return [num('#kitchenCountBadge'), 0]; if(t === 'inventory') return [num('#invAlertBadge'), 1]; return [0, 0]; }
+ function badge(t){ if(t === 'orders') return [num('#openCountBadge'), 0]; if(t === 'kitchen') return [num('#kitchenCountBadge'), 0]; if(t === 'inventory') return [num('#invAlertBadge'), 1]; if(t === 'pizzaiolo'){ var pb = window.bpPzBadge ? window.bpPzBadge() : null; return pb ? [pb.n, 0, pb.st] : [0, 0]; } return [0, 0]; }
  function item(n, on, sec, bg){
- var b = bg ? '<span class="bpn-b' + (bg[1] ? ' warn' : '') + '">' + bg[0] + '</span>' : '';
+ var b = bg ? '<span class="bpn-b' + (bg[1] ? ' warn' : '') + (bg[2] ? ' pz-' + bg[2] : '') + '">' + bg[0] + '</span>' : '';
  return '<button type="button" class="bpn-item' + (on ? ' on' : '') + (sec ? ' sec' : '') + '" data-go="' + n[0] + '" title="' + n[2] + '"><span class="i">' + n[1] + '</span><span class="l">' + n[2] + '</span>' + b + '</button>';
  }
  var navSig = '';
@@ -41149,6 +41157,36 @@ position:fixed;inset:0;z-index:2147483645;background:var(--bg);color:var(--tx);d
 #bpPZ .pz-chip2.warn{background:#3b2a07;border-color:var(--amb);color:#fcd34d}
 #bpPZ .pz-chip2.bad{background:#450a0a;border-color:var(--red);color:#fecaca}
 #bpPZ .pz-chip2.late{background:#7f1d1d;border-color:var(--red);color:#fff;animation:pzpulse 1.3s ease-in-out infinite}
+#bpPZ .pz-nx{display:flex;align-items:center;justify-content:space-between;gap:.4em .7em;flex-wrap:wrap;margin-top:.5em;padding:.5em .75em;border-radius:.9em;border:2px solid var(--nc,#1d4ed8);background:var(--nb,#172554);color:var(--nt,#dbeafe)}
+#bpPZ .pz-nx .t{font-weight:900;font-size:1.05em;letter-spacing:.02em}
+#bpPZ .pz-nx .d{display:flex;align-items:center;gap:.5em;font-weight:850;flex-wrap:wrap}
+#bpPZ .pz-nx .d b{background:rgba(255,255,255,.16);border-radius:.5em;padding:.05em .5em}
+#bpPZ .pz-nx .more{font-size:.82em;font-weight:750;opacity:.8}
+#bpPZ .pz-sum{background:var(--cd);border:1px solid var(--ln);border-radius:.9em;padding:.55em .7em;display:flex;flex-direction:column;gap:.45em}
+#bpPZ .pz-sumh{font-weight:900;letter-spacing:.05em;font-size:.95em;color:#e5e7eb}
+#bpPZ .pz-sumh b{color:#fff}
+#bpPZ .pz-sumc{display:flex;flex-wrap:wrap;gap:.4em}
+#bpPZ .pz-sc{border:0;border-inline-start:.4em solid var(--gc,#475569);border-radius:.7em;background:#1e2740;padding:.4em .7em;font-weight:850;font-size:1.05em;color:#f3f4f6;min-height:2.6em;text-align:start}
+#bpPZ .pz-sc b{color:#fbbf24;font-size:1.1em}
+#bpPZ .pz-sc.u-late,#bpPZ .pz-sc.u-now{--gc:var(--red)}#bpPZ .pz-sc.u-soon{--gc:var(--amb)}#bpPZ .pz-sc.u-later{--gc:var(--blu)}
+#bpPZ .pz-sums{display:flex;flex-wrap:wrap;gap:.4em .6em;align-items:center;font-weight:800;font-size:.92em}
+#bpPZ .pz-spm{color:#fde68a}
+#bpPZ .pz-g{scroll-margin-top:12em}
+#bpPZ .pz-g.flash{animation:pzFlash 1.2s ease-out}
+@keyframes pzFlash{0%{box-shadow:0 0 0 .35em rgba(251,191,36,.9)}100%{box-shadow:0 0 0 0 rgba(251,191,36,0)}}
+#bpPZ .pz-one{flex:none;border:0;border-radius:.8em;background:#15803d;color:#fff;font-weight:900;font-size:1.05em;padding:.5em .8em;min-height:3.2em;min-width:5.2em;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1.15}
+#bpPZ .pz-one small{font-size:.72em;font-weight:800;opacity:.92}
+#bpPZ .pz-one:active{filter:brightness(.9);transform:scale(.97)}
+#bpPZ .pz-gsum{margin-top:.35em;padding:.45em .8em;border-radius:.8em;background:#0f1626;border:1px solid #1f2a44;font-weight:800;font-size:.95em;color:#bbf7d0}
+#pzUndo{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(1em + env(safe-area-inset-bottom,0px));z-index:100002;display:none;align-items:center;gap:.8em;background:#1f2937;color:#fff;border:2px solid #4b5563;border-radius:1em;padding:.6em .8em;font-weight:850;box-shadow:0 8px 24px rgba(0,0,0,.5);max-width:94vw}
+#pzUndo button{border:0;border-radius:.7em;background:#f59e0b;color:#1b1200;font-weight:900;padding:.6em .9em;font:inherit;font-weight:900}
+#bpPZ .pz-nx .cmp{flex:1 0 100%;display:flex;flex-wrap:wrap;gap:.25em .9em;font-weight:900;font-size:1.12em}
+#bpPZ .pz-nx .cmp b{color:#fbbf24}
+#bpPZ .pz-nx.r .cmp b{color:#fff}
+#bpPZ .pz-nb{display:flex;flex-direction:column;align-items:flex-start;width:100%;margin-bottom:.5em;border:0;border-radius:.9em;background:#0e7490;color:#fff;font-weight:900;font-size:1.1em;padding:.55em .8em;text-align:start;animation:pzpulse 1.3s ease-in-out 3}
+#bpPZ .pz-nb small{font-size:.7em;font-weight:700;opacity:.85}
+#bpPZ .pz-nx.s{--nc:var(--amb);--nb:#3b2a07;--nt:#fde68a}
+#bpPZ .pz-nx.r{--nc:var(--red);--nb:#7f1d1d;--nt:#fff;animation:pzpulse 1.3s ease-in-out infinite}
 @keyframes pzpulse{0%,100%{box-shadow:0 0 0 0 rgba(239,68,68,.0)}50%{box-shadow:0 0 0 .35em rgba(239,68,68,.35)}}
 #bpPZ .pz-x{background:#b42318;border:1px solid #b42318;border-radius:.7em;padding:.35em .8em;font-weight:900;font-size:1.05em}
 #bpPZ .pz-seg{display:flex;gap:.35em;margin-top:.5em;background:#0b1220;border:1px solid var(--ln);border-radius:.9em;padding:.25em}
@@ -41196,7 +41234,7 @@ position:fixed;inset:0;z-index:2147483645;background:var(--bg);color:var(--tx);d
 #bpPZ .cu{font-size:.9em;font-weight:750;color:#cbd5e1}
 #bpPZ .tm{font-size:.9em;font-weight:850;background:#0f172a;border-radius:.5em;padding:.05em .5em}
 #bpPZ .eta{font-size:.85em;font-weight:800;color:var(--mu)}
-#bpPZ .eta.late{color:#fca5a5}#bpPZ .eta.soon{color:#fcd34d}
+#bpPZ .eta.late{color:#fca5a5}#bpPZ .eta.soon{color:#fcd34d}#bpPZ .eta.ok{color:#86efac}
 #bpPZ .sz{font-style:normal;font-size:.78em;font-weight:900;border-radius:.4em;padding:.05em .5em;background:#7c3aed;color:#fff}
 #bpPZ .sz.b{background:#0e7490}
 #bpPZ .pz-r3{display:flex;flex-wrap:wrap;gap:.2em .7em;font-size:.88em;font-weight:850}
@@ -41462,26 +41500,28 @@ function noteOf(o){ try{ return String(splitTimeAndNotes(o.notes).cleanNotes || 
 function nameHtml(n){ try{ return bpNameHtml(n); }catch(e){ return E(n); } }
 function dstChip(ds){ return '<span class="dst" style="--dc:' + (DST_COL[ds.k] || '#94a3b8') + '">' + ds.ico + ' ' + E(ds.lab) + '</span>'; }
 function szHtml(i){ var s = sizeTag(i); return s ? '<i class="sz' + (s === 'BABY' ? ' b' : '') + '">' + s + '</i>' : ''; }
-function etaHtml(x, now){
+function etaHtml(x, now, bare){
   var e = etaMin(x, now); if(e === null) return '';
   if(x.st === 'Pronto' || x.all) return '';
-  return e < -2 ? '<span class="eta late">⚠️ ritardo ' + fm(e) + '</span>' : '<span class="eta' + (e <= 10 ? ' soon' : '') + '">⏰ tra ' + fm(Math.max(e, 0)) + '</span>';
+  var ic = bare ? '' : '⏰ ';
+  return e < -2 ? '<span class="eta late">⚠️ ritardo ' + fm(e) + '</span>' : '<span class="eta' + (e <= 10 ? ' soon' : ' ok') + '">' + ic + 'tra ' + fm(Math.max(e, 0)) + '</span>';
 }
-/* riga = una pizza di un ordine (si tocca per segnarla fatta) */
+/* v2.1 · destinazione compatta: solo l'icona (🛵/🛍️); per tavolo e piattaforma anche il nome (Tavolo 7, Glovo) */
+function dstMini(ds){ var full = (ds.k === 'tav' || ds.k === 'plat'); return '<span class="dst" style="--dc:' + (DST_COL[ds.k] || '#94a3b8') + '">' + ds.ico + (full ? ' ' + E(ds.lab) : '') + '</span>'; }
+/* riga = una pizza di un ordine (si tocca per segnarla fatta) · v2.1: 2 righe (ordine · tipo · orario · tra X / modifiche) senza nome cliente, ×N solo se più di una */
 function rowHtml(x, i, n, key, now){
-  var done = x.d.indexOf(key) >= 0, mods = modsHtml(i), cu = custOf(x.o), nt = noteOf(x.o);
+  var done = x.d.indexOf(key) >= 0, mods = modsHtml(i), nt = noteOf(x.o), q = Number(i.quantity || 1);
   return '<button type="button" class="pz-row' + (done ? ' done' : '') + (isFresh(x.o.id) ? ' new' : '') + '" data-a="t" data-o="' + E(x.o.id) + '" data-k="' + E(key) + '" style="--oc:' + x.col[0] + ';--of:' + x.col[1] + '">' +
     '<span class="pz-pill">#' + E(x.o.id) + '</span><span class="pz-rb">' +
-    '<span class="pz-r1"><b class="q">×' + E(i.quantity || 1) + '</b>' + dstChip(x.ds) + szHtml(i) + (cu ? '<span class="cu">👤 ' + E(cu) + '</span>' : '') + '</span>' +
-    '<span class="pz-r2"><span class="tm">⏰ ' + E(x.tg.lab) + '</span>' + (done ? '' : etaHtml(x, now)) + '</span>' +
+    '<span class="pz-r1">' + (q > 1 ? '<b class="q">×' + q + '</b>' : '') + dstMini(x.ds) + szHtml(i) + '<span class="tm">⏰ ' + E(x.tg.lab) + '</span>' + (done ? '' : etaHtml(x, now, true)) + '</span>' +
     (mods ? '<span class="pz-r3">' + mods + '</span>' : '') + (nt ? '<span class="pz-r3"><span class="m-nt">📝 ' + E(nt) + '</span></span>' : '') +
     '</span><span class="pz-box"></span></button>';
 }
 function breadRow(x, now){
-  var dn = x.d.indexOf('pane') >= 0, cu = custOf(x.o), nt = noteOf(x.o);
+  var dn = x.d.indexOf('pane') >= 0, nt = noteOf(x.o);
   return '<button type="button" class="pz-row' + (dn ? ' done' : '') + (isFresh(x.o.id) ? ' new' : '') + '" data-a="t" data-o="' + E(x.o.id) + '" data-k="pane" style="--oc:' + x.col[0] + ';--of:' + x.col[1] + '">' +
-    '<span class="pz-pill">#' + E(x.o.id) + '</span><span class="pz-rb"><span class="pz-r1"><b class="q" style="font-size:1.05em">' + E(breadTxt(x.o)) + '</b>' + dstChip(x.ds) + (cu ? '<span class="cu">👤 ' + E(cu) + '</span>' : '') + '</span>' +
-    '<span class="pz-r2"><span class="tm">⏰ ' + E(x.tg.lab) + '</span>' + (dn ? '' : etaHtml(x, now)) + '</span>' + (nt ? '<span class="pz-r3"><span class="m-nt">📝 ' + E(nt) + '</span></span>' : '') + '</span><span class="pz-box"></span></button>';
+    '<span class="pz-pill">#' + E(x.o.id) + '</span><span class="pz-rb"><span class="pz-r1"><b class="q" style="font-size:1.05em">' + E(breadTxt(x.o)) + '</b>' + dstMini(x.ds) + '<span class="tm">⏰ ' + E(x.tg.lab) + '</span>' + (dn ? '' : etaHtml(x, now, true)) + '</span>' +
+    (nt ? '<span class="pz-r3"><span class="m-nt">📝 ' + E(nt) + '</span></span>' : '') + '</span><span class="pz-box"></span></button>';
 }
 /* riga dentro la scheda ordine */
 function lineHtml(x, i, n){
@@ -41525,13 +41565,13 @@ function groupsHtml(list, now){
       if(!g){ g = map[nm] = {name: nm, html: nameHtml(nm), rows: [], pend: 0, start: Infinity, rank: 9}; order.push(g); }
       var key = lineKey(i, n), done = x.d.indexOf(key) >= 0;
       g.rows.push(rowHtml(x, i, n, key, now));
-      if(!done){ g.pend += Number(i.quantity || 1); g.start = Math.min(g.start, x.start); g.rank = Math.min(g.rank, RANK[u] === undefined ? 3 : RANK[u]); }
+      if(!done){ g.pend += Number(i.quantity || 1); g.start = Math.min(g.start, x.start); g.rank = Math.min(g.rank, RANK[u] === undefined ? 3 : RANK[u]); if(!g.nx && !inflight[x.o.id + '|' + key]) g.nx = {oid: x.o.id, q: Number(i.quantity || 1)}; }
     });
     if(x.bread){
       var g2 = map['🥖 PANE'] || (map['🥖 PANE'] = {name: '🥖 PANE', html: '🥖 PANE · panini/piadine', rows: [], pend: 0, start: Infinity, rank: 9}); if(order.indexOf(g2) < 0) order.push(g2);
       var dn = x.d.indexOf('pane') >= 0;
       g2.rows.push(breadRow(x, now));
-      if(!dn){ g2.pend += 1; g2.start = Math.min(g2.start, x.start); g2.rank = Math.min(g2.rank, RANK[u] === undefined ? 3 : RANK[u]); }
+      if(!dn){ g2.pend += 1; g2.start = Math.min(g2.start, x.start); g2.rank = Math.min(g2.rank, RANK[u] === undefined ? 3 : RANK[u]); if(!g2.nx && !inflight[x.o.id + '|pane']) g2.nx = {oid: x.o.id, q: 1}; }
     }
   });
   order.sort(function(a, b){ return (a.pend === 0) - (b.pend === 0) || a.rank - b.rank || a.start - b.start; });
@@ -41539,7 +41579,7 @@ function groupsHtml(list, now){
   return order.map(function(g){
     var u = g.pend ? names[g.rank] || 'later' : 'fin';
     var tag = g.pend && (u === 'late' || u === 'now') ? '<span class="pz-tag">' + (u === 'late' ? '⚠️ IN RITARDO' : '🔥 PARTI ORA') + '</span>' : (g.pend && u === 'soon' ? '<span class="pz-tag">⏰ tra poco</span>' : '');
-    return '<div class="pz-g u-' + u + (g.pend ? '' : ' fin') + '"><div class="pz-gh"><div class="pz-qty">×' + g.pend + '</div><div class="pz-gn"><b>' + g.html + '</b>' + tag + '</div></div><div class="pz-rows">' + g.rows.join('') + '</div></div>';
+    return '<div class="pz-g u-' + u + (g.pend ? '' : ' fin') + '" data-g="' + E(g.name) + '"><div class="pz-gh"><div class="pz-qty">×' + g.pend + '</div><div class="pz-gn"><b>' + g.html + '</b>' + tag + '</div>' + (g.pend && g.nx ? oneBtn(g) : '') + '</div><div class="pz-rows">' + g.rows.join('') + '</div></div>';
   }).join('');
 }
 function legendHtml(){
@@ -41554,13 +41594,17 @@ function legendHtml(){
 /* ---------- guida forno: fasce da 15' (solo informativa, non cambia nessun orario) ---------- */
 function guideHtml(now){
   var OV = window.__ov; if(!OV || !OV.load) return '';
-  var open = ls('bp_pz_guide') !== '0', SL = 15 * 60000, cap = OV.cap();
+  var open = ls('bp_pz_guide') === '1', SL = 15 * 60000, cap = OV.cap();
   var d0 = new Date(now); d0.setHours(0, 0, 0, 0); var day = d0.getTime(), map = OV.load(day);
   var cur = Math.floor(now / SL) * SL, last = cur + 8 * SL, k;
   for(k in map){ if(k !== '__queue' && Number(k) > last && Number(k) < day + 864e5) last = Number(k); }
   last = Math.min(last, cur + 16 * SL);
   var head = '<div class="pz-sh blu" data-a="gd" style="cursor:pointer"><span>🕒 GUIDA FORNO · fasce da 15′</span><em>' + (open ? '▾' : '▸') + ' ' + (map.__queue || 0) + ' pizze</em></div>';
-  if(!open) return head;
+  if(!open){
+    var occ = null, s0; for(s0 = cur; s0 <= last; s0 += SL){ if(map[s0] && map[s0].n > 0){ occ = s0; break; } }
+    var sum = occ === null ? '✅ Forno libero · nessuna pizza in programma' : (occ === cur ? '🔥 Fascia ORA: ' + map[occ].n + '/' + cap : '✅ Forno libero fino alle ' + hhmm(occ) + ' · poi ' + map[occ].n + '/' + cap);
+    return head + '<div class="pz-gsum">' + sum + '</div>';
+  }
   var rows = '';
   for(var s = cur; s <= last; s += SL){
     var e = map[s], n = e ? e.n : 0, free = Math.max(0, cap - n), pct = Math.min(100, Math.round(n * 100 / Math.max(cap, 1)));
@@ -41580,6 +41624,127 @@ function nextChip(now, cap){
   }catch(e){ return ''; }
 }
 function secHead(cls, t, n){ return '<div class="pz-sh ' + cls + '"><span>' + t + '</span><em>' + n + '</em></div>'; }
+/* v2.1 · riepilogo «HO DA FARE», pulsante «✓ Fatta» per tipo di pizza e «Annulla» */
+var inflight = {}, lastOne = null, undoT = null, nb = null, toolsOpen = false;
+function pendAgg(list, now){
+  var map = {}, order = [], sp = {maxi: 0, baby: 0, mod: 0};
+  list.forEach(function(x){
+    var u = urg(x, now); if(u === 'done' || u === 'wait') return;
+    var rk = RANK[u] === undefined ? 3 : RANK[u];
+    x.lines.forEach(function(i, n){
+      if(x.d.indexOf(lineKey(i, n)) >= 0) return;
+      var q = Number(i.quantity || 1), nm = baseName(i), g = map[nm];
+      if(!g){ g = map[nm] = {name: nm, html: nameHtml(nm), pend: 0, rank: 9, start: Infinity}; order.push(g); }
+      g.pend += q; g.rank = Math.min(g.rank, rk); g.start = Math.min(g.start, x.start);
+      var st = sizeTag(i); if(st === 'MAXI') sp.maxi += q; else if(st === 'BABY') sp.baby += q;
+      var mh = ''; try{ mh = modsHtml(i); }catch(e){} if(mh) sp.mod += q;
+    });
+    if(x.bread && x.d.indexOf('pane') < 0){
+      var g2 = map['🥖 PANE'] || (map['🥖 PANE'] = {name: '🥖 PANE', html: '🥖 Pane', pend: 0, rank: 9, start: Infinity, bread: true});
+      if(order.indexOf(g2) < 0) order.push(g2);
+      g2.pend += 1; g2.rank = Math.min(g2.rank, rk); g2.start = Math.min(g2.start, x.start);
+    }
+  });
+  order.sort(function(a, b){ return a.rank - b.rank || a.start - b.start; });
+  return {groups: order, sp: sp};
+}
+function summaryHtml(list, now){
+  try{
+    var A = pendAgg(list, now); if(!A.groups.length) return '';
+    var names = ['late', 'now', 'soon', 'later'], total = 0;
+    var chips = A.groups.map(function(g){
+      if(!g.bread) total += g.pend;
+      return '<button type="button" class="pz-sc u-' + (names[g.rank] || 'later') + '" data-a="jump" data-n="' + E(g.name) + '"><b>' + g.pend + '×</b> ' + g.html + '</button>';
+    }).join('');
+    var sp = [];
+    if(A.sp.maxi) sp.push('<span class="sz">MAXI ×' + A.sp.maxi + '</span>');
+    if(A.sp.baby) sp.push('<span class="sz b">BABY ×' + A.sp.baby + '</span>');
+    if(A.sp.mod) sp.push('<span class="pz-spm">✏️ con modifiche ×' + A.sp.mod + '</span>');
+    return '<div class="pz-sum"><div class="pz-sumh">📋 HO DA FARE · <b>' + total + (total === 1 ? ' pizza' : ' pizze') + '</b></div><div class="pz-sumc">' + chips + '</div>' + (sp.length ? '<div class="pz-sums">' + sp.join('') + '</div>' : '') + '</div>';
+  }catch(e){ return ''; }
+}
+function oneBtn(g){
+  return '<button type="button" class="pz-one" data-a="one" data-g="' + E(g.name) + '">✓ ' + (g.name === '🥖 PANE' ? 'Pane' : 'Fatta') + '<small>#' + E(g.nx.oid) + (g.nx.q > 1 ? ' ×' + g.nx.q : '') + '</small></button>';
+}
+function pickNext(name){
+  var now = Date.now(), best = null;
+  model().forEach(function(x){
+    var u = urg(x, now); if(u === 'done' || u === 'wait') return;
+    if(name === '🥖 PANE'){
+      if(x.bread && x.d.indexOf('pane') < 0 && !inflight[x.o.id + '|pane'] && (!best || x.start < best.start)) best = {oid: x.o.id, key: 'pane', q: 1, start: x.start};
+      return;
+    }
+    x.lines.forEach(function(i, n){
+      var key = lineKey(i, n);
+      if(x.d.indexOf(key) >= 0 || inflight[x.o.id + '|' + key] || baseName(i) !== name) return;
+      if(!best || x.start < best.start) best = {oid: x.o.id, key: key, q: Number(i.quantity || 1), start: x.start};
+    });
+  });
+  return best;
+}
+function showUndo(name, t){
+  if(!pz) return;
+  var d = $('#pzUndo', pz); if(!d){ d = document.createElement('div'); d.id = 'pzUndo'; pz.appendChild(d); }
+  d.innerHTML = '<span>✓ ' + E(name === '🥖 PANE' ? 'Pane' : name) + ' · #' + E(t.oid) + (t.q > 1 ? ' ×' + t.q : '') + '</span><button type="button" data-a="undo">↩️ Annulla</button>';
+  d.style.display = 'flex'; clearTimeout(undoT); undoT = setTimeout(function(){ d.style.display = 'none'; }, 6000);
+}
+function runToggle(oid, key){
+  var id = oid + '|' + key; inflight[id] = 1;
+  var done = function(){ delete inflight[id]; };
+  var r = toggle(oid, key); if(r && r.then) r.then(done, done); else done();
+}
+function doOne(name){
+  var t = pickNext(name); if(!t) return;
+  lastOne = {oid: t.oid, key: t.key, name: name, q: t.q};
+  showUndo(name, t); runToggle(t.oid, t.key);
+}
+function doUndo(){
+  if(!lastOne) return; var t = lastOne; lastOne = null;
+  var d = $('#pzUndo', pz); if(d) d.style.display = 'none';
+  runToggle(t.oid, t.key);
+}
+function jumpTo(name){
+  if(ls(K_VIEW) === 'ord'){ ls(K_VIEW, 'piz'); paint(); }
+  var els = pz.querySelectorAll('.pz-g'), hit = null, k;
+  for(k = 0; k < els.length; k++){ if(els[k].getAttribute('data-g') === name){ hit = els[k]; break; } }
+  if(hit){ try{ hit.scrollIntoView({behavior: 'smooth', block: 'start'}); }catch(e){ hit.scrollIntoView(); } hit.classList.add('flash'); setTimeout(function(){ hit.classList.remove('flash'); }, 1300); }
+}
+/* v2.1 · barra «PROSSIMO»: il primo ordine con pizze ancora da fare, sempre visibile in alto */
+function nextBarHtml(list, now){
+  try{
+    var rows = [];
+    list.forEach(function(x){
+      var u = urg(x, now); if(u === 'done' || u === 'wait') return;
+      var pend = 0; x.lines.forEach(function(i, k){ if(x.d.indexOf(lineKey(i, k)) < 0) pend += Number(i.quantity || 1); });
+      if(pend > 0) rows.push({x: x, u: u, pend: pend});
+    });
+    if(!rows.length) return '';
+    var r = rows[0], x0 = r.x, mins = Math.round((x0.start - now) / 60000), lab;
+    var cls = (r.u === 'late' || r.u === 'now') ? 'r' : (r.u === 'soon' ? 's' : 'l');
+    /* infornata = tutti gli ordini che partono insieme al primo (entro 5′) */
+    var LIM = Math.max(x0.start, now) + 5 * 60000;
+    var batch = rows.filter(function(q){ return q.x.start <= LIM; }), rest = rows.length - batch.length;
+    var comp = [], idx = {}, total = 0, breadN = 0, ids = [];
+    batch.forEach(function(q){
+      ids.push('#' + E(q.x.o.id));
+      q.x.lines.forEach(function(i, k){
+        if(q.x.d.indexOf(lineKey(i, k)) >= 0) return;
+        var nm = baseName(i), n = Number(i.quantity || 1); total += n;
+        if(idx[nm] === undefined){ idx[nm] = comp.length; comp.push({n: 0, html: nameHtml(nm)}); }
+        comp[idx[nm]].n += n;
+      });
+      if(q.x.bread && q.x.d.indexOf('pane') < 0) breadN++;
+    });
+    if(r.u === 'late') lab = '⚠️ IN RITARDO · INFORNA ORA';
+    else if(r.u === 'now') lab = '🔥 INFORNA ORA';
+    else if(r.u === 'soon') lab = '⏰ TRA ' + fm(mins) + ' · inforna alle ' + hhmm(x0.start);
+    else lab = '▶ PROSSIMO · inizia ' + hhmm(x0.start) + ' (tra ' + fm(mins) + ')';
+    var cmp = comp.map(function(c){ return '<span><b>' + c.n + '×</b> ' + c.html + '</span>'; }).join('') + (breadN ? '<span><b>' + breadN + '×</b> 🥖 Pane</span>' : '');
+    var who = batch.length === 1 ? '<span>' + x0.ds.ico + '</span>' : '';
+    var more = rest > 0 ? '<span class="more">+' + rest + (rest === 1 ? ' ordine dopo' : ' ordini dopo') + '</span>' : '';
+    return '<div class="pz-nx ' + cls + '"><div class="t">' + lab + '</div><div class="d"><b>' + ids.join(' ') + '</b>' + who + '<span>' + total + (total === 1 ? ' pizza' : ' pizze') + '</span>' + more + '</div><div class="cmp">' + cmp + '</div></div>';
+  }catch(e){ return ''; }
+}
 function buildHtml(){
   var now = Date.now(), list = model(), view = ls(K_VIEW) === 'ord' ? 'ord' : 'piz';
   var pend = 0, forno = 0, cap = Number(ls(K_CAP)) || 12, late = 0, ready = 0;
@@ -41590,22 +41755,23 @@ function buildHtml(){
   });
   if(ovc){ forno = ovc.n; cap = ovc.cap; }
   var fcls = forno > cap ? 'bad' : (forno > cap - 2 ? 'warn' : 'ok');
-  var head = '<div class="pz-h1"><div class="pz-clock" id="pzClock">' + hhmm(now) + '</div>' +
+  var head = bannerHtml() + '<div class="pz-h1"><div class="pz-clock" id="pzClock">' + hhmm(now) + '</div>' +
     '<div class="pz-chip2 todo">🍕 Da fare ' + pend + '</div>' +
     (ready ? '<div class="pz-chip2 ok">✅ Pronti ' + ready + '</div>' : '') +
     (late ? '<div class="pz-chip2 late">🚨 ' + late + ' in ritardo</div>' : '') +
     nextChip(now, cap) + '<div class="pz-sp"></div><button type="button" class="pz-x" data-a="x">✕</button></div>' +
-    '<div class="pz-seg"><button type="button" class="' + (view === 'piz' ? 'on' : '') + '" data-a="v" data-v="piz">🍕 Per pizza</button><button type="button" class="' + (view === 'ord' ? 'on' : '') + '" data-a="v" data-v="ord">📋 Per ordine</button></div>';
+    '<div class="pz-seg"><button type="button" class="' + (view === 'piz' ? 'on' : '') + '" data-a="v" data-v="piz">🍕 Per pizza</button><button type="button" class="' + (view === 'ord' ? 'on' : '') + '" data-a="v" data-v="ord">📋 Per ordine</button></div>' + nextBarHtml(list, now);
   var tools = '<button type="button" class="pz-btn" data-a="cap" title="Capacità forno">🔥 Forno ' + forno + '/' + cap + '</button>' +
-    (roleNow() === 'manager' ? '<button type="button" class="pz-btn" data-a="enf" title="Collega pizzaiolo e cucina">🔗 ' + (enforceOn() ? 'ON' : 'OFF') + '</button>' : '') +
-    '<button type="button" class="pz-btn" data-a="m">A−</button><button type="button" class="pz-btn" data-a="p">A+</button>' +
-    '<button type="button" class="pz-btn" data-a="fs">⛶</button>' +
-    '<button type="button" class="pz-btn" data-a="out" title="Cambia utente">🔄</button>';
+    '<button type="button" class="pz-btn" data-a="tm">⚙️ Opzioni ' + (toolsOpen ? '▴' : '▾') + '</button>' +
+    (toolsOpen ? (roleNow() === 'manager' ? '<button type="button" class="pz-btn" data-a="enf" title="Collega pizzaiolo e cucina: «Pronto» solo quando hanno finito entrambi">🔗 ' + (enforceOn() ? 'Legato alla cucina' : 'Non legato alla cucina') + '</button>' : '') +
+    '<button type="button" class="pz-btn" data-a="m">A− testo</button><button type="button" class="pz-btn" data-a="p">A+ testo</button>' +
+    '<button type="button" class="pz-btn" data-a="fs">⛶ Schermo intero</button>' +
+    '<button type="button" class="pz-btn" data-a="out" title="Cambia utente">🔄 Cambia utente</button>' : '');
   var warn = colMissing ? '<div class="pz-warn">⚠️ Colonne pz_done / k_done mancanti: esegui pizzaiolo.sql in Supabase. Per ora i segni valgono solo su questo dispositivo e il collegamento con la cucina non è condiviso.</div>' : '';
   var oven = '<div class="pz-oven ' + fcls + '"><span>🔥 Forno</span><div class="bar"><i style="width:' + Math.min(100, Math.round(forno * 100 / Math.max(cap, 1))) + '%"></i></div><b>' + forno + '/' + cap + '</b><small>prossimi ' + BAKE_WINDOW_MIN + '′</small></div>';
   var work = list.filter(function(x){ return urg(x, now) !== 'done'; }), done = list.filter(function(x){ return urg(x, now) === 'done'; });
   var readyHtml = done.length ? secHead('grn', '✅ PRONTI · DA CONSEGNARE', done.length) + done.map(function(x){ return cardHtml(x, false, now); }).join('') : '';
-  var body; oven += guideHtml(now);
+  var body; oven += guideHtml(now); oven = summaryHtml(list, now) + oven;
   if(!list.length){ body = oven + '<div class="pz-empty">🍕 Nessuna pizza da preparare</div>'; }
   else if(view === 'piz'){
     body = oven + '<div class="pz-cols two"><div class="pz-col">' + secHead('red', '🍕 PIZZE DA FARE', pend) + (groupsHtml(list, now) || '<div class="pz-empty">✅ Tutto fatto</div>') + '</div>' +
@@ -41632,9 +41798,21 @@ function signature(){
   return allOrders().map(function(o){ return o.id + '|' + o.status + '|' + (Array.isArray(o.pz_done) ? o.pz_done.join('.') : '') + '|' + (o.k_done ? 1 : 0) + '|' + itemsOf(o.id).length; }).join(',') + '|' + Object.keys(lmap()).length;
 }
 function beep(){ try{ var C = window.AudioContext || window.webkitAudioContext, a = new C(), o = a.createOscillator(), g = a.createGain(); o.connect(g); g.connect(a.destination); o.frequency.value = 880; g.gain.value = .15; o.start(); setTimeout(function(){ try{ o.stop(); a.close(); }catch(e){} }, 350); }catch(e){} }
+function bannerHtml(){
+  if(!nb || Date.now() - nb.t > 9000) return '';
+  var one = nb.ids.length === 1, pz1 = nb.u ? ' · ' + nb.u + (nb.u === 1 ? ' pizza' : ' pizze') : '';
+  var t = one ? 'NUOVO ORDINE · #' + E(nb.ids[0]) + pz1 + (nb.ds ? ' · ' + nb.ds : '') + (nb.at ? ' · ' + E(nb.at) : '') : nb.ids.length + ' NUOVI ORDINI · ' + nb.ids.map(function(i){ return '#' + E(i); }).join(' ') + pz1;
+  return '<button type="button" class="pz-nb" data-a="dis">🆕 ' + t + '<small>tocca per chiudere</small></button>';
+}
 function checkNew(){
-  var ids = {}, fresh = false; model().forEach(function(x){ ids[x.o.id] = 1; if(seen && !seen[x.o.id] && x.st !== 'Pronto'){ fresh = true; newIds[x.o.id] = Date.now(); } });
-  seen = ids; if(fresh) beep();
+  var ids = {}, fresh = []; model().forEach(function(x){ ids[x.o.id] = 1; if(seen && !seen[x.o.id] && x.st !== 'Pronto'){ fresh.push(x); newIds[x.o.id] = Date.now(); } });
+  seen = ids;
+  if(fresh.length){
+    beep(); try{ if(navigator.vibrate) navigator.vibrate([250, 120, 250]); }catch(e){}
+    var u = 0; fresh.forEach(function(x){ u += x.units; });
+    nb = {t: Date.now(), ids: fresh.map(function(x){ return x.o.id; }), u: u, ds: fresh.length === 1 ? fresh[0].ds.ico : '', at: fresh.length === 1 ? fresh[0].tg.lab : ''};
+    setTimeout(function(){ if(pz) paint(); }, 9200);
+  }
 }
 function toastMsg(t){ if(!hasDoc) return; var d = $('#pzToast') || document.createElement('div'); d.id = 'pzToast'; d.textContent = t; document.body.appendChild(d); clearTimeout(d._t); d._t = setTimeout(function(){ if(d.parentNode) d.parentNode.removeChild(d); }, 3500); }
 function openPZ(){
@@ -41679,7 +41857,12 @@ function onClick(e){
   if(a === 'fin'){ b.disabled = true; var fid = b.getAttribute('data-o'), fo = findOrder(fid);
     if(fo){ chain = chain.then(async function(){ try{ await doneAll(fo); await window.updateOrderStatus(fo.id, 'Pronto'); }catch(x){ console.warn('[pz] fin', x); alert('Errore: ' + (x && x.message || x)); } try{ if(typeof loadOrders === 'function') await loadOrders(); }catch(x){} paint(); toastMsg('✅ #' + fo.id + ' pronto — avvisato il responsabile'); }); } return; }
   if(a === 'v'){ ls(K_VIEW, b.getAttribute('data-v')); paint(); return; }
-  if(a === 'gd'){ ls('bp_pz_guide', ls('bp_pz_guide') === '0' ? '1' : '0'); paint(); return; }
+  if(a === 'gd'){ ls('bp_pz_guide', ls('bp_pz_guide') === '1' ? '0' : '1'); paint(); return; }
+  if(a === 'one'){ doOne(b.getAttribute('data-g')); return; }
+  if(a === 'undo'){ doUndo(); return; }
+  if(a === 'jump'){ jumpTo(b.getAttribute('data-n')); return; }
+  if(a === 'tm'){ toolsOpen = !toolsOpen; paint(); return; }
+  if(a === 'dis'){ nb = null; paint(); return; }
   if(a === 'x'){ closePZ(); return; }
   if(a === 'out'){ closePZ(); try{ doLogout(); }catch(x){} return; }
   if(a === 'fs'){ try{ if(document.fullscreenElement) document.exitFullscreen(); else pz.requestFullscreen(); }catch(x){} return; }
@@ -41728,8 +41911,15 @@ function installRole(){
 function mountBtn(){
   if(!hasDoc || roleNow() === 'driver') return;
   ['#kitchenTab .topline', '#ordersTab .topline'].forEach(function(sel){
-    var tl = $(sel); if(!tl || $('.pz-open', tl)) return;
-    var b = document.createElement('button'); b.type = 'button'; b.className = 'blue pz-open'; b.innerHTML = '<img class="bp-chef" alt="" src="'+BP_IMG.pizzaiolo+'"> Schermo pizzaiolo'; b.addEventListener('click', openPZ); tl.appendChild(b);
+    var tl = $(sel); if(!tl) return;
+    var b = $('.pz-open', tl);
+    if(!b){
+      b = document.createElement('button'); b.type = 'button'; b.className = 'blue pz-open'; b.innerHTML = '<img class="bp-chef" alt="" src="'+BP_IMG.pizzaiolo+'"> Schermo pizzaiolo'; b.addEventListener('click', openPZ); tl.appendChild(b);
+    }
+    var bg = window.bpPzBadge ? window.bpPzBadge() : {n: 0, st: 'none'}, c = $('.pz-cnt', b);
+    if(!bg.n){ if(c) c.remove(); return; }
+    if(!c){ c = document.createElement('span'); b.appendChild(c); }
+    c.className = 'pz-cnt pz-' + bg.st; if(c.textContent !== String(bg.n)) c.textContent = bg.n;
   });
 }
 function decorKds(){
@@ -41748,10 +41938,27 @@ function init(){
   installWrapper(); installRole();
   if(hasDoc){ setInterval(function(){ try{ mountBtn(); decorKds(); }catch(e){} }, 1500); }
   window.bpOpenPizzaioloScreen = openPZ;
+  /* lo schermo resta acceso: il blocco si perde quando la pagina va in background, quindi lo richiedo di nuovo al ritorno */
+  if(hasDoc){ try{ document.addEventListener('visibilitychange', function(){ try{ if(pz && !document.hidden && navigator.wakeLock) navigator.wakeLock.request('screen').then(function(w){ wake = w; }).catch(function(){}); }catch(e){} }); }catch(e){} }
   /* apre da solo la schermata quando l'utente è pizzaiolo (la funzione bpApplyRole interna non è agganciabile da qui) */
   if(hasDoc){ try{ var opened = false, chk = function(){ if(document.body && document.body.getAttribute('data-role') === 'pizzaiolo' && !opened){ opened = true; setTimeout(openPZ, 300); } else if(document.body && document.body.getAttribute('data-role') !== 'pizzaiolo'){ opened = false; } };
     new MutationObserver(chk).observe(document.body, {attributes: true, attributeFilter: ['data-role']}); chk(); }catch(e){ console.warn('[pz] role watch', e); } }
 }
+/* v2.1 · badge del tab Pizzaiolo: numero di pizze ancora da fare + urgenza (later/soon/now/late) */
+var _bgC = {t: 0, v: {n: 0, st: 'none'}};
+window.bpPzBadge = function(){
+  try{
+    var now = Date.now(); if(now - _bgC.t < 1200) return _bgC.v;
+    var n = 0, rank = -1, R = {later: 0, soon: 1, now: 2, late: 3};
+    model().forEach(function(x){
+      var u = urg(x, now); if(u === 'done' || u === 'wait') return;
+      var pend = 0; x.lines.forEach(function(i, k){ if(x.d.indexOf(lineKey(i, k)) < 0) pend += Number(i.quantity || 1); });
+      if(!pend) return; n += pend; if(R[u] > rank) rank = R[u];
+    });
+    _bgC = {t: now, v: {n: n, st: n ? ['later', 'soon', 'now', 'late'][rank] : 'none'}};
+    return _bgC.v;
+  }catch(e){ return {n: 0, st: 'none'}; }
+};
 window.__pz = {h: {pzLines: pzLines, lineKey: lineKey, doneArr: doneArr, targetMs: targetMs, dest: dest, stOf: stOf, allOrders: allOrders, itemsOf: itemsOf, hhmm: hhmm, E: E, ls: ls, findOrder: findOrder, toast: toastMsg}, model: model, buildHtml: buildHtml, toggle: toggle, doneArr: doneArr, allDone: allDone, reqKeys: reqKeys, dest: dest, init: init, flags: function(){ return {colMissing: colMissing}; }};
 init();
 })();
