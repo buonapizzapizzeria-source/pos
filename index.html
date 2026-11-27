@@ -2828,14 +2828,6 @@ html:not(.x) body .bp-theme-btn{width:42px!important;height:42px;min-height:42px
 .bpn-b{position:absolute;top:3px;right:50%;margin-right:-24px;min-width:19px;height:19px;border-radius:99px;background:#101828;color:#fff;font-size:11px;font-weight:900;display:flex;align-items:center;justify-content:center;padding:0 5px;border:2px solid var(--bp-card)}
 .bpn-b.warn{background:var(--bp-brand)}
 .bpn-item.on .bpn-b{background:#fff;color:var(--bp-brand2);border-color:transparent}
-/* v2.1 · badge Pizzaiolo: grigio = presto, arancio = tra poco, rosso = parti ora / in ritardo */
-.bpn-b.pz-later,.bpn-item.on .bpn-b.pz-later{background:#667085;color:#fff}
-.bpn-b.pz-soon,.bpn-item.on .bpn-b.pz-soon{background:#f59e0b;color:#101828}
-.bpn-b.pz-now,.bpn-b.pz-late,.bpn-item.on .bpn-b.pz-now,.bpn-item.on .bpn-b.pz-late{background:#d92d20;color:#fff;animation:bpPzPulse 1.2s ease-in-out infinite}
-@keyframes bpPzPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.2)}}
-.pz-cnt{display:inline-flex;align-items:center;justify-content:center;min-width:26px;height:26px;padding:0 7px;margin-left:8px;border-radius:99px;font-size:14px;font-weight:900;color:#fff;background:#667085}
-.pz-cnt.pz-soon{background:#f59e0b;color:#101828}
-.pz-cnt.pz-now,.pz-cnt.pz-late{background:#d92d20;animation:bpPzPulse 1.2s ease-in-out infinite}
 @media(min-width:900px){
  #bpNav{left:0;top:var(--bp-hdr,60px);bottom:0;width:86px;flex-direction:column;gap:6px;padding:12px 7px;border-right:1px solid var(--bp-line);overflow-y:auto}
  #bpNav .bpn-more{display:none}
@@ -4799,14 +4791,9 @@ html body #resPanel,html body #bpCamOv,html body #bpInk{padding-top:env(safe-are
  Analisi ed estrazione automatica dei dati in corso...
  </span>
  </div>
- <div style="display:flex;flex-direction:column;gap:6px;flex:none">
- <button class="secondary btn-sm" id="orderImgRetry" onclick="retryOrderImage()" type="button" title="Rimanda la stessa foto all'AI · أعد قراءة نفس الصورة">
- 🔄 Rileggi
- </button>
  <button class="secondary btn-sm" onclick="el('imagePreviewBar').classList.add('hidden')" type="button">
  ✖
  </button>
- </div>
  </div>
  <div class="voice-input-row">
  <textarea id="voiceSmartInput" placeholder="📝 Incolla qui un testo WhatsApp, usa il microfono 🎤 o incolla una foto (Ctrl+V). Es: 'Marco, via Roma 10 Lodi Vecchio, tel 3331234567, per le 20:30 consegna 2 Margherita, 1 Panino Kebab senza cipolla più patatine pago con 50 euro'"></textarea>
@@ -6233,6 +6220,7 @@ async function startEditOrder(o){
  if(parsedNotes.cashInfo){
  let cm = parsedNotes.cashInfo.match(/Paga con\s*[^\d]*(\d+(?:[.,]\d+)?)/i);
  if(cm) el('cashGivenInput').value = cm[1].replace(',','.');
+ else if(/^Giusto/i.test(parsedNotes.cashInfo)) el('cashGivenInput').value = '0';
  }
 
  cart.clear();
@@ -7024,7 +7012,7 @@ function rdAccRefresh(){
  set("rdAccModeSum", v("type") + " · " + v("payment"));
  var tt = getSelectedDeliveryTime(); set("rdAccTimeSum", tt === "Prima possibile" ? "Subito" : tt);
  set("rdAccNoteSum", v("notes").slice(0, 60) || "Nessuna nota");
- var cash = Number(v("cashGivenInput") || 0), tot = getGrandTotal();
+ var tot = getGrandTotal(), cash = bpCashGiven(tot);
  set("rdAccPaySum", cash > 0 ? (cash >= tot ? "Dà " + euro(cash) + " · Resto " + euro(cash - tot) : "Mancano " + euro(tot - cash)) : "Importo esatto");
  var sz = el("ddSizeSelect"), qt = el("ddQtySelect");
  if(sz && qt) set("rdAccSizeSum", (sz.value || "") + " · ×" + (qt.value || 1));
@@ -7177,9 +7165,9 @@ function rdTimerInfo(o){
  if(m){
  var d = new Date(created); d.setHours(Number(m[1]), Number(m[2]), 0, 0);
  if(o.is_scheduled && o.scheduled_at){ var sd = new Date(o.scheduled_at); if(!isNaN(sd.getTime())) d = sd; }
- var diff = d.getTime() - now - (deliv ? (Number(window.BP_DEP_LEAD_MIN) || 0) * 60000 : 0); /* consegne: conto alla rovescia fino all'USCITA */
- if(diff > 600000) return {cls: "ok", main: "⏳ " + rdFmt(diff), sub: (deliv ? "all'uscita · consegna" : pre) + " · ore " + t};
- if(diff > 0) return {cls: "warn", main: "🔥 " + rdFmt(diff), sub: (deliv ? "all'uscita · consegna" : pre) + " · ore " + t};
+ var diff = d.getTime() - now;
+ if(diff > 600000) return {cls: "ok", main: "⏳ " + rdFmt(diff), sub: pre + " · ore " + t};
+ if(diff > 0) return {cls: "warn", main: "🔥 " + rdFmt(diff), sub: pre + " · ore " + t};
  return {cls: "late", main: "🚨 +" + rdFmt(diff), sub: "IN RITARDO · " + lbl + " ore " + t};
  }
  var el_ = now - created;
@@ -7499,22 +7487,6 @@ function compressImageToBase64(file, maxSide=2000){
  });
 }
 
-
-/* Rileggi: rimanda all'AI la stessa foto già caricata (utile se la prima lettura è stata interrotta o è andata male) */
-async function retryOrderImage(){
- var c = window.__bpLastOrderImg, st = el('orderImgStatus'), btn = el('orderImgRetry');
- if(!c){ if(st) st.textContent = '⚠️ Nessuna foto salvata: caricala di nuovo.'; return; }
- var apiKey = (el('geminiApiKey')?.value || localStorage.getItem('bp_gemini_key') || '').trim();
- if(!apiKey){ try{ el('aiKeyBox').classList.remove('hidden'); el('geminiApiKey').focus(); }catch(e){} if(st) st.textContent = '🔑 Inserisci la Gemini API Key per rileggere la foto.'; return; }
- if(btn){ if(btn.disabled) return; btn.disabled = true; }
- if(st) st.textContent = '⏳ Rilettura della stessa foto in corso...';
- try{
-  await analyzeMediaOrTextWithGemini({type: 'image', base64: c.base64, mimeType: c.mimeType}, apiKey);
- }catch(e){ if(st) st.textContent = '❌ ' + (e && e.message ? e.message : 'Errore') + ' — riprova con «Rileggi».'; }
- finally{ if(btn) btn.disabled = false; }
-}
-window.retryOrderImage = retryOrderImage;
-
 async function processUploadedOrderImage(file){
  let apiKey = (el('geminiApiKey')?.value || localStorage.getItem('bp_gemini_key') || '').trim();
  let compressed;
@@ -7522,7 +7494,6 @@ async function processUploadedOrderImage(file){
  catch(e){ el('orderImgStatus').textContent = '❌ Immagine non leggibile: ' + e.message; return; }
 
  el('orderImgThumb').src = compressed.dataUrl;
- window.__bpLastOrderImg = compressed; /* ultima foto: «Rileggi» la rimanda all'AI senza ricaricarla */
  el('imagePreviewBar').classList.remove('hidden');
 
  if(!apiKey){
@@ -7543,8 +7514,6 @@ async function processUploadedOrderImage(file){
 
 /* ================= CALCOLO URGENZA & ORDINAMENTO AUTOMATICO PER ORARIO DI CONSEGNA ================= */
 function __fmMin(n){ n = Math.abs(n); return n >= 60 ? Math.floor(n / 60) + 'h ' + (n % 60) + 'min' : n + ' min'; }
-/* Anticipo di uscita per le CONSEGNE: l'orario del cliente = consegnato al cliente; l'ordine deve essere pronto e il fattorino parte N minuti prima (default 5) */
-window.BP_DEP_LEAD_MIN = (function(){ try{ var r = localStorage.getItem('bp_dep_lead_min'), v = Number(r); if(r !== null && v >= 0 && v <= 30) return v; }catch(e){} return 5; })();
 function getOrderUrgencyMeta(o){
  var parsed = splitTimeAndNotes(o.notes), tStr = parsed.time || 'Prima possibile';
  var st = normStatus(o.status), isDone = ['Completato','Annullato'].indexOf(st) >= 0;
@@ -7561,9 +7530,7 @@ function getOrderUrgencyMeta(o){
  badgeText: late ? '🚨 SUBITO (attesa ' + wait + ' min)' : '⚡ SUBITO (' + wait + ' min fa)'};
  }
  var d = new Date(created); d.setHours(Number(m[1]), Number(m[2]), 0, 0);
- var tgt = isNaN(schedTs) ? d.getTime() : schedTs;
-  var __isDel = /consegna|domicilio/i.test(o.order_type || ''), __lead = (__isDel && !isDone) ? (Number(window.BP_DEP_LEAD_MIN) || 0) : 0, __dep = tgt - __lead * 60000; /* uscita = consegna − anticipo */
-  var diff = Math.round((__dep - now) / 60000), tm = __dep / 60000;
+ var tgt = isNaN(schedTs) ? d.getTime() : schedTs, diff = Math.round((tgt - now) / 60000), tm = tgt / 60000;
  if(!isNaN(schedTs) && !isDone && diff > 0 && new Date(schedTs).toDateString() !== new Date(now).toDateString()){
   var __d0 = new Date(now); __d0.setHours(0,0,0,0); var __d1 = new Date(schedTs); __d1.setHours(0,0,0,0);
   var __days = Math.round((__d1.getTime() - __d0.getTime()) / 86400000);
@@ -7572,11 +7539,11 @@ function getOrderUrgencyMeta(o){
  if(!isDone && st !== 'In consegna' && window.bpShiftHides && window.bpShiftHides(tgt, diff)) return {type:'future', shiftHidden:true, timeLabel:tStr, sortMinutes:tm, diffMinutes:diff, isUrgent:false, isOverdue:false, cardClass:'', badgeClass:'urg-badge-scheduled', badgeText: window.bpShiftBadge(tgt, diff, tStr)};
  if(isDone) return {type:'done', timeLabel:tStr, sortMinutes:tm, diffMinutes:diff, isUrgent:false, isOverdue:false, cardClass:'', badgeClass:'time-badge', badgeText:'⏰ ' + tStr};
  if(diff < 0) return {type:'overdue', timeLabel:tStr, sortMinutes: tm - 1000000, diffMinutes:diff, isUrgent:true, isOverdue:true,
- cardClass:'urg-overdue', badgeClass:'urg-badge-overdue', badgeText:'🚨 ' + tStr + (__isDel ? ' · DOVEVI USCIRE ' + __fmMin(diff) + ' FA' : ' · IN RITARDO DI ' + __fmMin(diff))};
+ cardClass:'urg-overdue', badgeClass:'urg-badge-overdue', badgeText:'🚨 ' + tStr + ' · IN RITARDO DI ' + __fmMin(diff)};
  if(diff <= 25) return {type:'soon', timeLabel:tStr, sortMinutes:tm, diffMinutes:diff, isUrgent:true, isOverdue:false,
- cardClass:'urg-soon', badgeClass:'urg-badge-soon', badgeText: __isDel ? (diff === 0 ? '🔥 ' + tStr + ' · ESCI ORA!' : '🔥 ' + tStr + ' · esci tra ' + diff + ' min') : (diff === 0 ? '🔥 ' + tStr + ' · ADESSO!' : '🔥 ' + tStr + ' · tra ' + diff + ' min')};
+ cardClass:'urg-soon', badgeClass:'urg-badge-soon', badgeText: diff === 0 ? '🔥 ' + tStr + ' · ADESSO!' : '🔥 ' + tStr + ' · tra ' + diff + ' min'};
  return {type:'scheduled', timeLabel:tStr, sortMinutes:tm, diffMinutes:diff, isUrgent:false, isOverdue:false,
- cardClass:'', badgeClass:'urg-badge-scheduled', badgeText:'⏰ ' + tStr + (__isDel ? ' (esci tra ' : ' (tra ') + __fmMin(diff) + ')'};
+ cardClass:'', badgeClass:'urg-badge-scheduled', badgeText:'⏰ ' + tStr + ' (tra ' + __fmMin(diff) + ')'};
 }
 
 function sortOpenOrdersList(list){
@@ -7636,7 +7603,7 @@ function checkUrgentOrdersAlert(openList){
  parts.push(`🚨 ${overdueList.length} in ritardo (${overdueList.map(x=>`#${x.order.id} ore ${x.meta.timeLabel}`).join(', ')})`);
  }
  if(soonList.length){
- parts.push(`🔥 ${soonList.length} da far uscire entro 20 min (${soonList.map(x=>`#${x.order.id} ore ${x.meta.timeLabel}`).join(', ')})`);
+ parts.push(`🔥 ${soonList.length} in consegna entro 20 min (${soonList.map(x=>`#${x.order.id} ore ${x.meta.timeLabel}`).join(', ')})`);
  }
 
  el('urgencyBannerTitle').textContent = overdueList.length
@@ -8403,9 +8370,70 @@ function setCashGiven(val){
  renderCart();
 }
 
+/* ===== resto automatico: campo vuoto = taglio proposto · '0' = Giusto · numero = scelto dal cassiere ===== */
+function bpRestoOpts(t){
+ t = Math.round(Number(t || 0) * 100) / 100;
+ if(t <= 20) return [20, 30, 50];
+ if(t <= 30) return [30, 40, 50];
+ var a = Math.ceil(t / 10) * 10;
+ var l = [a, a + 10, a < 50 ? 50 : (a + 10 < 100 ? 100 : Math.ceil((a + 20) / 50) * 50)];
+ if(l[2] <= l[1]) l[2] = l[1] + 10;
+ return l;
+}
+function bpCashRaw(){ return String((el('cashGivenInput') || {}).value || '').trim(); }
+function bpCashGiven(total){
+ if(!el('payment') || el('payment').value !== 'Contanti') return 0;
+ var raw = bpCashRaw();
+ if(raw !== '') return Number(raw) || 0;
+ if(!(total > 0)) return 0;
+ if(typeof editingOrderId !== 'undefined' && editingOrderId != null && window.__bpEditPaidId == editingOrderId) return 0;
+ return bpRestoOpts(total)[0];
+}
+function bpCashTagFor(total){
+ if(!el('payment') || el('payment').value !== 'Contanti') return '';
+ if(bpCashRaw() === '0') return '[💶 Giusto, nessun resto]';
+ var g = bpCashGiven(total);
+ return g > total + 0.001 ? '[💶 Paga con ' + euro(g) + ' · Resto: ' + euro(Math.round((g - total) * 100) / 100) + ']' : '';
+}
+
+/* resto sulla scheda ordine (pagina Ordini) */
+function bpCardResto(o, p){
+ var st = String(o.status || ''), t = Number(o.total || 0);
+ if(bpPayKind(o.payment_method) !== 'cash' || p.paid || st === 'Completato' || st === 'Annullato' || !(t > 0) || String(o.id).indexOf('OFF-') === 0) return '';
+ var m = p.cashInfo && p.cashInfo.match(/Paga con\s*[^\d]*(\d+(?:[.,]\d+)?)/i);
+ var saved = m ? Number(m[1].replace(',', '.')) : null, exact = /^Giusto/i.test(p.cashInfo || '');
+ var opts = bpRestoOpts(t);
+ if(saved && opts.indexOf(saved) < 0 && saved >= t){ opts.push(saved); opts.sort(function(a, b){ return a - b; }); }
+ var h = '<button type="button" data-cashpick="0" class="' + (exact ? 'on' : '') + '"><b>✔ Giusto</b><small>' + euro(t) + '</small></button>';
+ opts.forEach(function(v){
+  var cls = saved === v ? 'on' : (!p.cashInfo && v === opts[0] ? 'sug' : '');
+  h += '<button type="button" data-cashpick="' + v + '" class="' + cls + '"><b>' + v + ' €</b><small>resto ' + euro(Math.round((v - t) * 100) / 100) + '</small></button>';
+ });
+ return '<div class="bp-cardresto">' + h + '</div>';
+}
+async function bpSaveCardCash(o, v, box){
+ var t = Number(o.total || 0), old = String(o.notes || '');
+ var tag = v > 0 && v > t + 0.001 ? '[💶 Paga con ' + euro(v) + ' · Resto: ' + euro(Math.round((v - t) * 100) / 100) + ']' : '[💶 Giusto, nessun resto]';
+ var rest = old.replace(/\s*\[💶[^\]]*\]/g, '').trim();
+ var tm = rest.match(/^\[⏰[^\]]*\]/);
+ var notes = tm ? (tm[0] + ' ' + tag + ' ' + rest.slice(tm[0].length).trim()).trim() : (tag + ' ' + rest).trim();
+ box.querySelectorAll('button').forEach(function(b){ b.disabled = true; });
+ try{
+  var r = await sb.from('orders').update({notes: notes}).eq('id', o.id).select();
+  if(r.error) throw r.error;
+  if(!r.data || !r.data.length) throw new Error('ordine non aggiornato (permessi?)');
+  o.notes = notes;
+  renderOrders();
+  await loadOrders();
+ }catch(e){
+  box.querySelectorAll('button').forEach(function(b){ b.disabled = false; });
+  alert('Resto non salvato:\n' + (e.message || e));
+ }
+}
+
 function updateRestoUI(grandTotal){
  let banner = el('restoResultBanner');
- let valIn = Number(el('cashGivenInput')?.value || 0);
+ let valIn = bpCashGiven(grandTotal);
  if(!banner || el('payment')?.value !== 'Contanti' || !valIn || grandTotal <= 0){
  if(banner) banner.classList.add('hidden');
  return;
@@ -8737,35 +8765,10 @@ function gemRomeTimePlus(minutes){
 }
 
 /* Prosciutto = Prosciutto cotto: sulla pizza Prosciutto (non crudo) l'extra "prosciutto"/"prosciutto cotto"/"cotto" e' l'ingrediente base, mai un'aggiunta */
-function gemDedupeBaseExtras(prodName, add, prod){
+function gemDedupeBaseExtras(prodName, add){
   const nm = String(prodName || '').toLowerCase();
-  let out = add || [];
-  if(/prosciutto/.test(nm) && !/crudo/.test(nm)) out = out.filter(a => !/^\s*(prosciutto(\s+cotto)?|cotto)\s*$/i.test(String(a).normalize('NFD').replace(/[\u0300-\u036f]/g, '')));
-  /* Ordini piattaforma (Deliveroo/Glovo/Just Eat) e AI: «+cipolla +piccante» su un prodotto che LI HA GIA' nella ricetta non è un'aggiunta a pagamento.
-     Si tolgono gli extra i cui ingredienti sono tutti già nella descrizione del prodotto (anche per «Menu X» → si guarda il prodotto base «X»).
-     «doppia/extra/più…» restano extra veri. */
-  try{
-    const STOP = /^(di|del|della|dei|al|alla|e|con|il|la|lo|le|un|una)$/;
-    const tok = t => ingNorm(t).replace(/[^a-z0-9 ]/g, ' ').split(' ').filter(w => w && !STOP.test(w)).map(w => w.length > 3 ? w.replace(/[aeio]$/, '') : w);
-    let base = [];
-    const descOf = p => (p && p.description) ? parseIngredients(p.description) : [];
-    base = descOf(prod);
-    if(!base.length){
-      const plain = String(prodName || '').replace(/^\s*men[uù]\s+/i, '').trim().toLowerCase();
-      const alt = (typeof allMenu !== 'undefined' ? allMenu : []).find(p => String(p.name || '').trim().toLowerCase() === plain && p !== prod);
-      base = descOf(alt);
-    }
-    const bt = new Set(); base.forEach(x => tok(x).forEach(w => bt.add(w)));
-    if(bt.size){
-      out = out.filter(a => {
-        const raw = ingNorm(a);
-        if(/\b(doppi[ao]|extra|piu|ancora|abbondante|tanta|tanto)\b/.test(raw)) return true;
-        const t = tok(a); if(!t.length) return true;
-        return !t.every(w => bt.has(w));
-      });
-    }
-  }catch(e){ try{ bpWarn(e); }catch(_e){} }
-  return out;
+  if(!/prosciutto/.test(nm) || /crudo/.test(nm)) return add || [];
+  return (add || []).filter(a => !/^\s*(prosciutto(\s+cotto)?|cotto)\s*$/i.test(String(a).normalize('NFD').replace(/[\u0300-\u036f]/g, '')));
 }
 
 /* MENU DISTRIBUTIVO: "due menu pizza: una X e una Y" => il Menu vale per TUTTE le pizze Normale fino a coprire il numero richiesto */
@@ -8864,7 +8867,7 @@ function gemNormalizeOrder(o){
     if(size !== 'Normale') isMenu = false;
     const mods = gemParseMods([str(r.modifiche), __tail].filter(Boolean).join(', '));
     const __pm = menuList.find(p => gemNorm(p.name) === gemNorm(nome));
-    mods.add = gemDedupeBaseExtras(__pm ? __pm.name : nome, mods.add, __pm);
+    mods.add = gemDedupeBaseExtras(__pm ? __pm.name : nome, mods.add);
     return {
       name: nome,
       quantity: Math.max(parseInt(r.quantita, 10) || 1, 1),
@@ -9914,7 +9917,7 @@ function gemCommitOrder(parsed, finalRows, skipped, learned){
  let rem = (Array.isArray(r.rem) ? r.rem : []).map(cleanIng).filter(Boolean);
  let add = (Array.isArray(r.add) ? r.add : []).map(cleanIng).filter(Boolean);
  try{ if(window.bpSmartExtras){ let __rr = window.bpSmartExtras([...rem.map(x => 'senza ' + x), ...add].join(' '), prod, rem, add); rem = __rr.removed; add = __rr.added; } }catch(_e){}
- add = gemDedupeBaseExtras(prod.name, add, prod);
+ add = gemDedupeBaseExtras(prod.name, add);
  const __before = new Map(); cart.forEach((v, k) => __before.set(k, v.qty));
 addVoiceItemToCart(prod, size, price, qty, rem, add);
 // chiave REALE della riga nel carrello (con extra a pagamento la chiave cambia: ingredienti canonici + "ext2"), cosi' Menu/Baby si applicano alla riga giusta
@@ -10304,7 +10307,7 @@ function processSpokenOrder(transcript, isAuto=false){
  custInfo.push(`⏰ <strong>${esc(getSelectedDeliveryTime())}</strong>`);
  if(el('address').value) custInfo.push(`📍 ${esc(el('address').value)}`);
  if(el('phone').value) custInfo.push(`📞 ${esc(el('phone').value)}`);
- if(el('cashGivenInput').value) custInfo.push(`💶 Contanti: €${esc(el('cashGivenInput').value)}`);
+ if(Number(el('cashGivenInput').value) > 0) custInfo.push(`💶 Contanti: €${esc(el('cashGivenInput').value)}`);
 
  if(addedSummary.length){
  playOrderChime(true);
@@ -11006,12 +11009,7 @@ async function _doSaveOrderCore(){
  let __sch = bpReadSchedule();
  if(__sch.error){ setMsg('orderMsg', __sch.error, 'error'); el('saveOrder').disabled=false; return; }
  if(__sch.on && __sch.at){ let __sd = new Date(__sch.at); selectedTime = bpPad2(__sd.getHours()) + ':' + bpPad2(__sd.getMinutes()); }
- let cashGiven = Number(el('cashGivenInput')?.value || 0);
- let cashTag = '';
- if(el('payment').value === 'Contanti' && cashGiven > total){
- let resto = Math.round((cashGiven - total) * 100) / 100;
- cashTag = `[💶 Paga con ${euro(cashGiven)} · Resto: ${euro(resto)}]`;
- }
+ let cashTag = bpCashTagFor(total);
  let userNotes = el('notes').value.trim();
  let combinedNotes = `[⏰ ${selectedTime}]` + (cashTag ? ` ${cashTag}` : '') + (userNotes ? ` ${userNotes}` : '') + ((editingOrderId != null && window.__bpEditPaidId == editingOrderId) ? ' [✅ PAGATO]' : '');
 
@@ -12060,6 +12058,7 @@ function renderOrderList(id, list, isOpenTab=false){
  <p>🕒 Creato: ${when} · ${bpTypeIcon(o.order_type)} <strong>${esc(o.order_type)}</strong> · ${bpPayIcon(o.payment_method)} ${esc(bpPayLabel(o.payment_method))}${o.created_by_email ? ' · 👤 ' + esc(o.created_by_email) : ''}</p>${o.updated_by_email ? '<p>✏️ Ultima modifica: <strong>' + esc(o.updated_by_email) + '</strong>' + (o.updated_at ? ' · ' + new Date(o.updated_at).toLocaleTimeString('it-IT', {hour: '2-digit', minute: '2-digit'}) : '') + '</p>' : ''}
  ${contactLine?`<p>${contactLine}</p>`:''}
  ${window.bpPreFo ? bpPreFo.ticket(items, true) : ''}${itemsHtml}${window.bpPB ? bpPB.ticket(items, true) : ''}
+ ${bpCardResto(o, parsedNotes)}
  ${noteHtml}
  ${o.online_pending ? `<div class="notice" style="background:#f4ebff;border:2px solid #6941c6;color:#53389e;font-weight:800;display:flex;gap:8px;align-items:center;flex-wrap:wrap">🌐 Ordine online da confermare <button type="button" class="green btn-sm" data-oacc>✅ Accetta</button> <button type="button" class="secondary btn-sm" data-orej>❌ Rifiuta</button></div>` : ''}
  <div class="status-bar">${statusButtonsHtml}</div>
@@ -12081,6 +12080,7 @@ function renderOrderList(id, list, isOpenTab=false){
 
  d.querySelector('[data-modifica]').onclick = ()=>startEditOrder(o);
  d.querySelector('[data-riordina]').onclick = ()=>repeatOrderIntoCart(o, items, true);
+ d.querySelectorAll('[data-cashpick]').forEach(function(b){ b.onclick = function(ev){ ev.preventDefault(); ev.stopPropagation(); bpSaveCardCash(o, Number(b.getAttribute('data-cashpick')), b.parentNode); }; });
  let __pdb = d.querySelector('[data-paga]'); if(__pdb) __pdb.onclick = ()=>bpTogglePaid(o, __pdb);
 
  d.querySelectorAll('[data-set-status]').forEach(btn=>{
@@ -14226,10 +14226,7 @@ try{
  function buildFromForm(){
  var items = [...cart.values()].map(function(x){ return JSON.parse(JSON.stringify(x)); });
  var total = getGrandTotal(), delivFee = getActiveDeliveryFee(), selectedTime = getSelectedDeliveryTime();
- var cashGiven = Number(el('cashGivenInput').value || 0), cashTag = '';
- if(el('payment').value === 'Contanti' && cashGiven > total){
- cashTag = '[💶 Paga con ' + euro(cashGiven) + ' · Resto: ' + euro(Math.round((cashGiven - total) * 100) / 100) + ']';
- }
+ var cashTag = bpCashTagFor(total);
  var userNotes = el('notes').value.trim();
  var tblNo = el('type').value === 'Tavolo' ? (el('tableNo') ? el('tableNo').value.trim() : '') : '';
  return {
@@ -18957,9 +18954,9 @@ openCartIngModal = function(key){
  var more = document.createElement('div'); more.id = 'bpMore'; more.className = 'hidden no-print';
  document.body.appendChild(nav); document.body.appendChild(more);
  function num(sel){ var e = $(sel); var n = e ? parseInt(e.textContent, 10) : 0; return isNaN(n) ? 0 : n; }
- function badge(t){ if(t === 'orders') return [num('#openCountBadge'), 0]; if(t === 'kitchen') return [num('#kitchenCountBadge'), 0]; if(t === 'inventory') return [num('#invAlertBadge'), 1]; if(t === 'pizzaiolo'){ var pb = window.bpPzBadge ? window.bpPzBadge() : null; return pb ? [pb.n, 0, pb.st] : [0, 0]; } return [0, 0]; }
+ function badge(t){ if(t === 'orders') return [num('#openCountBadge'), 0]; if(t === 'kitchen') return [num('#kitchenCountBadge'), 0]; if(t === 'inventory') return [num('#invAlertBadge'), 1]; return [0, 0]; }
  function item(n, on, sec, bg){
- var b = bg ? '<span class="bpn-b' + (bg[1] ? ' warn' : '') + (bg[2] ? ' pz-' + bg[2] : '') + '">' + bg[0] + '</span>' : '';
+ var b = bg ? '<span class="bpn-b' + (bg[1] ? ' warn' : '') + '">' + bg[0] + '</span>' : '';
  return '<button type="button" class="bpn-item' + (on ? ' on' : '') + (sec ? ' sec' : '') + '" data-go="' + n[0] + '" title="' + n[2] + '"><span class="i">' + n[1] + '</span><span class="l">' + n[2] + '</span>' + b + '</button>';
  }
  var navSig = '';
@@ -25091,7 +25088,7 @@ if(a&&!a.title){a.title='QR menu e automazioni';a.setAttribute('aria-label',a.ti
  var bar=$('#p64Bar'); if(!bar) return;
  var win=$('#p64Win'), open=win&&win.getAttribute('data-open');
  var tb=$('#bpoTime b'), tt=tb? tb.textContent.trim():'';
- var dots={cust:!!(val('customer')||val('phone')||val('address')),note:!!val('notes'),extra:parseFloat(val('extraAmountInput'))>0||parseFloat(val('discountAmountInput'))>0,time:tt&&tt!=='Subito',cash:parseFloat(val('cashGivenInput'))>0};
+ var dots={cust:!!(val('customer')||val('phone')||val('address')),note:!!val('notes'),extra:parseFloat(val('extraAmountInput'))>0||parseFloat(val('discountAmountInput'))>0,time:tt&&tt!=='Subito',cash:(function(){try{return bpCashGiven(getGrandTotal())>0;}catch(e){return false;}})()};
  $$('[data-w]',bar).forEach(function(b){ var k=b.getAttribute('data-w'); b.classList.toggle('on',open===k); b.classList.toggle('dot',!!dots[k]);
  var l=$('b',b); var txt=WIN[k][1]; if(k==='cust'&&val('customer')) txt=val('customer'); if(k==='time'&&tt) txt=tt; if(l&&l.textContent!==txt) l.textContent=txt; });
  var n=0,tot='€ 0,00'; try{ n=cartCount(); tot=euro(getGrandTotal()); }catch(e){}
@@ -27167,7 +27164,7 @@ try{
 /* ===== bpV93shutter ===== */
 try{
 (function(){try{
- var root=document.documentElement,shut=false,anim=0,tm=0,openedAt=0,mounted=false,lastH=null;
+ var root=document.documentElement,shut=false,anim=0,tm=0,openedAt=0,mounted=false;
  var H=function(){return document.querySelector('header')};
  /* durante l'animazione: aggiorna --p64-top e tieni ferma la pagina (niente salti) */
  function run(ms){var h=H();if(!h)return;cancelAnimationFrame(anim);var t0=performance.now(),last=h.offsetHeight;
@@ -27181,12 +27178,12 @@ try{
  function mount(){var h=H();if(!h||document.getElementById('bp93Strip'))return;var s=document.createElement('div');s.id='bp93Strip';s.setAttribute('role','button');s.setAttribute('aria-label','Apri barra strumenti');
  s.innerHTML='<span class="pill"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>Strumenti</span>';
  h.appendChild(s);
- s.addEventListener('click',function(e){if(e&&e.isTrusted===false)return;if(!shut&&root.classList.contains('bp-shut'))shut=true;openNow()});
+ s.addEventListener('click',function(){if(!shut&&root.classList.contains('bp-shut'))shut=true;openNow()});
  var b=h.querySelector('.brand');if(b)b.addEventListener('click',function(){if(!shut)shutNow()});
  var y0=null;h.addEventListener('touchstart',function(e){y0=e.touches[0].clientY},{passive:true});
  h.addEventListener('touchmove',function(e){if(y0==null)return;var dy=e.touches[0].clientY-y0;if(!shut&&dy<-70&&Date.now()-openedAt>1500){y0=null;shutNow()}else if(shut&&dy>12){y0=null;openNow()}},{passive:true});
  h.addEventListener('touchend',function(){y0=null},{passive:true});
- if(!mounted||h!==lastH){mounted=true;lastH=h;shut=false;shutNow(true)}} /* l'header parte alzato al primo montaggio e ogni volta che l'header viene ricreato (login/cambio utente); il remount ogni 500ms non deve richiuderlo */
+ if(!mounted){mounted=true;shutNow(true)}} /* l'header parte alzato SOLO al primo montaggio: il remount ogni 500ms non deve richiuderlo */
  /* clic su una voce dell'header (anche Stampa) = si richiude SUBITO, prima dell'azione;
  clic nel resto dell'app = si richiude dopo un attimo */
  document.addEventListener('click',function(e){var t=e.target;if(shut||!t||!t.closest||e.isTrusted===false)return;
@@ -27197,17 +27194,6 @@ try{
  if(Date.now()-openedAt<2500)return; /* appena aperto: lascia il tempo di scegliere */
  clearTimeout(tm);tm=setTimeout(shutNow,450)},true);
  window.addEventListener('afterprint',function(){shutNow()});
- /* Strumenti SEMPRE chiuso all'apertura: cambio ruolo/utente, ritorno all'app dopo una pausa, ripristino dalla cache */
- window.__bpShutHeader=function(animated){if(!root.classList.contains('bp-shut'))shut=false;shutNow(!animated)};
- var hidAt=0;
- document.addEventListener('visibilitychange',function(){if(document.hidden){hidAt=Date.now();return}if(hidAt)window.__bpShutHeader(false)});
- /* v130: Strumenti chiuso a ogni cambio di tab/schermata (Cucina, Pizzaiolo, Ordini...) */
- var tabShut=function(){setTimeout(function(){window.__bpShutHeader(false)},30)};
- document.addEventListener('click',function(e){var t=e.target;if(t&&t.closest&&t.closest('[data-tab],[data-go],#bpNav button,#bpMore button,.pz-open'))tabShut()},true);
- try{var pzOn=root.classList.contains('bp-pz-on');new MutationObserver(function(){var v=root.classList.contains('bp-pz-on');if(v!==pzOn){pzOn=v;tabShut()}}).observe(root,{attributes:true,attributeFilter:['class']})}catch(x){}
- setInterval(function(){try{var f=window.switchTab;if(typeof f==='function'&&!f.__bpShut){var g=function(){var r=f.apply(this,arguments);tabShut();return r};g.__bpShut=1;window.switchTab=g;try{switchTab=g}catch(x){}}}catch(x){}},1000);
- window.addEventListener('pageshow',function(e){if(e.persisted)window.__bpShutHeader(false)});
- try{if(document.body)new MutationObserver(function(){window.__bpShutHeader(false)}).observe(document.body,{attributes:true,attributeFilter:['data-role']})}catch(x){}
  mount();setInterval(function(){try{mount()}catch(e){}},500);
  setTimeout(function(){root.classList.remove('bp-boot')},3000);
 }catch(x){root.classList.remove('bp-boot');console.error('[bp] shutter',x)}})();
@@ -37006,7 +36992,7 @@ body.bp-peak #bpCash button{min-height:60px!important}
   var b=E('bpCash');if(b)return b;
   var a=E('cashCalcArea');if(!a)return null;var q=a.querySelector('.quick-cash-btns');if(!q)return null;
   b=document.createElement('div');b.id='bpCash';q.parentNode.insertBefore(b,q.nextSibling);
-  b.addEventListener('click',function(e){var t=e.target.closest('button');if(!t)return;setCashGiven(Number(t.getAttribute('data-v')||0));});
+  b.addEventListener('click',function(e){var t=e.target.closest('button');if(!t)return;var v=Number(t.getAttribute('data-v')||0);if(v>0)setCashGiven(v);else{E('cashGivenInput').value='0';renderCart();}});
   return b;
  }
  function cashOpts(t){
@@ -37020,7 +37006,7 @@ body.bp-peak #bpCash button{min-height:60px!important}
   var t=0;try{t=getGrandTotal();}catch(e){}
   var pay=E('payment');
   if(!t||t<=0||(pay&&pay.value!=='Contanti')){if(cashSig!==''){cashSig='';b.innerHTML='';}return;}
-  var inp=E('cashGivenInput'),cur=Number((inp&&inp.value)||0),h=['<button type="button" data-v="0" class="ex'+(!cur?' on':'')+'">✔ Giusto<small>'+eur(t)+'</small></button>'];
+  var cur=bpCashGiven(t),h=['<button type="button" data-v="0" class="ex'+(bpCashRaw()==='0'?' on':'')+'">✔ Giusto<small>'+eur(t)+'</small></button>'];
   cashOpts(t).forEach(function(v){h.push('<button type="button" data-v="'+v+'" class="'+(cur===v?'on':'')+'">'+v+' €<small>resto '+eur(Math.round((v-t)*100)/100)+'</small></button>');});
   var html=h.join('');if(html!==cashSig){cashSig=html;b.innerHTML=html;}
  }
@@ -37185,213 +37171,6 @@ function mount(){
 }
 setInterval(mount,1500);
 })()}catch(e){console.error('[bp] prep card',e)}
-</script>
-
-<style id="bpTCcss">
-#bpTC{position:fixed;inset:0;z-index:2147483200;display:flex;align-items:flex-end;justify-content:center;background:rgba(20,10,3,.6);font-family:inherit}
-#bpTC.hide{display:none}
-#bpTC .tb{width:min(100%,720px);max-height:94vh;display:flex;flex-direction:column;background:#fffaf3;color:#1d1209;border-radius:22px 22px 0 0;overflow:hidden}
-@media(min-width:700px){#bpTC{align-items:center}#bpTC .tb{border-radius:22px}}
-#bpTC .th{display:flex;gap:6px;padding:12px;background:#a8291f;color:#fff;align-items:center;flex-wrap:wrap}
-#bpTC .th b{flex:1 1 100%;font-size:17px}
-#bpTC .th button{flex:1;min-height:40px;border:0;border-radius:999px;background:#ffffff26;color:#fff;font-weight:900;font-size:13px}
-#bpTC .th button.on{background:#fff;color:#a8291f}
-#bpTC .tbd{flex:1;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:10px}
-#bpTC .tf{display:flex;gap:8px;padding:10px 12px calc(10px + env(safe-area-inset-bottom,0px));border-top:1px solid #ead9bf}
-#bpTC .tf button{flex:1;min-height:46px;font-weight:900;border-radius:14px}
-#bpTC .grp{background:#fff;border:1.5px solid #ead9bf;border-radius:16px;padding:10px 12px;display:grid;grid-template-columns:1fr 1fr;gap:8px}
-#bpTC .grp label{font-size:12px;font-weight:800;display:flex;flex-direction:column;gap:3px}
-#bpTC .grp label.ck{flex-direction:row;align-items:center;gap:8px;font-size:14px}
-#bpTC .grp label.w{grid-column:1/-1}
-#bpTC input,#bpTC select,#bpTC textarea{width:100%;min-height:40px;border:1.5px solid #e2cfa8;border-radius:10px;padding:6px 8px;font:inherit;font-size:14px;background:#fff;color:#1d1209}
-#bpTC input[type=checkbox]{width:22px;min-height:22px}
-#bpTC .row{display:flex;gap:6px;align-items:flex-start;background:#fff;border:1.5px solid #ead9bf;border-radius:14px;padding:6px}
-#bpTC .row textarea{min-height:44px;resize:vertical}
-#bpTC .row button{min-width:40px;min-height:40px;padding:0;border-radius:10px;font-size:16px}
-#bpTC .im{width:44px;height:44px;flex:0 0 44px;border-radius:10px;border:1.5px dashed #c9a56a;display:grid;place-items:center;background:#fff8ec center/cover no-repeat;font-size:18px;cursor:pointer}
-#bpTC .pv{background:#f6f4ef;border-radius:16px;padding:12px;text-align:center;font-weight:700;min-height:70px;--spd:350ms;overflow:hidden}
-#bpTC .pv .mi{display:block;max-width:100%;max-height:120px;margin:0 auto 6px;border-radius:12px}
-#bpTC .pv.side .mi{display:inline-block;width:50px;height:50px;margin:0 8px 0 0;vertical-align:middle;object-fit:cover}
-#bpTC .hint{font-size:12px;color:#7a5a3a;font-weight:700;line-height:1.5}
-#bpTC .lcp{border-radius:18px;padding:14px;color:#fff;background:linear-gradient(160deg,#3b1e15,#220f09)}
-#bpTC .lcp.th-gold{background:linear-gradient(160deg,#b8860b,#5c3d00)}#bpTC .lcp.th-red{background:linear-gradient(160deg,#c8102e,#6b0718)}#bpTC .lcp.th-green{background:linear-gradient(160deg,#1f7a4d,#0b3b24)}#bpTC .lcp.th-blue{background:linear-gradient(160deg,#1c5fd6,#0b2a66)}#bpTC .lcp.th-light{background:#fff;color:#1f2328;border:1.5px solid #f0d9a8}
-.bptc-a-out{animation:var(--ao) var(--spd) ease-in forwards}.bptc-a-in{animation:var(--ai) var(--spd) ease-out both}
-@keyframes tcfo{to{opacity:0}}@keyframes tcfi{from{opacity:0}}@keyframes tcso{to{opacity:0;transform:translateX(-40px)}}@keyframes tcsi{from{opacity:0;transform:translateX(40px)}}
-@keyframes tcuo{to{opacity:0;transform:translateY(-18px)}}@keyframes tcui{from{opacity:0;transform:translateY(18px)}}@keyframes tczo{to{opacity:0;transform:scale(.6)}}@keyframes tczi{from{opacity:0;transform:scale(.6)}}
-@keyframes tcflo{to{transform:rotateX(90deg)}}@keyframes tcfli{from{transform:rotateX(-90deg)}}@keyframes tcbo{to{opacity:0;transform:scale(.8)}}@keyframes tcbi{0%{opacity:0;transform:scale(.3)}60%{opacity:1;transform:scale(1.12)}100%{transform:scale(1)}}
-@keyframes tcblo{to{opacity:0;filter:blur(8px)}}@keyframes tcbli{from{opacity:0;filter:blur(8px)}}
-.bptc-cel{position:fixed;top:-50px;font-size:30px;z-index:2147483600;pointer-events:none;animation:bptccf linear forwards}@keyframes bptccf{to{transform:translateY(110vh) rotate(360deg)}}
-
-/* v132 · editor messaggi: elenco leggibile + scheda di scrittura a tutto schermo */
-#bpTC .th{padding:10px 12px;gap:6px}#bpTC .th b{font-size:15px}#bpTC .th button{min-height:36px;font-size:12.5px;padding:0 8px}
-#bpTC .tb{position:relative}
-#bpTC details.opt{background:#fff;border:1.5px solid #ead9bf;border-radius:16px;overflow:hidden}
-#bpTC details.opt summary{list-style:none;cursor:pointer;padding:12px 14px;font-weight:900;font-size:14px;display:flex;align-items:center;gap:8px}
-#bpTC details.opt summary::-webkit-details-marker{display:none}
-#bpTC details.opt summary small{margin-inline-start:auto;font-weight:800;color:#a8291f;background:#fff1ec;border-radius:99px;padding:3px 10px;font-size:12px}
-#bpTC details.opt summary::after{content:'▾';color:#a8291f}#bpTC details.opt[open] summary::after{content:'▴'}
-#bpTC details.opt .grp{border:0;border-top:1.5px dashed #ead9bf;border-radius:0}
-#bpTC .lkw label{display:flex;flex-direction:column;gap:4px;font-size:12px;font-weight:800}
-#bpTC .lsth{position:sticky;top:-12px;z-index:2;display:flex;gap:8px;align-items:center;background:#fffaf3;padding:8px 0}
-#bpTC .lsth .lc1{display:flex;flex-direction:column;align-items:center;line-height:1;min-width:44px}
-#bpTC .lsth .lc1 b{font-size:22px;color:#a8291f}#bpTC .lsth .lc1 small{font-size:10px;font-weight:800;color:#7a5a3a}
-#bpTC .lsth input{flex:1;min-width:0;border-radius:99px;padding:0 14px}
-#bpTC .lsth .addb{flex:0 0 auto;min-height:42px;border:0;border-radius:99px;padding:0 16px;font-weight:900;background:#1f7a4d;color:#fff}
-#bpTC .its{display:flex;flex-direction:column;gap:8px}
-#bpTC .it{display:flex;gap:10px;align-items:flex-start;background:#fff;border:1.5px solid #ead9bf;border-inline-start:5px solid #e8590c;border-radius:14px;padding:12px;cursor:pointer;transition:transform .12s,box-shadow .12s;-webkit-tap-highlight-color:transparent}
-#bpTC .it:active{transform:scale(.985);box-shadow:0 4px 14px rgba(168,41,31,.15)}
-#bpTC .it.hid{display:none}
-#bpTC .it .no{flex:0 0 auto;min-width:24px;height:24px;border-radius:99px;background:#fff1ec;color:#a8291f;font-size:12px;font-weight:900;display:grid;place-items:center}
-#bpTC .it .ith{width:46px;height:46px;flex:0 0 46px;object-fit:cover;border-radius:10px}
-#bpTC .it .tx{flex:1;min-width:0;font-size:16px;font-weight:700;line-height:1.45;white-space:pre-wrap;overflow-wrap:anywhere}
-#bpTC .it .tx i{color:#b09272;font-weight:600}
-#bpTC .it .pen{flex:0 0 auto;color:#c9a56a;font-size:18px}
-#bpTC .emp{text-align:center;padding:24px;color:#7a5a3a;font-weight:700}
-#bpTC .esh{position:absolute;inset:0;z-index:5;background:rgba(29,18,9,.55);display:flex;align-items:flex-end;opacity:0;pointer-events:none;transition:opacity .2s}
-#bpTC .esh.on{opacity:1;pointer-events:auto}
-#bpTC .ebx{width:100%;max-height:100%;overflow-y:auto;background:#fffaf3;border-radius:22px 22px 0 0;padding:12px 14px calc(14px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:10px;transform:translateY(30px);transition:transform .25s cubic-bezier(.2,.9,.3,1.2)}
-#bpTC .esh.on .ebx{transform:none}
-#bpTC .ehd{display:flex;align-items:center;gap:6px}
-#bpTC .ehd b{flex:1;text-align:center;font-size:15px}
-#bpTC .ehd button{min-width:42px;min-height:42px;border:0;border-radius:12px;background:#f2e6d3;color:#1d1209;font-size:22px;font-weight:900;padding:0}
-#bpTC .ehd .edone{padding:0 16px;font-size:15px;background:#a8291f;color:#fff}
-#bpTC .estage{background:radial-gradient(circle at 30% 0,#fff,#f3ece0);border:1.5px solid #ead9bf;border-radius:18px;padding:10px 12px 14px}
-#bpTC .elab{font-size:11px;font-weight:900;color:#7a5a3a;margin-bottom:6px}
-#bpTC .epv{text-align:center;font-weight:700;font-size:15px;line-height:1.45;color:#1f2328;overflow-wrap:anywhere}
-#bpTC .epv .mi{display:block;max-width:100%;max-height:140px;margin:0 auto 6px;border-radius:12px}
-#bpTC .epv.side .mi{display:inline-block;width:54px;height:54px;object-fit:cover;margin:0 8px 0 0;vertical-align:middle}
-#bpTC .epv.fx{text-align:start;background:linear-gradient(135deg,#fff3e3,#ffe4d1);border:1.5px solid #e8590c;color:#7a2e0e;border-radius:14px;padding:10px 12px}
-#bpTC .epv.fx small{display:block;font-size:11px;font-weight:800;opacity:.75}#bpTC .epv.fx p{margin:4px 0 0;font-size:14.5px}
-#bpTC #bpTCet{min-height:130px;font-size:18px!important;line-height:1.5;font-weight:600;border-radius:16px;padding:12px 14px;resize:vertical;border:2px solid #e8590c}
-#bpTC .ecnt{font-size:12px;font-weight:800;color:#7a5a3a;text-align:end;margin-top:-4px}#bpTC .ecnt.warn{color:#b54708}
-#bpTC .emo{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding-bottom:2px}#bpTC .emo::-webkit-scrollbar{display:none}
-#bpTC .emo button{flex:0 0 auto;min-width:42px;min-height:42px;border:1.5px solid #ead9bf;border-radius:12px;background:#fff;font-size:20px;padding:0}
-#bpTC .eact{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-#bpTC .eact button{min-height:44px;border:0;border-radius:12px;background:#f2e6d3;color:#1d1209;font-weight:900;font-size:14px}
-#bpTC .eact .edel{background:#fef3f2;color:#b42318}
-@media(min-width:700px){#bpTC .esh{align-items:center;justify-content:center}#bpTC .ebx{max-width:560px;border-radius:22px}}
-</style>
-<script id="bpTrackCfg">
-try{(function(){
-var KEY='track_cfg',ST=['Nuovo','In preparazione','Pronto','In consegna','Completato','Annullato'];
-var D_ALL=['Ottima scelta! 😋','Il pizzaiolo approva 👨‍🍳👍','Gusto da vero intenditore 🤌','Mmm… già sentiamo il profumo! 👃','Mangiare bene è una cosa seria 😌','Il tuo stomaco ti ringrazia 🙏','Sorriso garantito 😄'],D_PH={
- 'Nuovo':['Il pizzaiolo sta leggendo il tuo ordine 👀','Controlliamo che sia tutto perfetto ✅'],
- 'In preparazione':['Stendiamo la tua pizza a mano 🤌','Il forno è a 450°, ci siamo! 🔥','Ingredienti freschi, tanto amore ❤️'],
- 'Pronto':['È appena uscita dal forno, vieni finché è bollente! 🔥','Ti aspettiamo con un sorriso 😄'],
- 'In consegna':['Il fattorino sta arrivando da te 🛵','Tieni il citofono a portata di mano 😉'],
- 'Completato':['Buon appetito! Ci vediamo alla prossima fetta 🍕','Grazie di aver scelto Buona Pizza ❤️'],
- 'Annullato':['Ci dispiace! Chiamaci se hai domande 📞']
-},D_FX=[
-['🍕','Secondo la tradizione, la Margherita nasce a Napoli nel 1889 in onore della Regina Margherita.'],['🍕','Pomodoro, mozzarella e basilico: la Margherita ha i colori della bandiera italiana 🇮🇹'],['🍕','Nel 2017 l’arte del pizzaiuolo napoletano è diventata Patrimonio UNESCO.'],['🍕','La Pizza Napoletana è STG: una Specialità Tradizionale Garantita in tutta Europa.'],['🍕','La parola «pizza» compare già in un documento di Gaeta dell’anno 997.'],['🍕','La Marinara non ha pesce: era la pizza dei marinai, con aglio, origano e pomodoro.'],['🍕','La Quattro Stagioni ha quattro spicchi, uno per ogni stagione dell’anno.'],['🍕','«Calzone» viene da «calza»: è la pizza ripiegata a forma di mezzaluna.'],
-['🌾','L’impasto napoletano tradizionale ha solo 4 ingredienti: farina, acqua, sale e lievito.'],['🌾','Una lievitazione lunga rende la pizza più leggera e più digeribile.'],['🌾','Le bollicine nel cornicione sono anidride carbonica prodotta dal lievito.'],['🌾','Il bordo gonfio della pizza si chiama «cornicione».'],['🌾','Le macchioline scure sul bordo si chiamano «leopardatura»: segno di una bella cottura.'],['🌾','La pizza napoletana si stende a mano: niente mattarello, per non schiacciare l’aria.'],['🌾','La farina «00» è la più finemente macinata.'],['🌾','Il sale rinforza il glutine e tiene a bada il lievito.'],['🌾','Il glutine crea una rete elastica che trattiene l’aria: per questo l’impasto si allunga senza rompersi.'],
-['🧀','«Mozzarella» viene da «mozzare»: la pasta si stacca a mano, pezzo per pezzo.'],['🧀','Il fior di latte è fatto con latte vaccino, la bufala con latte di bufala.'],['🧀','La Mozzarella di Bufala Campana è DOP.'],['🧀','La mozzarella è una «pasta filata»: la cagliata si lavora e si allunga in acqua calda.'],['🧀','Treccia, bocconcini e ciliegine: la mozzarella ha tante forme!'],['🧀','I pizzaioli fanno sgocciolare la mozzarella fresca, così la pizza non diventa acquosa.'],['🧀','Il nome «Gorgonzola» viene da un paese vicino a Milano.'],['🧀','Grana Padano e Parmigiano Reggiano sono due formaggi DOP diversi.'],
-['🔥','Una pizza napoletana cuoce in 60–90 secondi!'],['🔥','Nel forno a legna la temperatura può superare i 450°C.'],['🔥','La pala per infornare la pizza si chiama… «pala»!'],['🔥','Il calore arriva da sotto (la pietra) e da sopra (la cupola): così la pizza cuoce in modo uniforme.'],['🔥','Il pizzaiolo gira la pizza nel forno per cuocerla uguale da ogni lato.'],
-['🍅','Il pomodoro è arrivato in Europa dalle Americhe nel Cinquecento.'],['🍅','Il Pomodoro San Marzano dell’Agro Sarnese-Nocerino è DOP.'],['🍅','«Basilico» viene dal greco e vuol dire «regale» 👑'],['🍅','L’olio extravergine si mette spesso a crudo, per non perdere il profumo.'],['🍅','L’origano è il profumo classico della Marinara.'],
-['🤓','«Döner kebab» in turco vuol dire «carne che gira» 🥙'],['🤓','Pizza con würstel e patatine: la preferita dei bambini italiani! 🍟'],['🤓','La pizza va mangiata subito: il suo momento migliore sono i primi minuti.'],['🤓','Una pizza «a portafoglio» si piega in quattro e si mangia per strada, alla napoletana.'],['🤓','Ogni pizza è fatta a mano: non ce ne sono due uguali 🤌']];
-var ANIM=[['fade','Dissolvenza'],['slide','Scorri di lato'],['up','Sale dal basso'],['zoom','Zoom'],['flip','Giro (flip)'],['bounce','Rimbalzo'],['blur','Sfocatura'],['type','Macchina da scrivere'],['none','Nessuna']];
-var AN={fade:['tcfo','tcfi'],slide:['tcso','tcsi'],up:['tcuo','tcui'],zoom:['tczo','tczi'],flip:['tcflo','tcfli'],bounce:['tcbo','tcbi'],blur:['tcblo','tcbli']};
-function I(t){return {t:t,img:''}}
-function defs(){var st={};ST.forEach(function(k){st[k]=(D_PH[k]||[]).map(I)});
- return {phr:{on:true,sec:6,anim:'fade',spd:350,size:15,mix:true,nmix:3,order:'rnd',imgPos:'top',all:D_ALL.map(I),st:st},
-  fx:{on:true,title:'💡 Lo sapevi?',sec:8,anim:'fade',spd:350,order:'rnd',imgPos:'top',list:D_FX.map(function(f){return I(f[0]+' '+f[1])})},
-  loy:{on:true,title:'Carta Buona Fedeltà',sub:'بطاقة الولاء',theme:'dark',anim:'pop',cele:'clap',celFirst:false,logo:'',banner:'',
-   mGift:'🎁 Hai {regali} da usare nel prossimo ordine!',mPend:'🍕 Le fette di questo ordine arrivano appena il locale lo conferma.',mMiss:'Ancora {n} {fw} e la prossima {premio} è tua! 💪',mCel:'👏 Bravo {nome}! Sei a {fette}/{tot} fette',mWin:'🎉 Hai vinto {premio}!'}};}
-var C=null,tab='phr',lk='__all',pvT=0,E=function(i){return document.getElementById(i)};
-function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
-function merge(a,b){Object.keys(b||{}).forEach(function(k){a[k]=b[k]});return a}
-async function load(){C=defs();try{var r=await sb.from('bp36_data').select('data').eq('key',KEY).maybeSingle();var c=r&&r.data&&r.data.data&&r.data.data.cfg;
- if(c){merge(C.phr,c.phr);merge(C.fx,c.fx);merge(C.loy,c.loy);ST.forEach(function(k){if(!C.phr.st[k])C.phr.st[k]=[]})}}catch(e){}}
-function sel(k,v,opts){return '<select data-k="'+k+'">'+opts.map(function(o){return '<option value="'+o[0]+'"'+(String(v)===o[0]?' selected':'')+'>'+o[1]+'</option>'}).join('')+'</select>'}
-function ck(k,v,t){return '<label class="ck w"><input type="checkbox" data-k="'+k+'"'+(v!==false?' checked':'')+'> '+t+'</label>'}
-function num(k,v,t,mn,mx){return '<label>'+t+'<input type="number" data-k="'+k+'" value="'+esc(v)+'" min="'+mn+'" max="'+mx+'"></label>'}
-function txt(k,v,t){return '<label class="w">'+t+'<input type="text" data-k="'+k+'" value="'+esc(v)+'"></label>'}
-var Q='',EI=-1,optOpen=false;
-function list(arr){
- var h='<div class="lsth"><div class="lc1"><b>'+arr.length+'</b><small>messaggi</small></div><input type="search" data-q placeholder="🔎 Cerca nei messaggi…" value="'+esc(Q)+'"><button type="button" class="addb" data-add="1">＋ Nuovo</button></div><div class="its">';
- h+=arr.map(function(x,i){var hide=Q&&String(x.t).toLowerCase().indexOf(Q.toLowerCase())<0;
-  return '<div class="it'+(hide?' hid':'')+'" data-open="'+i+'"><span class="no">'+(i+1)+'</span>'+(x.img?'<img class="ith" src="'+x.img+'" alt="">':'')+'<div class="tx">'+(x.t?esc(x.t):'<i>Messaggio vuoto · tocca per scrivere</i>')+'</div><span class="pen">✎</span></div>'}).join('');
- return h+'</div>'+(arr.length?'':'<div class="emp">Nessun messaggio. Tocca «＋ Nuovo» per scrivere il primo.</div>');}
-function curArr(){return tab==='fx'?C.fx.list:(lk==='__all'?C.phr.all:C.phr.st[lk])}
-function motion(o){return '<details class="opt"'+(optOpen?' open':'')+'><summary>⚙️ Tempi e animazione <small>'+(Number(o.sec)||6)+'s · '+((ANIM.filter(function(a){return a[0]===o.anim})[0]||ANIM[0])[1])+'</small></summary><div class="grp">'+ck('on',o.on,'Mostra sulla pagina di tracking')+num('sec',o.sec,'Cambia ogni (secondi)',2,60)+num('spd',o.spd,'Durata transizione (ms)',100,3000)
- +'<label>Animazione'+sel('anim',o.anim,ANIM)+'</label><label>Ordine'+sel('order',o.order,[['rnd','Casuale'],['seq','In sequenza']])+'</label><label>Foto'+sel('imgPos',o.imgPos,[['top','Sopra il testo'],['side','Accanto al testo']])+'</label>'}
-function paint(){
- var b=E('bpTCb'),h='';[].forEach.call(document.querySelectorAll('#bpTC .th [data-tab]'),function(x){x.classList.toggle('on',x.getAttribute('data-tab')===tab)});
- if(tab==='phr'){var o=C.phr;h='<div class="pv" id="bpTCpv"></div>'+motion(o)+num('size',o.size,'Grandezza testo (px)',11,30)+ck('mix',o.mix,'Mescola anche le frasi generali')+num('nmix',o.nmix,'Quante frasi generali per stato',0,20)+'</div></details>'
-  +'<div class="lkw"><label>📂 Lista'+sel('__lk',lk,[['__all','⭐ Frasi generali (tutti gli stati)']].concat(ST.map(function(s){return [s,'Stato: '+s+' ('+(C.phr.st[s]||[]).length+')']})))+'</label></div>'+list(curArr());}
- else if(tab==='fx'){var f=C.fx;h='<div class="pv" id="bpTCpv"></div>'+motion(f)+txt('title',f.title,'Titolo del riquadro')+'</div></details>'+list(f.list);}
- else{var l=C.loy;h='<div class="lcp th-'+esc(l.theme)+'" id="bpTCl">'+(l.banner?'<img src="'+l.banner+'" style="width:100%;max-height:110px;object-fit:cover;border-radius:12px;margin-bottom:8px">':'')+'<b>'+esc(l.title)+'</b><div style="font-size:11px;opacity:.7">'+esc(l.sub)+'</div><div style="font-size:26px;margin-top:6px">🍕🍕🍕<span style="opacity:.25">🍕🍕</span></div></div>'
-  +'<div class="grp">'+ck('on',l.on,'Mostra la carta fedeltà sul tracking')+txt('title',l.title,'Titolo')+txt('sub',l.sub,'Sottotitolo')
-  +'<label>Colore'+sel('theme',l.theme,[['dark','Cioccolato'],['gold','Oro'],['red','Rosso'],['green','Verde'],['blue','Blu'],['light','Chiaro']])+'</label>'
-  +'<label>Animazione fette'+sel('anim',l.anim,[['pop','Pop'],['bounce','Cade e rimbalza'],['spin','Gira'],['glow','Brilla sempre']])+'</label>'
-  +'<label>Festa (nuove fette)'+sel('cele',l.cele,[['clap','👏 Applausi'],['confetti','🎊 Coriandoli'],['stars','⭐ Stelle'],['pizza','🍕 Pioggia di pizza'],['none','Nessuna']])+'</label>'
-  +'<label><span>&nbsp;</span><button type="button" id="bpTCtest" class="secondary">▶ Prova festa</button></label>'
-  +ck('celFirst',l.celFirst,'Festa anche all’apertura della pagina (se ha già fette)')
-  +'<label class="w">Logo<div style="display:flex;gap:6px"><div class="im" data-limg="logo"'+(l.logo?' style="background-image:url('+l.logo+')"':'')+'>'+(l.logo?'':'🖼️')+'</div><div class="im" data-limg="banner" style="flex:1;'+(l.banner?'background-image:url('+l.banner+')':'')+'">'+(l.banner?'':'🖼️ Banner')+'</div></div></label>'
-  +txt('mMiss',l.mMiss,'Messaggio fette mancanti')+txt('mGift',l.mGift,'Messaggio regalo disponibile')+txt('mPend',l.mPend,'Messaggio ordine in attesa')+txt('mCel',l.mCel,'Messaggio festa (nuove fette)')+txt('mWin',l.mWin,'Messaggio festa (regalo vinto)')
-  +'<div class="hint w" style="grid-column:1/-1">Segnaposto: {n} fette mancanti · {fw} fetta/fette · {premio} · {regali} · {fette} · {tot} · {nome}</div></div>';}
- b.innerHTML=h;pv();
-}
-function obj(){return C[tab]}
-function swap(el,x,o,first){var html=(x.img?'<img class="mi" src="'+x.img+'">':'')+'<span>'+esc(x.t)+'</span>',spd=Number(o.spd)||350;el.style.setProperty('--spd',spd+'ms');el.classList.toggle('side',o.imgPos==='side');
- if(first||o.anim==='none'){el.innerHTML=html;return}
- if(o.anim==='type'){el.innerHTML=html;var s=el.querySelector('span'),full=x.t||'',i=0;s.textContent='';clearInterval(el._tw);el._tw=setInterval(function(){if(i>=full.length)return clearInterval(el._tw);s.textContent=full.slice(0,++i)},Math.max(15,Math.min(60,spd/Math.max(1,full.length)*4)));return}
- var a=AN[o.anim]||AN.fade;el.style.setProperty('--ao',a[0]);el.style.setProperty('--ai',a[1]);el.classList.remove('bptc-a-in');el.classList.add('bptc-a-out');
- setTimeout(function(){el.innerHTML=html;el.classList.remove('bptc-a-out');void el.offsetWidth;el.classList.add('bptc-a-in')},spd)}
-function pv(){clearInterval(pvT);var el=E('bpTCpv');if(!el)return;var o=obj(),arr=curArr().filter(function(x){return x.t||x.img}),i=0;if(tab==='phr')el.style.fontSize=(Number(o.size)||15)+'px';
- if(!arr.length){el.textContent='(lista vuota)';return}swap(el,arr[0],o,true);pvT=setInterval(function(){if(!E('bpTCpv'))return clearInterval(pvT);i=(i+1)%arr.length;swap(el,arr[i],o)},Math.max(2,Number(o.sec)||6)*1000)}
-function pick(cb){var f=document.createElement('input');f.type='file';f.accept='image/*';f.onchange=function(){var fl=f.files[0];if(!fl)return;var rd=new FileReader();rd.onload=function(){var im=new Image();im.onload=function(){var m=480,k=Math.min(1,m/Math.max(im.width,im.height)),c=document.createElement('canvas');c.width=Math.round(im.width*k);c.height=Math.round(im.height*k);c.getContext('2d').drawImage(im,0,0,c.width,c.height);cb(c.toDataURL('image/jpeg',.72))};im.src=rd.result};rd.readAsDataURL(fl)};f.click()}
-function cele(kind){var Em={clap:['👏','🙌','🍕'],stars:['⭐','✨','🌟'],pizza:['🍕','🔥'],confetti:['🎊','🎉','✨']}[kind];if(!Em)return;for(var i=0;i<24;i++){var d=document.createElement('i');d.className='bptc-cel';d.textContent=Em[i%Em.length];d.style.left=Math.random()*96+'vw';d.style.animationDuration=(1.6+Math.random()*1.2)+'s';d.style.animationDelay=(Math.random()*.6)+'s';document.body.appendChild(d);setTimeout(function(x){x.remove()},3600,d)}}
-async function save(){var b=E('bpTCs'),st=E('bpTCst');var js=JSON.stringify(C);if(js.length>1500000){alert('⚠️ Troppe foto o foto troppo grandi ('+Math.round(js.length/1024)+' KB). Togline qualcuna.');return}
- b.disabled=true;b.textContent='Salvataggio…';try{var r=await sb.from('bp36_data').upsert({key:KEY,data:{cfg:C},updated_at:new Date().toISOString()});if(r&&r.error)throw r.error;b.textContent='✅ Salvato · تم الحفظ';setTimeout(function(){b.textContent='💾 Salva'},1800)}
- catch(e){alert('❌ Non salvato: '+((e&&e.message)||e));b.textContent='💾 Salva'}b.disabled=false}
-var EMO=['🍕','🔥','😋','🤌','❤️','👨‍🍳','👍','😄','🎉','🙏','⏳','🛵','🧀','🍅','🌶️','🥙','🍟','✨','💪','👀'];
-function edPv(){var x=curArr()[EI];if(!x)return;var o=obj(),pv=E('bpTCepv');var inner=(x.img?'<img class="mi" src="'+x.img+'">':'')+'<span>'+(esc(x.t)||'<i style="opacity:.5">Scrivi qui sotto…</i>')+'</span>';
- pv.className='epv'+(tab==='fx'?' fx':'')+(o.imgPos==='side'?' side':'');pv.innerHTML=tab==='fx'?'<small>'+esc(C.fx.title||'💡 Lo sapevi?')+'</small><p>'+inner+'</p>':inner;
- if(tab==='phr')pv.style.fontSize=(Number(o.size)||15)+'px';else pv.style.fontSize='';
- var n=String(x.t||'').length,c=E('bpTCecnt');c.textContent=n+' caratteri'+(n>(tab==='fx'?140:80)?' · un po’ lungo, si legge meglio corto':'');c.className='ecnt'+(n>(tab==='fx'?140:80)?' warn':'');}
-function edOpen(i){var arr=curArr();if(i<0||i>=arr.length)return;EI=i;var e=E('bpTCe');e.classList.add('on');
- E('bpTCeh').textContent=(tab==='fx'?'Curiosità ':'Messaggio ')+(i+1)+' / '+arr.length;var x=arr[i],ta=E('bpTCet');ta.value=x.t||'';
- E('bpTCeimg').textContent=x.img?'🗑 Togli foto':'🖼️ Aggiungi foto';edPv();setTimeout(function(){ta.focus();ta.setSelectionRange(ta.value.length,ta.value.length)},60);}
-function edClose(){var e=E('bpTCe');if(e)e.classList.remove('on');EI=-1;paint();}
-function build(){var m=document.createElement('div');m.id='bpTC';m.className='hide';
- m.innerHTML='<div class="tb"><div class="th"><b>📱 Pagina tracking · رسائل صفحة المتابعة</b><button type="button" data-tab="phr">💬 Frasi</button><button type="button" data-tab="fx">💡 Lo sapevi?</button><button type="button" data-tab="loy">🍕 Carta fedeltà</button></div><div class="tbd" id="bpTCb"></div>'
- +'<div class="esh" id="bpTCe"><div class="ebx"><div class="ehd"><button type="button" data-ego="-1" aria-label="Precedente">‹</button><b id="bpTCeh"></b><button type="button" data-ego="1" aria-label="Successivo">›</button><button type="button" class="edone" data-edone="1">✓ Fatto</button></div>'
- +'<div class="estage"><div class="elab">👁 Così lo vede il cliente</div><div id="bpTCepv" class="epv"></div></div>'
- +'<textarea id="bpTCet" placeholder="Scrivi il messaggio…"></textarea><div id="bpTCecnt" class="ecnt"></div>'
- +'<div class="emo">'+EMO.map(function(x){return '<button type="button" data-emo="'+x+'">'+x+'</button>'}).join('')+'</div>'
- +'<div class="eact"><button type="button" id="bpTCeimg" data-eimg="1"></button><button type="button" data-emv="-1">↑ Sposta su</button><button type="button" data-emv="1">↓ Sposta giù</button><button type="button" class="edel" data-edel="1">🗑 Elimina</button></div></div></div>'
- +'<div class="tf"><button type="button" class="secondary" id="bpTCx">Chiudi</button><button type="button" class="secondary" id="bpTCr">↺ Predefiniti</button><button type="button" id="bpTCs">💾 Salva</button></div></div>';
- document.body.appendChild(m);
- m.addEventListener('click',function(e){var t=e.target;if(t===m)return close();var tb=t.closest('.th [data-tab]');if(tb){tab=tb.getAttribute('data-tab');paint();return}
-  var arr=curArr(),a;
-  if((a=t.closest('[data-add]'))){arr.push(I(''));Q='';paint();edOpen(arr.length-1);return}
-  if((a=t.closest('[data-open]'))){edOpen(+a.getAttribute('data-open'));return}
-  if(t.closest('[data-edone]')||t.id==='bpTCe'){edClose();return}
-  if((a=t.closest('[data-ego]'))){var ni=EI+(+a.getAttribute('data-ego'));if(ni>=0&&ni<arr.length)edOpen(ni);return}
-  if((a=t.closest('[data-emo]'))){var ta=E('bpTCet'),st=ta.selectionStart||ta.value.length,en=ta.selectionEnd||st,em=a.getAttribute('data-emo');ta.value=ta.value.slice(0,st)+em+ta.value.slice(en);arr[EI].t=ta.value;ta.focus();ta.setSelectionRange(st+em.length,st+em.length);edPv();return}
-  if(t.closest('[data-eimg]')){var x0=arr[EI];if(x0.img){x0.img='';edOpen(EI)}else pick(function(u){x0.img=u;edOpen(EI)});return}
-  if((a=t.closest('[data-emv]'))){var d=+a.getAttribute('data-emv'),k2=EI+d;if(k2>=0&&k2<arr.length){var y=arr[EI];arr[EI]=arr[k2];arr[k2]=y;edOpen(k2)}return}
-  if(t.closest('[data-edel]')){if(confirm('Eliminare questo messaggio?')){arr.splice(EI,1);if(!arr.length){edClose();return}edOpen(Math.min(EI,arr.length-1))}return}
-  if((a=t.closest('summary'))){setTimeout(function(){var d2=document.querySelector('#bpTC details.opt');optOpen=!!(d2&&d2.open)},0)}
-  if((a=t.closest('[data-del]'))){arr.splice(+a.getAttribute('data-del'),1);paint();return}
-  if((a=t.closest('[data-up]'))){var i=+a.getAttribute('data-up');if(i>0){var x=arr[i];arr[i]=arr[i-1];arr[i-1]=x;paint()}return}
-  if((a=t.closest('[data-img]'))){var j=+a.getAttribute('data-img');if(arr[j].img){if(confirm('Togliere la foto?')){arr[j].img='';paint()}}else pick(function(u){arr[j].img=u;paint()});return}
-  if((a=t.closest('[data-limg]'))){var k=a.getAttribute('data-limg');if(C.loy[k]){if(confirm('Togliere la foto?')){C.loy[k]='';paint()}}else pick(function(u){C.loy[k]=u;paint()});return}
-  if(t.id==='bpTCtest')cele(C.loy.cele)});
- m.addEventListener('input',function(e){var t=e.target;if(t.id==='bpTCet'&&EI>=0){curArr()[EI].t=t.value;edPv();return}
-  if(t.hasAttribute('data-q')){Q=t.value;[].forEach.call(document.querySelectorAll('#bpTCb .it'),function(r){var x=curArr()[+r.getAttribute('data-open')];r.classList.toggle('hid',!!Q&&String(x&&x.t||'').toLowerCase().indexOf(Q.toLowerCase())<0)});return}});
- m.addEventListener('change',function(e){var t=e.target,k=t.getAttribute('data-k');if(t.hasAttribute('data-t')){pv();return}if(!k)return;
-  if(k==='__lk'){lk=t.value;Q='';paint();return}
-  var o=obj(),v=t.type==='checkbox'?t.checked:(t.type==='number'?Number(t.value):t.value);o[k]=v;if(tab==='loy'&&/^(theme|title|sub)$/.test(k))paint();else pv()});
- E('bpTCx').onclick=close;E('bpTCs').onclick=save;E('bpTCr').onclick=function(){if(confirm('Ripristinare le frasi e le impostazioni predefinite? (poi premi Salva)')){C=defs();paint()}};}
-function close(){clearInterval(pvT);var e0=E('bpTCe');if(e0)e0.classList.remove('on');EI=-1;var m=E('bpTC');if(m)m.classList.add('hide')}
-async function open(){if(!E('bpTC'))build();var m=E('bpTC');m.classList.remove('hide');E('bpTCb').innerHTML='<div class="hint">Caricamento…</div>';await load();paint()}
-window.bpOpenTrackCfg=open;
-function mount(){var grid=document.querySelector('#settingsTab .bp-set-grid');if(!grid||E('bpTCcard'))return;var c=document.createElement('div');c.className='bp-set-card';c.id='bpTCcard';c.style.borderTopColor='#a8291f';
- c.innerHTML='<div class="bp-set-head"><span class="bp-set-ico" style="background:#fff1ec;color:#a8291f">📱</span><h3>Pagina tracking · رسائل صفحة المتابعة</h3></div><p class="bp-set-desc">Frasi, «Lo sapevi?», foto, animazioni, tempi e carta fedeltà che il cliente vede mentre aspetta l’ordine.</p><button type="button" style="min-height:44px;font-weight:900;width:100%">✏️ Personalizza</button>';
- c.querySelector('button').onclick=open;grid.appendChild(c)}
-setInterval(mount,1500);
-})()}catch(e){console.error('[bp] track cfg',e)}
 </script>
 
 <style id="v120css">
@@ -39323,11 +39102,11 @@ html body #newTab #bpmGrid .bpm-tile .bp-prep .pp-t,html body #newTab #bpmGrid .
   if(!groups.length&&!unknown.length) h+='<div style="margin-top:6px;color:#667085">'+esc(bi('Nessuna consegna aperta.','لا توجد أوردرات توصيل مفتوحة.'))+'</div>';
   groups.forEach(function(g,i){
    var lo=Math.min.apply(null,g.map(function(x){return x.t;})), hi=Math.max.apply(null,g.map(function(x){return x.t;})), dep=cfg.dir==='late'?hi:lo;
-   h+='<div style="margin-top:8px;padding:8px;border-radius:12px;background:#fff;border:1px solid #d6bbfb"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><b>'+esc(bi('Giro','خط'))+' '+(i+1)+(g.length>1?' · '+g.length+' '+esc(bi('consegne','توصيلات')):' · '+esc(bi('da solo','لوحده')))+' · '+esc(bi('esce alle','يخرج الساعة'))+' '+hhmm(dep-(window.BP_DEP_LEAD_MIN||0))+' · '+money(g)+'</b>'
+   h+='<div style="margin-top:8px;padding:8px;border-radius:12px;background:#fff;border:1px solid #d6bbfb"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><b>'+esc(bi('Giro','خط'))+' '+(i+1)+(g.length>1?' · '+g.length+' '+esc(bi('consegne','توصيلات')):' · '+esc(bi('da solo','لوحده')))+' · '+esc(bi('esce alle','يخرج الساعة'))+' '+hhmm(dep)+' · '+money(g)+'</b>'
     +(g.length>1?'<button data-g="'+i+'" style="padding:8px 12px;border-radius:10px;border:0;background:#7a5af8;color:#fff;font-weight:700">'+esc(bi('Crea giro','اعمل خط'))+'</button>':'')+'</div>';
    g.forEach(function(x){
     var mv=x.t>dep?' <span style="color:#b54708">⏩ '+esc(bi('anticipa da '+hhmm(x.t)+' a '+hhmm(dep),'قدّمه من '+hhmm(x.t)+' إلى '+hhmm(dep)))+'</span>':(x.t<dep?' <span style="color:#b54708">⏪ '+esc(bi('posticipa da '+hhmm(x.t)+' a '+hhmm(dep),'أخّره من '+hhmm(x.t)+' إلى '+hhmm(dep)))+'</span>':'');
-    var late=(nowM-(x.t-(window.BP_DEP_LEAD_MIN||0)))>=5&&(nowM-x.t)<180;
+    var late=(nowM-x.t)>=5&&(nowM-x.t)<180;
     h+='<div style="margin-top:4px">• #'+esc(x.id)+' · '+hhmm(x.t)+(x.name?' · '+esc(x.name):'')+' · '+esc(x.addr)+(late?' <b style="color:#d92d20">🔴 '+esc(bi('in ritardo','متأخر'))+'</b>':'')+(x.d!=null?' <span style="color:#667085">('+Math.round(x.d*1000)+' m)</span>':'')+mv+'</div>';
    });
    h+='</div>';
@@ -41426,36 +41205,6 @@ position:fixed;inset:0;z-index:2147483645;background:var(--bg);color:var(--tx);d
 #bpPZ .pz-chip2.warn{background:#3b2a07;border-color:var(--amb);color:#fcd34d}
 #bpPZ .pz-chip2.bad{background:#450a0a;border-color:var(--red);color:#fecaca}
 #bpPZ .pz-chip2.late{background:#7f1d1d;border-color:var(--red);color:#fff;animation:pzpulse 1.3s ease-in-out infinite}
-#bpPZ .pz-nx{display:flex;align-items:center;justify-content:space-between;gap:.4em .7em;flex-wrap:wrap;margin-top:.5em;padding:.5em .75em;border-radius:.9em;border:2px solid var(--nc,#1d4ed8);background:var(--nb,#172554);color:var(--nt,#dbeafe)}
-#bpPZ .pz-nx .t{font-weight:900;font-size:1.05em;letter-spacing:.02em}
-#bpPZ .pz-nx .d{display:flex;align-items:center;gap:.5em;font-weight:850;flex-wrap:wrap}
-#bpPZ .pz-nx .d b{background:rgba(255,255,255,.16);border-radius:.5em;padding:.05em .5em}
-#bpPZ .pz-nx .more{font-size:.82em;font-weight:750;opacity:.8}
-#bpPZ .pz-sum{background:var(--cd);border:1px solid var(--ln);border-radius:.9em;padding:.55em .7em;display:flex;flex-direction:column;gap:.45em}
-#bpPZ .pz-sumh{font-weight:900;letter-spacing:.05em;font-size:.95em;color:#e5e7eb}
-#bpPZ .pz-sumh b{color:#fff}
-#bpPZ .pz-sumc{display:flex;flex-wrap:wrap;gap:.4em}
-#bpPZ .pz-sc{border:0;border-inline-start:.4em solid var(--gc,#475569);border-radius:.7em;background:#1e2740;padding:.4em .7em;font-weight:850;font-size:1.05em;color:#f3f4f6;min-height:2.6em;text-align:start}
-#bpPZ .pz-sc b{color:#fbbf24;font-size:1.1em}
-#bpPZ .pz-sc.u-late,#bpPZ .pz-sc.u-now{--gc:var(--red)}#bpPZ .pz-sc.u-soon{--gc:var(--amb)}#bpPZ .pz-sc.u-later{--gc:var(--blu)}
-#bpPZ .pz-sums{display:flex;flex-wrap:wrap;gap:.4em .6em;align-items:center;font-weight:800;font-size:.92em}
-#bpPZ .pz-spm{color:#fde68a}
-#bpPZ .pz-g{scroll-margin-top:12em}
-#bpPZ .pz-g.flash{animation:pzFlash 1.2s ease-out}
-@keyframes pzFlash{0%{box-shadow:0 0 0 .35em rgba(251,191,36,.9)}100%{box-shadow:0 0 0 0 rgba(251,191,36,0)}}
-#bpPZ .pz-one{flex:none;border:0;border-radius:.8em;background:#15803d;color:#fff;font-weight:900;font-size:1.05em;padding:.5em .8em;min-height:3.2em;min-width:5.2em;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1.15}
-#bpPZ .pz-one small{font-size:.72em;font-weight:800;opacity:.92}
-#bpPZ .pz-one:active{filter:brightness(.9);transform:scale(.97)}
-#bpPZ .pz-gsum{margin-top:.35em;padding:.45em .8em;border-radius:.8em;background:#0f1626;border:1px solid #1f2a44;font-weight:800;font-size:.95em;color:#bbf7d0}
-#pzUndo{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(1em + env(safe-area-inset-bottom,0px));z-index:100002;display:none;align-items:center;gap:.8em;background:#1f2937;color:#fff;border:2px solid #4b5563;border-radius:1em;padding:.6em .8em;font-weight:850;box-shadow:0 8px 24px rgba(0,0,0,.5);max-width:94vw}
-#pzUndo button{border:0;border-radius:.7em;background:#f59e0b;color:#1b1200;font-weight:900;padding:.6em .9em;font:inherit;font-weight:900}
-#bpPZ .pz-nx .cmp{flex:1 0 100%;display:flex;flex-wrap:wrap;gap:.25em .9em;font-weight:900;font-size:1.12em}
-#bpPZ .pz-nx .cmp b{color:#fbbf24}
-#bpPZ .pz-nx.r .cmp b{color:#fff}
-#bpPZ .pz-nb{display:flex;flex-direction:column;align-items:flex-start;width:100%;margin-bottom:.5em;border:0;border-radius:.9em;background:#0e7490;color:#fff;font-weight:900;font-size:1.1em;padding:.55em .8em;text-align:start;animation:pzpulse 1.3s ease-in-out 3}
-#bpPZ .pz-nb small{font-size:.7em;font-weight:700;opacity:.85}
-#bpPZ .pz-nx.s{--nc:var(--amb);--nb:#3b2a07;--nt:#fde68a}
-#bpPZ .pz-nx.r{--nc:var(--red);--nb:#7f1d1d;--nt:#fff;animation:pzpulse 1.3s ease-in-out infinite}
 @keyframes pzpulse{0%,100%{box-shadow:0 0 0 0 rgba(239,68,68,.0)}50%{box-shadow:0 0 0 .35em rgba(239,68,68,.35)}}
 #bpPZ .pz-x{background:#b42318;border:1px solid #b42318;border-radius:.7em;padding:.35em .8em;font-weight:900;font-size:1.05em}
 #bpPZ .pz-seg{display:flex;gap:.35em;margin-top:.5em;background:#0b1220;border:1px solid var(--ln);border-radius:.9em;padding:.25em}
@@ -41503,7 +41252,7 @@ position:fixed;inset:0;z-index:2147483645;background:var(--bg);color:var(--tx);d
 #bpPZ .cu{font-size:.9em;font-weight:750;color:#cbd5e1}
 #bpPZ .tm{font-size:.9em;font-weight:850;background:#0f172a;border-radius:.5em;padding:.05em .5em}
 #bpPZ .eta{font-size:.85em;font-weight:800;color:var(--mu)}
-#bpPZ .eta.late{color:#fca5a5}#bpPZ .eta.soon{color:#fcd34d}#bpPZ .eta.ok{color:#86efac}
+#bpPZ .eta.late{color:#fca5a5}#bpPZ .eta.soon{color:#fcd34d}
 #bpPZ .sz{font-style:normal;font-size:.78em;font-weight:900;border-radius:.4em;padding:.05em .5em;background:#7c3aed;color:#fff}
 #bpPZ .sz.b{background:#0e7490}
 #bpPZ .pz-r3{display:flex;flex-wrap:wrap;gap:.2em .7em;font-size:.88em;font-weight:850}
@@ -41537,10 +41286,6 @@ position:fixed;inset:0;z-index:2147483645;background:var(--bg);color:var(--tx);d
 
 #bpPZ .pz-leg{background:#0f1626;border:1px solid #1f2a44;border-radius:.9em;padding:.6em .8em;font-size:.82em;color:#cbd5e1}
 #bpPZ .pz-leg b{display:block;margin-bottom:.4em;letter-spacing:.06em;color:#e5e7eb}
-#bpPZ .pz-leg.closed{padding:.35em .8em}
-#bpPZ .pz-legh{display:flex;align-items:center;justify-content:space-between;gap:.6em;cursor:pointer;font-weight:900;letter-spacing:.05em;color:#e5e7eb;min-height:2.2em;-webkit-tap-highlight-color:transparent}
-#bpPZ .pz-legh em{font-style:normal;font-weight:800;font-size:.9em;color:#94a3b8;white-space:nowrap}
-#bpPZ .pz-leg:not(.closed) .pz-legh{margin-bottom:.5em}
 #bpPZ .pz-lg{display:flex;flex-wrap:wrap;gap:.35em .9em;margin-bottom:.35em}
 #bpPZ .pz-lg span{display:inline-flex;align-items:center;gap:.4em;font-weight:700}
 #bpPZ .pz-lg i{display:inline-block;width:.9em;height:.9em;border-radius:.3em;background:var(--k)}
@@ -41616,7 +41361,7 @@ body[data-role="pizzaiolo"] #bpPZ .pz-fin{display:block}
 (function(){
 if(window.__bpPZ) return; window.__bpPZ = 1;
 var K_LOCAL='bp_pz_local', K_ENF='bp_pz_enforce', K_CAP='bp_pz_cap', K_FS='bp_pz_f', K_VIEW='bp_pz_view';
-var BAKE_WINDOW_MIN = 15, PER_PIZZA_MIN = 1.2, DELIVERY_MIN = (window.BP_DEP_LEAD_MIN != null ? Number(window.BP_DEP_LEAD_MIN) : 5);
+var BAKE_WINDOW_MIN = 15, PER_PIZZA_MIN = 1.2, DELIVERY_MIN = 10;
 var PAL = [['#1f7a9e','#fff'],['#e0a21a','#1b1500'],['#c2457c','#fff'],['#3c9a5f','#fff'],['#7b5cc9','#fff'],['#d9622b','#fff'],['#2e8f8f','#fff'],['#a8a23a','#1b1500']];
 var hasDoc = (typeof document !== 'undefined' && document && document.body);
 var colMissing = false, pz = null, tick = 0, sig = '', force = 0, seen = null, chain = Promise.resolve(), wake = null;
@@ -41751,18 +41496,17 @@ var RANK = {late: 0, now: 1, soon: 2, later: 3};
 function isFresh(id){ var t = newIds[id]; return !!(t && Date.now() - t < 9000); }
 function fm(n){ n = Math.abs(n); return n >= 60 ? Math.floor(n / 60) + 'h' + pad2(n % 60) : n + '′'; }
 function etaMin(x, now){ return isNaN(x.tg.ms) ? null : Math.round((x.tg.ms - now) / 60000); }
-function depMin(x, now){ var e = etaMin(x, now); return e === null ? null : e - (x.ds && x.ds.k === 'dom' ? DELIVERY_MIN : 0); } /* minuti all'USCITA per le consegne */
 function urg(x, now){
   if(x.st === 'Pronto' || (x.all && (!x.kit || x.kd))) return 'done';
   if(x.all) return 'wait';
-  var e = depMin(x, now);
+  var e = etaMin(x, now);
   if(e !== null && e < -2) return 'late';
   if(x.start <= now) return 'now';
   if(x.start - now <= 10 * 60000) return 'soon';
   return 'later';
 }
 function badge(x, now){
-  var u = urg(x, now), e = depMin(x, now);
+  var u = urg(x, now), e = etaMin(x, now);
   if(u === 'done') return '<span class="pz-bd g">✅ PRONTO</span>';
   if(u === 'wait') return '<span class="pz-bd w">⏳ attende cucina</span>';
   if(u === 'late') return '<span class="pz-bd r">⚠️ RITARDO ' + fm(e) + '</span>';
@@ -41774,28 +41518,26 @@ function noteOf(o){ try{ return String(splitTimeAndNotes(o.notes).cleanNotes || 
 function nameHtml(n){ try{ return bpNameHtml(n); }catch(e){ return E(n); } }
 function dstChip(ds){ return '<span class="dst" style="--dc:' + (DST_COL[ds.k] || '#94a3b8') + '">' + ds.ico + ' ' + E(ds.lab) + '</span>'; }
 function szHtml(i){ var s = sizeTag(i); return s ? '<i class="sz' + (s === 'BABY' ? ' b' : '') + '">' + s + '</i>' : ''; }
-function etaHtml(x, now, bare){
+function etaHtml(x, now){
   var e = etaMin(x, now); if(e === null) return '';
   if(x.st === 'Pronto' || x.all) return '';
-  var ic = bare ? '' : '⏰ ';
-  return e < -2 ? '<span class="eta late">⚠️ ritardo ' + fm(e) + '</span>' : '<span class="eta' + (e <= 10 ? ' soon' : ' ok') + '">' + ic + 'tra ' + fm(Math.max(e, 0)) + '</span>';
+  return e < -2 ? '<span class="eta late">⚠️ ritardo ' + fm(e) + '</span>' : '<span class="eta' + (e <= 10 ? ' soon' : '') + '">⏰ tra ' + fm(Math.max(e, 0)) + '</span>';
 }
-/* v2.1 · destinazione compatta: solo l'icona (🛵/🛍️); per tavolo e piattaforma anche il nome (Tavolo 7, Glovo) */
-function dstMini(ds){ var full = (ds.k === 'tav' || ds.k === 'plat'); return '<span class="dst" style="--dc:' + (DST_COL[ds.k] || '#94a3b8') + '">' + ds.ico + (full ? ' ' + E(ds.lab) : '') + '</span>'; }
-/* riga = una pizza di un ordine (si tocca per segnarla fatta) · v2.1: 2 righe (ordine · tipo · orario · tra X / modifiche) senza nome cliente, ×N solo se più di una */
+/* riga = una pizza di un ordine (si tocca per segnarla fatta) */
 function rowHtml(x, i, n, key, now){
-  var done = x.d.indexOf(key) >= 0, mods = modsHtml(i), nt = noteOf(x.o), q = Number(i.quantity || 1);
+  var done = x.d.indexOf(key) >= 0, mods = modsHtml(i), cu = custOf(x.o), nt = noteOf(x.o);
   return '<button type="button" class="pz-row' + (done ? ' done' : '') + (isFresh(x.o.id) ? ' new' : '') + '" data-a="t" data-o="' + E(x.o.id) + '" data-k="' + E(key) + '" style="--oc:' + x.col[0] + ';--of:' + x.col[1] + '">' +
     '<span class="pz-pill">#' + E(x.o.id) + '</span><span class="pz-rb">' +
-    '<span class="pz-r1">' + (q > 1 ? '<b class="q">×' + q + '</b>' : '') + dstMini(x.ds) + szHtml(i) + '<span class="tm">⏰ ' + E(x.tg.lab) + '</span>' + (done ? '' : etaHtml(x, now, true)) + '</span>' +
+    '<span class="pz-r1"><b class="q">×' + E(i.quantity || 1) + '</b>' + dstChip(x.ds) + szHtml(i) + (cu ? '<span class="cu">👤 ' + E(cu) + '</span>' : '') + '</span>' +
+    '<span class="pz-r2"><span class="tm">⏰ ' + E(x.tg.lab) + '</span>' + (done ? '' : etaHtml(x, now)) + '</span>' +
     (mods ? '<span class="pz-r3">' + mods + '</span>' : '') + (nt ? '<span class="pz-r3"><span class="m-nt">📝 ' + E(nt) + '</span></span>' : '') +
     '</span><span class="pz-box"></span></button>';
 }
 function breadRow(x, now){
-  var dn = x.d.indexOf('pane') >= 0, nt = noteOf(x.o);
+  var dn = x.d.indexOf('pane') >= 0, cu = custOf(x.o), nt = noteOf(x.o);
   return '<button type="button" class="pz-row' + (dn ? ' done' : '') + (isFresh(x.o.id) ? ' new' : '') + '" data-a="t" data-o="' + E(x.o.id) + '" data-k="pane" style="--oc:' + x.col[0] + ';--of:' + x.col[1] + '">' +
-    '<span class="pz-pill">#' + E(x.o.id) + '</span><span class="pz-rb"><span class="pz-r1"><b class="q" style="font-size:1.05em">' + E(breadTxt(x.o)) + '</b>' + dstMini(x.ds) + '<span class="tm">⏰ ' + E(x.tg.lab) + '</span>' + (dn ? '' : etaHtml(x, now, true)) + '</span>' +
-    (nt ? '<span class="pz-r3"><span class="m-nt">📝 ' + E(nt) + '</span></span>' : '') + '</span><span class="pz-box"></span></button>';
+    '<span class="pz-pill">#' + E(x.o.id) + '</span><span class="pz-rb"><span class="pz-r1"><b class="q" style="font-size:1.05em">' + E(breadTxt(x.o)) + '</b>' + dstChip(x.ds) + (cu ? '<span class="cu">👤 ' + E(cu) + '</span>' : '') + '</span>' +
+    '<span class="pz-r2"><span class="tm">⏰ ' + E(x.tg.lab) + '</span>' + (dn ? '' : etaHtml(x, now)) + '</span>' + (nt ? '<span class="pz-r3"><span class="m-nt">📝 ' + E(nt) + '</span></span>' : '') + '</span><span class="pz-box"></span></button>';
 }
 /* riga dentro la scheda ordine */
 function lineHtml(x, i, n){
@@ -41839,13 +41581,13 @@ function groupsHtml(list, now){
       if(!g){ g = map[nm] = {name: nm, html: nameHtml(nm), rows: [], pend: 0, start: Infinity, rank: 9}; order.push(g); }
       var key = lineKey(i, n), done = x.d.indexOf(key) >= 0;
       g.rows.push(rowHtml(x, i, n, key, now));
-      if(!done){ g.pend += Number(i.quantity || 1); g.start = Math.min(g.start, x.start); g.rank = Math.min(g.rank, RANK[u] === undefined ? 3 : RANK[u]); if(!g.nx && !inflight[x.o.id + '|' + key]) g.nx = {oid: x.o.id, q: Number(i.quantity || 1)}; }
+      if(!done){ g.pend += Number(i.quantity || 1); g.start = Math.min(g.start, x.start); g.rank = Math.min(g.rank, RANK[u] === undefined ? 3 : RANK[u]); }
     });
     if(x.bread){
       var g2 = map['🥖 PANE'] || (map['🥖 PANE'] = {name: '🥖 PANE', html: '🥖 PANE · panini/piadine', rows: [], pend: 0, start: Infinity, rank: 9}); if(order.indexOf(g2) < 0) order.push(g2);
       var dn = x.d.indexOf('pane') >= 0;
       g2.rows.push(breadRow(x, now));
-      if(!dn){ g2.pend += 1; g2.start = Math.min(g2.start, x.start); g2.rank = Math.min(g2.rank, RANK[u] === undefined ? 3 : RANK[u]); if(!g2.nx && !inflight[x.o.id + '|pane']) g2.nx = {oid: x.o.id, q: 1}; }
+      if(!dn){ g2.pend += 1; g2.start = Math.min(g2.start, x.start); g2.rank = Math.min(g2.rank, RANK[u] === undefined ? 3 : RANK[u]); }
     }
   });
   order.sort(function(a, b){ return (a.pend === 0) - (b.pend === 0) || a.rank - b.rank || a.start - b.start; });
@@ -41853,15 +41595,12 @@ function groupsHtml(list, now){
   return order.map(function(g){
     var u = g.pend ? names[g.rank] || 'later' : 'fin';
     var tag = g.pend && (u === 'late' || u === 'now') ? '<span class="pz-tag">' + (u === 'late' ? '⚠️ IN RITARDO' : '🔥 PARTI ORA') + '</span>' : (g.pend && u === 'soon' ? '<span class="pz-tag">⏰ tra poco</span>' : '');
-    return '<div class="pz-g u-' + u + (g.pend ? '' : ' fin') + '" data-g="' + E(g.name) + '"><div class="pz-gh"><div class="pz-qty">×' + g.pend + '</div><div class="pz-gn"><b>' + g.html + '</b>' + tag + '</div>' + (g.pend && g.nx ? oneBtn(g) : '') + '</div><div class="pz-rows">' + g.rows.join('') + '</div></div>';
+    return '<div class="pz-g u-' + u + (g.pend ? '' : ' fin') + '"><div class="pz-gh"><div class="pz-qty">×' + g.pend + '</div><div class="pz-gn"><b>' + g.html + '</b>' + tag + '</div></div><div class="pz-rows">' + g.rows.join('') + '</div></div>';
   }).join('');
 }
 function legendHtml(){
   function s(c, t){ return '<span><i style="--k:' + c + '"></i>' + t + '</span>'; }
-  var legOpen = ls('bp_pz_leg') === '1';
-  var legHead = '<div class="pz-legh" data-a="lg" role="button" aria-expanded="' + (legOpen ? 'true' : 'false') + '"><span>🎨 GUIDA COLORI · legenda pizzaiolo</span><em>' + (legOpen ? '▾ chiudi' : '▸ apri') + '</em></div>';
-  if(!legOpen) return '<div class="pz-leg closed">' + legHead + '</div>';
-  return '<div class="pz-leg">' + legHead +
+  return '<div class="pz-leg"><b>🎨 COLORI</b>' +
     '<div class="pz-lg">' + s('#ef4444', 'Rosso: inizia ora / in ritardo') + s('#f59e0b', 'Giallo: tra poco (≤10′)') + s('#3b82f6', 'Blu: più tardi') + s('#8b5cf6', 'Viola: attende la cucina') + s('#22c55e', 'Verde: fatto / pronto') + '</div>' + '<div class="pz-lg">' + s('#22c55e', 'Fascia forno: libera') + s('#f59e0b', 'Fascia forno: ≥60% piena') + s('#ef4444', 'Fascia forno: piena / oltre') + '</div>' +
     '<div class="pz-lg">' + s('#fb923c', '🛍️ Ritiro') + s('#22d3ee', '🛵 Domicilio') + s('#2dd4bf', '🍽️ Tavolo') + s('#f472b6', '📲 Piattaforma') + '</div>' +
     '<div class="pz-lg"><span style="color:#fca5a5">🚫 SENZA</span><span style="color:#86efac">➕ EXTRA</span><span style="color:#fde68a">📝 NOTA</span><span><i style="--k:#7c3aed"></i>MAXI</span><span><i style="--k:#0e7490"></i>BABY</span></div>' +
@@ -41871,17 +41610,13 @@ function legendHtml(){
 /* ---------- guida forno: fasce da 15' (solo informativa, non cambia nessun orario) ---------- */
 function guideHtml(now){
   var OV = window.__ov; if(!OV || !OV.load) return '';
-  var open = ls('bp_pz_guide') === '1', SL = 15 * 60000, cap = OV.cap();
+  var open = ls('bp_pz_guide') !== '0', SL = 15 * 60000, cap = OV.cap();
   var d0 = new Date(now); d0.setHours(0, 0, 0, 0); var day = d0.getTime(), map = OV.load(day);
   var cur = Math.floor(now / SL) * SL, last = cur + 8 * SL, k;
   for(k in map){ if(k !== '__queue' && Number(k) > last && Number(k) < day + 864e5) last = Number(k); }
   last = Math.min(last, cur + 16 * SL);
   var head = '<div class="pz-sh blu" data-a="gd" style="cursor:pointer"><span>🕒 GUIDA FORNO · fasce da 15′</span><em>' + (open ? '▾' : '▸') + ' ' + (map.__queue || 0) + ' pizze</em></div>';
-  if(!open){
-    var occ = null, s0; for(s0 = cur; s0 <= last; s0 += SL){ if(map[s0] && map[s0].n > 0){ occ = s0; break; } }
-    var sum = occ === null ? '✅ Forno libero · nessuna pizza in programma' : (occ === cur ? '🔥 Fascia ORA: ' + map[occ].n + '/' + cap : '✅ Forno libero fino alle ' + hhmm(occ) + ' · poi ' + map[occ].n + '/' + cap);
-    return head + '<div class="pz-gsum">' + sum + '</div>';
-  }
+  if(!open) return head;
   var rows = '';
   for(var s = cur; s <= last; s += SL){
     var e = map[s], n = e ? e.n : 0, free = Math.max(0, cap - n), pct = Math.min(100, Math.round(n * 100 / Math.max(cap, 1)));
@@ -41901,127 +41636,6 @@ function nextChip(now, cap){
   }catch(e){ return ''; }
 }
 function secHead(cls, t, n){ return '<div class="pz-sh ' + cls + '"><span>' + t + '</span><em>' + n + '</em></div>'; }
-/* v2.1 · riepilogo «HO DA FARE», pulsante «✓ Fatta» per tipo di pizza e «Annulla» */
-var inflight = {}, lastOne = null, undoT = null, nb = null, toolsOpen = false;
-function pendAgg(list, now){
-  var map = {}, order = [], sp = {maxi: 0, baby: 0, mod: 0};
-  list.forEach(function(x){
-    var u = urg(x, now); if(u === 'done' || u === 'wait') return;
-    var rk = RANK[u] === undefined ? 3 : RANK[u];
-    x.lines.forEach(function(i, n){
-      if(x.d.indexOf(lineKey(i, n)) >= 0) return;
-      var q = Number(i.quantity || 1), nm = baseName(i), g = map[nm];
-      if(!g){ g = map[nm] = {name: nm, html: nameHtml(nm), pend: 0, rank: 9, start: Infinity}; order.push(g); }
-      g.pend += q; g.rank = Math.min(g.rank, rk); g.start = Math.min(g.start, x.start);
-      var st = sizeTag(i); if(st === 'MAXI') sp.maxi += q; else if(st === 'BABY') sp.baby += q;
-      var mh = ''; try{ mh = modsHtml(i); }catch(e){} if(mh) sp.mod += q;
-    });
-    if(x.bread && x.d.indexOf('pane') < 0){
-      var g2 = map['🥖 PANE'] || (map['🥖 PANE'] = {name: '🥖 PANE', html: '🥖 Pane', pend: 0, rank: 9, start: Infinity, bread: true});
-      if(order.indexOf(g2) < 0) order.push(g2);
-      g2.pend += 1; g2.rank = Math.min(g2.rank, rk); g2.start = Math.min(g2.start, x.start);
-    }
-  });
-  order.sort(function(a, b){ return a.rank - b.rank || a.start - b.start; });
-  return {groups: order, sp: sp};
-}
-function summaryHtml(list, now){
-  try{
-    var A = pendAgg(list, now); if(!A.groups.length) return '';
-    var names = ['late', 'now', 'soon', 'later'], total = 0;
-    var chips = A.groups.map(function(g){
-      if(!g.bread) total += g.pend;
-      return '<button type="button" class="pz-sc u-' + (names[g.rank] || 'later') + '" data-a="jump" data-n="' + E(g.name) + '"><b>' + g.pend + '×</b> ' + g.html + '</button>';
-    }).join('');
-    var sp = [];
-    if(A.sp.maxi) sp.push('<span class="sz">MAXI ×' + A.sp.maxi + '</span>');
-    if(A.sp.baby) sp.push('<span class="sz b">BABY ×' + A.sp.baby + '</span>');
-    if(A.sp.mod) sp.push('<span class="pz-spm">✏️ con modifiche ×' + A.sp.mod + '</span>');
-    return '<div class="pz-sum"><div class="pz-sumh">📋 HO DA FARE · <b>' + total + (total === 1 ? ' pizza' : ' pizze') + '</b></div><div class="pz-sumc">' + chips + '</div>' + (sp.length ? '<div class="pz-sums">' + sp.join('') + '</div>' : '') + '</div>';
-  }catch(e){ return ''; }
-}
-function oneBtn(g){
-  return '<button type="button" class="pz-one" data-a="one" data-g="' + E(g.name) + '">✓ ' + (g.name === '🥖 PANE' ? 'Pane' : 'Fatta') + '<small>#' + E(g.nx.oid) + (g.nx.q > 1 ? ' ×' + g.nx.q : '') + '</small></button>';
-}
-function pickNext(name){
-  var now = Date.now(), best = null;
-  model().forEach(function(x){
-    var u = urg(x, now); if(u === 'done' || u === 'wait') return;
-    if(name === '🥖 PANE'){
-      if(x.bread && x.d.indexOf('pane') < 0 && !inflight[x.o.id + '|pane'] && (!best || x.start < best.start)) best = {oid: x.o.id, key: 'pane', q: 1, start: x.start};
-      return;
-    }
-    x.lines.forEach(function(i, n){
-      var key = lineKey(i, n);
-      if(x.d.indexOf(key) >= 0 || inflight[x.o.id + '|' + key] || baseName(i) !== name) return;
-      if(!best || x.start < best.start) best = {oid: x.o.id, key: key, q: Number(i.quantity || 1), start: x.start};
-    });
-  });
-  return best;
-}
-function showUndo(name, t){
-  if(!pz) return;
-  var d = $('#pzUndo', pz); if(!d){ d = document.createElement('div'); d.id = 'pzUndo'; pz.appendChild(d); }
-  d.innerHTML = '<span>✓ ' + E(name === '🥖 PANE' ? 'Pane' : name) + ' · #' + E(t.oid) + (t.q > 1 ? ' ×' + t.q : '') + '</span><button type="button" data-a="undo">↩️ Annulla</button>';
-  d.style.display = 'flex'; clearTimeout(undoT); undoT = setTimeout(function(){ d.style.display = 'none'; }, 6000);
-}
-function runToggle(oid, key){
-  var id = oid + '|' + key; inflight[id] = 1;
-  var done = function(){ delete inflight[id]; };
-  var r = toggle(oid, key); if(r && r.then) r.then(done, done); else done();
-}
-function doOne(name){
-  var t = pickNext(name); if(!t) return;
-  lastOne = {oid: t.oid, key: t.key, name: name, q: t.q};
-  showUndo(name, t); runToggle(t.oid, t.key);
-}
-function doUndo(){
-  if(!lastOne) return; var t = lastOne; lastOne = null;
-  var d = $('#pzUndo', pz); if(d) d.style.display = 'none';
-  runToggle(t.oid, t.key);
-}
-function jumpTo(name){
-  if(ls(K_VIEW) === 'ord'){ ls(K_VIEW, 'piz'); paint(); }
-  var els = pz.querySelectorAll('.pz-g'), hit = null, k;
-  for(k = 0; k < els.length; k++){ if(els[k].getAttribute('data-g') === name){ hit = els[k]; break; } }
-  if(hit){ try{ hit.scrollIntoView({behavior: 'smooth', block: 'start'}); }catch(e){ hit.scrollIntoView(); } hit.classList.add('flash'); setTimeout(function(){ hit.classList.remove('flash'); }, 1300); }
-}
-/* v2.1 · barra «PROSSIMO»: il primo ordine con pizze ancora da fare, sempre visibile in alto */
-function nextBarHtml(list, now){
-  try{
-    var rows = [];
-    list.forEach(function(x){
-      var u = urg(x, now); if(u === 'done' || u === 'wait') return;
-      var pend = 0; x.lines.forEach(function(i, k){ if(x.d.indexOf(lineKey(i, k)) < 0) pend += Number(i.quantity || 1); });
-      if(pend > 0) rows.push({x: x, u: u, pend: pend});
-    });
-    if(!rows.length) return '';
-    var r = rows[0], x0 = r.x, mins = Math.round((x0.start - now) / 60000), lab;
-    var cls = (r.u === 'late' || r.u === 'now') ? 'r' : (r.u === 'soon' ? 's' : 'l');
-    /* infornata = tutti gli ordini che partono insieme al primo (entro 5′) */
-    var LIM = Math.max(x0.start, now) + 5 * 60000;
-    var batch = rows.filter(function(q){ return q.x.start <= LIM; }), rest = rows.length - batch.length;
-    var comp = [], idx = {}, total = 0, breadN = 0, ids = [];
-    batch.forEach(function(q){
-      ids.push('#' + E(q.x.o.id));
-      q.x.lines.forEach(function(i, k){
-        if(q.x.d.indexOf(lineKey(i, k)) >= 0) return;
-        var nm = baseName(i), n = Number(i.quantity || 1); total += n;
-        if(idx[nm] === undefined){ idx[nm] = comp.length; comp.push({n: 0, html: nameHtml(nm)}); }
-        comp[idx[nm]].n += n;
-      });
-      if(q.x.bread && q.x.d.indexOf('pane') < 0) breadN++;
-    });
-    if(r.u === 'late') lab = '⚠️ IN RITARDO · INFORNA ORA';
-    else if(r.u === 'now') lab = '🔥 INFORNA ORA';
-    else if(r.u === 'soon') lab = '⏰ TRA ' + fm(mins) + ' · inforna alle ' + hhmm(x0.start);
-    else lab = '▶ PROSSIMO · inizia ' + hhmm(x0.start) + ' (tra ' + fm(mins) + ')';
-    var cmp = comp.map(function(c){ return '<span><b>' + c.n + '×</b> ' + c.html + '</span>'; }).join('') + (breadN ? '<span><b>' + breadN + '×</b> 🥖 Pane</span>' : '');
-    var who = batch.length === 1 ? '<span>' + x0.ds.ico + '</span>' : '';
-    var more = rest > 0 ? '<span class="more">+' + rest + (rest === 1 ? ' ordine dopo' : ' ordini dopo') + '</span>' : '';
-    return '<div class="pz-nx ' + cls + '"><div class="t">' + lab + '</div><div class="d"><b>' + ids.join(' ') + '</b>' + who + '<span>' + total + (total === 1 ? ' pizza' : ' pizze') + '</span>' + more + '</div><div class="cmp">' + cmp + '</div></div>';
-  }catch(e){ return ''; }
-}
 function buildHtml(){
   var now = Date.now(), list = model(), view = ls(K_VIEW) === 'ord' ? 'ord' : 'piz';
   var pend = 0, forno = 0, cap = Number(ls(K_CAP)) || 12, late = 0, ready = 0;
@@ -42032,23 +41646,22 @@ function buildHtml(){
   });
   if(ovc){ forno = ovc.n; cap = ovc.cap; }
   var fcls = forno > cap ? 'bad' : (forno > cap - 2 ? 'warn' : 'ok');
-  var head = bannerHtml() + '<div class="pz-h1"><div class="pz-clock" id="pzClock">' + hhmm(now) + '</div>' +
+  var head = '<div class="pz-h1"><div class="pz-clock" id="pzClock">' + hhmm(now) + '</div>' +
     '<div class="pz-chip2 todo">🍕 Da fare ' + pend + '</div>' +
     (ready ? '<div class="pz-chip2 ok">✅ Pronti ' + ready + '</div>' : '') +
     (late ? '<div class="pz-chip2 late">🚨 ' + late + ' in ritardo</div>' : '') +
     nextChip(now, cap) + '<div class="pz-sp"></div><button type="button" class="pz-x" data-a="x">✕</button></div>' +
-    '<div class="pz-seg"><button type="button" class="' + (view === 'piz' ? 'on' : '') + '" data-a="v" data-v="piz">🍕 Per pizza</button><button type="button" class="' + (view === 'ord' ? 'on' : '') + '" data-a="v" data-v="ord">📋 Per ordine</button></div>' + nextBarHtml(list, now);
+    '<div class="pz-seg"><button type="button" class="' + (view === 'piz' ? 'on' : '') + '" data-a="v" data-v="piz">🍕 Per pizza</button><button type="button" class="' + (view === 'ord' ? 'on' : '') + '" data-a="v" data-v="ord">📋 Per ordine</button></div>';
   var tools = '<button type="button" class="pz-btn" data-a="cap" title="Capacità forno">🔥 Forno ' + forno + '/' + cap + '</button>' +
-    '<button type="button" class="pz-btn" data-a="tm">⚙️ Opzioni ' + (toolsOpen ? '▴' : '▾') + '</button>' +
-    (toolsOpen ? (roleNow() === 'manager' ? '<button type="button" class="pz-btn" data-a="enf" title="Collega pizzaiolo e cucina: «Pronto» solo quando hanno finito entrambi">🔗 ' + (enforceOn() ? 'Legato alla cucina' : 'Non legato alla cucina') + '</button>' : '') +
-    '<button type="button" class="pz-btn" data-a="m">A− testo</button><button type="button" class="pz-btn" data-a="p">A+ testo</button>' +
-    '<button type="button" class="pz-btn" data-a="fs">⛶ Schermo intero</button>' +
-    '<button type="button" class="pz-btn" data-a="out" title="Cambia utente">🔄 Cambia utente</button>' : '');
+    (roleNow() === 'manager' ? '<button type="button" class="pz-btn" data-a="enf" title="Collega pizzaiolo e cucina">🔗 ' + (enforceOn() ? 'ON' : 'OFF') + '</button>' : '') +
+    '<button type="button" class="pz-btn" data-a="m">A−</button><button type="button" class="pz-btn" data-a="p">A+</button>' +
+    '<button type="button" class="pz-btn" data-a="fs">⛶</button>' +
+    '<button type="button" class="pz-btn" data-a="out" title="Cambia utente">🔄</button>';
   var warn = colMissing ? '<div class="pz-warn">⚠️ Colonne pz_done / k_done mancanti: esegui pizzaiolo.sql in Supabase. Per ora i segni valgono solo su questo dispositivo e il collegamento con la cucina non è condiviso.</div>' : '';
   var oven = '<div class="pz-oven ' + fcls + '"><span>🔥 Forno</span><div class="bar"><i style="width:' + Math.min(100, Math.round(forno * 100 / Math.max(cap, 1))) + '%"></i></div><b>' + forno + '/' + cap + '</b><small>prossimi ' + BAKE_WINDOW_MIN + '′</small></div>';
   var work = list.filter(function(x){ return urg(x, now) !== 'done'; }), done = list.filter(function(x){ return urg(x, now) === 'done'; });
   var readyHtml = done.length ? secHead('grn', '✅ PRONTI · DA CONSEGNARE', done.length) + done.map(function(x){ return cardHtml(x, false, now); }).join('') : '';
-  var body; oven += guideHtml(now); oven = summaryHtml(list, now) + oven;
+  var body; oven += guideHtml(now);
   if(!list.length){ body = oven + '<div class="pz-empty">🍕 Nessuna pizza da preparare</div>'; }
   else if(view === 'piz'){
     body = oven + '<div class="pz-cols two"><div class="pz-col">' + secHead('red', '🍕 PIZZE DA FARE', pend) + (groupsHtml(list, now) || '<div class="pz-empty">✅ Tutto fatto</div>') + '</div>' +
@@ -42075,21 +41688,9 @@ function signature(){
   return allOrders().map(function(o){ return o.id + '|' + o.status + '|' + (Array.isArray(o.pz_done) ? o.pz_done.join('.') : '') + '|' + (o.k_done ? 1 : 0) + '|' + itemsOf(o.id).length; }).join(',') + '|' + Object.keys(lmap()).length;
 }
 function beep(){ try{ var C = window.AudioContext || window.webkitAudioContext, a = new C(), o = a.createOscillator(), g = a.createGain(); o.connect(g); g.connect(a.destination); o.frequency.value = 880; g.gain.value = .15; o.start(); setTimeout(function(){ try{ o.stop(); a.close(); }catch(e){} }, 350); }catch(e){} }
-function bannerHtml(){
-  if(!nb || Date.now() - nb.t > 9000) return '';
-  var one = nb.ids.length === 1, pz1 = nb.u ? ' · ' + nb.u + (nb.u === 1 ? ' pizza' : ' pizze') : '';
-  var t = one ? 'NUOVO ORDINE · #' + E(nb.ids[0]) + pz1 + (nb.ds ? ' · ' + nb.ds : '') + (nb.at ? ' · ' + E(nb.at) : '') : nb.ids.length + ' NUOVI ORDINI · ' + nb.ids.map(function(i){ return '#' + E(i); }).join(' ') + pz1;
-  return '<button type="button" class="pz-nb" data-a="dis">🆕 ' + t + '<small>tocca per chiudere</small></button>';
-}
 function checkNew(){
-  var ids = {}, fresh = []; model().forEach(function(x){ ids[x.o.id] = 1; if(seen && !seen[x.o.id] && x.st !== 'Pronto'){ fresh.push(x); newIds[x.o.id] = Date.now(); } });
-  seen = ids;
-  if(fresh.length){
-    beep(); try{ if(navigator.vibrate) navigator.vibrate([250, 120, 250]); }catch(e){}
-    var u = 0; fresh.forEach(function(x){ u += x.units; });
-    nb = {t: Date.now(), ids: fresh.map(function(x){ return x.o.id; }), u: u, ds: fresh.length === 1 ? fresh[0].ds.ico : '', at: fresh.length === 1 ? fresh[0].tg.lab : ''};
-    setTimeout(function(){ if(pz) paint(); }, 9200);
-  }
+  var ids = {}, fresh = false; model().forEach(function(x){ ids[x.o.id] = 1; if(seen && !seen[x.o.id] && x.st !== 'Pronto'){ fresh = true; newIds[x.o.id] = Date.now(); } });
+  seen = ids; if(fresh) beep();
 }
 function toastMsg(t){ if(!hasDoc) return; var d = $('#pzToast') || document.createElement('div'); d.id = 'pzToast'; d.textContent = t; document.body.appendChild(d); clearTimeout(d._t); d._t = setTimeout(function(){ if(d.parentNode) d.parentNode.removeChild(d); }, 3500); }
 function openPZ(){
@@ -42134,13 +41735,7 @@ function onClick(e){
   if(a === 'fin'){ b.disabled = true; var fid = b.getAttribute('data-o'), fo = findOrder(fid);
     if(fo){ chain = chain.then(async function(){ try{ await doneAll(fo); await window.updateOrderStatus(fo.id, 'Pronto'); }catch(x){ console.warn('[pz] fin', x); alert('Errore: ' + (x && x.message || x)); } try{ if(typeof loadOrders === 'function') await loadOrders(); }catch(x){} paint(); toastMsg('✅ #' + fo.id + ' pronto — avvisato il responsabile'); }); } return; }
   if(a === 'v'){ ls(K_VIEW, b.getAttribute('data-v')); paint(); return; }
-  if(a === 'lg'){ ls('bp_pz_leg', ls('bp_pz_leg') === '1' ? '0' : '1'); paint(); return; }
-  if(a === 'gd'){ ls('bp_pz_guide', ls('bp_pz_guide') === '1' ? '0' : '1'); paint(); return; }
-  if(a === 'one'){ doOne(b.getAttribute('data-g')); return; }
-  if(a === 'undo'){ doUndo(); return; }
-  if(a === 'jump'){ jumpTo(b.getAttribute('data-n')); return; }
-  if(a === 'tm'){ toolsOpen = !toolsOpen; paint(); return; }
-  if(a === 'dis'){ nb = null; paint(); return; }
+  if(a === 'gd'){ ls('bp_pz_guide', ls('bp_pz_guide') === '0' ? '1' : '0'); paint(); return; }
   if(a === 'x'){ closePZ(); return; }
   if(a === 'out'){ closePZ(); try{ doLogout(); }catch(x){} return; }
   if(a === 'fs'){ try{ if(document.fullscreenElement) document.exitFullscreen(); else pz.requestFullscreen(); }catch(x){} return; }
@@ -42189,15 +41784,8 @@ function installRole(){
 function mountBtn(){
   if(!hasDoc || roleNow() === 'driver') return;
   ['#kitchenTab .topline', '#ordersTab .topline'].forEach(function(sel){
-    var tl = $(sel); if(!tl) return;
-    var b = $('.pz-open', tl);
-    if(!b){
-      b = document.createElement('button'); b.type = 'button'; b.className = 'blue pz-open'; b.innerHTML = '<img class="bp-chef" alt="" src="'+BP_IMG.pizzaiolo+'"> Schermo pizzaiolo'; b.addEventListener('click', openPZ); tl.appendChild(b);
-    }
-    var bg = window.bpPzBadge ? window.bpPzBadge() : {n: 0, st: 'none'}, c = $('.pz-cnt', b);
-    if(!bg.n){ if(c) c.remove(); return; }
-    if(!c){ c = document.createElement('span'); b.appendChild(c); }
-    c.className = 'pz-cnt pz-' + bg.st; if(c.textContent !== String(bg.n)) c.textContent = bg.n;
+    var tl = $(sel); if(!tl || $('.pz-open', tl)) return;
+    var b = document.createElement('button'); b.type = 'button'; b.className = 'blue pz-open'; b.innerHTML = '<img class="bp-chef" alt="" src="'+BP_IMG.pizzaiolo+'"> Schermo pizzaiolo'; b.addEventListener('click', openPZ); tl.appendChild(b);
   });
 }
 function decorKds(){
@@ -42216,27 +41804,10 @@ function init(){
   installWrapper(); installRole();
   if(hasDoc){ setInterval(function(){ try{ mountBtn(); decorKds(); }catch(e){} }, 1500); }
   window.bpOpenPizzaioloScreen = openPZ;
-  /* lo schermo resta acceso: il blocco si perde quando la pagina va in background, quindi lo richiedo di nuovo al ritorno */
-  if(hasDoc){ try{ document.addEventListener('visibilitychange', function(){ try{ if(pz && !document.hidden && navigator.wakeLock) navigator.wakeLock.request('screen').then(function(w){ wake = w; }).catch(function(){}); }catch(e){} }); }catch(e){} }
   /* apre da solo la schermata quando l'utente è pizzaiolo (la funzione bpApplyRole interna non è agganciabile da qui) */
   if(hasDoc){ try{ var opened = false, chk = function(){ if(document.body && document.body.getAttribute('data-role') === 'pizzaiolo' && !opened){ opened = true; setTimeout(openPZ, 300); } else if(document.body && document.body.getAttribute('data-role') !== 'pizzaiolo'){ opened = false; } };
     new MutationObserver(chk).observe(document.body, {attributes: true, attributeFilter: ['data-role']}); chk(); }catch(e){ console.warn('[pz] role watch', e); } }
 }
-/* v2.1 · badge del tab Pizzaiolo: numero di pizze ancora da fare + urgenza (later/soon/now/late) */
-var _bgC = {t: 0, v: {n: 0, st: 'none'}};
-window.bpPzBadge = function(){
-  try{
-    var now = Date.now(); if(now - _bgC.t < 1200) return _bgC.v;
-    var n = 0, rank = -1, R = {later: 0, soon: 1, now: 2, late: 3};
-    model().forEach(function(x){
-      var u = urg(x, now); if(u === 'done' || u === 'wait') return;
-      var pend = 0; x.lines.forEach(function(i, k){ if(x.d.indexOf(lineKey(i, k)) < 0) pend += Number(i.quantity || 1); });
-      if(!pend) return; n += pend; if(R[u] > rank) rank = R[u];
-    });
-    _bgC = {t: now, v: {n: n, st: n ? ['later', 'soon', 'now', 'late'][rank] : 'none'}};
-    return _bgC.v;
-  }catch(e){ return {n: 0, st: 'none'}; }
-};
 window.__pz = {h: {pzLines: pzLines, lineKey: lineKey, doneArr: doneArr, targetMs: targetMs, dest: dest, stOf: stOf, allOrders: allOrders, itemsOf: itemsOf, hhmm: hhmm, E: E, ls: ls, findOrder: findOrder, toast: toastMsg}, model: model, buildHtml: buildHtml, toggle: toggle, doneArr: doneArr, allDone: allDone, reqKeys: reqKeys, dest: dest, init: init, flags: function(){ return {colMissing: colMissing}; }};
 init();
 })();
@@ -42245,7 +41816,7 @@ init();
 (function(){
 if(window.__bpOV) return;
 var P = window.__pz, H = P && P.h; if(!H) return; window.__bpOV = 1;
-var SLOT = 15 * 60000, DOM_LEAD = (window.BP_DEP_LEAD_MIN != null ? Number(window.BP_DEP_LEAD_MIN) : 5) * 60000, CAP_KEY = 'bp_pz_cap';
+var SLOT = 15 * 60000, DOM_LEAD = 10 * 60000, CAP_KEY = 'bp_pz_cap';
 var hasDoc = (typeof document !== 'undefined' && document && document.body);
 var ov = null, timer = 0, openSlot = null;
 function $(s, r){ if(!hasDoc) return null; return (r || document).querySelector(s); }
@@ -43064,37 +42635,6 @@ body.dark-mode #bpKzBar .kz-l,body.dark-mode #bpKzBar b{color:#e2e8f0}
   window.addEventListener('resize', later); window.addEventListener('orientationchange', function(){ setTimeout(later, 300); });
   var wasVis = false;
   setInterval(function(){ try{ ensure(); var v = visible(cols()); if(v && !wasVis) later(); wasVis = v; }catch(e){} }, 1000);
-})();
-</script>
-<style id="bpKSetCss">
-#kitchenTab:not(.bpk-open) #kitchenChips,#kitchenTab:not(.bpk-open) #bpKzBar{display:none!important}
-#bpKSetBtn{display:inline-flex;align-items:center;gap:8px;margin:0 0 10px;padding:10px 16px;border:0;border-radius:99px;background:#eceff3;color:#202124;font-size:14px;font-weight:800;font-family:inherit;cursor:pointer;box-shadow:inset 0 0 0 1px rgba(0,0,0,.06);-webkit-tap-highlight-color:transparent}
-#bpKSetBtn:active{transform:scale(.96)}
-#kitchenTab.bpk-open #bpKSetBtn{background:#1d2939;color:#fff}
-body.dark-mode #bpKSetBtn{background:#1e293b;color:#f1f5f9}
-body[data-role="viewer"] #bpKSetBtn{display:none!important}
-</style>
-<script id="bpKSetJs">
-/* Cucina: ⛶ schermo intero, microfono, v95 e Zoom in una barra «Opzioni» che si apre/chiude; parte SEMPRE chiusa */
-(function(){
-  if(window.__bpKSet) return; window.__bpKSet = 1;
-  function label(tab, btn){ btn.innerHTML = '⚙️ Opzioni ' + (tab.classList.contains('bpk-open') ? '▴' : '▾'); btn.setAttribute('aria-expanded', tab.classList.contains('bpk-open') ? 'true' : 'false'); }
-  function ensure(){
-    var tab = document.getElementById('kitchenTab'), chips = document.getElementById('kitchenChips');
-    if(!tab || !chips || !chips.parentNode) return;
-    var btn = document.getElementById('bpKSetBtn');
-    if(!btn){
-      btn = document.createElement('button'); btn.type = 'button'; btn.id = 'bpKSetBtn'; btn.title = 'Opzioni · إعدادات';
-      btn.addEventListener('click', function(){
-        tab.classList.toggle('bpk-open'); label(tab, btn);
-        setTimeout(function(){ try{ window.dispatchEvent(new Event('resize')); }catch(e){} }, 60); /* lo zoom automatico si riadatta all'altezza libera */
-      });
-      label(tab, btn);
-    }
-    if(chips.previousElementSibling !== btn) chips.parentNode.insertBefore(btn, chips);
-  }
-  setInterval(function(){ try{ ensure(); }catch(e){} }, 800);
-  try{ ensure(); }catch(e){}
 })();
 </script>
 <script id="bp-voicelog">
@@ -44425,9 +43965,9 @@ html.pos64 body #p64Bar button b{font-size:14px!important;font-weight:900!import
 (function(){
  function E(i){return document.getElementById(i);}
  function eur(n){return (Math.round(n*100)/100).toFixed(2).replace('.',',')+' €';}
- var DEN=[10,20,50,100], sig='';
+ var DEN=[10,20,30,40,50,100], sig='';
  function total(){try{return getGrandTotal();}catch(e){return 0;}}
- function given(){var i=E('cashGivenInput');return Number((i&&i.value)||0);}
+ function given(){return bpCashGiven(total());}
  function ensure(){
   var a=E('cashCalcArea');if(!a)return null;
   var m=E('bpCashMain');
@@ -44440,8 +43980,8 @@ html.pos64 body #p64Bar button b{font-size:14px!important;font-weight:900!import
    var v=b.getAttribute('data-v');
    var pay=E('payment');
    if(pay&&pay.value!=='Contanti'){pay.value='Contanti';try{onPaymentMethodChange();}catch(x){}}
-   var val=v==='x'?0:(v==='g'?Math.ceil(total()*100)/100:Number(v));
-   var inp=E('cashGivenInput');if(inp){inp.value=val>0?val:'';}
+   var val=v==='x'?'':(v==='g'?'0':Number(v));
+   var inp=E('cashGivenInput');if(inp){inp.value=val;}
    try{renderCart();}catch(x){}
    try{inp&&inp.dispatchEvent(new Event('input',{bubbles:true}));}catch(x){}
    paint(true);
@@ -44455,10 +43995,11 @@ html.pos64 body #p64Bar button b{font-size:14px!important;font-weight:900!import
    var r=(t>0&&v>=t)?'resto '+eur(v-t):(t>0?'mancano '+eur(t-v):'');
    return '<button type="button" data-v="'+v+'" class="'+(cash&&cur===v?'on':'')+'">'+v+' €<small>'+(r||'&nbsp;')+'</small></button>';
   });
-  h.push('<button type="button" data-v="g" class="ex'+(cash&&t>0&&cur===Math.ceil(t*100)/100?' on':'')+'">✔ Giusto'+(t>0?' · '+eur(t):'')+'</button>');
-  h.push('<button type="button" data-v="x" class="clr">✖ Azzera</button>');
+  h.push('<button type="button" data-v="g" class="ex'+(cash&&bpCashRaw()==='0'?' on':'')+'">✔ Giusto'+(t>0?' · '+eur(t):'')+'</button>');
+  h.push('<button type="button" data-v="x" class="clr">↺ Automatico</button>');
   var note='',cls='';
-  if(cash&&cur>0&&t>0){
+  if(cash&&bpCashRaw()==='0'&&t>0){note='✔ Importo giusto, nessun resto';}
+  else if(cash&&cur>0&&t>0){
    if(cur>t+0.001){note='📝 In nota: [💶 Paga con '+eur(cur)+' · Resto: '+eur(cur-t)+']';cls='big';}
    else if(cur<t-0.001){note='⚠️ Mancano ancora '+eur(t-cur);cls='bad';}
    else note='✔ Importo giusto, nessun resto';
@@ -45132,41 +44673,129 @@ html.pos64.p64-voice #voiceOrderBox #voiceSmartInput:focus{outline:0;border-colo
 window.bpIsOnlineOrder=function(o){ if(!o) return false; return o.source==='online'||!!o.online_pending||/\bONLINE\b/.test(String(o.notes||'')); };
 window.bpOnlineRcHtml=function(o){ return bpIsOnlineOrder(o)?'<div class="bp-onl-rc"><i></i><b>🌐 ONLINE</b><span>ORDINE DAL SITO WEB</span><i></i></div>':''; };
 </script>
-<style id="bpKCompact">
-/* v131 · Cucina compatta su telefono: 2 righe invece di 6 (titolo+pulsanti+Opzioni in una riga, filtri in una riga) */
-@media (max-width:899px){
- html body #kitchenTab:not(.hidden){display:flex!important;flex-wrap:wrap;align-items:center;column-gap:6px;row-gap:6px}
- html body #kitchenTab>*{order:10;flex:1 1 100%;min-width:0}
- html body #kitchenTab>.topline{order:1;flex:1 1 0;display:flex!important;flex-wrap:nowrap!important;align-items:center!important;gap:6px!important;margin:0!important;padding:0!important}
- html body #kitchenTab>#bpKSetBtn{order:2;flex:0 0 auto}
- html body #kitchenTab>#bpfBar_cucina{order:3}
- html body #kitchenTab>#kitchenChips,html body #kitchenTab>#bpKzBar{order:4}
- html body #kitchenTab>#kitchenCols{order:20}
- html body #kitchenTab .topline h1{flex:1 1 auto;min-width:0;margin:0!important;font-size:19px!important;line-height:1.1!important;display:flex;align-items:center;gap:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
- html body #kitchenTab .topline h1 img{width:28px!important;height:28px!important}
- /* pulsanti solo icona, quadrati da 42px */
- html body #kitchenTab .topline>button,html body #kitchenTab>#bpKSetBtn{flex:0 0 42px!important;width:42px!important;min-width:42px!important;height:42px!important;min-height:42px!important;max-width:42px;padding:0!important;margin:0!important;border-radius:12px!important;font-size:0!important;display:inline-flex!important;align-items:center;justify-content:center;position:relative;overflow:visible}
- html body #kitchenTab .topline>button::before,html body #kitchenTab>#bpKSetBtn::before{font-size:21px;line-height:1}
- html body #kitchenTab #bp35KdsBtn::before{content:'📺'}
- html body #kitchenTab .ov-open2::before{content:'🔥'}
- html body #kitchenTab>#bpKSetBtn::before{content:'⚙️'}
- html body #kitchenTab .pz-open img{width:26px!important;height:26px!important;margin:0!important}
- html body #kitchenTab .pz-open .pz-cnt{position:absolute;top:-6px;inset-inline-end:-6px;font-size:11px!important;line-height:17px;min-width:17px;padding:0 4px;border-radius:99px}
- /* filtri: una sola riga, scorrevole, testo corto */
- html body #bpfBar_cucina{display:flex!important;flex-wrap:nowrap!important;gap:6px!important;overflow-x:auto;scrollbar-width:none;margin:0!important;padding:2px 0!important;background:none!important;border:0!important;box-shadow:none!important}
- html body #bpfBar_cucina::-webkit-scrollbar{display:none}
- html body #bpfBar_cucina .bpf-chip{flex:1 0 auto;min-height:38px!important;height:38px;padding:0 10px!important;gap:5px!important;font-size:14px!important;border-width:1.5px!important;margin:0!important;justify-content:center}
- html body #bpfBar_cucina .bpf-chip[data-f]:not([data-f="all"])>span:nth-child(2){display:none}
- html body #bpfBar_cucina .bpf-chip .uxi svg{width:18px;height:18px}
- html body #bpfBar_cucina .bpf-n{font-size:12px!important;padding:1px 7px!important;min-width:0!important}
- html body #bpfBar_cucina .bpf-hint{display:none!important}
-}
+<style id="bpRestoQuickCss">
+#bpRestoStrip,.bp-cardresto{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);gap:6px;margin:6px 0}
+#bpRestoStrip[hidden]{display:none!important}
+html body #bpRestoStrip button,html body .panel.order .bp-cardresto button{display:flex!important;flex-direction:column;align-items:center;justify-content:center;gap:1px;min-width:0;width:auto!important;min-height:54px!important;margin:0!important;padding:4px 2px!important;border-radius:14px!important;border:2px solid #abefc6!important;background:#fff!important;color:#101828!important;box-shadow:none!important;line-height:1.15;cursor:pointer;touch-action:manipulation}
+#bpRestoStrip button *,.bp-cardresto button *{letter-spacing:0!important}
+#bpRestoStrip button b,.bp-cardresto button b{font-size:16px;font-weight:900;white-space:nowrap}
+#bpRestoStrip button small,.bp-cardresto button small{font-size:10.5px;font-weight:800;color:#16794b;white-space:nowrap}
+html body #bpRestoStrip button.on,html body .panel.order .bp-cardresto button.on{background:#16794b!important;border-color:#16794b!important;color:#fff!important}
+#bpRestoStrip button.on small,.bp-cardresto button.on small{color:#d1fadf}
+html body .panel.order .bp-cardresto button.sug{border:2px dashed #16794b!important;background:#ecfdf3!important}
+html body .panel.order .bp-cardresto{grid-auto-flow:row!important;grid-template-columns:repeat(2,minmax(0,1fr))}
+html body .panel.order .bp-cardresto button b{font-size:19px!important}
+html body .panel.order .bp-cardresto button small{font-size:13px!important}
 </style>
-<script id="bpKCompactJs">
-(function(){var T={bp35KdsBtn:'Schermo cucina'};setInterval(function(){try{var k=document.getElementById('kitchenTab');if(!k)return;
- [['#bp35KdsBtn','Schermo cucina'],['.pz-open','Schermo pizzaiolo'],['.ov-open2','Forno'],['#bpKSetBtn','Opzioni']].forEach(function(x){var b=k.querySelector(x[0]);if(b&&b.getAttribute('aria-label')!==x[1]){b.setAttribute('aria-label',x[1]);b.title=x[1]}});
- [].forEach.call(k.querySelectorAll('#bpfBar_cucina .bpf-chip[data-f]'),function(b){var n={all:'Tutti',domicilio:'Domicilio',ritiro:'Ritiro',tavolo:'Tavolo'}[b.getAttribute('data-f')];if(n&&b.title!==n){b.title=n;b.setAttribute('aria-label',n)}});
-}catch(e){}},1500)})();
+<script id="bpRestoQuickJs">
+(function(){
+ var sig='', lastT=null;
+ function ensure(){
+  var s=el('bpRestoStrip'); if(s) return s;
+  var tot=document.querySelector('#newTab .rd-total'); if(!tot) return null;
+  s=document.createElement('div'); s.id='bpRestoStrip'; s.hidden=true;
+  tot.parentNode.insertBefore(s, tot.nextSibling);
+  s.addEventListener('click',function(e){
+   var b=e.target.closest('button'); if(!b) return;
+   var i=el('cashGivenInput'); i.value=b.getAttribute('data-v'); renderCart();
+   i.dispatchEvent(new Event('input',{bubbles:true}));
+  });
+  return s;
+ }
+ function paint(){
+  var s=ensure(); if(!s) return;
+  var t=cart.size?getGrandTotal():0, raw=bpCashRaw();
+  /* il totale è salito oltre il taglio scelto: torna alla proposta automatica */
+  if(t!==lastT){ lastT=t; if(Number(raw)>0 && t>0 && Number(raw)<t-0.001){ el('cashGivenInput').value=''; raw=''; renderCart(); } }
+  var win=el('p64Win'), inWin=win && win.getAttribute('data-open')==='cash' && document.documentElement.classList.contains('pos64');
+  var show=t>0 && el('payment').value==='Contanti' && !inWin;
+  if(s.hidden===show) s.hidden=!show;
+  if(!show) return;
+  var cur=bpCashGiven(t), opts=bpRestoOpts(t);
+  if(cur>=t && cur>0 && raw!=='0' && opts.indexOf(cur)<0){ opts.push(cur); opts.sort(function(a,b){return a-b;}); }
+  var h='<button type="button" data-v="0" class="'+(raw==='0'?'on':'')+'"><b>✔ Giusto</b><small>'+euro(t)+'</small></button>';
+  opts.forEach(function(v){ h+='<button type="button" data-v="'+v+'" class="'+(raw!=='0'&&cur===v?'on':'')+'"><b>'+v+' €</b><small>resto '+euro(Math.round((v-t)*100)/100)+'</small></button>'; });
+  if(h!==sig){ sig=h; s.innerHTML=h; }
+ }
+ try{ var rc=renderCart; window.renderCart=renderCart=function(){ var r=rc.apply(this,arguments); try{paint();}catch(e){console.warn('[resto]',e);} return r; }; }catch(e){ console.warn('[resto]',e); }
+ setInterval(function(){ try{paint();}catch(e){console.warn('[resto]',e);} },400);
+})();
+</script>
+<!-- ===== CALLER ID: شريط المكالمات الواردة (v1) ===== -->
+<style id="bpCallerCss">
+#bpCallBar{position:fixed;inset-inline:0;top:0;z-index:2147483000;padding:calc(env(safe-area-inset-top,0px) + 8px) 10px 10px;background:#14301f;color:#fff;box-shadow:0 6px 20px rgba(0,0,0,.35);border-bottom:3px solid #2ecc71;font-family:inherit}
+#bpCallBar[hidden]{display:none}
+#bpCallBar .bpc-top{display:flex;align-items:center;gap:8px;font-weight:900;font-size:17px}
+#bpCallBar .bpc-q{background:#e67e22;border-radius:99px;padding:1px 9px;font-size:13px}
+#bpCallBar .bpc-nm{font-size:20px;font-weight:900;margin:4px 0 2px;line-height:1.2}
+#bpCallBar .bpc-sub{opacity:.85;font-size:14px;margin-bottom:6px}
+#bpCallBar .bpc-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}
+#bpCallBar button{flex:1 1 140px;min-height:46px;border:0;border-radius:12px;font-size:16px;font-weight:900;padding:8px 12px;cursor:pointer;background:#2ecc71;color:#06280f}
+#bpCallBar button.bpc-alt{background:#3b4a40;color:#fff}
+#bpCallBar button.bpc-new{background:#f1c40f;color:#2b2200}
+#bpCallBar input{flex:1 1 140px;min-height:44px;border-radius:10px;border:0;padding:6px 10px;font-size:16px;font-weight:700;color:#111;background:#fff}
+</style>
+<script id="bpCallerJs">
+try{(function(){
+ if(window.__bpCallerId) return; window.__bpCallerId=true;
+ var TABLE='incoming_calls', queue=[], seen={}, cur=null, mode='main', pend=null, started=false, bar=null;
+ function $(i){return document.getElementById(i)}
+ function allowed(){return window.BP_ROLE==='manager'||window.BP_ROLE==='cashier'}
+ function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
+ function key(p){try{return normalizePhoneKey(p)}catch(e){return String(p||'').replace(/\D+/g,'')}}
+ function matches(k){var o=[];try{customerDirectory.forEach(function(c){if(k.length>=6&&key(c.phone)===k)o.push(c)})}catch(e){}return o}
+ function busy(k){try{if(cart&&cart.size>0)return true}catch(e){} var p=$('phone');return !!(p&&p.value.trim()&&key(p.value)!==k)}
+ function beep(){try{var a=new(window.AudioContext||window.webkitAudioContext)(),o=a.createOscillator(),g=a.createGain();o.connect(g);g.connect(a.destination);o.frequency.value=880;g.gain.value=.08;o.start();setTimeout(function(){o.stop();a.close()},200)}catch(e){}try{navigator.vibrate&&navigator.vibrate([120,60,120])}catch(e){}}
+ function getBar(){if(bar)return bar;bar=document.createElement('div');bar.id='bpCallBar';bar.hidden=true;document.body.appendChild(bar);bar.addEventListener('click',onClick);return bar}
+ function render(){
+  var b=getBar(); if(!cur||!allowed()){b.hidden=true;return} b.hidden=false;
+  var k=key(cur.phone), m=matches(k), h='<div class="bpc-top"><span>📞 '+esc(cur.phone)+'</span>'+(queue.length?'<span class="bpc-q">+'+queue.length+'</span>':'')+'</div>';
+  if(mode==='new'){
+   h+='<div class="bpc-nm">Cliente nuovo</div><div class="bpc-row"><input id="bpcName" placeholder="Nome / citofono"><input id="bpcAddr" placeholder="Indirizzo (facoltativo)"></div>'
+    +'<div class="bpc-row"><button data-a="save">💾 Salva e compila</button><button class="bpc-alt" data-a="skip">✖ Annulla</button></div>';
+  }else if(mode==='replace'){
+   h+='<div class="bpc-nm">C\'è un ordine in corso</div><div class="bpc-sub">Sostituire i dati con '+esc(pend.name||pend.phone)+'?</div>'
+    +'<div class="bpc-row"><button data-a="force">✅ Sostituisci</button><button class="bpc-alt" data-a="back">↩ Indietro</button></div>';
+  }else if(m.length){
+   h+='<div class="bpc-row">';
+   m.slice(0,3).forEach(function(c,i){h+='<button data-a="fill" data-i="'+i+'">✅ '+esc(c.name||'Cliente')+(c.address?' · '+esc(c.address):'')+'</button>'});
+   h+='</div><div class="bpc-row"><button class="bpc-alt" data-a="skip">✖ Ignora</button></div>';
+  }else{
+   h+='<div class="bpc-nm">Numero sconosciuto</div><div class="bpc-row"><button class="bpc-new" data-a="new">➕ Cliente nuovo</button><button class="bpc-alt" data-a="skip">✖ Ignora</button></div>';
+  }
+  b.innerHTML=h; if(mode==='new'){var n=$('bpcName');if(n)n.focus()}
+ }
+ function next(){cur=queue.shift()||null;mode='main';pend=null;render()}
+ function doFill(c){try{switchTab('new')}catch(e){} try{applyCustomerSuggestion({name:c.name||'',phone:c.phone||'',address:c.address||''})}catch(e){console.error(e)} next()}
+ function onClick(e){
+  var t=e.target.closest('button[data-a]'); if(!t||!cur)return; var a=t.getAttribute('data-a'), k=key(cur.phone);
+  if(a==='skip')return next();
+  if(a==='back'){mode='main';pend=null;return render()}
+  if(a==='fill'){var c=matches(k)[+t.getAttribute('data-i')]; if(!c)return; if(busy(k)){pend=c;mode='replace';return render()} return doFill(c)}
+  if(a==='force')return doFill(pend);
+  if(a==='new'){mode='new';return render()}
+  if(a==='save'){
+   var nm=($('bpcName').value||'').trim(), ad=($('bpcAddr').value||'').trim(); if(!nm){$('bpcName').focus();return}
+   try{upsertCustomerProfile(nm,k,ad,false);saveCustomerDirectoryToStorage()}catch(er){console.error(er)}
+   try{sb.from('customers').upsert({name:nm,phone:k,address:ad},{onConflict:'phone'}).then(function(){})}catch(er){}
+   var pf={name:nm,phone:k,address:ad}; if(busy(k)){pend=pf;mode='replace';return render()} return doFill(pf);
+  }
+ }
+ function push(r){
+  if(!allowed()||!r||!r.id||seen[r.id])return; seen[r.id]=1; var k=key(r.phone); if(!k)return;
+  if(cur&&key(cur.phone)===k)return; for(var i=0;i<queue.length;i++)if(key(queue[i].phone)===k)return;
+  beep(); if(!cur){cur=r;mode='main';render()}else{queue.push(r);render()}
+ }
+ function poll(){if(!allowed())return;try{sb.from(TABLE).select('id,phone,called_at').gte('called_at',new Date(Date.now()-90000).toISOString()).order('id').then(function(r){(r&&r.data||[]).forEach(push)})}catch(e){}}
+ function start(){
+  if(started||!allowed())return; if(typeof sb==='undefined'||!sb)return; started=true;
+  try{sb.channel('bp-calls').on('postgres_changes',{event:'INSERT',schema:'public',table:TABLE},function(p){push(p.new)}).subscribe()}catch(e){console.error(e)}
+  setInterval(poll,15000); poll();
+ }
+ try{if(typeof showApp==='function'){var o=showApp;showApp=function(){var r=o.apply(this,arguments);setTimeout(start,1200);return r}}}catch(e){}
+ var tries=0,iv=setInterval(function(){start();if(started||++tries>20)clearInterval(iv)},3000);
+ window.bpCallerTest=function(ph){push({id:'t'+Date.now(),phone:ph||'0212345678'})};
+})()}catch(e){console.error('[caller-id]',e)}
 </script>
 </body>
 </html>
