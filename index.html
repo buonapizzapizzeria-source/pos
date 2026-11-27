@@ -8384,6 +8384,12 @@ function bpRestoOpts(t){
  if(l[2] <= l[1]) l[2] = l[1] + 10;
  return l;
 }
+/* tagli mostrati sui bottoni: sotto i 10 € compare anche il 10 (la proposta automatica resta bpRestoOpts) */
+function bpRestoShow(t){
+ t = Math.round(Number(t || 0) * 100) / 100;
+ if(t > 0 && t < 10) return [10, 20, 50];
+ return bpRestoOpts(t);
+}
 function bpCashRaw(){ return String((el('cashGivenInput') || {}).value || '').trim(); }
 function bpCashGiven(total){
  if(!el('payment') || el('payment').value !== 'Contanti') return 0;
@@ -8406,11 +8412,11 @@ function bpCardResto(o, p){
  if(bpPayKind(o.payment_method) !== 'cash' || p.paid || st === 'Completato' || st === 'Annullato' || !(t > 0) || String(o.id).indexOf('OFF-') === 0) return '';
  var m = p.cashInfo && p.cashInfo.match(/Paga con\s*[^\d]*(\d+(?:[.,]\d+)?)/i);
  var saved = m ? Number(m[1].replace(',', '.')) : null, exact = /^Giusto/i.test(p.cashInfo || '');
- var opts = bpRestoOpts(t);
+ var opts = bpRestoShow(t), sugV = bpRestoOpts(t)[0];
  if(saved && opts.indexOf(saved) < 0 && saved >= t){ opts.push(saved); opts.sort(function(a, b){ return a - b; }); }
  var h = '<button type="button" data-cashpick="0" class="' + (exact ? 'on' : '') + '"><b>✔ Giusto</b><small>' + euro(t) + '</small></button>';
  opts.forEach(function(v){
-  var cls = saved === v ? 'on' : (!p.cashInfo && v === opts[0] ? 'sug' : '');
+  var cls = saved === v ? 'on' : (!p.cashInfo && v === sugV ? 'sug' : '');
   h += '<button type="button" data-cashpick="' + v + '" class="' + cls + '"><b>' + v + ' €</b><small>resto ' + euro(Math.round((v - t) * 100) / 100) + '</small></button>';
  });
  return '<div class="bp-cardresto">' + h + '</div>';
@@ -18952,13 +18958,13 @@ openCartIngModal = function(key){
  function vib(){ try{ if(navigator.vibrate) navigator.vibrate(12); }catch(e){} }
 
  /* ---------- 1) NAVIGAZIONE A ICONE ---------- */
- var NAV = [['new','🛒','Nuovo'],['orders','📋','Ordini'],['kitchen','<img class="bp-chef" alt="" src="'+BP_IMG.chef+'">','Cucina'],['pizzaiolo','<img class="bp-chef" alt="" src="'+BP_IMG.pizzaiolo+'">','Pizzaiolo'],['cassa','💰','Cassa'],['menu','🍕','Menu'],['all','🕒','Storico'],['credit','💳','Da pagare'],['drivers','🛵','Autisti'],['purchases','🧾','Acquisti'],['inventory','📦','Scorte'],['loyalty','👑','Clienti'],['analytics','📊','Report'],['settings','⚙️','Impostazioni']];
+ var NAV = [['new','🛒','Nuovo'],['orders','📋','Ordini'],['kitchen','<img class="bp-chef" alt="" src="'+BP_IMG.chef+'">','Cucina'],['pizzaiolo','<img class="bp-chef" alt="" src="'+BP_IMG.pizzaiolo+'">','Pizzaiolo'],['cassa','💰','Cassa'],['menu','🍕','Menu'],['all','🕒','Storico'],['credit','💳','Da pagare'],['drivers','🛵','Autisti'],['calls','📞','Chiamate'],['purchases','🧾','Acquisti'],['inventory','📦','Scorte'],['loyalty','👑','Clienti'],['analytics','📊','Report'],['settings','⚙️','Impostazioni']];
  var PRIMARY = {'new':1,'orders':1,'kitchen':1,'pizzaiolo':1,'cassa':1};
  var nav = document.createElement('nav'); nav.id = 'bpNav'; nav.className = 'no-print hidden';
  var more = document.createElement('div'); more.id = 'bpMore'; more.className = 'hidden no-print';
  document.body.appendChild(nav); document.body.appendChild(more);
  function num(sel){ var e = $(sel); var n = e ? parseInt(e.textContent, 10) : 0; return isNaN(n) ? 0 : n; }
- function badge(t){ if(t === 'orders') return [num('#openCountBadge'), 0]; if(t === 'kitchen') return [num('#kitchenCountBadge'), 0]; if(t === 'inventory') return [num('#invAlertBadge'), 1]; return [0, 0]; }
+ function badge(t){ if(t === 'orders') return [num('#openCountBadge'), 0]; if(t === 'kitchen') return [num('#kitchenCountBadge'), 0]; if(t === 'inventory') return [num('#invAlertBadge'), 1]; if(t === 'calls') return [num('#callsMissBadge'), 1]; return [0, 0]; }
  function item(n, on, sec, bg){
  var b = bg ? '<span class="bpn-b' + (bg[1] ? ' warn' : '') + '">' + bg[0] + '</span>' : '';
  return '<button type="button" class="bpn-item' + (on ? ' on' : '') + (sec ? ' sec' : '') + '" data-go="' + n[0] + '" title="' + n[2] + '"><span class="i">' + n[1] + '</span><span class="l">' + n[2] + '</span>' + b + '</button>';
@@ -44715,7 +44721,7 @@ html body .panel.order .bp-cardresto button small{font-size:13px!important}
   var show=t>0 && el('payment').value==='Contanti' && !inWin;
   if(s.hidden===show) s.hidden=!show;
   if(!show) return;
-  var cur=bpCashGiven(t), opts=bpRestoOpts(t);
+  var cur=bpCashGiven(t), opts=bpRestoShow(t);
   if(cur>=t && cur>0 && raw!=='0' && opts.indexOf(cur)<0){ opts.push(cur); opts.sort(function(a,b){return a-b;}); }
   var h='<button type="button" data-v="0" class="'+(raw==='0'?'on':'')+'"><b>✔ Giusto</b><small>'+euro(t)+'</small></button>';
   opts.forEach(function(v){ h+='<button type="button" data-v="'+v+'" class="'+(raw!=='0'&&cur===v?'on':'')+'"><b>'+v+' €</b><small>resto '+euro(Math.round((v-t)*100)/100)+'</small></button>'; });
