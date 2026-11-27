@@ -99,6 +99,17 @@ h1{font-size:22px;margin:0 0 4px}
 .celm{position:fixed;left:50%;top:40%;transform:translate(-50%,-50%) scale(.4);z-index:100;background:#fff;color:#1f2328;border-radius:20px;padding:16px 22px;font-weight:900;font-size:20px;text-align:center;box-shadow:0 12px 40px #0005;opacity:0;transition:.35s;pointer-events:none}
 .celm.on{opacity:1;transform:translate(-50%,-50%) scale(1)}
 @media(prefers-reduced-motion:reduce){.a-out,.a-in,.cel{animation:none!important}}
+/* v131 · messaggi fedeltà + quiz */
+.lmsg{margin:10px 2px 14px;text-align:center;font-weight:700;font-size:14px;line-height:1.4;min-height:40px}
+.qzc h2{font-size:17px;margin:0}.qzh{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.qzs{font-size:13px;font-weight:800;color:var(--mut);white-space:nowrap}
+.qzq{font-weight:750;margin:12px 0 10px}
+.qzc button{display:block;width:100%;min-height:46px;margin-top:8px;padding:10px 12px;border-radius:12px;border:1.5px solid var(--line);background:var(--bg);color:var(--ink);font:inherit;font-weight:700;cursor:pointer}
+.qzc button:disabled{cursor:default}
+.qzc button.good{background:var(--ok);border-color:var(--ok);color:#fff}
+.qzc button.bad{background:#b42318;border-color:#b42318;color:#fff}
+.qzc button.nx{background:var(--run);border-color:var(--run);color:#fff}
+.qzr{margin:12px 0 0;font-size:14.5px;line-height:1.45}.qzr:empty{display:none}
 </style>
 </head>
 <body>
@@ -108,6 +119,7 @@ h1{font-size:22px;margin:0 0 4px}
   <div id="root"><div class="card err">Caricamento…</div></div>
   <div class="phr tw" id="phr"></div>
   <div class="sapw" id="sapT"></div>
+  <div id="quizT"></div>
   <div id="root2"></div>
   <div id="loyT"></div>
   <p class="upd" id="upd"></p>
@@ -175,6 +187,7 @@ function loyPaintT(){
   box.innerHTML='<div class="lc th-'+loyEsc(c.theme||'dark')+' an-'+loyEsc(c.anim||'pop')+'">'+(c.banner?'<img class="lbn" alt="" src="'+loyEsc(c.banner)+'">':'')+'<div class="lh"><img alt="" src="'+loyEsc(logo)+'" onerror="this.style.display=\'none\'"><div><b>'+loyEsc(c.title||'Carta Buona Fedeltà')+'</b><small>'+loyEsc(c.sub==null?'بطاقة الولاء':c.sub)+'</small></div><div class="lt"><small>Fette</small><b>'+cyc+'/'+pts+'</b></div></div>'
    +'<div class="lr">'+s+'</div><div class="lf"><div><small>Premio</small><b>'+loyEsc(prem)+'</b></div><div><small>Mancanti</small><b>'+miss+'</b></div><div><small>Cliente</small><b>'+loyEsc(L._n||'—')+'</b></div></div></div>'
    +(msg?'<p class="lenc">'+loyEsc(msg)+'</p>':'');
+  lmMount(box);
   /* festa quando arrivano nuove fette o un regalo (una volta per valore) */
   var key=cyc+'|'+avail;
   if(celDone===null){celDone=key;if(loyPrev==null&&c.celFirst&&cyc>0)celebrate(c.cele||'clap',tpl(c.mCel||'👏 Bravo {nome}! Sei a {fette}/{tot} fette',V));}
@@ -201,7 +214,8 @@ function swap(el,html,anim,spd,first){
   el.classList.remove('a-in');el.classList.add('a-out');
   setTimeout(function(){el.innerHTML=html;el.classList.remove('a-out');void el.offsetWidth;el.classList.add('a-in')},spd);
 }
-function fxList(){var f=TC.fx;return f&&f.list&&f.list.length?f.list.map(it2):FACTS.map(function(x){return{t:x[0]+' '+x[1]}})}
+var N_FX=["🍕 La pizza Diavola si chiama così per il salame piccante che «scalda» il palato! 🌶️", "🍕 La Capricciosa nasce a Roma negli anni '50 ed è un tripudio di sapori.", "🍕 La pizza Quattro Formaggi unisce spesso mozzarella, gorgonzola, fontina e parmigiano.", "🍕 La pizza Bismark prende il nome dal cancelliere tedesco, famoso per amare le uova! 🍳", "🍕 La Napoli classica ha alici, capperi e origano: un tuffo nel mare! 🌊", "🌾 L'idratazione dell'impasto è il segreto per una pizza soffice e mai pesante 💧", "🌾 L'impasto riposa al fresco per maturare lentamente e sviluppare più aroma ❄️", "🌾 Un buon cornicione deve essere alveolato, cioè pieno di piccole bolle d'aria 🫧", "🌾 Il lievito madre dona alla pizza un profumo unico e una crosta più dorata ✨", "🌾 Stendere la pizza dal centro verso l'esterno spinge l'aria nei bordi 👐", "🧀 La parola «fior di latte» indica la mozzarella fresca di latte vaccino 🥛", "🧀 Il Gorgonzola DOP è uno dei formaggi erborinati più antichi al mondo, nato vicino a Lodi e Milano! 🗺️", "🧀 La Provola affumicata viene esposta al fumo di paglia per avere il suo aroma tipico 💨", "🧀 Il Parmigiano Reggiano stagiona almeno 12 mesi prima di arrivare sulle nostre tavole ⏳", "🔥 Nei forni ad alta temperatura lo shock termico fa gonfiare il cornicione in pochi secondi ⚡", "🔥 La pala del pizzaiolo era tradizionalmente in legno, oggi spesso è forata per far cadere la farina in eccesso.", "🔥 Cuocere la pizza alla giusta temperatura evita che la mozzarella bruci 🌡️", "🍅 Le foglie di basilico non vanno mai tagliate col coltello, ma spezzate a mano per non ossidarle 🌿", "🍅 L'origano di montagna ha un profumo molto più intenso rispetto a quello di pianura ⛰️", "🍅 I pomodori pelati vengono raccolti solo in estate quando sono ben maturi al sole ☀️", "🤓 Il kebab viene cotto su uno spiedo verticale che gira lentamente per mantenere la carne succosa 🥙", "🤓 La salsa allo yogurt per il kebab rinfresca il palato ed equilibra le spezie 🥣", "🤓 Il cartone della pizza ha dei piccoli fori laterali per far uscire il vapore e non ammorbidirla 📦", "🤓 L'Italia è il paese con il maggior numero di pizze diverse al mondo: oltre 200 varianti! 🇮🇹", "🤓 Mangiare la pizza con le mani permette di sentirne subito la fragranza e la temperatura 🖐️🍕"];
+function fxList(){var f=TC.fx;return f&&f.list&&f.list.length?f.list.map(it2):FACTS.map(function(x){return{t:x[0]+' '+x[1]}}).concat(N_FX.map(it2))}
 var FI=-1;
 function factNext(){
   var L=fxList();if(TC.fx&&TC.fx.order==='seq'){FI=(FI+1)%L.length;return L[FI]}
@@ -223,6 +237,62 @@ function factsMount(host){
 }
 window.BPFACTS={mount:factsMount,list:FACTS};
 
+/* ====== v131: messaggi Carta fedeltà (rotazione) ====== */
+var N_LOY=["🍕 Ogni pizza ti avvicina alla tua prossima pizza gratis! 🎁", "⭐ Colleziona i tuoi punti fedeltà: la fedeltà da Buona Pizza ha sempre un buon sapore! 😋", "🎯 Un altro passo verso il tuo premio: continua così! 🏆", "❤️ Grazie per averci scelto ancora: i clienti affezionati sono la nostra famiglia! 🏠", "🔥 Più ordini, più gusti, più vantaggi con la tua Carta Fedeltà! ✨", "🎉 Controlla i tuoi timbri: potresti essere vicinissimo al tuo regalo! 🍕", "👑 Sei un vero VIP di Buona Pizza: grazie per la tua fiducia! 🙌", "💡 Ricorda: ogni ordine conta per sbloccare la tua ricompensa! 🔓🍕", "🥂 La tua fame ti premia: accumula punti ad ogni consegna! 🛵💨", "🌟 Clienti speciali meritano regali speciali: grazie di cuore da tutto lo staff! 👨‍🍳❤️"];
+var lmQ=[],lmCur=null,lmTM=0;
+function lmList(){var c=TC.loy||{};return (Array.isArray(c.list)?c.list:N_LOY).map(it2).filter(function(x){return x.t||x.img})}
+function lmNext(){var L=lmList();if(!L.length)return null;if(!lmQ.length){lmQ=L.slice();for(var i=lmQ.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1)),t=lmQ[i];lmQ[i]=lmQ[j];lmQ[j]=t}}return lmQ.shift()}
+function lmMount(box){
+  clearInterval(lmTM);
+  if(lmCur&&!lmList().some(function(x){return x.t===lmCur.t&&x.img===lmCur.img})){lmCur=null;lmQ=[]}
+  lmCur=lmCur||lmNext(); if(!lmCur) return;
+  var el=document.createElement('div');el.className='lmsg tw';el.innerHTML=itemHtml(lmCur);box.appendChild(el);
+  lmTM=setInterval(function(){if(!document.body.contains(el)){clearInterval(lmTM);return}lmCur=lmNext();if(lmCur)swap(el,itemHtml(lmCur),'fade',350)},7000);
+}
+
+/* ====== v131: Quiz della Pizza ====== */
+var QUIZ=[{"q": "In quale città nasce, secondo la tradizione, la Margherita?", "a": ["Napoli", "Roma", "Milano"], "ok": 0, "info": "La tradizione la lega a Napoli e al 1889, in onore della Regina Margherita 👑"}, {"q": "Quale di queste pizze classiche non ha la mozzarella?", "a": ["Marinara", "Margherita", "Quattro Formaggi"], "ok": 0, "info": "La Marinara è semplice: pomodoro, aglio, origano e olio 🍅"}, {"q": "Come si chiama il bordo gonfio della pizza?", "a": ["Cornicione", "Cornice", "Corona"], "ok": 0, "info": "È il cornicione: soffice e pieno di bolle d’aria 🫧"}, {"q": "Quanto cuoce una pizza napoletana nel forno a legna?", "a": ["60–90 secondi", "10 minuti", "20 minuti"], "ok": 0, "info": "Forno caldissimo e cottura velocissima 🔥"}, {"q": "Cosa rende piccante la pizza Diavola?", "a": ["Il salame piccante", "Il basilico", "La mozzarella"], "ok": 0, "info": "Il salame piccante scalda il palato 🌶️"}, {"q": "Con quale latte si fa il fior di latte?", "a": ["Latte di mucca", "Latte di capra", "Latte di pecora"], "ok": 0, "info": "Con latte vaccino. La bufala invece usa latte di bufala 🥛"}, {"q": "In che anno l’arte del pizzaiuolo napoletano è entrata nel Patrimonio UNESCO?", "a": ["2017", "1999", "1985"], "ok": 0, "info": "Dal 2017 è Patrimonio Culturale Immateriale dell’Umanità 🌍"}, {"q": "Quali sono i 4 ingredienti dell’impasto napoletano tradizionale?", "a": ["Farina, acqua, sale, lievito", "Farina, uova, latte, sale", "Farina, burro, zucchero, lievito"], "ok": 0, "info": "Pochi ingredienti, tanta pazienza 🌾"}, {"q": "Che forma ha il calzone?", "a": ["A mezzaluna", "Quadrata", "A stella"], "ok": 0, "info": "È la pizza ripiegata a mezzaluna 🌙"}, {"q": "Cosa vuol dire «döner kebab» in turco?", "a": ["Carne che gira", "Pane caldo", "Salsa bianca"], "ok": 0, "info": "La carne gira lentamente sullo spiedo verticale 🥙"}];
+var qz=null;
+function shuffle(a){for(var i=a.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1)),t=a[i];a[i]=a[j];a[j]=t}return a}
+function qzList(){
+  var c=TC.quiz||{};
+  return (Array.isArray(c.list)?c.list:QUIZ).map(function(x){
+    var a=(x.a||[]).map(function(t,i){return {t:String(t||'').trim(),ok:i===Number(x.ok||0)}}).filter(function(o){return o.t});
+    return {q:String(x.q||'').trim(),a:a,info:x.info||''};
+  }).filter(function(x){return x.q&&x.a.length>1&&x.a.some(function(o){return o.ok})});
+}
+function qzMount(){
+  var host=document.getElementById('quizT'),c=TC.quiz||{};if(!host)return;
+  var st=lastO&&(lastO.status||'Nuovo'),L=qzList();
+  if(!lastO||st==='Completato'||st==='Annullato'||c.on===false||!L.length){host.innerHTML='';qz=null;return}
+  var sig=JSON.stringify([c.title,L]);
+  if(qz&&qz.sig===sig&&host.firstChild)return;
+  qz={sig:sig,list:shuffle(L),i:0,score:0};
+  host.innerHTML='<div class="card qzc"><div class="qzh"><h2>'+esc(c.title||'🎯 Quiz della Pizza')+'</h2><span class="qzs"></span></div><div class="qzb"></div></div>';
+  qzShow();
+}
+function qzShow(){
+  var host=document.getElementById('quizT'),b=host.querySelector('.qzb'),s=host.querySelector('.qzs'),n=qz.list.length;
+  if(qz.i>=n){
+    s.textContent='';
+    b.innerHTML='<p class="qzq">🏆 Hai indovinato '+qz.score+' su '+n+'!</p><button type="button" class="nx">↻ Gioca ancora</button>';
+    b.querySelector('.nx').onclick=function(){qz.list=shuffle(qz.list);qz.i=0;qz.score=0;qzShow()};return;
+  }
+  var x=qz.list[qz.i],ans=shuffle(x.a.slice());
+  s.textContent=(qz.i+1)+'/'+n+' · ⭐ '+qz.score;
+  b.innerHTML='<p class="qzq">'+esc(x.q)+'</p>'+ans.map(function(o){return '<button type="button" class="op">'+esc(o.t)+'</button>'}).join('')+'<p class="qzr" aria-live="polite"></p>';
+  var btns=[].slice.call(b.querySelectorAll('.op'));
+  btns.forEach(function(btn,k){btn.onclick=function(){
+    var good=ans[k].ok;
+    btns.forEach(function(q,j){q.disabled=true;if(ans[j].ok){q.className='op good';q.textContent='✓ '+ans[j].t}});
+    if(good){qz.score++;celebrate('pizza','🎉 Bravissimo!')}else{btn.className='op bad';btn.textContent='✗ '+ans[k].t}
+    s.textContent=(qz.i+1)+'/'+n+' · ⭐ '+qz.score;
+    b.querySelector('.qzr').textContent=(good?'Esatto! ':'Quasi! ')+x.info;
+    var nx=document.createElement('button');nx.type='button';nx.className='nx';nx.textContent=qz.i+1<n?'Prossima domanda ➜':'Vedi il risultato 🏆';
+    nx.onclick=function(){qz.i++;qzShow()};b.appendChild(nx);
+  }});
+}
+
 /* ====== FASE 3: icone animate, frasi per stato, tempo stimato ====== */
 /* --- frasi per stato: modificale qui (2-3 per stato + le generiche) --- */
 var PH_ALL=['Ottima scelta! 😋','Il pizzaiolo approva 👨‍🍳👍','Gusto da vero intenditore 🤌','Mmm… già sentiamo il profumo! 👃','Mangiare bene è una cosa seria 😌','Il tuo stomaco ti ringrazia 🙏','Sorriso garantito 😄'];
@@ -234,13 +304,19 @@ var PH={
  'Completato':['Buon appetito! Ci vediamo alla prossima fetta 🍕','Grazie di aver scelto Buona Pizza ❤️'],
  'Annullato':['Ci dispiace! Chiamaci se hai domande 📞']
 };
+PH_ALL=PH_ALL.concat(["Capolavoro in arrivo! 🎨🍕", "La fame ha trovato il suo nemico 🦸‍♂️🍕", "Calda, filante e irresistibile 🔥🧀", "Mani in pasta e cuore nel forno ❤️🔥", "Stasera si mangia alla grande! 🙌😋", "Il profumo sta già facendo il giro del quartiere 🌬️🍕", "Qualità che si sente al primo morso 👌🤤", "Prepariamo il tuo sorriso, fetta dopo fetta 😄🍕", "Zero stress, ci pensiamo noi alla cena 🛋️✨", "Impasto leggero, gusto gigante 🪶💥", "La felicità ha la forma di una pizza tonda ⭕❤️", "Fatta al momento, solo per te ⏱️👨‍🍳", "Croccante fuori, morbida dentro: perfezione! 💯🍕", "L'attesa sta per essere premiata 🏆😋", "Ingredienti veri, passione vera 🌿🍅", "Anche il forno è contento di questa scelta 🔥😊", "Quando la pizza chiama, noi rispondiamo! 📞🍕", "Un morso e passa tutta la stanchezza 🔋🤤", "Da Buona Pizza ogni ordine è speciale ⭐🏠", "Il segreto? Tanto amore in ogni impasto 💕🌾", "Tra poco si va in tavola! 🍽️🚀", "Gusto autentico, senza scorciatoie ✅👨‍🍳", "La serata prende subito una bella piega 🌙🍕", "Filante al punto giusto 🧀✨", "Buon appetito in anticipo! 😋🥂"]);
+PH["Nuovo"]=(PH["Nuovo"]||[]).concat(["Ordine ricevuto: la magia sta per cominciare ✨", "Mettiti comodo, adesso tocca a noi 😌"]);
+PH["In preparazione"]=(PH["In preparazione"]||[]).concat(["Il tuo ordine sta prendendo forma 👨‍🍳", "Un tocco alla volta, tutto con cura 🤌"]);
+PH["Pronto"]=(PH["Pronto"]||[]).concat(["Missione compiuta: il tuo ordine ti aspetta! 🎯", "Caldo caldo, manchi solo tu 😍"]);
+PH["In consegna"]=(PH["In consegna"]||[]).concat(["Profumo in viaggio verso casa tua 🛵💨", "Apparecchia pure, siamo per strada 🍽️"]);
+PH["Completato"]=(PH["Completato"]||[]).concat(["Speriamo ti sia piaciuta fino all’ultima fetta 😋", "La prossima serata pizza? Noi ci siamo! 🙌"]);
 var phSt=null,phLast='',phTM=0,phQ=[];
 function phNext(){
   var c=TC.phr||{},stl=c.st&&c.st[phSt]?c.st[phSt]:(PH[phSt]||[]),all=c.all||PH_ALL;
   if(!phQ.length){
     var base=stl.slice(),gen=(phSt==='Completato'||phSt==='Annullato'||c.mix===false)?[]:all.slice();
     for(var i=gen.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1)),t=gen[i];gen[i]=gen[j];gen[j]=t}
-    phQ=base.concat(gen.slice(0,Math.max(0,c.nmix==null?3:Number(c.nmix))));
+    phQ=base.concat(gen.slice(0,Math.max(0,c.nmix==null?8:Number(c.nmix))));
     if(c.order!=='seq')for(var k=phQ.length-1;k>0;k--){var m=Math.floor(Math.random()*(k+1)),u=phQ[k];phQ[k]=phQ[m];phQ[m]=u}
     if(phQ.length>1&&phQ[0]===phLast){phQ.push(phQ.shift())}
   }
@@ -261,7 +337,7 @@ function phSet(st,force){
 }
 async function tcLoad(){
   try{var r=await sb.rpc('get_track_settings');if(!r.error&&r.data&&r.data.cfg){TC=r.data.cfg;
-    if(phSt)phSet(phSt,true);var sw=document.getElementById('sapT');if(sw&&sw.firstChild)factsMount(sw);loyPaintT();}}catch(_){}
+    if(phSt)phSet(phSt,true);var sw=document.getElementById('sapT');if(sw&&sw.firstChild)factsMount(sw);loyPaintT();qzMount();}}catch(_){}
 }
 /* --- icone animate (SVG + CSS, niente GIF) --- */
 function icoSvg(st,pend){
@@ -321,6 +397,7 @@ function render(o){
      '<div class="items" style="margin-top:8px">'+items+'</div>'+
      '<div class="tot"><span>Totale</span><span>'+euro(o.total)+'</span></div></div>';
   phSet(st);
+  qzMount();
   var sw=document.getElementById('sapT'), fin=(st==='Completato'||st==='Annullato');
   if(fin){ clearInterval(FTM); sw.innerHTML=''; } else if(!sw.firstChild){ factsMount(sw); }
   if(fin) document.getElementById('phr').style.display = (st==='Annullato'?'none':''); else document.getElementById('phr').style.display='';
