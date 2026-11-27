@@ -4698,6 +4698,10 @@ html body #resPanel,html body #bpCamOv,html body #bpInk{padding-top:env(safe-are
  <button data-tab="drivers" onclick="switchTab('drivers')" type="button" id="tabBtnDrivers">
 🛵 Autisti
 </button>
+<button data-tab="calls" onclick="switchTab('calls')" type="button" id="tabBtnCalls">
+ 📞 Chiamate
+ <span class="badge-count" id="callsMissBadge" style="display:none">0</span>
+ </button>
 <button data-tab="purchases" onclick="switchTab('purchases')" type="button">
  🧾 Acquisti
  </button>
@@ -44782,11 +44786,11 @@ try{(function(){
   }
  }
  function push(r){
-  if(!allowed()||!r||!r.id||seen[r.id])return; seen[r.id]=1; var k=key(r.phone); if(!k)return;
+  if(r&&r.status&&r.status!=='ringing')return; if(!allowed()||!r||!r.id||seen[r.id])return; seen[r.id]=1; var k=key(r.phone); if(!k)return;
   if(cur&&key(cur.phone)===k)return; for(var i=0;i<queue.length;i++)if(key(queue[i].phone)===k)return;
   beep(); if(!cur){cur=r;mode='main';render()}else{queue.push(r);render()}
  }
- function poll(){if(!allowed())return;try{sb.from(TABLE).select('id,phone,called_at').gte('called_at',new Date(Date.now()-90000).toISOString()).order('id').then(function(r){(r&&r.data||[]).forEach(push)})}catch(e){}}
+ function poll(){if(!allowed())return;try{sb.from(TABLE).select('*').gte('called_at',new Date(Date.now()-90000).toISOString()).order('id').then(function(r){(r&&r.data||[]).forEach(push)})}catch(e){}}
  function start(){
   if(started||!allowed())return; if(typeof sb==='undefined'||!sb)return; started=true;
   try{sb.channel('bp-calls').on('postgres_changes',{event:'INSERT',schema:'public',table:TABLE},function(p){push(p.new)}).subscribe()}catch(e){console.error(e)}
@@ -44794,8 +44798,115 @@ try{(function(){
  }
  try{if(typeof showApp==='function'){var o=showApp;showApp=function(){var r=o.apply(this,arguments);setTimeout(start,1200);return r}}}catch(e){}
  var tries=0,iv=setInterval(function(){start();if(started||++tries>20)clearInterval(iv)},3000);
+ window.bpCallerOpen=function(ph){if(!allowed()||!ph)return;cur={id:'o'+Date.now(),phone:ph};mode='main';pend=null;render()};
  window.bpCallerTest=function(ph){push({id:'t'+Date.now(),phone:ph||'0212345678'})};
 })()}catch(e){console.error('[caller-id]',e)}
 </script>
+<!-- BP-CALLLOG:START -->
+<style id="bpCallLogCss">
+#callsTab{padding:10px 12px 110px}
+#callsTab .cl-h{display:flex;align-items:center;justify-content:space-between;gap:8px}
+#callsTab .cl-h h2{margin:6px 0;font-size:20px}
+#callsTab .cl-h button{min-height:44px;min-width:44px;border-radius:12px;border:1px solid var(--bp-line,#d0d5dd);background:var(--bp-card,#fff);color:inherit;font-size:20px;font-weight:900}
+#callsTab .cl-seg{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0}
+#callsTab .cl-seg button{min-height:40px;padding:0 14px;border-radius:999px;border:1px solid var(--bp-line,#d0d5dd);background:var(--bp-card,#fff);color:inherit;font-weight:800}
+#callsTab .cl-seg button.on{background:#16794b;color:#fff;border-color:#16794b}
+#callsTab .cl-seg button.miss.on{background:#b42318;border-color:#b42318}
+#callsTab .cl-row{display:flex;align-items:center;gap:10px;background:var(--bp-card,#fff);border:1px solid var(--bp-line,#e8eaf0);border-radius:14px;padding:10px 12px;margin:8px 0}
+#callsTab .cl-row.miss{border-color:#f04438;background:rgba(240,68,56,.08)}
+#callsTab .cl-dot{font-size:22px;flex:0 0 auto}
+#callsTab .cl-main{flex:1 1 auto;min-width:0}
+#callsTab .cl-main b{display:block;overflow-wrap:anywhere}
+#callsTab .cl-sub{font-size:12.5px;color:var(--bp-mute,#6b7280);margin-top:2px}
+#callsTab .cl-act{display:flex;gap:6px;flex:0 0 auto}
+#callsTab .cl-act a,#callsTab .cl-act button{min-height:44px;min-width:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;border:1px solid var(--bp-line,#d0d5dd);background:var(--bp-card,#fff);color:inherit;font-size:18px;font-weight:800;text-decoration:none;padding:0 10px;cursor:pointer}
+#callsTab .cl-empty{padding:28px 10px;text-align:center;color:var(--bp-mute,#6b7280);font-weight:700}
+#tabBtnCalls .badge-count{background:#d92d20;color:#fff}
+</style>
+<script id="bpCallLogJs">
+try{(function(){
+ if(window.__bpCallLog) return; window.__bpCallLog=1;
+ var TAB='callsTab', TABLE='incoming_calls', SEEN='bp_calls_seen', DATA=[], filt='all', days=1, loading=false, started=false;
+ function $(i){return document.getElementById(i)}
+ function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+ function allowed(){try{return BP_ROLE==='manager'||BP_ROLE==='cashier'}catch(e){return false}}
+ function cl(){try{return sb}catch(e){return null}}
+ function key(p){try{return normalizePhoneKey(p)}catch(e){return String(p||'').replace(/\D+/g,'')}}
+ function nameOf(ph){var k=key(ph),f='';if(k.length<6)return '';try{customerDirectory.forEach(function(c){if(!f&&key(c.phone)===k)f=c.name||''})}catch(e){}return f}
+ function fmt(iso){var d=new Date(iso);if(isNaN(d))return '';var n=new Date(),hm=d.toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'});if(d.toDateString()===n.toDateString())return 'oggi '+hm;if(d.toDateString()===new Date(n.getTime()-864e5).toDateString())return 'ieri '+hm;return d.toLocaleDateString('it-IT',{day:'2-digit',month:'2-digit'})+' '+hm}
+ function dur(s){s=+s||0;if(!s)return '';return s<60?s+'s':Math.floor(s/60)+'m '+('0'+(s%60)).slice(-2)+'s'}
+ function stOf(r){var s=r.status||'ringing';if(s==='answered')return['🟢','Risposta'];if(s==='missed')return['🔴','Persa'];if(s==='rejected')return['⚪','Rifiutata'];return Date.now()-new Date(r.called_at).getTime()<60000?['📞','In arrivo…']:['📞','Esito non registrato']}
+ function isRing(r){return !r.status||r.status==='ringing'}
+ /* una chiamata = una riga: la riga "in arrivo" sparisce se c'è l'esito (risposta/persa) dello stesso numero */
+ function merged(rows){
+  var res=rows.filter(function(r){return !isRing(r)});
+  return rows.filter(function(r){
+   if(!isRing(r))return true;
+   var t=new Date(r.called_at).getTime(),k=key(r.phone);
+   return !res.some(function(x){var d=new Date(x.called_at).getTime()-t;return key(x.phone)===k&&d>=-5000&&d<=1200000});
+  });
+ }
+ function ensure(){
+  var t=$(TAB);if(t)return t;var app=$('app');if(!app)return null;
+  t=document.createElement('div');t.id=TAB;t.className='hidden';
+  t.innerHTML='<div class="cl-h"><h2>📞 Registro chiamate</h2><button type="button" id="clRefresh" title="Aggiorna">↻</button></div>'
+   +'<div class="cl-seg" id="clF"><button type="button" data-f="all" class="on">Tutte</button><button type="button" data-f="missed" class="miss">🔴 Perse</button></div>'
+   +'<div class="cl-seg" id="clD"><button type="button" data-d="1" class="on">Oggi</button><button type="button" data-d="7">7 giorni</button><button type="button" data-d="30">30 giorni</button></div>'
+   +'<div id="clList"></div>';
+  app.appendChild(t);
+  $('clRefresh').onclick=function(){load()};
+  t.addEventListener('click',function(e){
+   var f=e.target.closest('#clF button'),d=e.target.closest('#clD button'),o=e.target.closest('button[data-open]');
+   if(f){filt=f.getAttribute('data-f');[].forEach.call($('clF').children,function(x){x.classList.toggle('on',x===f)});render()}
+   else if(d){days=parseInt(d.getAttribute('data-d'),10)||1;[].forEach.call($('clD').children,function(x){x.classList.toggle('on',x===d)});load()}
+   else if(o){try{window.bpCallerOpen&&window.bpCallerOpen(o.getAttribute('data-open'))}catch(er){console.error(er)}}
+  });
+  return t;
+ }
+ function render(){
+  var t=ensure();if(!t)return;var all=merged(DATA),missed=all.filter(function(r){return r.status==='missed'});
+  var fb=$('clF');if(fb)fb.querySelector('[data-f="missed"]').textContent='🔴 Perse ('+missed.length+')';
+  var list=filt==='missed'?missed:all,lb=$('clList');
+  if(!list.length){lb.innerHTML='<div class="cl-empty">'+(filt==='missed'?'Nessuna chiamata persa 👍':'Nessuna chiamata nel periodo.')+'</div>';return}
+  lb.innerHTML=list.map(function(r){
+   var s=stOf(r),nm=nameOf(r.phone),d=dur(r.duration_sec);
+   return '<div class="cl-row'+(r.status==='missed'?' miss':'')+'"><div class="cl-dot">'+s[0]+'</div><div class="cl-main"><b>'+esc(nm||r.phone)+'</b><div class="cl-sub">'+(nm?esc(r.phone)+' · ':'')+esc(fmt(r.called_at))+' · '+s[1]+(d?' · '+d:'')+'</div></div>'
+    +'<div class="cl-act"><a href="tel:'+esc(r.phone)+'" title="Chiama">📞</a><button type="button" data-open="'+esc(r.phone)+'" title="'+(nm?'Apri ordine':'Cliente nuovo')+'">'+(nm?'🧾':'➕')+'</button></div></div>';
+  }).join('');
+ }
+ async function load(){
+  var c=cl();if(!c||!allowed()||loading)return;loading=true;
+  try{
+   var since=days<=1?(function(){var d=new Date();d.setHours(0,0,0,0);return d})():new Date(Date.now()-days*864e5);
+   var r=await c.from(TABLE).select('*').gte('called_at',since.toISOString()).order('called_at',{ascending:false}).limit(500);
+   if(r.error)throw r.error;DATA=r.data||[];render();
+  }catch(e){var t=ensure(),lb=t&&$('clList');if(lb)lb.innerHTML='<div class="cl-empty">⚠️ Impossibile leggere le chiamate.<br><small>Hai eseguito lo script SQL registro_chiamate.sql?</small></div>'}
+  finally{loading=false}
+ }
+ function tabOpen(){var t=$(TAB);return !!t&&!t.classList.contains('hidden')}
+ function markSeen(){try{localStorage.setItem(SEEN,new Date().toISOString())}catch(e){}setBadge(0)}
+ function setBadge(n){var b=$('callsMissBadge');if(!b)return;b.textContent=n;b.style.display=n>0?'':'none'}
+ async function badge(){
+  var c=cl();if(!c||!allowed())return;if(tabOpen()){markSeen();return}
+  var seen='';try{seen=localStorage.getItem(SEEN)||''}catch(e){}
+  if(!seen){seen=new Date().toISOString();try{localStorage.setItem(SEEN,seen)}catch(e){}}
+  try{var r=await c.from(TABLE).select('id').eq('status','missed').gt('called_at',seen);setBadge(r&&r.data?r.data.length:0)}catch(e){}
+ }
+ function start(){
+  if(started||!allowed()||!cl())return;started=true;
+  try{cl().channel('bp-calls-log').on('postgres_changes',{event:'INSERT',schema:'public',table:TABLE},function(){badge();if(tabOpen())load()}).subscribe()}catch(e){console.error(e)}
+  setInterval(function(){badge();if(tabOpen()&&!document.hidden)load()},30000);badge();
+ }
+ try{['manager','cashier'].forEach(function(r){if(BP_TABS[r]&&BP_TABS[r].indexOf('calls')<0)BP_TABS[r].push('calls')})}catch(e){console.warn('[calllog]',e)}
+ var _sw=window.switchTab;
+ if(typeof _sw==='function'){
+  var w=function(name){var r=_sw.apply(this,arguments),t=ensure();if(t)t.classList.toggle('hidden',name!=='calls');if(name==='calls'&&allowed()){markSeen();load()}return r};
+  window.switchTab=w;try{switchTab=w}catch(e){}
+ }
+ try{if(typeof showApp==='function'){var o=showApp;showApp=function(){var r=o.apply(this,arguments);setTimeout(start,1500);return r}}}catch(e){}
+ var tries=0,iv=setInterval(function(){start();if(started||++tries>40)clearInterval(iv)},3000);
+})()}catch(e){console.error('[call-log]',e)}
+</script>
+<!-- BP-CALLLOG:END -->
 </body>
 </html>
