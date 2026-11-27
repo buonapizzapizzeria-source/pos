@@ -27116,7 +27116,7 @@ try{
 /* ===== bpV93shutter ===== */
 try{
 (function(){try{
- var root=document.documentElement,shut=false,anim=0,tm=0,openedAt=0,mounted=false;
+ var root=document.documentElement,shut=false,anim=0,tm=0,openedAt=0,mounted=false,lastH=null;
  var H=function(){return document.querySelector('header')};
  /* durante l'animazione: aggiorna --p64-top e tieni ferma la pagina (niente salti) */
  function run(ms){var h=H();if(!h)return;cancelAnimationFrame(anim);var t0=performance.now(),last=h.offsetHeight;
@@ -27135,7 +27135,7 @@ try{
  var y0=null;h.addEventListener('touchstart',function(e){y0=e.touches[0].clientY},{passive:true});
  h.addEventListener('touchmove',function(e){if(y0==null)return;var dy=e.touches[0].clientY-y0;if(!shut&&dy<-70&&Date.now()-openedAt>1500){y0=null;shutNow()}else if(shut&&dy>12){y0=null;openNow()}},{passive:true});
  h.addEventListener('touchend',function(){y0=null},{passive:true});
- if(!mounted){mounted=true;shutNow(true)}} /* l'header parte alzato SOLO al primo montaggio: il remount ogni 500ms non deve richiuderlo */
+ if(!mounted||h!==lastH){mounted=true;lastH=h;shut=false;shutNow(true)}} /* l'header parte alzato al primo montaggio e ogni volta che l'header viene ricreato (login/cambio utente); il remount ogni 500ms non deve richiuderlo */
  /* clic su una voce dell'header (anche Stampa) = si richiude SUBITO, prima dell'azione;
  clic nel resto dell'app = si richiude dopo un attimo */
  document.addEventListener('click',function(e){var t=e.target;if(shut||!t||!t.closest||e.isTrusted===false)return;
@@ -27146,6 +27146,12 @@ try{
  if(Date.now()-openedAt<2500)return; /* appena aperto: lascia il tempo di scegliere */
  clearTimeout(tm);tm=setTimeout(shutNow,450)},true);
  window.addEventListener('afterprint',function(){shutNow()});
+ /* Strumenti SEMPRE chiuso all'apertura: cambio ruolo/utente, ritorno all'app dopo una pausa, ripristino dalla cache */
+ window.__bpShutHeader=function(animated){if(!root.classList.contains('bp-shut'))shut=false;shutNow(!animated)};
+ var hidAt=0;
+ document.addEventListener('visibilitychange',function(){if(document.hidden){hidAt=Date.now();return}if(hidAt&&Date.now()-hidAt>30000)window.__bpShutHeader(false)});
+ window.addEventListener('pageshow',function(e){if(e.persisted)window.__bpShutHeader(false)});
+ try{if(document.body)new MutationObserver(function(){window.__bpShutHeader(false)}).observe(document.body,{attributes:true,attributeFilter:['data-role']})}catch(x){}
  mount();setInterval(function(){try{mount()}catch(e){}},500);
  setTimeout(function(){root.classList.remove('bp-boot')},3000);
 }catch(x){root.classList.remove('bp-boot');console.error('[bp] shutter',x)}})();
@@ -42786,6 +42792,37 @@ body.dark-mode #bpKzBar .kz-l,body.dark-mode #bpKzBar b{color:#e2e8f0}
   window.addEventListener('resize', later); window.addEventListener('orientationchange', function(){ setTimeout(later, 300); });
   var wasVis = false;
   setInterval(function(){ try{ ensure(); var v = visible(cols()); if(v && !wasVis) later(); wasVis = v; }catch(e){} }, 1000);
+})();
+</script>
+<style id="bpKSetCss">
+#kitchenTab:not(.bpk-open) #kitchenChips,#kitchenTab:not(.bpk-open) #bpKzBar{display:none!important}
+#bpKSetBtn{display:inline-flex;align-items:center;gap:8px;margin:0 0 10px;padding:10px 16px;border:0;border-radius:99px;background:#eceff3;color:#202124;font-size:14px;font-weight:800;font-family:inherit;cursor:pointer;box-shadow:inset 0 0 0 1px rgba(0,0,0,.06);-webkit-tap-highlight-color:transparent}
+#bpKSetBtn:active{transform:scale(.96)}
+#kitchenTab.bpk-open #bpKSetBtn{background:#1d2939;color:#fff}
+body.dark-mode #bpKSetBtn{background:#1e293b;color:#f1f5f9}
+body[data-role="viewer"] #bpKSetBtn{display:none!important}
+</style>
+<script id="bpKSetJs">
+/* Cucina: ⛶ schermo intero, microfono, v95 e Zoom in una barra «Opzioni» che si apre/chiude; parte SEMPRE chiusa */
+(function(){
+  if(window.__bpKSet) return; window.__bpKSet = 1;
+  function label(tab, btn){ btn.innerHTML = '⚙️ Opzioni ' + (tab.classList.contains('bpk-open') ? '▴' : '▾'); btn.setAttribute('aria-expanded', tab.classList.contains('bpk-open') ? 'true' : 'false'); }
+  function ensure(){
+    var tab = document.getElementById('kitchenTab'), chips = document.getElementById('kitchenChips');
+    if(!tab || !chips || !chips.parentNode) return;
+    var btn = document.getElementById('bpKSetBtn');
+    if(!btn){
+      btn = document.createElement('button'); btn.type = 'button'; btn.id = 'bpKSetBtn'; btn.title = 'Opzioni · إعدادات';
+      btn.addEventListener('click', function(){
+        tab.classList.toggle('bpk-open'); label(tab, btn);
+        setTimeout(function(){ try{ window.dispatchEvent(new Event('resize')); }catch(e){} }, 60); /* lo zoom automatico si riadatta all'altezza libera */
+      });
+      label(tab, btn);
+    }
+    if(chips.previousElementSibling !== btn) chips.parentNode.insertBefore(btn, chips);
+  }
+  setInterval(function(){ try{ ensure(); }catch(e){} }, 800);
+  try{ ensure(); }catch(e){}
 })();
 </script>
 <script id="bp-voicelog">
