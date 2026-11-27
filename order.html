@@ -230,6 +230,7 @@ input,select,textarea{width:100%;padding:12px;border:1.5px solid var(--line);bor
 #cute{position:fixed;left:50%;bottom:132px;transform:translateX(-50%) translateY(14px);max-width:calc(100% - 32px);background:#fff;color:#1f2328;border:2px solid #e8590c;font-weight:800;font-size:15px;border-radius:99px;padding:9px 16px;opacity:0;pointer-events:none;transition:.25s;z-index:41;box-shadow:0 8px 20px rgba(0,0,0,.18);text-align:center}
 #cute.on{opacity:1;transform:translateX(-50%)}
 @media(prefers-color-scheme:dark){#cute{background:#2a1a12;color:#ffd9b8}}
+.encs{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin-top:8px}.encs button{border:0;border-radius:999px;padding:8px 12px;min-height:38px;font:inherit;font-size:13px;font-weight:800;background:#e8590c;color:#fff;cursor:pointer}
 .enc{margin-top:10px;background:#fff8e6;border:1.5px dashed #f59f00;color:#7a4a00;border-radius:14px;padding:9px 12px;font-size:14px;font-weight:700;text-align:center}
 .enc.win{background:#e8f7ee;border:1.5px solid #16794b;color:#0f5132}
 @media(prefers-color-scheme:dark){.enc{background:#2e2410;color:#ffd98a}.enc.win{background:#12301f;color:#bff0d2}}
@@ -855,11 +856,16 @@ function encPaint(){
   var h='';
   if(win)h='🎉 Con questo ordine vinci una pizza in regalo!';
   else{
-    if(gain>0)h='🍕 Con questo ordine guadagni <b>'+gain+(gain>1?' fette':' fetta')+'</b>. ';
-    h+='Aggiungi ancora <b>'+fe(miss>0?miss:eur)+'</b> di pizza e guadagni 1 fetta in più!';
+    var mm=miss>0?miss:eur,nx=gain+1,gw=((pn+1)%pts===0);
+    if(gain>0)h='🍕 Con questo ordine guadagni <b>'+gain+(gain>1?' fette':' fetta')+'</b>.<br>';
+    h+='Aggiungi solo <b>'+fe(mm)+'</b> di pizza e '+(gain>0?'diventano <b>'+nx+' fette</b>':'guadagni <b>1 fetta</b>')+(gw?' e <b>vinci il regalo!</b> 🎁':'!')+' 💪';
+    /* v130: suggerimenti per arrivare alla fetta successiva (tocca = aggiunge al carrello) */
+    try{var sg=(M.menu||[]).filter(function(p){return /pizz/i.test(p.category||'')&&Number(p.pn)>=mm-1e-9&&p.available!==false&&!p.hidden}).sort(function(x,y){return x.pn-y.pn}).slice(0,3);
+      if(sg.length)h+='<div class="encs">'+sg.map(function(p){return '<button type="button" data-ups="'+esc(p.id)+'">+ '+esc(p.name)+' · '+fe(p.pn)+'</button>'}).join('')+'</div>'}catch(_){}
   }
   box.className='enc'+(win?' win':'');box.innerHTML=h;
 }
+document.addEventListener('click',function(e){var b=e.target.closest&&e.target.closest('#enc [data-ups]');if(!b)return;var p=prod(b.getAttribute('data-ups'));if(!p)return;put(p,'Normale',1,[],[],[]);upd();try{toast('✓ '+p.name+' aggiunta 🍕')}catch(_){}if(navigator.vibrate)try{navigator.vibrate(15)}catch(_){}});
 function celebrate(){
   var c=$('cele');c.innerHTML='🎉 Complimenti!<br>Hai vinto una pizza!';c.classList.add('on');setTimeout(function(){c.classList.remove('on')},2200);
   var cols=['#e8590c','#f8c24a','#16794b','#c8102e','#1c7ed6','#ae3ec9'];

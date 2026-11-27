@@ -27181,7 +27181,7 @@ try{
  function mount(){var h=H();if(!h||document.getElementById('bp93Strip'))return;var s=document.createElement('div');s.id='bp93Strip';s.setAttribute('role','button');s.setAttribute('aria-label','Apri barra strumenti');
  s.innerHTML='<span class="pill"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>Strumenti</span>';
  h.appendChild(s);
- s.addEventListener('click',function(){if(!shut&&root.classList.contains('bp-shut'))shut=true;openNow()});
+ s.addEventListener('click',function(e){if(e&&e.isTrusted===false)return;if(!shut&&root.classList.contains('bp-shut'))shut=true;openNow()});
  var b=h.querySelector('.brand');if(b)b.addEventListener('click',function(){if(!shut)shutNow()});
  var y0=null;h.addEventListener('touchstart',function(e){y0=e.touches[0].clientY},{passive:true});
  h.addEventListener('touchmove',function(e){if(y0==null)return;var dy=e.touches[0].clientY-y0;if(!shut&&dy<-70&&Date.now()-openedAt>1500){y0=null;shutNow()}else if(shut&&dy>12){y0=null;openNow()}},{passive:true});
@@ -27200,7 +27200,12 @@ try{
  /* Strumenti SEMPRE chiuso all'apertura: cambio ruolo/utente, ritorno all'app dopo una pausa, ripristino dalla cache */
  window.__bpShutHeader=function(animated){if(!root.classList.contains('bp-shut'))shut=false;shutNow(!animated)};
  var hidAt=0;
- document.addEventListener('visibilitychange',function(){if(document.hidden){hidAt=Date.now();return}if(hidAt&&Date.now()-hidAt>30000)window.__bpShutHeader(false)});
+ document.addEventListener('visibilitychange',function(){if(document.hidden){hidAt=Date.now();return}if(hidAt)window.__bpShutHeader(false)});
+ /* v130: Strumenti chiuso a ogni cambio di tab/schermata (Cucina, Pizzaiolo, Ordini...) */
+ var tabShut=function(){setTimeout(function(){window.__bpShutHeader(false)},30)};
+ document.addEventListener('click',function(e){var t=e.target;if(t&&t.closest&&t.closest('[data-tab],[data-go],#bpNav button,#bpMore button,.pz-open'))tabShut()},true);
+ try{var pzOn=root.classList.contains('bp-pz-on');new MutationObserver(function(){var v=root.classList.contains('bp-pz-on');if(v!==pzOn){pzOn=v;tabShut()}}).observe(root,{attributes:true,attributeFilter:['class']})}catch(x){}
+ setInterval(function(){try{var f=window.switchTab;if(typeof f==='function'&&!f.__bpShut){var g=function(){var r=f.apply(this,arguments);tabShut();return r};g.__bpShut=1;window.switchTab=g;try{switchTab=g}catch(x){}}}catch(x){}},1000);
  window.addEventListener('pageshow',function(e){if(e.persisted)window.__bpShutHeader(false)});
  try{if(document.body)new MutationObserver(function(){window.__bpShutHeader(false)}).observe(document.body,{attributes:true,attributeFilter:['data-role']})}catch(x){}
  mount();setInterval(function(){try{mount()}catch(e){}},500);
@@ -37182,6 +37187,137 @@ setInterval(mount,1500);
 })()}catch(e){console.error('[bp] prep card',e)}
 </script>
 
+<style id="bpTCcss">
+#bpTC{position:fixed;inset:0;z-index:2147483200;display:flex;align-items:flex-end;justify-content:center;background:rgba(20,10,3,.6);font-family:inherit}
+#bpTC.hide{display:none}
+#bpTC .tb{width:min(100%,720px);max-height:94vh;display:flex;flex-direction:column;background:#fffaf3;color:#1d1209;border-radius:22px 22px 0 0;overflow:hidden}
+@media(min-width:700px){#bpTC{align-items:center}#bpTC .tb{border-radius:22px}}
+#bpTC .th{display:flex;gap:6px;padding:12px;background:#a8291f;color:#fff;align-items:center;flex-wrap:wrap}
+#bpTC .th b{flex:1 1 100%;font-size:17px}
+#bpTC .th button{flex:1;min-height:40px;border:0;border-radius:999px;background:#ffffff26;color:#fff;font-weight:900;font-size:13px}
+#bpTC .th button.on{background:#fff;color:#a8291f}
+#bpTC .tbd{flex:1;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:10px}
+#bpTC .tf{display:flex;gap:8px;padding:10px 12px calc(10px + env(safe-area-inset-bottom,0px));border-top:1px solid #ead9bf}
+#bpTC .tf button{flex:1;min-height:46px;font-weight:900;border-radius:14px}
+#bpTC .grp{background:#fff;border:1.5px solid #ead9bf;border-radius:16px;padding:10px 12px;display:grid;grid-template-columns:1fr 1fr;gap:8px}
+#bpTC .grp label{font-size:12px;font-weight:800;display:flex;flex-direction:column;gap:3px}
+#bpTC .grp label.ck{flex-direction:row;align-items:center;gap:8px;font-size:14px}
+#bpTC .grp label.w{grid-column:1/-1}
+#bpTC input,#bpTC select,#bpTC textarea{width:100%;min-height:40px;border:1.5px solid #e2cfa8;border-radius:10px;padding:6px 8px;font:inherit;font-size:14px;background:#fff;color:#1d1209}
+#bpTC input[type=checkbox]{width:22px;min-height:22px}
+#bpTC .row{display:flex;gap:6px;align-items:flex-start;background:#fff;border:1.5px solid #ead9bf;border-radius:14px;padding:6px}
+#bpTC .row textarea{min-height:44px;resize:vertical}
+#bpTC .row button{min-width:40px;min-height:40px;padding:0;border-radius:10px;font-size:16px}
+#bpTC .im{width:44px;height:44px;flex:0 0 44px;border-radius:10px;border:1.5px dashed #c9a56a;display:grid;place-items:center;background:#fff8ec center/cover no-repeat;font-size:18px;cursor:pointer}
+#bpTC .pv{background:#f6f4ef;border-radius:16px;padding:12px;text-align:center;font-weight:700;min-height:70px;--spd:350ms;overflow:hidden}
+#bpTC .pv .mi{display:block;max-width:100%;max-height:120px;margin:0 auto 6px;border-radius:12px}
+#bpTC .pv.side .mi{display:inline-block;width:50px;height:50px;margin:0 8px 0 0;vertical-align:middle;object-fit:cover}
+#bpTC .hint{font-size:12px;color:#7a5a3a;font-weight:700;line-height:1.5}
+#bpTC .lcp{border-radius:18px;padding:14px;color:#fff;background:linear-gradient(160deg,#3b1e15,#220f09)}
+#bpTC .lcp.th-gold{background:linear-gradient(160deg,#b8860b,#5c3d00)}#bpTC .lcp.th-red{background:linear-gradient(160deg,#c8102e,#6b0718)}#bpTC .lcp.th-green{background:linear-gradient(160deg,#1f7a4d,#0b3b24)}#bpTC .lcp.th-blue{background:linear-gradient(160deg,#1c5fd6,#0b2a66)}#bpTC .lcp.th-light{background:#fff;color:#1f2328;border:1.5px solid #f0d9a8}
+.bptc-a-out{animation:var(--ao) var(--spd) ease-in forwards}.bptc-a-in{animation:var(--ai) var(--spd) ease-out both}
+@keyframes tcfo{to{opacity:0}}@keyframes tcfi{from{opacity:0}}@keyframes tcso{to{opacity:0;transform:translateX(-40px)}}@keyframes tcsi{from{opacity:0;transform:translateX(40px)}}
+@keyframes tcuo{to{opacity:0;transform:translateY(-18px)}}@keyframes tcui{from{opacity:0;transform:translateY(18px)}}@keyframes tczo{to{opacity:0;transform:scale(.6)}}@keyframes tczi{from{opacity:0;transform:scale(.6)}}
+@keyframes tcflo{to{transform:rotateX(90deg)}}@keyframes tcfli{from{transform:rotateX(-90deg)}}@keyframes tcbo{to{opacity:0;transform:scale(.8)}}@keyframes tcbi{0%{opacity:0;transform:scale(.3)}60%{opacity:1;transform:scale(1.12)}100%{transform:scale(1)}}
+@keyframes tcblo{to{opacity:0;filter:blur(8px)}}@keyframes tcbli{from{opacity:0;filter:blur(8px)}}
+.bptc-cel{position:fixed;top:-50px;font-size:30px;z-index:2147483600;pointer-events:none;animation:bptccf linear forwards}@keyframes bptccf{to{transform:translateY(110vh) rotate(360deg)}}
+</style>
+<script id="bpTrackCfg">
+try{(function(){
+var KEY='track_cfg',ST=['Nuovo','In preparazione','Pronto','In consegna','Completato','Annullato'];
+var D_ALL=['Ottima scelta! 😋','Il pizzaiolo approva 👨‍🍳👍','Gusto da vero intenditore 🤌','Mmm… già sentiamo il profumo! 👃','Mangiare bene è una cosa seria 😌','Il tuo stomaco ti ringrazia 🙏','Sorriso garantito 😄'],D_PH={
+ 'Nuovo':['Il pizzaiolo sta leggendo il tuo ordine 👀','Controlliamo che sia tutto perfetto ✅'],
+ 'In preparazione':['Stendiamo la tua pizza a mano 🤌','Il forno è a 450°, ci siamo! 🔥','Ingredienti freschi, tanto amore ❤️'],
+ 'Pronto':['È appena uscita dal forno, vieni finché è bollente! 🔥','Ti aspettiamo con un sorriso 😄'],
+ 'In consegna':['Il fattorino sta arrivando da te 🛵','Tieni il citofono a portata di mano 😉'],
+ 'Completato':['Buon appetito! Ci vediamo alla prossima fetta 🍕','Grazie di aver scelto Buona Pizza ❤️'],
+ 'Annullato':['Ci dispiace! Chiamaci se hai domande 📞']
+},D_FX=[
+['🍕','Secondo la tradizione, la Margherita nasce a Napoli nel 1889 in onore della Regina Margherita.'],['🍕','Pomodoro, mozzarella e basilico: la Margherita ha i colori della bandiera italiana 🇮🇹'],['🍕','Nel 2017 l’arte del pizzaiuolo napoletano è diventata Patrimonio UNESCO.'],['🍕','La Pizza Napoletana è STG: una Specialità Tradizionale Garantita in tutta Europa.'],['🍕','La parola «pizza» compare già in un documento di Gaeta dell’anno 997.'],['🍕','La Marinara non ha pesce: era la pizza dei marinai, con aglio, origano e pomodoro.'],['🍕','La Quattro Stagioni ha quattro spicchi, uno per ogni stagione dell’anno.'],['🍕','«Calzone» viene da «calza»: è la pizza ripiegata a forma di mezzaluna.'],
+['🌾','L’impasto napoletano tradizionale ha solo 4 ingredienti: farina, acqua, sale e lievito.'],['🌾','Una lievitazione lunga rende la pizza più leggera e più digeribile.'],['🌾','Le bollicine nel cornicione sono anidride carbonica prodotta dal lievito.'],['🌾','Il bordo gonfio della pizza si chiama «cornicione».'],['🌾','Le macchioline scure sul bordo si chiamano «leopardatura»: segno di una bella cottura.'],['🌾','La pizza napoletana si stende a mano: niente mattarello, per non schiacciare l’aria.'],['🌾','La farina «00» è la più finemente macinata.'],['🌾','Il sale rinforza il glutine e tiene a bada il lievito.'],['🌾','Il glutine crea una rete elastica che trattiene l’aria: per questo l’impasto si allunga senza rompersi.'],
+['🧀','«Mozzarella» viene da «mozzare»: la pasta si stacca a mano, pezzo per pezzo.'],['🧀','Il fior di latte è fatto con latte vaccino, la bufala con latte di bufala.'],['🧀','La Mozzarella di Bufala Campana è DOP.'],['🧀','La mozzarella è una «pasta filata»: la cagliata si lavora e si allunga in acqua calda.'],['🧀','Treccia, bocconcini e ciliegine: la mozzarella ha tante forme!'],['🧀','I pizzaioli fanno sgocciolare la mozzarella fresca, così la pizza non diventa acquosa.'],['🧀','Il nome «Gorgonzola» viene da un paese vicino a Milano.'],['🧀','Grana Padano e Parmigiano Reggiano sono due formaggi DOP diversi.'],
+['🔥','Una pizza napoletana cuoce in 60–90 secondi!'],['🔥','Nel forno a legna la temperatura può superare i 450°C.'],['🔥','La pala per infornare la pizza si chiama… «pala»!'],['🔥','Il calore arriva da sotto (la pietra) e da sopra (la cupola): così la pizza cuoce in modo uniforme.'],['🔥','Il pizzaiolo gira la pizza nel forno per cuocerla uguale da ogni lato.'],
+['🍅','Il pomodoro è arrivato in Europa dalle Americhe nel Cinquecento.'],['🍅','Il Pomodoro San Marzano dell’Agro Sarnese-Nocerino è DOP.'],['🍅','«Basilico» viene dal greco e vuol dire «regale» 👑'],['🍅','L’olio extravergine si mette spesso a crudo, per non perdere il profumo.'],['🍅','L’origano è il profumo classico della Marinara.'],
+['🤓','«Döner kebab» in turco vuol dire «carne che gira» 🥙'],['🤓','Pizza con würstel e patatine: la preferita dei bambini italiani! 🍟'],['🤓','La pizza va mangiata subito: il suo momento migliore sono i primi minuti.'],['🤓','Una pizza «a portafoglio» si piega in quattro e si mangia per strada, alla napoletana.'],['🤓','Ogni pizza è fatta a mano: non ce ne sono due uguali 🤌']];
+var ANIM=[['fade','Dissolvenza'],['slide','Scorri di lato'],['up','Sale dal basso'],['zoom','Zoom'],['flip','Giro (flip)'],['bounce','Rimbalzo'],['blur','Sfocatura'],['type','Macchina da scrivere'],['none','Nessuna']];
+var AN={fade:['tcfo','tcfi'],slide:['tcso','tcsi'],up:['tcuo','tcui'],zoom:['tczo','tczi'],flip:['tcflo','tcfli'],bounce:['tcbo','tcbi'],blur:['tcblo','tcbli']};
+function I(t){return {t:t,img:''}}
+function defs(){var st={};ST.forEach(function(k){st[k]=(D_PH[k]||[]).map(I)});
+ return {phr:{on:true,sec:6,anim:'fade',spd:350,size:15,mix:true,nmix:3,order:'rnd',imgPos:'top',all:D_ALL.map(I),st:st},
+  fx:{on:true,title:'💡 Lo sapevi?',sec:8,anim:'fade',spd:350,order:'rnd',imgPos:'top',list:D_FX.map(function(f){return I(f[0]+' '+f[1])})},
+  loy:{on:true,title:'Carta Buona Fedeltà',sub:'بطاقة الولاء',theme:'dark',anim:'pop',cele:'clap',celFirst:false,logo:'',banner:'',
+   mGift:'🎁 Hai {regali} da usare nel prossimo ordine!',mPend:'🍕 Le fette di questo ordine arrivano appena il locale lo conferma.',mMiss:'Ancora {n} {fw} e la prossima {premio} è tua! 💪',mCel:'👏 Bravo {nome}! Sei a {fette}/{tot} fette',mWin:'🎉 Hai vinto {premio}!'}};}
+var C=null,tab='phr',lk='__all',pvT=0,E=function(i){return document.getElementById(i)};
+function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+function merge(a,b){Object.keys(b||{}).forEach(function(k){a[k]=b[k]});return a}
+async function load(){C=defs();try{var r=await sb.from('bp36_data').select('data').eq('key',KEY).maybeSingle();var c=r&&r.data&&r.data.data&&r.data.data.cfg;
+ if(c){merge(C.phr,c.phr);merge(C.fx,c.fx);merge(C.loy,c.loy);ST.forEach(function(k){if(!C.phr.st[k])C.phr.st[k]=[]})}}catch(e){}}
+function sel(k,v,opts){return '<select data-k="'+k+'">'+opts.map(function(o){return '<option value="'+o[0]+'"'+(String(v)===o[0]?' selected':'')+'>'+o[1]+'</option>'}).join('')+'</select>'}
+function ck(k,v,t){return '<label class="ck w"><input type="checkbox" data-k="'+k+'"'+(v!==false?' checked':'')+'> '+t+'</label>'}
+function num(k,v,t,mn,mx){return '<label>'+t+'<input type="number" data-k="'+k+'" value="'+esc(v)+'" min="'+mn+'" max="'+mx+'"></label>'}
+function txt(k,v,t){return '<label class="w">'+t+'<input type="text" data-k="'+k+'" value="'+esc(v)+'"></label>'}
+function list(arr){return arr.map(function(x,i){return '<div class="row"><div class="im" data-img="'+i+'" title="Immagine"'+(x.img?' style="background-image:url('+x.img+')"':'')+'>'+(x.img?'':'🖼️')+'</div><textarea data-t="'+i+'" rows="2">'+esc(x.t)+'</textarea><button type="button" class="secondary" data-up="'+i+'">↑</button><button type="button" class="secondary" data-del="'+i+'">🗑</button></div>'}).join('')
+ +'<button type="button" data-add="1" style="min-height:44px;font-weight:900">➕ Aggiungi</button><div class="hint">🖼️ = aggiungi una foto (tocca di nuovo per toglierla). Le emoji si scrivono direttamente nel testo.</div>'}
+function curArr(){return tab==='fx'?C.fx.list:(lk==='__all'?C.phr.all:C.phr.st[lk])}
+function motion(o){return '<div class="grp">'+ck('on',o.on,'Mostra sulla pagina di tracking')+num('sec',o.sec,'Cambia ogni (secondi)',2,60)+num('spd',o.spd,'Durata transizione (ms)',100,3000)
+ +'<label>Animazione'+sel('anim',o.anim,ANIM)+'</label><label>Ordine'+sel('order',o.order,[['rnd','Casuale'],['seq','In sequenza']])+'</label><label>Foto'+sel('imgPos',o.imgPos,[['top','Sopra il testo'],['side','Accanto al testo']])+'</label>'}
+function paint(){
+ var b=E('bpTCb'),h='';[].forEach.call(document.querySelectorAll('#bpTC .th [data-tab]'),function(x){x.classList.toggle('on',x.getAttribute('data-tab')===tab)});
+ if(tab==='phr'){var o=C.phr;h='<div class="pv" id="bpTCpv"></div>'+motion(o)+num('size',o.size,'Grandezza testo (px)',11,30)+ck('mix',o.mix,'Mescola anche le frasi generali')+num('nmix',o.nmix,'Quante frasi generali per stato',0,20)+'</div>'
+  +'<div class="grp"><label class="w">Lista da modificare'+sel('__lk',lk,[['__all','⭐ Frasi generali (tutti gli stati)']].concat(ST.map(function(s){return [s,'Stato: '+s]})))+'</label></div>'+list(curArr());}
+ else if(tab==='fx'){var f=C.fx;h='<div class="pv" id="bpTCpv"></div>'+motion(f)+txt('title',f.title,'Titolo del riquadro')+'</div>'+list(f.list);}
+ else{var l=C.loy;h='<div class="lcp th-'+esc(l.theme)+'" id="bpTCl">'+(l.banner?'<img src="'+l.banner+'" style="width:100%;max-height:110px;object-fit:cover;border-radius:12px;margin-bottom:8px">':'')+'<b>'+esc(l.title)+'</b><div style="font-size:11px;opacity:.7">'+esc(l.sub)+'</div><div style="font-size:26px;margin-top:6px">🍕🍕🍕<span style="opacity:.25">🍕🍕</span></div></div>'
+  +'<div class="grp">'+ck('on',l.on,'Mostra la carta fedeltà sul tracking')+txt('title',l.title,'Titolo')+txt('sub',l.sub,'Sottotitolo')
+  +'<label>Colore'+sel('theme',l.theme,[['dark','Cioccolato'],['gold','Oro'],['red','Rosso'],['green','Verde'],['blue','Blu'],['light','Chiaro']])+'</label>'
+  +'<label>Animazione fette'+sel('anim',l.anim,[['pop','Pop'],['bounce','Cade e rimbalza'],['spin','Gira'],['glow','Brilla sempre']])+'</label>'
+  +'<label>Festa (nuove fette)'+sel('cele',l.cele,[['clap','👏 Applausi'],['confetti','🎊 Coriandoli'],['stars','⭐ Stelle'],['pizza','🍕 Pioggia di pizza'],['none','Nessuna']])+'</label>'
+  +'<label><span>&nbsp;</span><button type="button" id="bpTCtest" class="secondary">▶ Prova festa</button></label>'
+  +ck('celFirst',l.celFirst,'Festa anche all’apertura della pagina (se ha già fette)')
+  +'<label class="w">Logo<div style="display:flex;gap:6px"><div class="im" data-limg="logo"'+(l.logo?' style="background-image:url('+l.logo+')"':'')+'>'+(l.logo?'':'🖼️')+'</div><div class="im" data-limg="banner" style="flex:1;'+(l.banner?'background-image:url('+l.banner+')':'')+'">'+(l.banner?'':'🖼️ Banner')+'</div></div></label>'
+  +txt('mMiss',l.mMiss,'Messaggio fette mancanti')+txt('mGift',l.mGift,'Messaggio regalo disponibile')+txt('mPend',l.mPend,'Messaggio ordine in attesa')+txt('mCel',l.mCel,'Messaggio festa (nuove fette)')+txt('mWin',l.mWin,'Messaggio festa (regalo vinto)')
+  +'<div class="hint w" style="grid-column:1/-1">Segnaposto: {n} fette mancanti · {fw} fetta/fette · {premio} · {regali} · {fette} · {tot} · {nome}</div></div>';}
+ b.innerHTML=h;pv();
+}
+function obj(){return C[tab]}
+function swap(el,x,o,first){var html=(x.img?'<img class="mi" src="'+x.img+'">':'')+'<span>'+esc(x.t)+'</span>',spd=Number(o.spd)||350;el.style.setProperty('--spd',spd+'ms');el.classList.toggle('side',o.imgPos==='side');
+ if(first||o.anim==='none'){el.innerHTML=html;return}
+ if(o.anim==='type'){el.innerHTML=html;var s=el.querySelector('span'),full=x.t||'',i=0;s.textContent='';clearInterval(el._tw);el._tw=setInterval(function(){if(i>=full.length)return clearInterval(el._tw);s.textContent=full.slice(0,++i)},Math.max(15,Math.min(60,spd/Math.max(1,full.length)*4)));return}
+ var a=AN[o.anim]||AN.fade;el.style.setProperty('--ao',a[0]);el.style.setProperty('--ai',a[1]);el.classList.remove('bptc-a-in');el.classList.add('bptc-a-out');
+ setTimeout(function(){el.innerHTML=html;el.classList.remove('bptc-a-out');void el.offsetWidth;el.classList.add('bptc-a-in')},spd)}
+function pv(){clearInterval(pvT);var el=E('bpTCpv');if(!el)return;var o=obj(),arr=curArr().filter(function(x){return x.t||x.img}),i=0;if(tab==='phr')el.style.fontSize=(Number(o.size)||15)+'px';
+ if(!arr.length){el.textContent='(lista vuota)';return}swap(el,arr[0],o,true);pvT=setInterval(function(){if(!E('bpTCpv'))return clearInterval(pvT);i=(i+1)%arr.length;swap(el,arr[i],o)},Math.max(2,Number(o.sec)||6)*1000)}
+function pick(cb){var f=document.createElement('input');f.type='file';f.accept='image/*';f.onchange=function(){var fl=f.files[0];if(!fl)return;var rd=new FileReader();rd.onload=function(){var im=new Image();im.onload=function(){var m=480,k=Math.min(1,m/Math.max(im.width,im.height)),c=document.createElement('canvas');c.width=Math.round(im.width*k);c.height=Math.round(im.height*k);c.getContext('2d').drawImage(im,0,0,c.width,c.height);cb(c.toDataURL('image/jpeg',.72))};im.src=rd.result};rd.readAsDataURL(fl)};f.click()}
+function cele(kind){var Em={clap:['👏','🙌','🍕'],stars:['⭐','✨','🌟'],pizza:['🍕','🔥'],confetti:['🎊','🎉','✨']}[kind];if(!Em)return;for(var i=0;i<24;i++){var d=document.createElement('i');d.className='bptc-cel';d.textContent=Em[i%Em.length];d.style.left=Math.random()*96+'vw';d.style.animationDuration=(1.6+Math.random()*1.2)+'s';d.style.animationDelay=(Math.random()*.6)+'s';document.body.appendChild(d);setTimeout(function(x){x.remove()},3600,d)}}
+async function save(){var b=E('bpTCs'),st=E('bpTCst');var js=JSON.stringify(C);if(js.length>1500000){alert('⚠️ Troppe foto o foto troppo grandi ('+Math.round(js.length/1024)+' KB). Togline qualcuna.');return}
+ b.disabled=true;b.textContent='Salvataggio…';try{var r=await sb.from('bp36_data').upsert({key:KEY,data:{cfg:C},updated_at:new Date().toISOString()});if(r&&r.error)throw r.error;b.textContent='✅ Salvato · تم الحفظ';setTimeout(function(){b.textContent='💾 Salva'},1800)}
+ catch(e){alert('❌ Non salvato: '+((e&&e.message)||e));b.textContent='💾 Salva'}b.disabled=false}
+function build(){var m=document.createElement('div');m.id='bpTC';m.className='hide';
+ m.innerHTML='<div class="tb"><div class="th"><b>📱 Pagina tracking · رسائل صفحة المتابعة</b><button type="button" data-tab="phr">💬 Frasi</button><button type="button" data-tab="fx">💡 Lo sapevi?</button><button type="button" data-tab="loy">🍕 Carta fedeltà</button></div><div class="tbd" id="bpTCb"></div>'
+ +'<div class="tf"><button type="button" class="secondary" id="bpTCx">Chiudi</button><button type="button" class="secondary" id="bpTCr">↺ Predefiniti</button><button type="button" id="bpTCs">💾 Salva</button></div></div>';
+ document.body.appendChild(m);
+ m.addEventListener('click',function(e){var t=e.target;if(t===m)return close();var tb=t.closest('.th [data-tab]');if(tb){tab=tb.getAttribute('data-tab');paint();return}
+  var arr=curArr(),a;
+  if((a=t.closest('[data-add]'))){arr.push(I(''));paint();var ts=document.querySelectorAll('#bpTCb textarea');if(ts.length)ts[ts.length-1].focus();return}
+  if((a=t.closest('[data-del]'))){arr.splice(+a.getAttribute('data-del'),1);paint();return}
+  if((a=t.closest('[data-up]'))){var i=+a.getAttribute('data-up');if(i>0){var x=arr[i];arr[i]=arr[i-1];arr[i-1]=x;paint()}return}
+  if((a=t.closest('[data-img]'))){var j=+a.getAttribute('data-img');if(arr[j].img){if(confirm('Togliere la foto?')){arr[j].img='';paint()}}else pick(function(u){arr[j].img=u;paint()});return}
+  if((a=t.closest('[data-limg]'))){var k=a.getAttribute('data-limg');if(C.loy[k]){if(confirm('Togliere la foto?')){C.loy[k]='';paint()}}else pick(function(u){C.loy[k]=u;paint()});return}
+  if(t.id==='bpTCtest')cele(C.loy.cele)});
+ m.addEventListener('input',function(e){var t=e.target;if(t.hasAttribute('data-t')){curArr()[+t.getAttribute('data-t')].t=t.value;return}});
+ m.addEventListener('change',function(e){var t=e.target,k=t.getAttribute('data-k');if(t.hasAttribute('data-t')){pv();return}if(!k)return;
+  if(k==='__lk'){lk=t.value;paint();return}
+  var o=obj(),v=t.type==='checkbox'?t.checked:(t.type==='number'?Number(t.value):t.value);o[k]=v;if(tab==='loy'&&/^(theme|title|sub)$/.test(k))paint();else pv()});
+ E('bpTCx').onclick=close;E('bpTCs').onclick=save;E('bpTCr').onclick=function(){if(confirm('Ripristinare le frasi e le impostazioni predefinite? (poi premi Salva)')){C=defs();paint()}};}
+function close(){clearInterval(pvT);var m=E('bpTC');if(m)m.classList.add('hide')}
+async function open(){if(!E('bpTC'))build();var m=E('bpTC');m.classList.remove('hide');E('bpTCb').innerHTML='<div class="hint">Caricamento…</div>';await load();paint()}
+window.bpOpenTrackCfg=open;
+function mount(){var grid=document.querySelector('#settingsTab .bp-set-grid');if(!grid||E('bpTCcard'))return;var c=document.createElement('div');c.className='bp-set-card';c.id='bpTCcard';c.style.borderTopColor='#a8291f';
+ c.innerHTML='<div class="bp-set-head"><span class="bp-set-ico" style="background:#fff1ec;color:#a8291f">📱</span><h3>Pagina tracking · رسائل صفحة المتابعة</h3></div><p class="bp-set-desc">Frasi, «Lo sapevi?», foto, animazioni, tempi e carta fedeltà che il cliente vede mentre aspetta l’ordine.</p><button type="button" style="min-height:44px;font-weight:900;width:100%">✏️ Personalizza</button>';
+ c.querySelector('button').onclick=open;grid.appendChild(c)}
+setInterval(mount,1500);
+})()}catch(e){console.error('[bp] track cfg',e)}
+</script>
+
 <style id="v120css">
 
 .bp-rm{float:inline-end;margin-inline-start:8px;margin-bottom:4px;border:0;border-radius:99px!important;min-height:34px!important;height:auto!important;padding:4px 14px!important;font-size:13px;font-weight:900;background:#1d1209;color:#fff;min-width:0!important;cursor:pointer;display:inline-flex;align-items:center;gap:5px}
@@ -44919,6 +45055,42 @@ html.pos64.p64-voice #voiceOrderBox #voiceSmartInput:focus{outline:0;border-colo
 <script id="bpOnlineJs">
 window.bpIsOnlineOrder=function(o){ if(!o) return false; return o.source==='online'||!!o.online_pending||/\bONLINE\b/.test(String(o.notes||'')); };
 window.bpOnlineRcHtml=function(o){ return bpIsOnlineOrder(o)?'<div class="bp-onl-rc"><i></i><b>🌐 ONLINE</b><span>ORDINE DAL SITO WEB</span><i></i></div>':''; };
+</script>
+<style id="bpKCompact">
+/* v131 · Cucina compatta su telefono: 2 righe invece di 6 (titolo+pulsanti+Opzioni in una riga, filtri in una riga) */
+@media (max-width:899px){
+ html body #kitchenTab:not(.hidden){display:flex!important;flex-wrap:wrap;align-items:center;column-gap:6px;row-gap:6px}
+ html body #kitchenTab>*{order:10;flex:1 1 100%;min-width:0}
+ html body #kitchenTab>.topline{order:1;flex:1 1 0;display:flex!important;flex-wrap:nowrap!important;align-items:center!important;gap:6px!important;margin:0!important;padding:0!important}
+ html body #kitchenTab>#bpKSetBtn{order:2;flex:0 0 auto}
+ html body #kitchenTab>#bpfBar_cucina{order:3}
+ html body #kitchenTab>#kitchenChips,html body #kitchenTab>#bpKzBar{order:4}
+ html body #kitchenTab>#kitchenCols{order:20}
+ html body #kitchenTab .topline h1{flex:1 1 auto;min-width:0;margin:0!important;font-size:19px!important;line-height:1.1!important;display:flex;align-items:center;gap:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+ html body #kitchenTab .topline h1 img{width:28px!important;height:28px!important}
+ /* pulsanti solo icona, quadrati da 42px */
+ html body #kitchenTab .topline>button,html body #kitchenTab>#bpKSetBtn{flex:0 0 42px!important;width:42px!important;min-width:42px!important;height:42px!important;min-height:42px!important;max-width:42px;padding:0!important;margin:0!important;border-radius:12px!important;font-size:0!important;display:inline-flex!important;align-items:center;justify-content:center;position:relative;overflow:visible}
+ html body #kitchenTab .topline>button::before,html body #kitchenTab>#bpKSetBtn::before{font-size:21px;line-height:1}
+ html body #kitchenTab #bp35KdsBtn::before{content:'📺'}
+ html body #kitchenTab .ov-open2::before{content:'🔥'}
+ html body #kitchenTab>#bpKSetBtn::before{content:'⚙️'}
+ html body #kitchenTab .pz-open img{width:26px!important;height:26px!important;margin:0!important}
+ html body #kitchenTab .pz-open .pz-cnt{position:absolute;top:-6px;inset-inline-end:-6px;font-size:11px!important;line-height:17px;min-width:17px;padding:0 4px;border-radius:99px}
+ /* filtri: una sola riga, scorrevole, testo corto */
+ html body #bpfBar_cucina{display:flex!important;flex-wrap:nowrap!important;gap:6px!important;overflow-x:auto;scrollbar-width:none;margin:0!important;padding:2px 0!important;background:none!important;border:0!important;box-shadow:none!important}
+ html body #bpfBar_cucina::-webkit-scrollbar{display:none}
+ html body #bpfBar_cucina .bpf-chip{flex:1 0 auto;min-height:38px!important;height:38px;padding:0 10px!important;gap:5px!important;font-size:14px!important;border-width:1.5px!important;margin:0!important;justify-content:center}
+ html body #bpfBar_cucina .bpf-chip[data-f]:not([data-f="all"])>span:nth-child(2){display:none}
+ html body #bpfBar_cucina .bpf-chip .uxi svg{width:18px;height:18px}
+ html body #bpfBar_cucina .bpf-n{font-size:12px!important;padding:1px 7px!important;min-width:0!important}
+ html body #bpfBar_cucina .bpf-hint{display:none!important}
+}
+</style>
+<script id="bpKCompactJs">
+(function(){var T={bp35KdsBtn:'Schermo cucina'};setInterval(function(){try{var k=document.getElementById('kitchenTab');if(!k)return;
+ [['#bp35KdsBtn','Schermo cucina'],['.pz-open','Schermo pizzaiolo'],['.ov-open2','Forno'],['#bpKSetBtn','Opzioni']].forEach(function(x){var b=k.querySelector(x[0]);if(b&&b.getAttribute('aria-label')!==x[1]){b.setAttribute('aria-label',x[1]);b.title=x[1]}});
+ [].forEach.call(k.querySelectorAll('#bpfBar_cucina .bpf-chip[data-f]'),function(b){var n={all:'Tutti',domicilio:'Domicilio',ritiro:'Ritiro',tavolo:'Tavolo'}[b.getAttribute('data-f')];if(n&&b.title!==n){b.title=n;b.setAttribute('aria-label',n)}});
+}catch(e){}},1500)})();
 </script>
 </body>
 </html>
