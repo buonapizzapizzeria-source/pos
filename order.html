@@ -210,6 +210,28 @@ input,select,textarea{width:100%;padding:12px;border:1.5px solid var(--line);bor
 .lc .lf b{display:block;font-size:14px;line-height:1.25;margin-top:2px;overflow-wrap:anywhere}
 .lm{font-size:12.5px;color:var(--mut);margin:8px 2px 0;line-height:1.4}
 .lt0{background:var(--soft);border:1px dashed var(--line);border-radius:14px;padding:11px 13px;font-size:13.5px;line-height:1.45}
+.pbn{margin-top:14px;display:grid;gap:8px}
+.pbn .pb{background:linear-gradient(135deg,#e8590c,#c8102e);color:#fff;border-radius:16px;padding:11px 14px;box-shadow:0 6px 16px rgba(200,16,46,.22)}
+.pbn .pb small{display:block;font-size:10.5px;letter-spacing:.9px;text-transform:uppercase;opacity:.8;font-weight:800}
+.pbn .pb b{display:block;font-size:16px;line-height:1.2;margin-top:1px}
+.pbn .pb span{display:block;font-size:13.5px;margin-top:3px;opacity:.95}
+#cute{position:fixed;left:50%;bottom:132px;transform:translateX(-50%) translateY(14px);max-width:calc(100% - 32px);background:#fff;color:#1f2328;border:2px solid #e8590c;font-weight:800;font-size:15px;border-radius:99px;padding:9px 16px;opacity:0;pointer-events:none;transition:.25s;z-index:41;box-shadow:0 8px 20px rgba(0,0,0,.18);text-align:center}
+#cute.on{opacity:1;transform:translateX(-50%)}
+@media(prefers-color-scheme:dark){#cute{background:#2a1a12;color:#ffd9b8}}
+.enc{margin-top:10px;background:#fff8e6;border:1.5px dashed #f59f00;color:#7a4a00;border-radius:14px;padding:9px 12px;font-size:14px;font-weight:700;text-align:center}
+.enc.win{background:#e8f7ee;border:1.5px solid #16794b;color:#0f5132}
+@media(prefers-color-scheme:dark){.enc{background:#2e2410;color:#ffd98a}.enc.win{background:#12301f;color:#bff0d2}}
+#cele{position:fixed;left:50%;top:38%;transform:translate(-50%,-50%) scale(.6);background:#16794b;color:#fff;font-weight:900;font-size:22px;border-radius:20px;padding:18px 22px;opacity:0;pointer-events:none;transition:.3s;z-index:60;text-align:center;box-shadow:0 14px 40px rgba(0,0,0,.35);max-width:calc(100% - 40px)}
+#cele.on{opacity:1;transform:translate(-50%,-50%) scale(1)}
+.cf{position:fixed;top:-14px;width:9px;height:14px;z-index:59;pointer-events:none;border-radius:2px;animation:cf 2s ease-in forwards}
+@keyframes cf{to{transform:translateY(105vh) rotate(720deg);opacity:.9}}
+.sap{margin-top:12px;background:linear-gradient(135deg,#fff3e3,#ffe4d1);border:1.5px solid #e8590c;color:#7a2e0e;border-radius:14px;padding:10px 12px;cursor:pointer;transition:opacity .35s}
+.sap small{display:block;font-size:11px;letter-spacing:.8px;text-transform:uppercase;font-weight:800;opacity:.75}
+.sap p{margin:4px 0 0;font-size:14.5px;font-weight:650;line-height:1.4}
+.sap.f{opacity:0}
+@media(prefers-color-scheme:dark){.sap{background:linear-gradient(135deg,#2e2016,#2a1a12);color:#ffd9b8}}
+.tot.pvl{color:#16794b;font-weight:800}
+@media(prefers-color-scheme:dark){.tot.pvl{color:#6ee7a1}}
 .lgift{margin-top:10px;background:#e8f7ee;border:2px solid #16794b;border-radius:16px;padding:11px 12px;color:#0f5132}
 @media(prefers-color-scheme:dark){.lgift{background:#12301f;color:#bff0d2;border-color:#2f9e63}}
 .lgift>b{display:block;font-size:15px}
@@ -226,11 +248,12 @@ input,select,textarea{width:100%;padding:12px;border:1.5px solid var(--line);bor
   <button type="button" class="gbtn" id="gBtn"><span class="gi">❓</span><span>Guida · الدليل<small>Come ordinare e prenotare · طريقة الطلب والحجز</small></span></button>
   <div id="tv" class="hide" style="margin-top:28px"></div>
   <div id="note" class="card hide" style="margin-top:28px"></div>
+  <div id="promoBn" class="pbn hide"></div>
   <div id="chips" class="chips"></div>
   <div id="list"><div class="card mut">Caricamento menu…</div></div>
 </div>
 <div id="bar" class="bar hide"><button class="btn" id="barBtn"></button></div>
-<div id="toast"></div>
+<div id="toast"></div><div id="cute"></div><div id="cele"></div>
 <div id="ov" class="ov hide"><div class="box" id="box"></div></div>
 <div id="sov" class="ov hide" style="z-index:30"><div class="box" id="sbox"></div></div>
 
@@ -580,13 +603,13 @@ function openSheet(){
    '<label>Nome '+(TV?'(facoltativo)':'')+'</label><input id="fn" autocomplete="name" value="'+esc(sv.n||'')+'">'+
    '<label>Telefono <span class="mut">(facoltativo)</span></label><input id="fp" type="tel" autocomplete="tel" value="'+esc(sv.p||'')+'">'+
    '<div class="fam">💛 Vuoi entrare nella <b>famiglia Buona Pizza</b>? Lascia il tuo numero: registreremo i tuoi dati come cliente e potrai avere vantaggi, promo e punti fedeltà. Se preferisci, puoi ordinare anche senza.</div>'+
-   '<div id="loy"></div>'+
+   '<div id="loy"></div><div id="pgb"></div>'+
    '<label>Ritiro o consegna</label><select id="ft"><option value="Asporto">🛍️ Ritiro in pizzeria</option><option value="Consegna">🛵 Consegna a domicilio</option><option value="Tavolo">🍽️ Mangio in pizzeria · scegli il tavolo</option></select>'+
    '<div id="ftb" class="hide"><label>Numero del tavolo</label><select id="fx"></select><div id="fxn" class="mut" style="font-size:13px;margin-top:6px"></div></div>'+
    '<div id="fa" class="hide"><label>Indirizzo di consegna</label><input id="fd" autocomplete="street-address" value="'+esc(sv.a||'')+'" placeholder="Via, numero civico, citofono"></div>'+
    '<label>Orario</label><select id="fh">'+slots()+'</select>'+
    '<label>Note (facoltative)</label><textarea id="fo" rows="2"></textarea>'+
-   '<div id="er"></div><button class="btn g" id="go" style="margin-top:12px">✅ Invia ordine</button>'+
+   '<div id="enc"></div><div id="er"></div><button class="btn g" id="go" style="margin-top:12px">✅ Invia ordine</button>'+
    '<button class="btn sec" id="cl" style="margin-top:8px;padding:12px">Continua con il menu</button>';
   if(TV){
     $('box').insertAdjacentHTML('afterbegin','<div class="tvb">🍽️ TAVOLO '+TV+'</div>');
@@ -596,13 +619,15 @@ function openSheet(){
   $('ft').onchange=function(){$('fa').classList.toggle('hide',$('ft').value!=='Consegna');$('ftb').classList.toggle('hide',$('ft').value!=='Tavolo');if($('ft').value==='Tavolo')loadTables();upd();loyPaint()};
   $('fh').onchange=function(){if($('ft').value==='Tavolo')loadTables()};
   $('cl').onclick=function(){$('ov').classList.add('hide')};
-  $('go').onclick=send; upd(); loyInit();
+  $('go').onclick=send; $('pgb').onclick=pgClick; upd(); loyInit();
 }
 function upd(){
   var ls=lines(); if(!ls.length){$('ov').classList.add('hide');paintBar();updBadges();return}
   $('ls').innerHTML=ls.map(function(l){var k=l.id+'|'+l.size+'|'+sigOf(l.rem,l.add,l.nt);return '<div class="ln"><div><b>'+esc(l.name)+'</b>'+(l.size==='Maxi'?' <b style="color:var(--acc)">MAXI</b>':'')+'<div class="mut">'+euro(l.price)+'</div>'+(modsHtml(l)?'<div class="mods">'+modsHtml(l)+'</div>':'')+'</div><div class="q2"><button data-m="'+esc(k)+'">−</button><b>'+l.qty+'</b><button data-p="'+esc(k)+'">+</button></div></div>'}).join('');
-  var del=$('ft')&&$('ft').value==='Consegna'&&!TV,fee=del&&sub()<Number(M.free_from||0)?Number(M.fee||0):0;
-  $('tt').innerHTML='<div class="tot"><span>Prodotti</span><span>'+euro(sub())+'</span></div>'+(fee>0?'<div class="tot"><span>Consegna</span><span>'+euro(fee)+'</span></div>':'')+'<div class="tot g"><span>Totale</span><span>'+euro(sub()+fee)+'</span></div>'+(fee>0?'<div class="mut" style="font-size:13px;margin-top:8px">Consegna '+euro(fee)+' per ordini inferiori a '+euro(M.free_from)+'</div>':'');
+  var del=$('ft')&&$('ft').value==='Consegna'&&!TV,disc=pvDisc(),net=Math.max(0,sub()-disc),fee=del&&net<Number(M.free_from||0)?Number(M.fee||0):0;
+  var dl=(disc>0&&PV&&PV.discount_lines||[]).map(function(x){return '<div class="tot pvl"><span>🏷️ '+esc(pvLabel(x.name))+'</span><span>− '+euro(Math.abs(Number(x.price||0)))+'</span></div>'}).join('');
+  $('tt').innerHTML='<div class="tot"><span>Prodotti</span><span>'+euro(sub())+'</span></div>'+dl+(fee>0?'<div class="tot"><span>Consegna</span><span>'+euro(fee)+'</span></div>':'')+'<div class="tot g"><span>Totale</span><span>'+euro(net+fee)+'</span></div>'+(fee>0?'<div class="mut" style="font-size:13px;margin-top:8px">Consegna '+euro(fee)+' per ordini inferiori a '+euro(M.free_from)+'</div>':'');
+  pvSched();pgPaint();encPaint();
   paintBar();updBadges();
 }
 $('box').onclick=function(e){
@@ -661,7 +686,7 @@ async function send(){
   if(ty==='Consegna'&&ad.length<5) return er.innerHTML='<div class="err">'+ERR.BAD_ADDRESS+'</div>';
   var nx=lines().map(function(l){return [l,(l.nt||[]).filter(function(x){return String(x).indexOf(HHP)!==0})]}).filter(function(a){return a[1].length}).map(function(a){var l=a[0];return '• '+l.qty+'× '+l.name+(l.size==='Maxi'?' (Maxi)':'')+': '+a[1].join(', ')}).join(' | ');
   if(nx) nt=(nt?nt+' · ':'')+'NOTE: '+nx;
-  busy=true; $('go').disabled=true; $('go').textContent='Invio in corso…';
+  busy=true; $('go').disabled=true; $('go').textContent='Invio in corso…'; try{factsMount(er)}catch(_){}
   try{
     var tAt=null;
     if(tn){
@@ -679,16 +704,16 @@ async function send(){
       }
     }
     var r=await sb.rpc('create_online_order',{p_name:n,p_phone:ph,p_type:ty,p_address:ad,p_time:tm,p_notes:nt,
-      p_items:lines().map(function(l){return{id:String(l.id),size:l.size,qty:l.qty,rem:l.hhd?[]:l.rem,add:l.hhd?[]:l.add,hh:l.hhd||undefined}}).concat(ty==='Asporto'?GIFTS.map(function(g){return{id:String(g),size:'Normale',qty:1,gift:true}}):[])});
+      p_items:lines().map(function(l){return{id:String(l.id),size:l.size,qty:l.qty,rem:l.hhd?[]:l.rem,add:l.hhd?[]:l.add,hh:l.hhd||undefined}}).concat(ty==='Asporto'?GIFTS.map(function(g){return{id:String(g),size:'Normale',qty:1,gift:true}}):[]).concat(PGIFTS.map(function(g){return{pgift:String(g.promo),id:String(g.id)}}))});
     if(r.error) throw r.error;
     if(ph){try{localStorage.setItem('bp_cust',JSON.stringify({n:n0,p:ph,a:ad}))}catch(_){}}
-    cart={}; GIFTS=[]; paintBar(); var tOk=tn?tvDone:null; tvDone=null;
+    cart={}; GIFTS=[]; PGIFTS=[]; encCel=null; PV=null; PVSIG=''; paintBar(); var tOk=tn?tvDone:null; tvDone=null;
     var tHm=tOk?(function(d){return hm(d.getHours()*60+d.getMinutes())})(new Date(tOk.at)):'';
     $('box').innerHTML='<h2>✅ Ordine inviato!</h2><p>Il tuo ordine <b>#'+esc(r.data.id)+'</b>'+(TV?' per il <b>Tavolo '+TV+'</b>':'')+' è stato ricevuto. Il locale lo confermerà a breve.</p>'+(tOk?'<div class="fam">🍽️ Il <b>Tavolo '+tOk.t+'</b> è riservato per te alle <b>'+tHm+'</b>. Arriva, siediti e mangia: troverai l’ordine pronto!</div>':'')+'<p class="mut">'+(TV?'Pagamento al tavolo. Buon appetito! 🍕':'Pagamento in contanti alla consegna o al ritiro.')+'</p>'+(ph?'<div class="fam">💛 Benvenuto nella famiglia Buona Pizza!</div>':'')+'<a class="btn" href="track.html?t='+encodeURIComponent(r.data.token)+'">📍 Segui il tuo ordine</a>';
   }catch(e){
     var msg=String((e&&e.message)||e),code=Object.keys(ERR).filter(function(c){return msg.indexOf(c)>=0})[0];
     er.innerHTML='<div class="err">'+esc(code?ERR[code]:'Errore: '+msg)+'</div>';
-    if(code==='NO_GIFT'||code==='GIFT_NOT_ALLOWED'){GIFTS=[];if($('fp'))loyFetch($('fp').value.trim())}
+    if(code==='NO_GIFT'||code==='GIFT_NOT_ALLOWED'){GIFTS=[];PGIFTS=[];PVSIG='';pvSched();if($('fp'))loyFetch($('fp').value.trim())}
     busy=false; $('go').disabled=false; $('go').textContent='✅ Invia ordine';
   }
 }
@@ -708,6 +733,7 @@ async function loyFetch(ph){
 function loySched(){clearTimeout(loyTm);loyTm=setTimeout(function(){if($('fp'))loyFetch($('fp').value.trim())},600)}
 function loyName(id){var g=((LOY&&LOY.gifts)||[]).filter(function(x){return String(x.id)===String(id)})[0];return g?g.name:'Regalo'}
 function loyPaint(){
+  try{encPaint()}catch(_){}
   var box=$('loy'); if(!box)return;
   if(!LOY||!LOY.active){box.innerHTML='';GIFTS=[];return}
   var ty=$('ft')?$('ft').value:'Asporto', eur=Number(LOY.eur||5), pts=Number(LOY.pts||5), gifts=LOY.gifts||[];
@@ -741,7 +767,149 @@ function loyInit(){
   };
   loyPaint(); loyFetch(f?f.value.trim():'');
 }
-init();
+
+
+/* ====== FASE 2: frasi simpatiche, incoraggiamento fette, festa regalo, «Lo sapevi?» ====== */
+/* --- frasi: tutto in un posto, modificale qui --- */
+var CUTE=['Ottima scelta! 😋','Questa sì che è una pizza! 🍕','Il pizzaiolo approva 👨‍🍳👍','Gusto da vero intenditore 🤌','Mmm… già sentiamo il profumo! 👃','Scelta da campione 🏆','Così si fa! 💪','Il forno ti aspetta 🔥','Una fetta di felicità in arrivo 🍕','Abbinamento perfetto ✨','Hai buon gusto, si vede! 😎','Napoli sarebbe fiera di te 🇮🇹','Questa la facciamo con amore ❤️','Sorriso garantito 😄','Più ricca, più buona! 🤤','Il tuo stomaco ti ringrazia 🙏','Mangiare bene è una cosa seria 😌','Ancora una e diventi pizzaiolo 😉','Che fame! Ci pensiamo noi 😂','Questa sera si festeggia! 🎉'];
+var CUTE_SP=[[/(?<!poco\s)(piccante|peperoncino|diavola|nduja|’nduja)/i,'Coraggioso! 🌶️🔥'],[/doppia mozzarella/i,'Filante come piace a te 🧀'],[/patatin|patate|fritte/i,'Con le patatine è sempre festa 🍟'],[/kebab|kebap|d[oö]ner/i,'Kebab power! 🥙'],[/ben cotta/i,'Bella croccante, ricevuto! 🔥']];
+/* --- «Lo sapevi?» (40) --- icone: 🍕 storia · 🌾 impasto · 🧀 mozzarella · 🔥 forno · 🍅 ingredienti · 🤓 curiosità */
+var FACTS=[
+['🍕','Secondo la tradizione, la Margherita nasce a Napoli nel 1889 in onore della Regina Margherita.'],['🍕','Pomodoro, mozzarella e basilico: la Margherita ha i colori della bandiera italiana 🇮🇹'],['🍕','Nel 2017 l’arte del pizzaiuolo napoletano è diventata Patrimonio UNESCO.'],['🍕','La Pizza Napoletana è STG: una Specialità Tradizionale Garantita in tutta Europa.'],['🍕','La parola «pizza» compare già in un documento di Gaeta dell’anno 997.'],['🍕','La Marinara non ha pesce: era la pizza dei marinai, con aglio, origano e pomodoro.'],['🍕','La Quattro Stagioni ha quattro spicchi, uno per ogni stagione dell’anno.'],['🍕','«Calzone» viene da «calza»: è la pizza ripiegata a forma di mezzaluna.'],
+['🌾','L’impasto napoletano tradizionale ha solo 4 ingredienti: farina, acqua, sale e lievito.'],['🌾','Una lievitazione lunga rende la pizza più leggera e più digeribile.'],['🌾','Le bollicine nel cornicione sono anidride carbonica prodotta dal lievito.'],['🌾','Il bordo gonfio della pizza si chiama «cornicione».'],['🌾','Le macchioline scure sul bordo si chiamano «leopardatura»: segno di una bella cottura.'],['🌾','La pizza napoletana si stende a mano: niente mattarello, per non schiacciare l’aria.'],['🌾','La farina «00» è la più finemente macinata.'],['🌾','Il sale rinforza il glutine e tiene a bada il lievito.'],['🌾','Il glutine crea una rete elastica che trattiene l’aria: per questo l’impasto si allunga senza rompersi.'],
+['🧀','«Mozzarella» viene da «mozzare»: la pasta si stacca a mano, pezzo per pezzo.'],['🧀','Il fior di latte è fatto con latte vaccino, la bufala con latte di bufala.'],['🧀','La Mozzarella di Bufala Campana è DOP.'],['🧀','La mozzarella è una «pasta filata»: la cagliata si lavora e si allunga in acqua calda.'],['🧀','Treccia, bocconcini e ciliegine: la mozzarella ha tante forme!'],['🧀','I pizzaioli fanno sgocciolare la mozzarella fresca, così la pizza non diventa acquosa.'],['🧀','Il nome «Gorgonzola» viene da un paese vicino a Milano.'],['🧀','Grana Padano e Parmigiano Reggiano sono due formaggi DOP diversi.'],
+['🔥','Una pizza napoletana cuoce in 60–90 secondi!'],['🔥','Nel forno a legna la temperatura può superare i 450°C.'],['🔥','La pala per infornare la pizza si chiama… «pala»!'],['🔥','Il calore arriva da sotto (la pietra) e da sopra (la cupola): così la pizza cuoce in modo uniforme.'],['🔥','Il pizzaiolo gira la pizza nel forno per cuocerla uguale da ogni lato.'],
+['🍅','Il pomodoro è arrivato in Europa dalle Americhe nel Cinquecento.'],['🍅','Il Pomodoro San Marzano dell’Agro Sarnese-Nocerino è DOP.'],['🍅','«Basilico» viene dal greco e vuol dire «regale» 👑'],['🍅','L’olio extravergine si mette spesso a crudo, per non perdere il profumo.'],['🍅','L’origano è il profumo classico della Marinara.'],
+['🤓','«Döner kebab» in turco vuol dire «carne che gira» 🥙'],['🤓','Pizza con würstel e patatine: la preferita dei bambini italiani! 🍟'],['🤓','La pizza va mangiata subito: il suo momento migliore sono i primi minuti.'],['🤓','Una pizza «a portafoglio» si piega in quattro e si mangia per strada, alla napoletana.'],['🤓','Ogni pizza è fatta a mano: non ce ne sono due uguali 🤌']];
+var FQ=null,FLAST=null;
+function factNext(){
+  /* ordine casuale, nessuna ripetizione prima di averle viste tutte, categorie mescolate */
+  if(!FQ||!Object.keys(FQ).some(function(k){return FQ[k].length})){
+    FQ={};FACTS.forEach(function(f){(FQ[f[0]]=FQ[f[0]]||[]).push(f)});
+    Object.keys(FQ).forEach(function(k){var a=FQ[k];for(var i=a.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1)),t=a[i];a[i]=a[j];a[j]=t}});
+  }
+  var ks=Object.keys(FQ).filter(function(k){return FQ[k].length}),ok=ks.filter(function(k){return k!==FLAST});
+  var pool=ok.length?ok:ks,k=pool[Math.floor(Math.random()*pool.length)];
+  FLAST=k;return FQ[k].shift();
+}
+var FTM=0;
+function factsMount(host){
+  if(!host)return;
+  clearInterval(FTM);
+  host.innerHTML='<div class="sap" role="button" aria-label="Prossima curiosità"><small>💡 Lo sapevi?</small><p></p></div>';
+  var box=host.firstChild,p=box.querySelector('p'),busyF=false;
+  function show(first){
+    if(busyF)return;var f=factNext();
+    function set(){p.textContent=f[0]+' '+f[1];box.classList.remove('f');busyF=false}
+    if(first){set();return}
+    busyF=true;box.classList.add('f');setTimeout(set,350)}
+  show(true);
+  box.onclick=function(){clearInterval(FTM);show();FTM=setInterval(tick,8000)};
+  function tick(){if(!document.body.contains(box)){clearInterval(FTM);return}show()}
+  FTM=setInterval(tick,8000);
+}
+window.BPFACTS={mount:factsMount,list:FACTS};
+/* --- frase a ogni aggiunta (2 secondi) --- */
+var _cuteT=0,_cuteLast=-1;
+function cute(p,add,nt){
+  var txt=[(p&&p.name)||''].concat(add||[],nt||[]).join(' '),m=null;
+  for(var i=0;i<CUTE_SP.length;i++){if(CUTE_SP[i][0].test(txt)){m=CUTE_SP[i][1];break}}
+  if(!m){var k;do{k=Math.floor(Math.random()*CUTE.length)}while(k===_cuteLast&&CUTE.length>1);_cuteLast=k;m=CUTE[k]}
+  var e=$('cute');e.textContent=m;e.classList.add('on');clearTimeout(_cuteT);_cuteT=setTimeout(function(){e.classList.remove('on')},2000);
+}
+var _put=put;
+put=function(p,size,qty,rem,add,nt){var r=_put.apply(this,arguments);try{cute(p,add,nt)}catch(_){}return r};
+/* --- incoraggiamento fette + festa --- */
+var encCel=null;
+function pizzaEur(){var t=0;lines().forEach(function(l){var p=prod(l.id);if(l.hhd||/pizz/i.test(p?(p.category||''):'')||/^pizza\b/i.test(l.name||''))t+=(Number(l.price)-(hasMenu(l.nt)?MENU_PRICE:0))*l.qty});return t}
+function fe(n){return euro(n).replace(/,00$/,'').replace(/(,\d)0$/,'$1')}
+function encPaint(){
+  var box=$('enc');if(!box)return;
+  var ty=$('ft')?$('ft').value:'Asporto';
+  if(!LOY||!LOY.active||!LOY.valid||(ty==='Consegna'&&!TV)){box.innerHTML='';box.className='';return}
+  var eur=Number(LOY.eur||5),pts=Number(LOY.pts||5),spend=Number(LOY.spend||0),base=Number(LOY.points||0),e0=Number(LOY.earned||0);
+  var pz=pizzaEur();
+  if(pz<=0){box.className='';box.innerHTML='';return}
+  var tot=spend+pz,pn=Math.floor(tot/eur+1e-9),gain=pn-base,miss=eur-(tot-pn*eur),en=Math.floor(pn/pts);
+  if(miss>=eur-1e-9)miss=0;
+  var win=en>e0;
+  if(encCel===null)encCel=e0;
+  if(en>encCel)celebrate();
+  encCel=en;
+  var h='';
+  if(win)h='🎉 Con questo ordine vinci una pizza in regalo!';
+  else{
+    if(gain>0)h='🍕 Con questo ordine guadagni <b>'+gain+(gain>1?' fette':' fetta')+'</b>. ';
+    h+='Aggiungi ancora <b>'+fe(miss>0?miss:eur)+'</b> di pizza e guadagni 1 fetta in più!';
+  }
+  box.className='enc'+(win?' win':'');box.innerHTML=h;
+}
+function celebrate(){
+  var c=$('cele');c.innerHTML='🎉 Complimenti!<br>Hai vinto una pizza!';c.classList.add('on');setTimeout(function(){c.classList.remove('on')},2200);
+  var cols=['#e8590c','#f8c24a','#16794b','#c8102e','#1c7ed6','#ae3ec9'];
+  for(var i=0;i<46;i++){var d=document.createElement('i');d.className='cf';d.style.left=Math.random()*100+'vw';d.style.background=cols[i%cols.length];d.style.animationDelay=(Math.random()*.5)+'s';d.style.animationDuration=(1.4+Math.random()*.8)+'s';document.body.appendChild(d);setTimeout(function(x){x.remove()},2600,d)}
+  if(navigator.vibrate)try{navigator.vibrate([120,60,120])}catch(_){}
+}
+
+/* ====== PROMO: banner di oggi + sconti / 2x1 / regalo sopra soglia (calcolati dal server) ====== */
+var PB=[], PV=null, PVSIG='', PVTM=0, PVREQ=0, PGIFTS=[];
+var PDN=['','Lun','Mar','Mer','Gio','Ven','Sab','Dom'];
+function pbTgt(p){var a=[];if((p.names||[]).length)a.push(p.names.join(', '));if((p.cats||[]).length)a.push('categoria '+p.cats.join(', '));return a.length?a.join(' + '):'tutto il menu'}
+function pbSum(p){var t=p.type;
+  if(t==='sconto')return (Number(p.pct)>0?'-'+Number(p.pct)+'%':'-'+euro(p.amt)+' a pezzo')+' su '+pbTgt(p);
+  if(t==='prezzo')return euro(p.price)+(p.price_maxi!==''&&p.price_maxi!=null?' (Maxi '+euro(p.price_maxi)+')':'')+' su '+pbTgt(p);
+  if(t==='xy')return 'Prendi '+Number(p.buy)+', paghi '+Number(p.pay)+' su '+pbTgt(p);
+  if(t==='regalo_soglia')return 'Sopra '+euro(p.min)+' ti regaliamo: '+((p.gifts||[]).join(' / ')||'un omaggio')+' 🎁';
+  return ''}
+function pbWhen(p){var s=[];if(p.from_time&&p.to_time)s.push('dalle '+p.from_time+' alle '+p.to_time);if(p.to){var d=String(p.to).split('-');if(d.length===3)s.push('fino al '+d[2]+'/'+d[1])}return s.join(' · ')}
+function pbPaint(){var b=$('promoBn');if(!b)return;
+  var L=(canOrder?PB:[]).filter(function(p){return pbSum(p)});
+  b.classList.toggle('hide',!L.length);
+  b.innerHTML=L.map(function(p){var w=pbWhen(p);return '<div class="pb"><small>🔥 Promo di oggi</small><b>'+esc(p.name||'Promo')+'</b><span>'+esc(pbSum(p))+(w?' · '+esc(w):'')+'</span></div>'}).join('')}
+async function pbLoad(){try{var r=await sb.rpc('get_active_promos',{p_channel:'online'});if(!r.error&&Array.isArray(r.data))PB=r.data}catch(_){}pbPaint()}
+function pvLabel(n){return String(n||'Sconto promo').replace(/^\s*Sconto promo:?\s*/i,'')||'Promo'}
+function pvLines(){return lines().map(function(l){return{id:l.hhd?'':String(l.id),qty:l.qty,size:l.size,unit:Math.max(0,Number(l.price)-(hasMenu(l.nt)?MENU_PRICE:0)),cat:l.hhd?'Pizze':null,name:l.name}})}
+function pvType(){return ($('ft')&&$('ft').value==='Consegna'&&!TV)?'Consegna':'Asporto'}
+function pvDisc(){var d=PV?Number(PV.discount||0):0;return d>0?Math.min(d,sub()):0}
+function pvSched(){
+  var ls=pvLines();
+  if(!ls.length){PV=null;PVSIG='';PGIFTS=[];return}
+  var sig=JSON.stringify([ls,pvType()]);
+  if(sig===PVSIG)return;
+  PVSIG=sig;clearTimeout(PVTM);PVTM=setTimeout(pvRun,250)}
+async function pvRun(){
+  var my=++PVREQ,ls=pvLines(),ty=pvType();
+  if(!ls.length)return;
+  var res=null;
+  try{var r=await sb.rpc('promo_preview',{p_lines:ls,p_type:ty,p_channel:'online'});if(!r.error&&r.data)res=r.data}catch(_){}
+  if(my!==PVREQ)return;
+  PV=res;
+  /* tieni solo i regali ancora validi */
+  var keep=[],cnt={};
+  PGIFTS.forEach(function(g){
+    var gl=((PV&&PV.gifts)||[]).filter(function(x){return String(x.promo_id)===String(g.promo)})[0];
+    cnt[g.promo]=(cnt[g.promo]||0)+1;
+    if(gl&&cnt[g.promo]<=Number(gl.qty||0)&&(gl.options||[]).some(function(o){return String(o.id)===String(g.id)}))keep.push(g)});
+  PGIFTS=keep;
+  if($('tt'))upd()}
+function pgPaint(){
+  var box=$('pgb');if(!box)return;
+  var G=(PV&&PV.gifts)||[];
+  if(!G.length){box.innerHTML='';return}
+  box.innerHTML=G.map(function(g){
+    var pr=PB.filter(function(p){return String(p.id)===String(g.promo_id)})[0], nm=pr?pr.name:'Promo', q=Number(g.qty||1);
+    var mine=PGIFTS.map(function(x,i){return [x,i]}).filter(function(a){return String(a[0].promo)===String(g.promo_id)});
+    var h='<div class="lgift"><b>🎁 '+esc(nm)+' · scegli il tuo regalo'+(q>1?' ('+mine.length+'/'+q+')':'')+'</b>';
+    h+=mine.map(function(a){var o=(g.options||[]).filter(function(o){return String(o.id)===String(a[0].id)})[0];return '<div class="lsel"><span>🎁 '+esc(o?o.name:'Regalo')+' · €0,00</span><button type="button" class="lx" data-pgx="'+a[1]+'" aria-label="Rimuovi">✕</button></div>'}).join('');
+    if(mine.length<q)h+='<div class="lch">'+(g.options||[]).map(function(o){return '<button type="button" data-pg="'+esc(g.promo_id)+'" data-pi="'+esc(o.id)+'">+ '+esc(o.name)+'</button>'}).join('')+'</div>';
+    return h+'</div>'}).join('')}
+function pgClick(e){
+  var a=e.target.closest('[data-pg]'),x=e.target.closest('[data-pgx]');
+  if(a){var id=a.getAttribute('data-pg'),gl=((PV&&PV.gifts)||[]).filter(function(g){return String(g.promo_id)===id})[0];
+    if(gl&&PGIFTS.filter(function(g){return String(g.promo)===id}).length<Number(gl.qty||1)){PGIFTS.push({promo:id,id:a.getAttribute('data-pi')});pgPaint()}}
+  if(x){PGIFTS.splice(Number(x.getAttribute('data-pgx')),1);pgPaint()}}
+setInterval(function(){if(!document.hidden)pbLoad()},60000);
+init().then(pbLoad,pbLoad);
 var _xj='';
 async function refreshExtras(){
   if(!M||document.hidden||typeof sb==='undefined')return;
@@ -911,6 +1079,19 @@ ar:{
    'الدفع <b>عند الاستلام</b> أو <b>عند التوصيل</b>.',
    'لو الطلب أقل من الحد المحدد ممكن يكون فيه رسوم توصيل، وهتظهر في الملخص قبل ما تبعت.'
   ]},
+  {h:'🍕 جمع الشرايح والهدية', ol:[
+   'اكتب <b>رقم تليفونك</b> في الطلب: كل أوردر بيجمعلك <b>شرايح</b> على حسب مبلغ البيتزا، وكارت <b>Carta Buona Fedeltà</b> بيوريك الشرايح اللي معاك واللي ناقصة.',
+   'قبل زرار الإرسال بيظهر سطر يقولك تزود كام عشان تاخد شريحة زيادة.',
+   'الشرايح بتتضاف لما المحل <b>يأكد</b> الأوردر.',
+   'لما تكمّل شرايح الهدية بتنزل قصاقيص ألوان 🎉 ويبقى عندك <b>هدية مجانية</b>: اختارها من الكارت وانت بتجهّز الأوردر.',
+   'الهدية <b>للاستلام من المحل بس</b> (مش مع التوصيل).'
+  ], note:'الشرايح مربوطة برقم التليفون، فاكتب نفس الرقم في كل أوردر.'},
+  {h:'📍 متابعة الأوردر', ol:[
+   'بعد <b>Invia ordine</b> اضغط <b>📍 Segui il tuo ordine</b>.',
+   'الصفحة بتتحدث لوحدها: حالة الأوردر بأيقونات متحركة، وجمل لطيفة، والوقت التقريبي، ومعلومات <b>Lo sapevi?</b> (دوس عليها عشان تروح للي بعدها).',
+   'لو الأوردر اتأخر شوية هتلاقي رسالة بدل الوقت، ومفيش داعي تعمل refresh.',
+   'كارت الشرايح بيظهر برضه في صفحة المتابعة وبيتحرك لما الشرايح تزيد.'
+  ]},
   {h:'📅 حجز طاولة', ol:[
    'اضغط زرار <b>📅 Prenota</b> في كارت "Prenota un tavolo".',
    'اختار <b>اليوم</b> و<b>الساعة</b> (المواعيد كل 30 دقيقة في ساعات فتح المحل).',
@@ -941,6 +1122,19 @@ it:{
   {h:'💶 Pagamento', ol:[
    'Il pagamento avviene <b>alla consegna</b> o <b>al ritiro</b>.',
    'Se l\'ordine è sotto il minimo previsto può esserci un costo di consegna, che vedi nel riepilogo prima di inviare.'
+  ]},
+  {h:'🍕 Raccogliere le fette e il regalo', ol:[
+   'Inserisci il tuo <b>numero di telefono</b> nell\'ordine: ogni ordine ti fa guadagnare delle <b>fette</b> in base all\'importo delle pizze, e la <b>Carta Buona Fedeltà</b> mostra le fette che hai e quelle che mancano.',
+   'Sopra il pulsante di invio vedi quanto manca per guadagnare una fetta in più.',
+   'Le fette vengono accreditate quando il locale <b>conferma</b> l\'ordine.',
+   'Quando completi le fette del premio scendono i coriandoli 🎉 e hai un <b>regalo gratuito</b>: sceglilo dalla carta mentre prepari l\'ordine.',
+   'Il regalo è <b>solo per il ritiro in pizzeria</b> (non con la consegna).'
+  ], note:'Le fette sono legate al numero di telefono: usa sempre lo stesso numero.'},
+  {h:'📍 Seguire l\'ordine', ol:[
+   'Dopo <b>Invia ordine</b> tocca <b>📍 Segui il tuo ordine</b>.',
+   'La pagina si aggiorna da sola: stato con icone animate, frasi simpatiche, tempo stimato e le curiosità <b>Lo sapevi?</b> (toccale per passare alla successiva).',
+   'Se l\'ordine tarda un po\' vedi un messaggio al posto del tempo: non serve ricaricare la pagina.',
+   'La carta fedeltà compare anche nella pagina di tracking e si anima quando guadagni fette.'
   ]},
   {h:'📅 Prenotare un tavolo', ol:[
    'Tocca <b>📅 Prenota</b> nella scheda "Prenota un tavolo".',
