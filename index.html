@@ -18964,7 +18964,8 @@ openCartIngModal = function(key){
  var more = document.createElement('div'); more.id = 'bpMore'; more.className = 'hidden no-print';
  document.body.appendChild(nav); document.body.appendChild(more);
  function num(sel){ var e = $(sel); var n = e ? parseInt(e.textContent, 10) : 0; return isNaN(n) ? 0 : n; }
- function badge(t){ if(t === 'orders') return [num('#openCountBadge'), 0]; if(t === 'kitchen') return [num('#kitchenCountBadge'), 0]; if(t === 'inventory') return [num('#invAlertBadge'), 1]; if(t === 'calls') return [num('#callsMissBadge'), 1]; return [0, 0]; }
+ function cnt(f, fb){ try{ if(window[f]) return window[f](); }catch(e){ console.warn('[ui34] ' + f, e); } return fb; }
+ function badge(t){ if(t === 'orders') return [num('#openCountBadge'), 0]; if(t === 'kitchen') return [cnt('bpKPending', num('#kitchenCountBadge')), 0]; if(t === 'pizzaiolo') return [cnt('bpPzPending', 0), 0]; if(t === 'inventory') return [num('#invAlertBadge'), 1]; if(t === 'calls') return [num('#callsMissBadge'), 1]; return [0, 0]; }
  function item(n, on, sec, bg){
  var b = bg ? '<span class="bpn-b' + (bg[1] ? ' warn' : '') + '">' + bg[0] + '</span>' : '';
  return '<button type="button" class="bpn-item' + (on ? ' on' : '') + (sec ? ' sec' : '') + '" data-go="' + n[0] + '" title="' + n[2] + '"><span class="i">' + n[1] + '</span><span class="l">' + n[2] + '</span>' + b + '</button>';
@@ -27194,19 +27195,24 @@ try{
  s.addEventListener('click',function(){if(!shut&&root.classList.contains('bp-shut'))shut=true;openNow()});
  var b=h.querySelector('.brand');if(b)b.addEventListener('click',function(){if(!shut)shutNow()});
  var y0=null;h.addEventListener('touchstart',function(e){y0=e.touches[0].clientY},{passive:true});
- h.addEventListener('touchmove',function(e){if(y0==null)return;var dy=e.touches[0].clientY-y0;if(!shut&&dy<-70&&Date.now()-openedAt>1500){y0=null;shutNow()}else if(shut&&dy>12){y0=null;openNow()}},{passive:true});
+ h.addEventListener('touchmove',function(e){if(y0==null)return;var dy=e.touches[0].clientY-y0;if(!shut&&dy<-70&&Date.now()-openedAt>1500){y0=null;shutNow()}else if(shut&&dy>45){y0=null;openNow()}},{passive:true});
  h.addEventListener('touchend',function(){y0=null},{passive:true});
  if(!mounted){mounted=true;shutNow(true)}} /* l'header parte alzato SOLO al primo montaggio: il remount ogni 500ms non deve richiuderlo */
  /* clic su una voce dell'header (anche Stampa) = si richiude SUBITO, prima dell'azione;
  clic nel resto dell'app = si richiude dopo un attimo */
  document.addEventListener('click',function(e){var t=e.target;if(shut||!t||!t.closest||e.isTrusted===false)return;
  if(t.closest('#bp93Strip'))return;
+ /* cambio schermata dalla barra in basso = Strumenti si chiude subito */
+ if(t.closest('#bpNav,#bpMore')){clearTimeout(tm);shutNow(true);return}
  if(Date.now()-openedAt<700)return; /* tocco che ha appena aperto Strumenti: non richiudere */
  if(t.closest('header')){if(!t.closest('.brand')&&t.closest('button,a,summary,[role="button"]')){clearTimeout(tm);tm=setTimeout(shutNow,450)}return}
  if(t.closest('#bpNav,#bpMore,.modal-backdrop,#bpActSheet'))return;
  if(Date.now()-openedAt<2500)return; /* appena aperto: lascia il tempo di scegliere */
  clearTimeout(tm);tm=setTimeout(shutNow,450)},true);
  window.addEventListener('afterprint',function(){shutNow()});
+ /* tornando nel programma (o cambiando schermata dal codice) la barra riparte chiusa */
+ document.addEventListener('visibilitychange',function(){if(document.hidden){clearTimeout(tm);shutNow(true)}});
+ if(typeof switchTab==='function'){var _st=switchTab,lastTab=null;switchTab=window.switchTab=function(t){var r=_st.apply(this,arguments);if(t!==lastTab){lastTab=t;clearTimeout(tm);shutNow(true)}return r}}
  mount();setInterval(function(){try{mount()}catch(e){}},500);
  setTimeout(function(){root.classList.remove('bp-boot')},3000);
 }catch(x){root.classList.remove('bp-boot');console.error('[bp] shutter',x)}})();
@@ -41827,6 +41833,16 @@ function init(){
     new MutationObserver(chk).observe(document.body, {attributes: true, attributeFilter: ['data-role']}); chk(); }catch(e){ console.warn('[pz] role watch', e); } }
 }
 window.__pz = {h: {pzLines: pzLines, lineKey: lineKey, doneArr: doneArr, targetMs: targetMs, dest: dest, stOf: stOf, allOrders: allOrders, itemsOf: itemsOf, hhmm: hhmm, E: E, ls: ls, findOrder: findOrder, toast: toastMsg}, model: model, buildHtml: buildHtml, toggle: toggle, doneArr: doneArr, allDone: allDone, reqKeys: reqKeys, dest: dest, init: init, flags: function(){ return {colMissing: colMissing}; }};
+/* conteggi per la barra in basso: pezzi ancora da fare */
+window.bpPzPending = function(){ var now = Date.now(), n = 0; model().forEach(function(x){ if(urg(x, now) === 'done') return; x.lines.forEach(function(i, k){ if(x.d.indexOf(lineKey(i, k)) < 0) n += Number(i.quantity || 1); }); }); return n; };
+window.bpKPending = function(){ var n = 0; allOrders().forEach(function(o){
+  var s = stOf(o); if((s !== 'Nuovo' && s !== 'In preparazione') || kDone(o)) return;
+  try{ if(getOrderUrgencyMeta(o).type === 'future') return; }catch(e){}
+  var its = itemsOf(o.id); if(!its.length){ try{ bpKitchenLoadItems(o); }catch(e){} return; }
+  var p = bpCucinaPlan(its.filter(function(i){ return !isSvc(i); })); if(!p.has) return;
+  var seen = [];
+  ['kebabPz', 'panino', 'menuFr', 'pzFr', 'single', 'otherFr'].forEach(function(g){ (p[g] || []).forEach(function(i){ if(seen.indexOf(i) < 0){ seen.push(i); n += Number(i.quantity || 1); } }); });
+}); return n; };
 init();
 })();
 </script>
@@ -45188,6 +45204,7 @@ setInterval(mount,1500);
 <!-- BP-TRACKCFG:END -->
 <!-- BP-LAYOUT-V2:START -->
 <style id="bpLayoutV2">
+html body #bpNav .bpn-item .bpn-b,html body #bpMore .bpn-item .bpn-b{right:auto!important;left:50%!important;margin:0 0 0 6px!important;top:1px!important;width:max-content!important;min-width:22px!important;max-width:none!important;height:22px!important;padding:0 6px!important;box-sizing:border-box!important;white-space:nowrap!important;word-break:normal!important;overflow-wrap:normal!important;line-height:1!important;font-size:12px!important;font-variant-numeric:tabular-nums;direction:ltr;z-index:2}
 /* ===== Pizzaiolo ===== */
 #bpPZ .pz-seg .pz-set{flex:0 0 3.1em;background:#1f2937;color:#fff;font-size:1.1em;padding:.3em}
 #bpPZ .pz-seg button.pz-set.on{background:#2563eb;color:#fff}
