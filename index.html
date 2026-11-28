@@ -23901,24 +23901,25 @@ var TL={fedelta:'🍕 Fedeltà',sconto:'🏷️ Sconto',prezzo:'💶 Prezzo spec
  if(typeof BP_ROLE!=='undefined'&&BP_ROLE!=='manager'){ alert('Solo il Responsabile può modificare la promo.'); return; }
  if(!ov){ ov=document.createElement('div'); ov.className='au-ov'; ov.onclick=function(e){ if(e.target===ov) close(); }; document.body.appendChild(ov); }
  var L=RAW.promos, live=L.filter(liveNow).map(function(x){return x.name});
- var h='<div class="au-box"><h2>🎁 Promo e offerte</h2><p class="au-note">Puoi avere più promo: fedeltà a fette, sconti, prezzi speciali, 2x1 / 3x2 e regali sopra una soglia. Per la fedeltà vale la <b>prima attiva</b> della lista; le altre offerte valgono insieme, nel rispetto di «Cumulabile» e «Priorità».</p>'
+ var h='<div class="au-box bp-promo"><h2>🎁 Promo e offerte</h2><p class="au-note">Puoi avere più promo: fedeltà a fette, sconti, prezzi speciali, 2x1 / 3x2 e regali sopra una soglia. Per la fedeltà vale la <b>prima attiva</b> della lista; le altre offerte valgono insieme, nel rispetto di «Cumulabile» e «Priorità».</p>'
   +'<p class="au-note">'+(live.length?'✅ Adesso attivo: <b>'+live.map(esc).join(' · ')+'</b>':'⏸️ Adesso nessuna promo attiva.')+'</p><div class="au-sec">';
- L.forEach(function(p,i){ var t=p.type||'fedelta'; h+='<div class="au-row" style="gap:6px"><span style="flex:1"><b>'+(liveNow(p)?'🟢 ':(p.on?'🕓 ':'⏸️ '))+esc(p.name)+'</b><br><small>'+(TL[t]||t)+' · '+esc(psum(p))+esc(pwhen(p))+'</small></span>'
-  +'<button type="button" class="btn-sm" data-pe="'+i+'">✏️</button><button type="button" class="btn-sm" data-pc="'+i+'" title="Duplica">⧉</button><button type="button" class="btn-sm" data-pu="'+i+'" title="Su">↑</button><button type="button" class="btn-sm" data-pd="'+i+'">🗑</button></div>'; });
- h+='<div class="au-row" style="margin-top:8px;gap:6px"><select data-pnt style="flex:1">'+Object.keys(TL).map(function(k){return '<option value="'+k+'">'+TL[k]+'</option>'}).join('')+'</select><button type="button" class="green btn-sm" data-pn>➕ Nuova promo</button></div></div>';
+ L.forEach(function(p,i){ var t=p.type||'fedelta'; h+='<div class="au-row pm-item'+(EDIT===i?' sel':'')+'" style="gap:6px"><span style="flex:1"><b>'+(liveNow(p)?'🟢 ':(p.on?'🕓 ':'⏸️ '))+esc(p.name)+'</b><br><small>'+(TL[t]||t)+' · '+esc(psum(p))+esc(pwhen(p))+'</small></span>'
+  +'<button type="button" class="btn-sm pm-e" data-pe="'+i+'"><i>✏️</i><span>Modifica</span></button><button type="button" class="btn-sm pm-c" data-pc="'+i+'" title="Duplica"><i>⧉</i><span>Copia</span></button><button type="button" class="btn-sm pm-u" data-pu="'+i+'" title="Su"><i>↑</i><span>Su</span></button><button type="button" class="btn-sm pm-d" data-pd="'+i+'"><i>🗑</i><span>Elimina</span></button></div>'; });
+ h+='<div class="au-row pm-new" style="margin-top:8px;gap:6px"><select data-pnt style="flex:1">'+Object.keys(TL).map(function(k){return '<option value="'+k+'">'+TL[k]+'</option>'}).join('')+'</select><button type="button" class="green btn-sm" data-pn>➕ Nuova promo</button></div></div>';
  var p=EDIT!=null&&L[EDIT];
  if(p){ var t=p.type||'fedelta';
-  h+='<div class="au-sec"><h3 style="margin:0 0 6px">✏️ '+esc(p.name)+'</h3>'
-  +'<div class="au-row"><label>Nome</label><input type="text" data-f="name" value="'+esc(p.name)+'"></div>'
+  h+='<div class="au-sec pm-edit"><h3 style="margin:0 0 6px">✏️ '+esc(p.name)+'</h3>'
+  +'<div class="pm-h">🏷️ Promo</div><div class="au-row"><label>Nome</label><input type="text" data-f="name" value="'+esc(p.name)+'"></div>'
   +'<div class="au-row"><label>Tipo</label><select data-f="type">'+Object.keys(TL).map(function(k){return '<option value="'+k+'"'+(k===t?' selected':'')+'>'+TL[k]+'</option>'}).join('')+'</select></div>';
-  if(t==='fedelta') h+='<div class="au-row" style="flex-wrap:wrap;gap:6px"><label>Stato</label><span style="flex:1">'+(p.on&&p.started_at?'🟢 In corso dal '+new Date(p.started_at).toLocaleString('it-IT',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):'⏸️ Non avviata: nessun punto viene contato')+'</span><button type="button" class="green btn-sm" data-pstart>'+(p.on&&p.started_at?'↺ Azzera e riparti da ora':'▶ Avvia prova')+'</button>'+(p.on?'<button type="button" class="btn-sm" data-pstop>⏹ Ferma</button>':'')+'</div>';
+  if(t==='fedelta') h+='<div class="au-row pm-state'+(p.on&&p.started_at?' on':'')+'" style="flex-wrap:wrap;gap:6px"><label>Stato</label><span style="flex:1">'+(p.on&&p.started_at?'🟢 In corso dal '+new Date(p.started_at).toLocaleString('it-IT',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):'⏸️ Non avviata: nessun punto viene contato')+'</span><button type="button" class="green btn-sm" data-pstart>'+(p.on&&p.started_at?'↺ Azzera e riparti da ora':'▶ Avvia prova')+'</button>'+(p.on?'<button type="button" class="btn-sm" data-pstop>⏹ Ferma</button>':'')+'</div>';
   else h+='<div class="au-row"><label>Attiva</label><input type="checkbox" class="au-sw" data-f="on"'+(p.on?' checked':'')+'></div>';
-  h+='<div class="au-row"><label>Dal</label><input type="date" data-f="from" value="'+p.from+'"></div>'
+  h+='<div class="pm-h">📅 Quando vale</div><div class="pm-2"><div class="au-row"><label>Dal</label><input type="date" data-f="from" value="'+p.from+'"></div>'
   +'<div class="au-row"><label>Al (incluso)</label><input type="date" data-f="to" value="'+p.to+'"></div>'
-  +'<div class="au-row"><label>Giorni (vuoto = tutti)</label><span>'+[1,2,3,4,5,6,7].map(function(d){return '<label style="margin-right:6px"><input type="checkbox" data-day="'+d+'"'+(p.days.indexOf(d)>=0?' checked':'')+'> '+DN[d]+'</label>'}).join('')+'</span></div>'
-  +'<div class="au-row"><label>Dalle ore</label><input type="time" data-f="from_time" value="'+p.from_time+'"></div>'
+  +'</div><div class="au-row pm-chips pm-days"><label>Giorni (vuoto = tutti)</label><span>'+[1,2,3,4,5,6,7].map(function(d){return '<label style="margin-right:6px"><input type="checkbox" data-day="'+d+'"'+(p.days.indexOf(d)>=0?' checked':'')+'> '+DN[d]+'</label>'}).join('')+'</span></div>'
+  +'<div class="pm-2"><div class="au-row"><label>Dalle ore</label><input type="time" data-f="from_time" value="'+p.from_time+'"></div>'
   +'<div class="au-row"><label>Alle ore</label><input type="time" data-f="to_time" value="'+p.to_time+'"></div>'
-  +'<div class="au-row"><label>Canali (vuoto = tutti)</label><span>'+[['asporto','Ritiro'],['consegna','Consegna'],['tavolo','Tavolo'],['online','Online']].map(function(c){return '<label style="margin-right:6px"><input type="checkbox" data-ch="'+c[0]+'"'+(p.channels.indexOf(c[0])>=0?' checked':'')+'> '+c[1]+'</label>'}).join('')+'</span></div>';
+  +'</div><div class="au-row pm-chips pm-ch"><label>Canali (vuoto = tutti)</label><span>'+[['asporto','Ritiro'],['consegna','Consegna'],['tavolo','Tavolo'],['online','Online']].map(function(c){return '<label style="margin-right:6px"><input type="checkbox" data-ch="'+c[0]+'"'+(p.channels.indexOf(c[0])>=0?' checked':'')+'> '+c[1]+'</label>'}).join('')+'</span></div>';
+  h+='<div class="pm-h">'+(t==='fedelta'?'🍕 Fette e premi':'🎯 Regole dell’offerta')+'</div>';
   if(t==='fedelta') h+=numRow('€ di pizza per 1 fetta','eur',p.eur)
    +numRow('Fette per 1 premio','pts',p.pts,'1')
    +'<div class="au-row"><label>Premi a scelta (separati da virgola)</label><input type="text" data-f="gifts" value="'+esc(p.gifts.join(', '))+'" style="width:100%"></div>'
@@ -23930,10 +23931,12 @@ var TL={fedelta:'🍕 Fedeltà',sconto:'🏷️ Sconto',prezzo:'💶 Prezzo spec
    +'<div class="au-row"><label>Ripeti ogni soglia (max 5)</label><input type="checkbox" class="au-sw" data-f="repeat"'+(p.repeat?' checked':'')+'></div>'
    +'<div class="au-row"><label>Regali a scelta (separati da virgola)</label><input type="text" data-f="gifts" value="'+esc(p.gifts.join(', '))+'" style="width:100%"></div>'
    +'<p class="au-note">Trovati nel menu: '+(esc(giftsOf(p).map(function(m){return m.name}).join(' / '))||'⚠️ nessuno')+'</p>';
-  h+='<div class="au-row"><label>Cumulabile con altre promo</label><input type="checkbox" class="au-sw" data-f="stackable"'+(p.stackable?' checked':'')+'></div>'
+  h+='<div class="pm-h">⚙️ Combinazione</div><div class="au-row"><label>Cumulabile con altre promo</label><input type="checkbox" class="au-sw" data-f="stackable"'+(p.stackable?' checked':'')+'></div>'
   +numRow('Priorità (più alto = prima)','priority',p.priority,'1')+'</div>'; }
- h+='<button type="button" class="secondary" data-px style="width:100%;margin-top:10px;padding:12px">Salva e chiudi</button></div>';
+ h+='<div class="pm-foot"><button type="button" class="secondary" data-px style="width:100%;margin-top:10px;padding:12px">💾 Salva e chiudi</button></div></div>';
+ var _ob=ov.querySelector('.au-box'), _sc=_ob?_ob.scrollTop:0;
  ov.innerHTML=h;
+ if(_sc) ov.querySelector('.au-box').scrollTop=_sc;
  function redo(){ push(); panel(); }
  ov.querySelectorAll('[data-pe]').forEach(function(b){ b.onclick=function(){ EDIT=+b.dataset.pe; panel(); }; });
  ov.querySelectorAll('[data-pc]').forEach(function(b){ b.onclick=function(){ var c=norm(Object.assign({},L[+b.dataset.pc],{id:'p'+Date.now(),name:L[+b.dataset.pc].name+' (copia)',on:false,started_at:''})); L.push(c); EDIT=L.length-1; redo(); }; });
@@ -41610,11 +41613,14 @@ function groupsHtml(list, now){
 }
 function legendHtml(){
   function s(c, t){ return '<span><i style="--k:' + c + '"></i>' + t + '</span>'; }
-  return '<div class="pz-leg"><b>🎨 COLORI</b>' +
+  var open = ls('bp_pz_leg') === '1';
+  var h = '<button type="button" class="pz-legh" data-a="lg" aria-expanded="' + open + '"><span>🎨 Guida ai colori dello chef</span><span class="dots"><i style="--k:#ef4444"></i><i style="--k:#f59e0b"></i><i style="--k:#3b82f6"></i><i style="--k:#8b5cf6"></i><i style="--k:#22c55e"></i></span><em>' + (open ? '▾' : '▸') + '</em></button>';
+  if(!open) return '<div class="pz-legw">' + h + '</div>';
+  return '<div class="pz-legw">' + h + '<div class="pz-leg">' +
     '<div class="pz-lg">' + s('#ef4444', 'Rosso: inizia ora / in ritardo') + s('#f59e0b', 'Giallo: tra poco (≤10′)') + s('#3b82f6', 'Blu: più tardi') + s('#8b5cf6', 'Viola: attende la cucina') + s('#22c55e', 'Verde: fatto / pronto') + '</div>' + '<div class="pz-lg">' + s('#22c55e', 'Fascia forno: libera') + s('#f59e0b', 'Fascia forno: ≥60% piena') + s('#ef4444', 'Fascia forno: piena / oltre') + '</div>' +
     '<div class="pz-lg">' + s('#fb923c', '🛍️ Ritiro') + s('#22d3ee', '🛵 Domicilio') + s('#2dd4bf', '🍽️ Tavolo') + s('#f472b6', '📲 Piattaforma') + '</div>' +
     '<div class="pz-lg"><span style="color:#fca5a5">🚫 SENZA</span><span style="color:#86efac">➕ EXTRA</span><span style="color:#fde68a">📝 NOTA</span><span><i style="--k:#7c3aed"></i>MAXI</span><span><i style="--k:#0e7490"></i>BABY</span></div>' +
-    '<div class="pz-foot">Il colore del numero #ordine è solo per riconoscere lo stesso ordine fra le pizze.</div></div>';
+    '<div class="pz-foot">Il colore del numero #ordine è solo per riconoscere lo stesso ordine fra le pizze.</div></div></div>';
 }
 
 /* ---------- guida forno: fasce da 15' (solo informativa, non cambia nessun orario) ---------- */
@@ -41661,12 +41667,12 @@ function buildHtml(){
     (ready ? '<div class="pz-chip2 ok">✅ Pronti ' + ready + '</div>' : '') +
     (late ? '<div class="pz-chip2 late">🚨 ' + late + ' in ritardo</div>' : '') +
     nextChip(now, cap) + '<div class="pz-sp"></div><button type="button" class="pz-x" data-a="x">✕</button></div>' +
-    '<div class="pz-seg"><button type="button" class="' + (view === 'piz' ? 'on' : '') + '" data-a="v" data-v="piz">🍕 Per pizza</button><button type="button" class="' + (view === 'ord' ? 'on' : '') + '" data-a="v" data-v="ord">📋 Per ordine</button></div>';
+    '<div class="pz-seg"><button type="button" class="' + (view === 'piz' ? 'on' : '') + '" data-a="v" data-v="piz">🍕 Per pizza</button><button type="button" class="' + (view === 'ord' ? 'on' : '') + '" data-a="v" data-v="ord">📋 Per ordine</button><button type="button" class="pz-set' + (ls('bp_pz_set') === '1' ? ' on' : '') + '" data-a="set" aria-label="Impostazioni schermo" aria-expanded="' + (ls('bp_pz_set') === '1') + '">⚙️</button></div>';
   var tools = '<button type="button" class="pz-btn" data-a="cap" title="Capacità forno">🔥 Forno ' + forno + '/' + cap + '</button>' +
-    (roleNow() === 'manager' ? '<button type="button" class="pz-btn" data-a="enf" title="Collega pizzaiolo e cucina">🔗 ' + (enforceOn() ? 'ON' : 'OFF') + '</button>' : '') +
-    '<button type="button" class="pz-btn" data-a="m">A−</button><button type="button" class="pz-btn" data-a="p">A+</button>' +
-    '<button type="button" class="pz-btn" data-a="fs">⛶</button>' +
-    '<button type="button" class="pz-btn" data-a="out" title="Cambia utente">🔄</button>';
+    (roleNow() === 'manager' ? '<button type="button" class="pz-btn" data-a="enf" title="Collega pizzaiolo e cucina">🔗 ' + (enforceOn() ? 'Cucina ON' : 'Cucina OFF') + '</button>' : '') +
+    '<button type="button" class="pz-btn" data-a="m">A− Testo</button><button type="button" class="pz-btn" data-a="p">A+ Testo</button>' +
+    '<button type="button" class="pz-btn" data-a="fs">⛶ Schermo intero</button>' +
+    '<button type="button" class="pz-btn" data-a="out" title="Cambia utente">🔄 Cambia utente</button>';
   var warn = colMissing ? '<div class="pz-warn">⚠️ Colonne pz_done / k_done mancanti: esegui pizzaiolo.sql in Supabase. Per ora i segni valgono solo su questo dispositivo e il collegamento con la cucina non è condiviso.</div>' : '';
   var oven = '<div class="pz-oven ' + fcls + '"><span>🔥 Forno</span><div class="bar"><i style="width:' + Math.min(100, Math.round(forno * 100 / Math.max(cap, 1))) + '%"></i></div><b>' + forno + '/' + cap + '</b><small>prossimi ' + BAKE_WINDOW_MIN + '′</small></div>';
   var work = list.filter(function(x){ return urg(x, now) !== 'done'; }), done = list.filter(function(x){ return urg(x, now) === 'done'; });
@@ -41690,7 +41696,7 @@ function paint(){
   if(!pz) return;
   var m; try{ m = buildHtml(); }catch(e){ console.warn('[pz] render', e); return; }
   var sc = pz.scrollTop;
-  $('.pz-head', pz).innerHTML = m.head; $('.pz-tools', pz).innerHTML = m.tools; $('.pz-wn', pz).innerHTML = m.warn;
+  $('.pz-head', pz).innerHTML = m.head; $('.pz-tools', pz).innerHTML = m.tools; $('.pz-tools', pz).classList.toggle('open', ls('bp_pz_set') === '1'); $('.pz-wn', pz).innerHTML = m.warn;
   $('.pz-body', pz).innerHTML = m.body;
   pz.scrollTop = sc;
 }
@@ -41747,6 +41753,8 @@ function onClick(e){
   if(a === 'v'){ ls(K_VIEW, b.getAttribute('data-v')); paint(); return; }
   if(a === 'gd'){ ls('bp_pz_guide', ls('bp_pz_guide') === '0' ? '1' : '0'); paint(); return; }
   if(a === 'x'){ closePZ(); return; }
+  if(a === 'set'){ ls('bp_pz_set', ls('bp_pz_set') === '1' ? '0' : '1'); paint(); return; }
+  if(a === 'lg'){ ls('bp_pz_leg', ls('bp_pz_leg') === '1' ? '0' : '1'); paint(); return; }
   if(a === 'out'){ closePZ(); try{ doLogout(); }catch(x){} return; }
   if(a === 'fs'){ try{ if(document.fullscreenElement) document.exitFullscreen(); else pz.requestFullscreen(); }catch(x){} return; }
   if(a === 'm' || a === 'p'){ var f = Math.max(.8, Math.min(1.8, (parseFloat(ls(K_FS)) || 1) + (a === 'p' ? .1 : -.1))); ls(K_FS, f.toFixed(1)); pz.style.setProperty('--pzf', f.toFixed(1)); return; }
@@ -45178,5 +45186,129 @@ setInterval(mount,1500);
 })()}catch(e){console.error('[bp] track cfg',e)}
 </script>
 <!-- BP-TRACKCFG:END -->
+<!-- BP-LAYOUT-V2:START -->
+<style id="bpLayoutV2">
+/* ===== Pizzaiolo ===== */
+#bpPZ .pz-seg .pz-set{flex:0 0 3.1em;background:#1f2937;color:#fff;font-size:1.1em;padding:.3em}
+#bpPZ .pz-seg button.pz-set.on{background:#2563eb;color:#fff}
+#bpPZ .pz-tools{display:none}
+#bpPZ .pz-tools.open{display:grid;grid-template-columns:repeat(auto-fit,minmax(9em,1fr));gap:.45em;margin:.6em .8em 0;padding:.6em;background:#111827;border:1px solid #26324a;border-radius:.9em}
+#bpPZ .pz-tools .pz-btn{min-height:3em}
+#bpPZ .pz-legw{background:#0f1626;border:1px solid #1f2a44;border-radius:.9em;overflow:hidden}
+#bpPZ .pz-legh{display:flex;align-items:center;gap:.5em;width:100%;min-height:3em;padding:.45em .8em;border:0;background:transparent;font-weight:900;text-align:start}
+#bpPZ .pz-legh>span:first-child{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:.92em}
+#bpPZ .pz-legh .dots{display:flex;gap:.25em}
+#bpPZ .pz-legh .dots i{width:.7em;height:.7em;border-radius:50%;background:var(--k)}
+#bpPZ .pz-legh em{font-style:normal;color:#9aa6c0}
+#bpPZ .pz-legw .pz-leg{border:0;border-top:1px solid #1f2a44;border-radius:0}
+
+/* ===== Cucina (pagina) ===== */
+#kitchenTab:not(.hidden){display:flex;flex-wrap:wrap;align-items:center;column-gap:10px;align-content:flex-start}
+#kitchenTab>*{flex:1 1 100%;min-width:0}
+html body #kitchenTab .topline{display:flex!important;flex-wrap:nowrap!important;align-items:stretch!important;gap:6px!important;margin:0 0 6px!important;padding:0!important;min-height:0!important}
+html body #kitchenTab .topline h1{flex:1 1 auto!important;min-width:0;display:flex!important;align-items:center;gap:5px;margin:0!important;font-size:18px!important;white-space:nowrap;overflow:hidden}
+html body #kitchenTab .topline h1 img{width:30px!important;height:30px!important;flex:none}
+html body #kitchenTab .topline>button{flex:0 0 62px!important;width:62px;height:52px;min-height:52px!important;margin:0!important;padding:3px 2px!important;display:flex!important;flex-direction:column;align-items:center;justify-content:center;gap:2px;border:0!important;border-radius:14px!important;color:#fff!important;font-weight:800!important;line-height:1!important;box-shadow:0 2px 6px rgba(16,24,40,.18)!important}
+html body #kitchenTab .topline>button .ki{font-style:normal;font-size:20px;height:24px;display:flex;align-items:center}
+html body #kitchenTab .topline>button .ki img{width:24px!important;height:24px!important;margin:0!important}
+html body #kitchenTab .topline>button .kl{font-size:10.5px;white-space:nowrap}
+html body #kitchenTab .topline>#bp35KdsBtn{background:#1d4ed8!important}
+html body #kitchenTab .topline>.pz-open{background:#6d28d9!important}
+html body #kitchenTab .topline>.ov-open2{background:#c2410c!important}
+html body #kitchenTab .topline>#bpKSet{background:#334155!important}
+html body #kitchenTab .topline>#bpKSet[aria-expanded="true"]{background:#0f172a!important;box-shadow:0 0 0 3px #f8c24a!important}
+html body #kitchenTab .bpf-bar{display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr));gap:5px!important;margin:0 0 8px!important;padding:0!important;background:none!important}
+html body #kitchenTab .bpf-bar .bpf-chip{display:grid!important;grid-template-columns:auto auto;grid-template-rows:auto auto;justify-content:center;align-content:center;justify-items:center;align-items:center;gap:1px 4px!important;width:100%;min-width:0;min-height:46px!important;height:auto;margin:0!important;padding:3px 2px!important;border-radius:13px!important;font-size:11.5px!important}
+html body #kitchenTab .bpf-bar .bpf-chip>span{grid-row:1;margin:0!important}
+html body #kitchenTab .bpf-bar .bpf-chip>span:not(.bpf-n):nth-last-child(2){grid-row:2;grid-column:1/-1;white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis}
+html body #kitchenTab .bpf-bar .bpf-chip[data-f="all"]>span:not(.bpf-n){grid-row:2}
+html body #kitchenTab .bpf-bar .bpf-hint{display:none!important}
+/* pannello impostazioni: zoom, schermo intero, microfono, versione */
+html body #kitchenTab:not(.bp-kset) #kitchenChips,html body #kitchenTab:not(.bp-kset) #bpKzBar,html body #kitchenTab:not(.bp-kset) #bpKSetHint{display:none!important}
+html body #kitchenTab.bp-kset #kitchenChips{margin:0 0 6px!important}
+html body #kitchenTab.bp-kset #bpKzBar{margin:0 0 8px!important}
+#bpKSetHint{font-size:12px;font-weight:700;opacity:.75;margin:0 0 8px}
+html body #kitchenTab #kitchenCols{margin-top:0!important}
+@media (max-width:379px){
+ html body #kitchenTab .topline{gap:4px!important}
+ html body #kitchenTab .topline>button{flex-basis:56px!important;width:56px}
+ html body #kitchenTab .topline h1{font-size:16px!important;gap:3px}
+ html body #kitchenTab .topline h1 img{width:22px!important;height:22px!important}
+ html body #kitchenTab .topline>button .kl{font-size:9.5px}
+}
+@media (min-width:700px){
+ html body #kitchenTab .topline>button{flex-basis:86px!important;width:86px}
+ html body #kitchenTab .topline h1{font-size:23px!important}
+}
+@media (min-width:1000px){
+ html body #kitchenTab .topline{flex:1 1 440px;order:-2;margin-bottom:8px!important}
+ html body #kitchenTab .bpf-bar{flex:1 1 400px;order:-1}
+}
+
+/* ===== Promo e offerte ===== */
+html body .au-box.bp-promo{max-width:760px;background:#fbf7ef!important;padding:14px 12px calc(12px + env(safe-area-inset-bottom))!important}
+html body .bp-promo>.au-note{margin:6px 0!important;padding:8px 11px;border-radius:12px;background:#fff;border:1px solid #eadfca;font-size:12.5px!important;line-height:1.45}
+html body .bp-promo .au-sec{background:#fff;border:1px solid #eadfca!important;border-radius:18px!important;padding:12px!important;box-shadow:0 3px 12px rgba(80,45,10,.07)}
+html body .bp-promo .au-row{margin:0;gap:10px}
+html body .bp-promo .au-row>label{min-width:0!important;margin:0!important;font-size:14px!important}
+html body .bp-promo input[type=text],html body .bp-promo input[type=number],html body .bp-promo input[type=date],html body .bp-promo input[type=time],html body .bp-promo select{min-height:46px!important;height:46px;margin:0!important;padding:0 11px!important;border-radius:13px!important;font-size:16px!important;box-sizing:border-box}
+html body .bp-promo .pm-item{flex-wrap:wrap;padding:10px!important;margin-bottom:8px;border:1.5px solid #eadfca;border-radius:14px;background:#fffdf8}
+html body .bp-promo .pm-item.sel{border-color:#16794b;box-shadow:0 0 0 3px rgba(22,121,75,.14)}
+html body .bp-promo .pm-item>span{flex:1 1 100%!important;line-height:1.4}
+html body .bp-promo .pm-item>button{flex:1 1 0;min-width:0!important;min-height:44px!important;margin:0!important;padding:3px!important;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;border:0!important;border-radius:11px!important;box-shadow:none!important}
+html body .bp-promo .pm-item>button i{font-style:normal;font-size:15px;line-height:1.1}
+html body .bp-promo .pm-item>button span{font-size:10.5px;font-weight:800}
+html body .bp-promo .pm-item>.pm-e{background:#175cd3!important;color:#fff!important}
+html body .bp-promo .pm-item>.pm-c,html body .bp-promo .pm-item>.pm-u{background:#eef0f4!important;color:#1d2939!important}
+html body .bp-promo .pm-item>.pm-d{background:#fee4e2!important;color:#b42318!important}
+html body .bp-promo .pm-new>select{flex:1 1 0;min-width:0;width:auto!important;max-width:none!important}
+html body .bp-promo .pm-h{margin:14px -4px 6px;padding:7px 11px;border-radius:11px;background:#f6ead6;color:#6b3410;font-weight:900;font-size:13.5px}
+html body .bp-promo .pm-edit>.au-row{padding:6px 0;border-bottom:1px dashed #eee3d0}
+html body .bp-promo .pm-edit>.au-row>input[type=text],html body .bp-promo .pm-edit>.au-row>select{flex:0 1 62%;width:62%!important;max-width:62%!important}
+html body .bp-promo .pm-edit>.au-row>input[type=number]{width:96px!important;text-align:center}
+html body .bp-promo .pm-edit>.au-row:has(>input[data-f=gifts]),html body .bp-promo .pm-edit>.au-row:has(>input[data-f=names]),html body .bp-promo .pm-edit>.au-row:has(>input[data-f=cats]){flex-direction:column;align-items:stretch;border-bottom:0}
+html body .bp-promo .pm-edit>.au-row>input[data-f=gifts],html body .bp-promo .pm-edit>.au-row>input[data-f=names],html body .bp-promo .pm-edit>.au-row>input[data-f=cats]{flex:none;width:100%!important;max-width:100%!important}
+html body .bp-promo .pm-state{padding:10px!important;margin:6px 0;border:1.5px solid #fedf89!important;border-radius:14px;background:#fffaeb}
+html body .bp-promo .pm-state.on{border-color:#a6f4c5!important;background:#ecfdf3}
+html body .bp-promo .pm-state>label{display:none}
+html body .bp-promo .pm-state>span{flex:1 1 100%!important;font-weight:800;font-size:14px}
+html body .bp-promo .pm-state>button{flex:1 1 0;min-height:46px;margin:0!important}
+html body .bp-promo .pm-2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;padding:6px 0}
+html body .bp-promo .pm-2>.au-row{flex-direction:column;align-items:stretch;gap:3px;padding:0}
+html body .bp-promo .pm-2>.au-row{min-width:0}
+html body .bp-promo .pm-2>.au-row>input{width:100%!important;max-width:100%!important;min-width:0!important;padding:0 7px!important}
+html body .bp-promo .pm-chips{flex-direction:column;align-items:stretch;gap:6px}
+html body .bp-promo .pm-chips>span{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+html body .bp-promo .pm-days>span{grid-template-columns:repeat(7,minmax(0,1fr));gap:4px}
+html body .bp-promo .pm-chips>span>label{position:relative;display:flex!important;align-items:center;justify-content:center;min-width:0!important;min-height:44px;margin:0!important;padding:0 2px!important;border:1.5px solid #e3d5bb;border-radius:12px;background:#fffdf8;font-size:12.5px!important;font-weight:800;cursor:pointer;white-space:nowrap}
+html body .bp-promo .pm-chips>span>label>input{position:absolute!important;inset:0;width:100%!important;height:100%!important;min-height:0!important;margin:0!important;opacity:0;cursor:pointer}
+html body .bp-promo .pm-chips>span>label:has(input:checked){background:#16794b;border-color:#16794b;color:#fff}
+html body .bp-promo .pm-chips>span>label:has(input:checked)::before{content:"✓";position:absolute;top:0;inset-inline-end:3px;font-size:9px}
+html body .bp-promo .pm-chips>span>label:has(input:focus-visible){outline:3px solid #175cd3}
+html body .bp-promo .pm-foot{position:sticky;bottom:calc(-12px - env(safe-area-inset-bottom));z-index:3;padding:2px 74px 10px 0;background:linear-gradient(transparent,#fbf7ef 28%)}
+html body .bp-promo .pm-foot>button{min-height:50px;background:#16794b!important;color:#fff!important;font-weight:900;border:0!important;border-radius:14px!important}
+@media (min-width:700px){html body .au-ov:has(>.bp-promo){align-items:center}html body .au-box.bp-promo{border-radius:20px!important}}
+</style>
+<script id="bpLayoutV2Js">
+try{(function(){
+ var open=false;
+ function tile(b,icon,label){ if(!b||b.querySelector('.kl')) return; var im=b.querySelector('img'); b.setAttribute('aria-label',b.textContent.trim()||label); b.title=b.getAttribute('aria-label');
+  var i=document.createElement('i'); i.className='ki'; if(im) i.appendChild(im); else i.textContent=icon; var s=document.createElement('span'); s.className='kl'; s.textContent=label; b.textContent=''; b.appendChild(i); b.appendChild(s); }
+ function apply(){ var t=document.getElementById('kitchenTab'),b=document.getElementById('bpKSet'); if(t) t.classList.toggle('bp-kset',open); if(b) b.setAttribute('aria-expanded',String(open)); }
+ function ensure(){
+  var t=document.getElementById('kitchenTab'); if(!t) return; var tl=t.querySelector('.topline'); if(!tl) return;
+  tile(document.getElementById('bp35KdsBtn'),'📺','Schermo'); tile(tl.querySelector('.pz-open'),'👨‍🍳','Pizzaiolo'); tile(tl.querySelector('.ov-open2'),'🔥','Forno');
+  var b=document.getElementById('bpKSet');
+  if(!b){ b=document.createElement('button'); b.type='button'; b.id='bpKSet'; tile(b,'⚙️','Opzioni'); b.setAttribute('aria-label','Opzioni pagina: zoom, schermo intero, microfono');
+   b.onclick=function(){ open=!open; apply(); window.dispatchEvent(new Event('resize')); }; tl.appendChild(b); }
+  else if(tl.lastElementChild!==b) tl.appendChild(b);
+  var c=document.getElementById('kitchenCols');
+  if(c&&!document.getElementById('bpKSetHint')){ var h=document.createElement('div'); h.id='bpKSetHint'; h.textContent='⏰ Ordine sempre per orario di consegna/ritiro'; var k=document.getElementById('kitchenChips'); k.parentNode.insertBefore(h,k); }
+  apply();
+ }
+ setInterval(ensure,700); ensure();
+})();}catch(e){console.error('[bp] layout v2',e)}
+</script>
+<!-- BP-LAYOUT-V2:END -->
 </body>
 </html>
