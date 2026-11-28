@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- BUILD: voice-v2026-11-26-b12 (phase 3g: voice log auto-sync between devices, phase 3f: pause 2 pure-UI pollers when page hidden, phase 3e: voice log restore from Supabase, phase 3d: slow batch 2 x2 (bpSlow2), phase 3c: shared images (BP_IMG), phase 3b: slow 5 cosmetic timers x3 (BP_TIMER_SLOW), phase 3a: timer switches, tests 30/30) -->
+<!-- BUILD: voice-v2026-11-28-wa3 (problema), voice-v2026-11-28-wa2 (calls: group, search, profile), voice-v2026-11-28-wa1 (wa composer + sync msg cfg), voice-v2026-11-26-b12 (phase 3g: voice log auto-sync between devices, phase 3f: pause 2 pure-UI pollers when page hidden, phase 3e: voice log restore from Supabase, phase 3d: slow batch 2 x2 (bpSlow2), phase 3c: shared images (BP_IMG), phase 3b: slow 5 cosmetic timers x3 (BP_TIMER_SLOW), phase 3a: timer switches, tests 30/30) -->
 <script>window.BP_BUILD="voice-v2026-11-26-b13";try{document.title=(document.title||"").replace(/\s*·\s*b\d+$/,"")+" · b12";}catch(e){}</script>
 <html lang="it">
  <head>
@@ -22993,7 +22993,8 @@ setInterval(function(){if(document.hidden)return;var a=el('app');if(a&&a.classLi
  Modalità "1 tocco": WhatsApp si apre con il messaggio pronto, la cassa preme Invia. */
 try{(function(){
 var KEY='auto_settings', LS='bp_auto_cfg', SENT='bp_review_sent';
-var DEF={online:{on:false,promo:false,fee:0,min:0,open:'11:00',close:'23:00'},base:'https://buonapizzapizzeria-source.github.io/pos/',wa:{on:false,states:{'In preparazione':false,'Pronto':true,'In consegna':true}},review:{on:false,delay:30}};
+var MSGDEF={order:true,items:false,total:true,time:true,status:false,link:false,offers:false,offerText:'🎁 Con la carta fedeltà, ogni 5 pizze la Margherita è in regalo!',presets:[{k:'arrivo',on:true,label:'🛵 In arrivo',text:'Il tuo ordine è in arrivo 🛵'},{k:'ritardo',on:true,label:'⏳ Ritardo',text:'Ci scusiamo per il ritardo 🙏 Arriviamo tra {min} minuti.'},{k:'dimenticato',on:true,label:'➕ Dimenticato',text:'Abbiamo dimenticato qualcosa, te lo portiamo subito!'},{k:'attendi',on:true,label:'📞 Attendi il rider',text:'Attendi la chiamata del nostro rider: ti chiama appena arriva alla consegna 📞'}]};
+var DEF={online:{on:false,promo:false,fee:0,min:0,open:'11:00',close:'23:00'},base:'https://buonapizzapizzeria-source.github.io/pos/',wa:{on:false,states:{'In preparazione':false,'Pronto':true,'In consegna':true}},review:{on:false,delay:30},msg:JSON.parse(JSON.stringify(MSGDEF))};
 var CFG=JSON.parse(JSON.stringify(DEF)), shared=false, inited=false;
 function $q(s,r){return (r||document).querySelector(s)}
 function merge(c){
@@ -23003,6 +23004,9 @@ function merge(c){
  if(/^\d\d:\d\d$/.test(q.open||'')) o.online.open=q.open; if(/^\d\d:\d\d$/.test(q.close||'')) o.online.close=q.close;}
  if(c.wa){o.wa.on=!!c.wa.on; if(c.wa.states) Object.keys(o.wa.states).forEach(function(k){ if(k in c.wa.states) o.wa.states[k]=!!c.wa.states[k]; });}
  if(c.review){o.review.on=!!c.review.on; var d=Number(c.review.delay); if(d>=5&&d<=600) o.review.delay=d;}
+ if(c.msg&&typeof c.msg==='object'){var m=c.msg,om=o.msg;['order','items','total','time','status','link','offers'].forEach(function(k){if(k in m)om[k]=!!m[k]});
+  if(typeof m.offerText==='string') om.offerText=m.offerText.slice(0,300);
+  if(Array.isArray(m.presets)){ om.presets=m.presets.slice(0,8).map(function(p,i){p=p||{};var df=MSGDEF.presets[i]||{};return {k:String(p.k||df.k||('p'+i)).slice(0,20),on:!!p.on,label:String(p.label||df.label||'💬').slice(0,24),text:String(p.text||'').slice(0,300)}}).filter(function(p){return p.text}) }}
  return o;
 }
 try{CFG=merge(JSON.parse(localStorage.getItem(LS)||'null'))}catch(e){}
@@ -23010,18 +23014,63 @@ applyBase();
 function cleanBase(v){return String(v||'').replace(/\s+/g,'').split(/[?#]/)[0].replace(/[^\/]*\.html?$/i,'')}
 function applyBase(){window.__bpPublicBase=CFG.base||''}
 function saveLocal(){applyBase();try{localStorage.setItem(LS,JSON.stringify(CFG))}catch(e){}}
-async function pull(){
- try{ var r=await sb.from('bp36_data').select('data').eq('key',KEY).maybeSingle();
- if(r&&!r.error){ shared=true; if(r.data&&r.data.data&&r.data.data.cfg){CFG=merge(r.data.data.cfg);saveLocal();} }
- else shared=false; }catch(e){shared=false}
- paintPanel();
+var BASE='', KV={}, started=false;
+function flat(x,p,out){ if(x&&typeof x==='object'&&!Array.isArray(x)){Object.keys(x).forEach(function(k){flat(x[k],p?p+'.'+k:k,out)})}else out[p]=JSON.stringify(x); return out }
+function setPath(obj,path,val){var a=path.split('.'),t=obj;for(var i=0;i<a.length-1;i++){t=t[a[i]]=(t[a[i]]&&typeof t[a[i]]==='object')?t[a[i]]:{}}t[a[a.length-1]]=val}
+async function fetchRemote(){
+ var r=await sb.from('bp36_data').select('data').eq('key',KEY).maybeSingle();
+ if(r&&!r.error){ var raw=(r.data&&r.data.data)||{}; return {ok:true,raw:raw,cfg:raw.cfg?merge(raw.cfg):null} }
+ return {ok:false}
+}
+async function pull(silent){
+ var changed=false;
+ try{ var R=await fetchRemote();
+  if(R.ok){ shared=true; KV=R.raw||{};
+   if(R.cfg){ var s=JSON.stringify(R.cfg); if(s!==JSON.stringify(CFG)){CFG=R.cfg;saveLocal();changed=true} BASE=s }
+   else if(!BASE){BASE=JSON.stringify(CFG)} }
+  else shared=false;
+ }catch(e){shared=false}
+ if(!silent||changed){
+  var ae=document.activeElement;
+  if(silent&&ov&&ae&&ov.contains(ae)&&/INPUT|SELECT|TEXTAREA/.test(ae.tagName)) return;
+  paintPanel();
+ }
 }
 async function push(){
  saveLocal();
- try{ var r=await sb.from('bp36_data').upsert({key:KEY,data:{cfg:CFG},updated_at:new Date().toISOString()});
- shared=!(r&&r.error); }catch(e){shared=false}
+ try{
+  var R=await fetchRemote(), d={};
+  if(R.ok){
+   d=Object.assign({},R.raw);
+   if(R.cfg){
+    var b=BASE?JSON.parse(BASE):JSON.parse(JSON.stringify(DEF)), fb=flat(b,'',{}), fl=flat(CFG,'',{}), merged=JSON.parse(JSON.stringify(R.cfg));
+    Object.keys(fl).forEach(function(p){ if(fl[p]!==fb[p]) setPath(merged,p,JSON.parse(fl[p])) });
+    CFG=merge(merged); saveLocal();
+   }
+  }
+  d.cfg=CFG;
+  var w=await sb.from('bp36_data').upsert({key:KEY,data:d,updated_at:new Date().toISOString()});
+  shared=!(w&&w.error); if(shared){BASE=JSON.stringify(CFG);KV=d}
+ }catch(e){shared=false}
  paintPanel();
 }
+async function kvSet(field,fn){
+ try{
+  var R=await fetchRemote(); if(!R.ok) return false;
+  var d=Object.assign({},R.raw); d[field]=fn(d[field]); if(!d.cfg) d.cfg=CFG;
+  var w=await sb.from('bp36_data').upsert({key:KEY,data:d,updated_at:new Date().toISOString()});
+  if(w&&w.error) return false; KV=d; return true;
+ }catch(e){return false}
+}
+function startSync(){
+ if(started) return; var a=document.getElementById('app'); if(typeof sb==='undefined'||!sb||!a||a.classList.contains('hidden')) return;
+ started=true; pull(true);
+ try{ sb.channel('bp-auto-cfg').on('postgres_changes',{event:'*',schema:'public',table:'bp36_data'},function(p){ var k=(p&&p.new&&p.new.key)||(p&&p.old&&p.old.key); if(!k||k===KEY) pull(true) }).subscribe() }catch(e){}
+ setInterval(function(){ if(!document.hidden) pull(true) },45000);
+ document.addEventListener('visibilitychange',function(){ if(!document.hidden) pull(true) });
+ window.addEventListener('online',function(){ pull(true) });
+}
+setInterval(function(){ try{startSync()}catch(e){} },2000);
 function canSeeToasts(){return typeof BP_ROLE==='undefined'||BP_ROLE==='manager'||BP_ROLE==='cashier'}
 
 function promoLine(){
@@ -23036,7 +23085,7 @@ function sendMenuLink(phone,name){
  var n=String(name||'').split(' ')[0];
  window.open('https://wa.me/'+waPhone(phone)+'?text='+encodeURIComponent('Ciao'+(n?' '+n:'')+'! 🍕 Da Buona Pizza ora puoi ordinare online, comodo dal telefono: '+l),'_blank');
 }
-window.__bpAuto={cfg:function(){return CFG},promo:promoLine};
+window.__bpAuto={cfg:function(){return CFG},promo:promoLine,kv:function(){return KV},kvSet:kvSet,sync:function(){return pull(true)}};
 window.sendMenuLink=sendMenuLink;
 
 /* ---------- stile ---------- */
@@ -23061,6 +23110,14 @@ function onlineSec(){
  '<div style="display:flex;gap:12px;align-items:center;margin-top:10px;flex-wrap:wrap"><img src="'+qr+'" width="110" height="110" alt="QR menu" style="border-radius:8px;background:#fff"><div style="flex:1;min-width:150px"><div style="font-size:12.5px;word-break:break-all;font-weight:700">'+esc(link)+'</div><div style="display:flex;gap:6px;margin-top:8px"><button type="button" class="blue btn-sm" id="auCopy">🔗 Copia link</button><button type="button" class="secondary btn-sm" id="auPrint">🖨️ Stampa QR</button></div></div></div>')+
  '<p class="au-note">Il cliente vede il menu, ordina e paga alla consegna. Gli ordini arrivano qui “da confermare” con ✅ Accetta / ❌ Rifiuta. Richiede 03_online_orders.sql.</p></div>';
 }
+function msgSec(){
+ var M=CFG.msg, rows=[['order','🔢 Numero ordine'],['items','🍕 Elenco prodotti'],['time','⏰ Orario consegna / ritiro'],['total','💶 Totale'],['status','📌 Stato dell’ordine'],['link','🌐 Link “Ordina online”'+(CFG.online.on?'':' (ordini online spenti)')],['offers','🎁 Offerte / fedeltà']];
+ return '<div class="au-sec"><div class="au-row"><b>💬 Messaggio WhatsApp al cliente</b></div><p class="au-note">Scegli cosa è <b>acceso di default</b> nel messaggio. Prima di inviare, dalla schermata del messaggio si può cambiare caso per caso. Vale per tutti i dispositivi.</p>'+
+ rows.map(function(r){return '<div class="au-row"><label for="auM_'+r[0]+'">'+r[1]+'</label>'+sw('auM_'+r[0],M[r[0]])+'</div>'}).join('')+
+ '<div class="au-row"><label for="auMOffer">Testo offerta</label></div><textarea id="auMOffer" rows="2" style="width:100%">'+esc(M.offerText)+'</textarea>'+
+ '<div class="au-row" style="margin-top:8px"><b>Messaggi pronti</b></div><p class="au-note">Usa {min} dove vuoi i minuti (si scelgono nella schermata del messaggio).</p>'+
+ M.presets.map(function(p,i){return '<div class="au-row"><label for="auMP'+i+'">'+esc(p.label)+'</label>'+sw('auMP'+i,p.on)+'</div><input id="auMT'+i+'" type="text" maxlength="300" value="'+esc(p.text)+'" style="width:100%;margin-bottom:8px">'}).join('')+'</div>';
+}
 function paintPanel(){
  if(!ov) return;
  var s=CFG.wa.states;
@@ -23072,7 +23129,7 @@ function paintPanel(){
  ['In preparazione','Pronto','In consegna'].map(function(k,i){return '<div class="au-row"><label for="auS'+i+'">'+({'In preparazione':'👨‍🍳 In preparazione','Pronto':'✅ Pronto','In consegna':'🛵 In consegna'})[k]+'</label>'+sw('auS'+i,s[k])+'</div>'}).join('')+'</div></div>'+
  '<div class="au-sec"><div class="au-row"><label for="auRv">⭐ Richiesta recensione dopo la consegna</label>'+sw('auRv',CFG.review.on)+'</div>'+
  '<div class="au-row" style="'+(CFG.review.on?'':'opacity:.45;pointer-events:none')+'"><label for="auDl">Dopo quanti minuti</label><select id="auDl">'+[15,30,45,60,90,120].map(function(m){return '<option value="'+m+'"'+(CFG.review.delay===m?' selected':'')+'>'+m+' min</option>'}).join('')+'</select></div></div>'+
- onlineSec()+
+ onlineSec()+msgSec()+
  '<div class="au-sec"><div class="au-row"><label for="auBase">🌐 Cartella pubblica del sito (finisce con /pos/)</label></div><input id="auBase" type="url" placeholder="https://il-tuo-sito.netlify.app/" value="'+esc(CFG.base)+'" style="width:100%"><p class="au-note">Solo la cartella, senza order.html o track.html. Non usare localhost.</p></div>'+
  (shared?'<p class="au-note">✅ Salvato su Supabase: vale per tutti i dispositivi.</p>':'<div class="au-warn">⚠️ Salvato solo su questo dispositivo. Per condividerlo esegui <b>02_automation.sql</b> in Supabase.</div>')+
  '<button type="button" class="secondary" id="auClose" style="width:100%;margin-top:10px;padding:12px">Chiudi</button>';
@@ -23093,6 +23150,9 @@ function paintPanel(){
  ['In preparazione','Pronto','In consegna'].forEach(function(k,i){bind('auS'+i,function(e){CFG.wa.states[k]=e.checked})});
  bind('auRv',function(e){CFG.review.on=e.checked});
  bind('auDl',function(e){CFG.review.delay=Number(e.value)});
+ ['order','items','time','total','status','link','offers'].forEach(function(k){bind('auM_'+k,function(e){CFG.msg[k]=e.checked})});
+ bind('auMOffer',function(e){CFG.msg.offerText=String(e.value||'').slice(0,300)});
+ CFG.msg.presets.forEach(function(p,i){bind('auMP'+i,function(e){p.on=e.checked});bind('auMT'+i,function(e){if(String(e.value).trim())p.text=String(e.value).trim().slice(0,300)})});
  $q('#auClose',b).onclick=function(){ov.remove();ov=null};
 }
 function openPanel(){
@@ -45327,5 +45387,485 @@ try{(function(){
 })();}catch(e){console.error('[bp] layout v2',e)}
 </script>
 <!-- BP-LAYOUT-V2:END -->
+<!-- BP-WACOMPOSER:START -->
+<style id="bpWcCss">
+#bpWc{position:fixed;inset:0;z-index:2147483300;display:flex;align-items:flex-end;justify-content:center;background:rgba(20,10,3,.6);font-family:inherit}
+#bpWc .bpwc-box{width:min(100%,560px);max-height:92vh;display:flex;flex-direction:column;background:#fffaf3;color:#1d1209;border-radius:22px 22px 0 0;overflow:hidden}
+@media(min-width:700px){#bpWc{align-items:center}#bpWc .bpwc-box{border-radius:22px}}
+#bpWc .bpwc-h{padding:12px 14px;background:#a8291f;color:#fff;display:flex;flex-direction:column;gap:2px}
+#bpWc .bpwc-h b{font-size:18px}#bpWc .bpwc-h small{opacity:.85}
+#bpWc .bpwc-body{padding:10px 14px;overflow-y:auto;display:flex;flex-direction:column;gap:6px}
+#bpWc .bpwc-lbl{font-size:12px;font-weight:900;color:#7a5a2c;margin-top:4px}
+#bpWc .bpwc-row{display:flex;flex-wrap:wrap;gap:6px}
+#bpWc .bpwc-chip{min-height:42px;padding:0 12px;border-radius:999px;border:1.5px solid #e2cfa8;background:#fff;color:#1d1209;font-weight:800;font-size:14px}
+#bpWc .bpwc-chip.on{background:#16794b;border-color:#16794b;color:#fff}
+#bpWc .bpwc-chip.dis{opacity:.4}
+#bpWc textarea{width:100%;border:1.5px solid #e2cfa8;border-radius:12px;padding:8px;font:inherit;font-size:15px;background:#fff;color:#1d1209;box-sizing:border-box}
+#bpWc .bpwc-min{width:70px;min-height:40px;border:1.5px solid #e2cfa8;border-radius:10px;padding:4px 8px;font-size:16px;font-weight:800}
+#bpWc .bpwc-mute{font-size:12.5px;color:#7a5a2c}
+#bpWc .bpwc-f{display:flex;gap:8px;padding:10px 14px calc(10px + env(safe-area-inset-bottom,0px));border-top:1px solid #ead9bf}
+#bpWc .bpwc-f button{min-height:50px;border-radius:14px;border:0;font-weight:900;font-size:16px}
+#bpWc .bpwc-f .go{flex:2;background:#16a34a;color:#fff}#bpWc .bpwc-f .x{flex:1;background:#eee;color:#222}
+#callsTab .bpwc-ord{margin-top:4px;font-size:12.5px;font-weight:800;color:#175cd3;cursor:pointer}
+#callsTab .bpwc-ord.late{color:#b42318}
+#callsTab .bpwc-it{font-weight:600;color:#333;margin-top:2px}
+#callsTab .bpwc-tag{margin-top:4px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:12.5px;font-weight:900}
+#callsTab .bpwc-tag .ok{color:#16794b}#callsTab .bpwc-tag .todo{color:#b42318}
+#callsTab .bpwc-cb{min-height:34px;padding:0 10px;border-radius:999px;border:1.5px solid #16794b;background:#fff;color:#16794b;font-weight:900;font-size:12.5px}
+#callsTab .cl-row.bpwc-todo{box-shadow:0 0 0 2px #f04438 inset}
+#callsTab .bpwc-sw{margin:6px 0}
+#callsTab .bpwc-sw input{width:100%;min-height:44px;border-radius:12px;border:1.5px solid #d0d5dd;padding:0 12px;font-size:16px;box-sizing:border-box}
+#callsTab .bpwc-x{margin-top:4px;min-height:32px;padding:0 10px;border-radius:999px;border:1.5px solid #175cd3;background:#fff;color:#175cd3;font-weight:900;font-size:12.5px}
+#callsTab .cl-row.bpwc-sub{margin-inline-start:18px;opacity:.85}
+#callsTab .cl-main b{cursor:pointer;text-decoration:underline dotted}
+#bpWp{position:fixed;inset:0;z-index:2147483300;display:flex;align-items:flex-end;justify-content:center;background:rgba(20,10,3,.6);font-family:inherit}
+#bpWp .bpwc-box{width:min(100%,560px);max-height:92vh;display:flex;flex-direction:column;background:#fffaf3;color:#1d1209;border-radius:22px 22px 0 0;overflow:hidden}
+@media(min-width:700px){#bpWp{align-items:center}#bpWp .bpwc-box{border-radius:22px}}
+#bpWp .bpwc-h{padding:12px 14px;background:#a8291f;color:#fff;display:flex;flex-direction:column;gap:2px}#bpWp .bpwc-h b{font-size:18px}#bpWp .bpwc-h small{opacity:.85}
+#bpWp .bpwc-body{padding:10px 14px;overflow-y:auto;display:flex;flex-direction:column;gap:6px}
+#bpWp .bpwc-lbl{font-size:12px;font-weight:900;color:#7a5a2c;margin-top:4px}#bpWp .bpwc-mute{font-size:12.5px;color:#7a5a2c}
+#bpWp .bpwp-r{font-size:15px}#bpWp .bpwp-it{font-size:14.5px;font-weight:700}
+#bpWp .bpwc-f{display:flex;gap:8px;padding:10px 14px calc(10px + env(safe-area-inset-bottom,0px));border-top:1px solid #ead9bf}
+#bpWp .bpwc-f>*{min-height:50px;border-radius:14px;border:0;font-weight:900;font-size:17px;display:flex;align-items:center;justify-content:center;text-decoration:none;flex:1}
+#bpWp .bpwc-f .go{background:#16a34a;color:#fff}#bpWp .bpwc-f .solito{flex:2.2;background:#6941c6;font-size:15px}#bpWp .bpwc-f .x{background:#eee;color:#222}
+.bpwc-mb{position:absolute;top:2px;right:6px;min-width:20px;height:20px;border-radius:10px;background:#d92d20;color:#fff;font-size:12px;font-weight:900;display:flex;align-items:center;justify-content:center;padding:0 5px}
+#bpWq{position:fixed;inset:0;z-index:2147483300;display:flex;align-items:flex-end;justify-content:center;background:rgba(20,10,3,.6);font-family:inherit}
+#bpWq .bpwc-box{width:min(100%,560px);max-height:92vh;display:flex;flex-direction:column;background:#fffaf3;color:#1d1209;border-radius:22px 22px 0 0;overflow:hidden}
+#bpWq .bpwc-h{padding:12px 14px;background:#a8291f;color:#fff;display:flex;flex-direction:column;gap:2px}
+#bpWq .bpwc-h b{font-size:18px}#bpWq .bpwc-h small{opacity:.85}
+#bpWq .bpwc-body{padding:10px 14px;overflow-y:auto;display:flex;flex-direction:column;gap:6px}
+#bpWq .bpwc-lbl{font-size:12px;font-weight:900;color:#7a5a2c;margin-top:4px}
+#bpWq .bpwc-row{display:flex;flex-wrap:wrap;gap:6px}
+#bpWq .bpwc-chip{min-height:42px;padding:0 12px;border-radius:999px;border:1.5px solid #e2cfa8;background:#fff;color:#1d1209;font-weight:800;font-size:14px}
+#bpWq .bpwc-chip.on{background:#16794b;border-color:#16794b;color:#fff}
+#bpWq .bpwc-chip.dis{opacity:.4}
+#bpWq textarea{width:100%;border:1.5px solid #e2cfa8;border-radius:12px;padding:8px;font:inherit;font-size:15px;background:#fff;color:#1d1209;box-sizing:border-box}
+#bpWq .bpwc-min{width:70px;min-height:40px;border:1.5px solid #e2cfa8;border-radius:10px;padding:4px 8px;font-size:16px;font-weight:800}
+#bpWq .bpwc-mute{font-size:12.5px;color:#7a5a2c}
+#bpWq .bpwc-f{display:flex;gap:8px;padding:10px 14px calc(10px + env(safe-area-inset-bottom,0px));border-top:1px solid #ead9bf}
+#bpWq .bpwc-f button{min-height:50px;border-radius:14px;border:0;font-weight:900;font-size:16px}
+#bpWq .bpwc-f .go{flex:2;background:#16a34a;color:#fff}#bpWq .bpwc-f .x{flex:1;background:#eee;color:#222}
+#callsTab .bpwc-pb{margin-inline-start:6px;min-height:30px;padding:0 10px;border-radius:999px;border:1.5px solid #b54708;background:#fff;color:#b54708;font-weight:900;font-size:12px}
+#callsTab .bpwc-pr{margin-top:4px;font-size:12.5px;font-weight:800;color:#b54708}
+#callsTab .bpwc-pr>div{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:3px}
+#callsTab .bpwc-pr button,#bpWp .bpwp-rs{min-height:32px;padding:0 10px;border-radius:999px;border:1.5px solid #16794b;background:#fff;color:#16794b;font-weight:900;font-size:12.5px}
+#bpWp .bpwp-pb{margin-top:8px;min-height:44px;border-radius:12px;border:1.5px solid #b54708;background:#fff;color:#b54708;font-weight:900;font-size:15px}
+</style>
+<script id="bpWcJs">
+try{(function(){
+ if(window.__bpWc) return; window.__bpWc=1;
+ var $=function(i){return document.getElementById(i)};
+ function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+ function key(p){try{return normalizePhoneKey(p)}catch(e){return String(p||'').replace(/\D+/g,'')}}
+ function A(){return window.__bpAuto||null}
+ function allowed(){try{return BP_ROLE==='manager'||BP_ROLE==='cashier'}catch(e){return false}}
+ function client(){try{return sb}catch(e){return null}}
+ function ordList(){try{return Array.isArray(orders)?orders:[]}catch(e){return[]}}
+ function fmt(n){return Number(n||0).toFixed(2).replace('.',',')+' €'}
+ var DEFMC={order:true,items:false,total:true,time:true,status:false,link:false,offers:false,offerText:'',presets:[]};
+ function MC(){var a=A();try{var m=a&&a.cfg().msg;if(m)return m}catch(e){}return DEFMC}
+ function onlineLink(){
+  var a=A(); try{ if(!a||!a.cfg().online.on) return ''; var l=trackingBase()+'order.html'; if(isPrivateUrl(l)) return ''; return l }catch(e){ return '' }
+ }
+ function ordersFor(phone){
+  var k=key(phone),out=[]; if(k.length<6) return out;
+  ordList().forEach(function(o){ if(key(o.phone)===k) out.push(o) });
+  out.sort(function(a,b){return new Date(b.created_at)-new Date(a.created_at)});
+  return out;
+ }
+ function sameDay(a,b){return a.toDateString()===b.toDateString()}
+ function todayOrder(phone){
+  var l=ordersFor(phone),n=new Date();
+  for(var i=0;i<l.length;i++){ var d=new Date(l[i].created_at); if(!isNaN(d)&&sameDay(d,n)) return l[i]; }
+  return null;
+ }
+ function timeOf(o){
+  try{
+   if(o.is_scheduled&&o.scheduled_at){var d=new Date(o.scheduled_at); if(!isNaN(d)) return d.toLocaleDateString('it-IT',{day:'2-digit',month:'2-digit'})+' '+d.toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'})}
+   var t=splitTimeAndNotes(o.notes).time; return t&&t!=='Prima possibile'?t:(t||'');
+  }catch(e){return ''}
+ }
+ function lateOf(o){
+  try{
+   var st=normStatus(o.status); if(st==='Completato'||st==='Annullato') return 0;
+   var created=new Date(o.created_at),tg=null;
+   if(o.is_scheduled&&o.scheduled_at){var sd=new Date(o.scheduled_at); if(!isNaN(sd)) tg=sd}
+   if(!tg){var m=/^(\d{1,2})[:.](\d{2})/.exec(splitTimeAndNotes(o.notes).time||''); if(!m) return 0; tg=new Date(created); tg.setHours(+m[1],+m[2],0,0); if(tg.getTime()<created.getTime()-6*3600e3) tg.setDate(tg.getDate()+1)}
+   var d=Math.round((Date.now()-tg.getTime())/60000); return d>0?d:0;
+  }catch(e){return 0}
+ }
+ async function itemsOf(o){
+  var c=client(); if(!c||!o) return [];
+  try{ var r=await c.from('order_items').select('*').eq('order_id',o.id); return (r&&r.data)||[] }catch(e){return []}
+ }
+ function itemLine(it){
+  var q=Number(it.quantity||1),nm=String(it.product_name||it.name||'').trim(),sz=it.size&&it.size!=='normale'?' ('+it.size+')':'';
+  return q+'× '+nm+sz;
+ }
+
+ /* ---------- testo del messaggio ---------- */
+ function build(S){
+  var n=String(S.name||'').trim().split(' ')[0]; if(n==='Cliente') n='';
+  var L=['Ciao'+(n?' '+n:'')+'! 🍕'],s=S.sel,M=MC(),o=S.o;
+  if(S.preset){ L.push(String(S.preset.text||'').replace(/\{min\}/g,String(S.mins||10))) }
+  if(o){
+   var info=[];
+   if(s.order) info.push('Ordine *#'+o.id+'*');
+   if(s.status) info.push('Stato: *'+normStatus(o.status)+'*');
+   if(s.time){ var t=timeOf(o); if(t) info.push('Orario: *'+t+'*') }
+   if(s.total) info.push('Totale: *'+fmt(o.total)+'*');
+   if(info.length) L.push(info.map(function(b){return '• '+b}).join('\n'));
+   if(s.items&&S.items&&S.items.length) L.push(S.items.map(function(it){return '• '+itemLine(it)}).join('\n'));
+  }
+  if(s.link){ var lk=onlineLink(); if(lk) L.push('🌐 Ordina online: '+lk) }
+  if(s.offers&&M.offerText) L.push(M.offerText);
+  L.push('Buona Pizza 🍕');
+  return L.join('\n\n');
+ }
+
+ /* ---------- schermata di scelta ---------- */
+ var sheet=null,S=null,dirty=false;
+ var CHIPS=[['order','🔢 N° ordine'],['items','🍕 Prodotti'],['time','⏰ Orario'],['total','💶 Totale'],['status','📌 Stato'],['link','🌐 Link online'],['offers','🎁 Offerte']];
+ function close(){ if(sheet){sheet.remove();sheet=null} S=null }
+ function chipsHtml(){
+  var hasO=!!S.o,lk=!!onlineLink(),M=MC();
+  return CHIPS.map(function(c){
+   var k=c[0],dis=(!hasO&&(k==='order'||k==='items'||k==='time'||k==='total'||k==='status'))||(k==='link'&&!lk)||(k==='offers'&&!M.offerText);
+   var lbl=c[1]+(k==='link'&&!lk?' (spento)':'');
+   return '<button type="button" class="bpwc-chip'+(S.sel[k]&&!dis?' on':'')+(dis?' dis':'')+'" data-k="'+k+'"'+(dis?' disabled':'')+'>'+lbl+'</button>';
+  }).join('');
+ }
+ function presetsHtml(){
+  var M=MC(),P=(M.presets||[]).filter(function(p){return p.on});
+  return P.map(function(p,i){return '<button type="button" class="bpwc-chip'+(S.preset&&S.preset.k===p.k?' on':'')+'" data-p="'+i+'">'+esc(p.label)+'</button>'}).join('')||'<span class="bpwc-mute">Nessun messaggio pronto attivo (⚙️ Automazioni)</span>';
+ }
+ function ordersHtml(){
+  if(S.list.length<2) return '';
+  return '<div class="bpwc-lbl">Ordine</div><div class="bpwc-row">'+S.list.slice(0,5).map(function(o,i){return '<button type="button" class="bpwc-chip'+(S.o&&S.o.id===o.id?' on':'')+'" data-o="'+i+'">#'+o.id+' · '+esc(normStatus(o.status))+'</button>'}).join('')+'</div>';
+ }
+ function paint(keepText){
+  if(!sheet) return;
+  sheet.querySelector('#bpwcO').innerHTML=ordersHtml();
+  sheet.querySelector('#bpwcC').innerHTML=chipsHtml();
+  sheet.querySelector('#bpwcP').innerHTML=presetsHtml();
+  var needMin=S.preset&&/\{min\}/.test(S.preset.text||'');
+  var mw=sheet.querySelector('#bpwcMW'); mw.style.display=needMin?'':'none';
+  var ta=sheet.querySelector('#bpwcT'); if(!(dirty&&keepText)) { ta.value=build(S); dirty=false }
+  sheet.querySelector('#bpwcNote').textContent=S.o?'':'Nessun ordine recente per questo numero: il messaggio parte senza dati d’ordine.';
+ }
+ async function loadItems(){
+  if(!S||!S.o||!S.sel.items||S.items) return;
+  var o=S.o,it=await itemsOf(o); if(!S||S.o!==o) return; S.items=it; paint(true);
+ }
+ function pick(o){ S.o=o; S.items=null; paint(); loadItems() }
+ function open(opts){
+  close();
+  var list=ordersFor(opts.phone),o=null;
+  if(opts.orderId!=null){ list.forEach(function(x){ if(String(x.id)===String(opts.orderId)) o=x }) }
+  if(!o) o=todayOrder(opts.phone)||null;
+  var M=MC(),nm=opts.name||(o&&o.customer_name)||'';
+  S={phone:opts.phone,name:nm,list:list,o:o,items:null,preset:null,mins:10,
+   sel:{order:!!M.order,items:!!M.items,total:!!M.total,time:!!M.time,status:!!M.status,link:!!M.link,offers:!!M.offers}};
+  if(opts.presetKey){ S.preset=(M.presets||[]).filter(function(p){return p.on&&p.k===opts.presetKey})[0]||null }
+  dirty=false;
+  sheet=document.createElement('div'); sheet.id='bpWc';
+  sheet.innerHTML='<div class="bpwc-box"><div class="bpwc-h"><b>💬 '+esc(nm||opts.phone)+'</b><small>'+esc(opts.phone)+'</small></div>'
+   +'<div class="bpwc-body"><div id="bpwcO"></div><div class="bpwc-lbl">Cosa scrivere nel messaggio</div><div class="bpwc-row" id="bpwcC"></div>'
+   +'<div class="bpwc-lbl">Messaggi pronti</div><div class="bpwc-row" id="bpwcP"></div>'
+   +'<div id="bpwcMW" class="bpwc-row" style="display:none;align-items:center"><span>Arriviamo tra</span><input id="bpwcM" type="number" min="1" max="120" value="10" class="bpwc-min"><span>minuti</span></div>'
+   +'<div class="bpwc-lbl">Anteprima (puoi modificarla)</div><textarea id="bpwcT" rows="8"></textarea><div class="bpwc-mute" id="bpwcNote"></div></div>'
+   +'<div class="bpwc-f"><button type="button" id="bpwcGo" class="go">💬 Apri WhatsApp</button><button type="button" id="bpwcX" class="x">Chiudi</button></div></div>';
+  document.body.appendChild(sheet);
+  sheet.addEventListener('click',function(e){
+   if(e.target===sheet){close();return}
+   var c=e.target.closest('.bpwc-chip'); 
+   if(c&&!c.disabled){
+    if(c.hasAttribute('data-k')){ var k=c.getAttribute('data-k'); S.sel[k]=!S.sel[k]; paint(); if(k==='items') loadItems(); return }
+    if(c.hasAttribute('data-p')){ var P=(MC().presets||[]).filter(function(p){return p.on})[+c.getAttribute('data-p')]; S.preset=(S.preset&&P&&S.preset.k===P.k)?null:P; paint(); return }
+    if(c.hasAttribute('data-o')){ pick(S.list[+c.getAttribute('data-o')]); return }
+   }
+   if(e.target.id==='bpwcX'){close();return}
+   if(e.target.id==='bpwcGo'){
+    var txt=sheet.querySelector('#bpwcT').value,ph=S.phone,num;
+    try{num=waPhone(ph)}catch(er){num=String(ph).replace(/\D+/g,'')}
+    window.open('https://wa.me/'+num+'?text='+encodeURIComponent(txt),'_blank'); close();
+   }
+  });
+  sheet.querySelector('#bpwcT').addEventListener('input',function(){dirty=true});
+  sheet.querySelector('#bpwcM').addEventListener('input',function(e){S.mins=Math.max(1,Math.min(120,parseInt(e.target.value,10)||10)); paint()});
+  paint(); loadItems();
+ }
+ window.bpWaCompose=open;
+
+ /* ---------- chiamate (da ordine / richiamato) ---------- */
+ var CALLS=[],CB={},lastFetch=0,fetching=false;
+ function cbMap(){try{return (A()&&A().kv&&A().kv().cb)||{}}catch(e){return {}}}
+ async function fetchCalls(){
+  var c=client(); if(!c||!allowed()||fetching) return; fetching=true;
+  try{
+   var since=new Date(Date.now()-30*864e5).toISOString();
+   var r=await c.from('incoming_calls').select('phone,status,called_at').gte('called_at',since).order('called_at',{ascending:false}).limit(1000);
+   if(r&&!r.error&&r.data){CALLS=r.data;lastFetch=Date.now()}
+  }catch(e){} finally{fetching=false}
+ }
+ function missState(phone){
+  /* ultima chiamata persa di questo numero: gestita? (risposta dopo, ordine dopo, o segnato "richiamato") */
+  var k=key(phone),m=null,i;
+  for(i=0;i<CALLS.length;i++){ if(CALLS[i].status==='missed'&&key(CALLS[i].phone)===k){ m=CALLS[i]; break } }
+  if(!m) return null;
+  var t=new Date(m.called_at).getTime();
+  if(CALLS.some(function(x){return x.status==='answered'&&key(x.phone)===k&&new Date(x.called_at).getTime()>t})) return {m:m,done:true};
+  if(ordList().some(function(o){return key(o.phone)===k&&new Date(o.created_at).getTime()>t})) return {m:m,done:true};
+  var cb=cbMap()[k]; if(cb&&cb>t) return {m:m,done:true};
+  return {m:m,done:false};
+ }
+ async function markCb(phone){
+  var k=key(phone),a=A(); if(!a||!a.kvSet||k.length<6) return false;
+  return a.kvSet('cb',function(o){ o=o||{}; var cut=Date.now()-5*864e5; Object.keys(o).forEach(function(x){if(o[x]<cut)delete o[x]}); o[k]=Date.now(); return o });
+ }
+ function orderLineText(o){
+  var st=normStatus(o.status),t=timeOf(o),late=lateOf(o);
+  return {txt:'#'+o.id+' · '+st+(t?' · '+t:'')+' · '+fmt(o.total)+(late?' · ⚠️ ritardo '+late+'\'':''),late:late};
+ }
+
+ /* ---------- problemi segnalati (sincronizzati nella stessa riga di Automazioni, campo prob) ---------- */
+ var KINDS=[['manca','🍕 Manca qualcosa'],['sbagliato','❌ Sbagliato'],['ritardo','⏳ Ritardo'],['freddo','🥶 Arrivata fredda'],['altro','✏️ Altro']];
+ var KPRE={manca:'dimenticato',ritardo:'ritardo'};
+ function kindLbl(id){var r='⚠️';KINDS.forEach(function(k){if(k[0]===id)r=k[1]});return r}
+ function probs(){try{var p=A().kv().prob;return Array.isArray(p)?p:[]}catch(e){return[]}}
+ function openProbs(phone){var k=key(phone);return probs().filter(function(p){return !p.r&&p.k===k})}
+ function addProbFn(ent){return function(arr){arr=Array.isArray(arr)?arr.slice():[];arr.push(ent);var cut=Date.now()-3*864e5;arr=arr.filter(function(p){return !p.r||p.r>cut});return arr.slice(-100)}}
+ function resolveFn(id){return function(arr){arr=Array.isArray(arr)?arr:[];return arr.map(function(p){if(p.id!==id)return p;var q={};Object.keys(p).forEach(function(x){q[x]=p[x]});q.r=Date.now();return q})}}
+ var qsheet=null;
+ function closeQ(){ if(qsheet){qsheet.remove();qsheet=null} }
+ function problemForm(phone,name,orderId){
+  closeQ(); var sel=null;
+  qsheet=document.createElement('div'); qsheet.id='bpWq'; var mine=qsheet;
+  qsheet.innerHTML='<div class="bpwc-box"><div class="bpwc-h"><b>⚠️ Problema · '+esc(name||phone)+'</b><small>'+esc(phone)+(orderId?' · ordine #'+esc(orderId):'')+'</small></div>'
+   +'<div class="bpwc-body"><div class="bpwc-row" id="bpwqK">'+KINDS.map(function(k){return '<button type="button" class="bpwc-chip" data-q="'+k[0]+'">'+k[1]+'</button>'}).join('')+'</div>'
+   +'<div class="bpwc-lbl">Nota (facoltativa)</div><textarea id="bpwqN" rows="3" maxlength="200" placeholder="es. manca la coca, pizza sbagliata…"></textarea></div>'
+   +'<div class="bpwc-f"><button type="button" class="go" id="bpwqS">💾 Salva</button><button type="button" class="x" id="bpwqX">Chiudi</button></div></div>';
+  document.body.appendChild(qsheet);
+  qsheet.addEventListener('click',function(e){
+   if(e.target===mine||e.target.id==='bpwqX'){closeQ();return}
+   var c=e.target.closest('.bpwc-chip');
+   if(c){ sel=c.getAttribute('data-q'); [].forEach.call(mine.querySelectorAll('.bpwc-chip'),function(x){x.classList.toggle('on',x===c)}); return }
+   if(e.target.id==='bpwqS'){
+    if(!sel){ alert('Scegli il tipo di problema.'); return }
+    var a=A(); if(!a||!a.kvSet){ alert('Funzione non pronta, riprova tra un attimo.'); return }
+    var ent={id:'p'+Date.now().toString(36)+Math.floor(Math.random()*1e3).toString(36),k:key(phone),ph:phone,nm:name||'',oid:orderId||null,kind:sel,note:String(mine.querySelector('#bpwqN').value||'').slice(0,200),ts:Date.now()};
+    e.target.disabled=true;
+    a.kvSet('prob',addProbFn(ent)).then(function(ok){
+     if(!ok){ e.target.disabled=false; alert('Non salvato: controlla la connessione e riprova.'); return }
+     closeQ(); decorate(); badge();
+     if(KPRE[sel]&&confirm('Problema salvato. Scrivere al cliente su WhatsApp?')) open({phone:phone,name:name,orderId:orderId,presetKey:KPRE[sel]});
+    });
+   }
+  });
+ }
+ window.bpProblem=problemForm;
+
+ /* ---------- ricerca + raggruppamento ---------- */
+ var QV='',OPENG={};
+ function ensureSearch(){
+  var list=$('clList'); if(!list||$('bpwcSearch')) return;
+  var w=document.createElement('div'); w.className='bpwc-sw';
+  w.innerHTML='<input id="bpwcSearch" type="search" placeholder="🔍 Nome, numero o #ordine" autocomplete="off">';
+  list.parentNode.insertBefore(w,list);
+  w.firstChild.addEventListener('input',function(e){QV=String(e.target.value||'').trim().toLowerCase();refine()});
+ }
+ function rowInfo(r){
+  var tel=r.querySelector('a[href^="tel:"]'); if(!tel) return null;
+  var ph=decodeURIComponent(tel.getAttribute('href').slice(4)),sub=(r.querySelector('.cl-sub')||{}).textContent||'';
+  var m=/(oggi|ieri|\d{2}\/\d{2})\s+(\d{2}:\d{2})/.exec(sub);
+  return {ph:ph,k:key(ph),day:m?m[1]:'',tm:m?m[2]:'',miss:r.classList.contains('miss')};
+ }
+ function refine(){
+  var list=$('clList'); if(!list) return;
+  var rows=[].slice.call(list.querySelectorAll('.cl-row')),G={};
+  rows.forEach(function(r){ var i=rowInfo(r); r._bi=i; if(!i) return; var g=i.k+'|'+i.day; (G[g]=G[g]||[]).push(r) });
+  var ordKey='';
+  if(QV){ var q=QV.replace(/^#/,''); if(/^\d{1,7}$/.test(q)){ var oo=ordList().filter(function(o){return String(o.id)===q})[0]; if(oo) ordKey=key(oo.phone) } }
+  var shown=0;
+  rows.forEach(function(r){
+   var i=r._bi; if(!i) return;
+   var gk=i.k+'|'+i.day,g=G[gk],hide=false,badge=r.querySelector('.bpwc-x');
+   var head=g.reduce(function(a,b){return (b._bi.tm>a._bi.tm)?b:a},g[0]);
+   if(QV){
+    var txt=(r.textContent||'').toLowerCase(),dq=QV.replace(/\D+/g,'');
+    var ok=txt.indexOf(QV)>=0||(dq.length>=3&&i.ph.replace(/\D+/g,'').indexOf(dq)>=0)||(ordKey&&i.k===ordKey);
+    hide=!ok; if(badge) badge.remove();
+   }else if(g.length>1){
+    if(r!==head){ hide=!OPENG[gk]; if(badge) badge.remove() }
+    else{
+     var miss=g.filter(function(x){return x._bi.miss}).length,h='×'+g.length+(miss?' · '+miss+' perse':'')+(OPENG[gk]?' ▴':' ▾');
+     if(!badge){ badge=document.createElement('button'); badge.type='button'; badge.className='bpwc-x'; var mn=r.querySelector('.cl-main'); if(mn) mn.appendChild(badge) }
+     badge.setAttribute('data-g',gk); if(badge.textContent!==h) badge.textContent=h;
+    }
+   }else if(badge) badge.remove();
+   r.style.display=hide?'none':'';
+   r.classList.toggle('bpwc-sub',!QV&&g.length>1&&r!==head&&!hide);
+   if(!hide) shown++;
+  });
+  var em=$('bpwcEmpty');
+  if(QV&&!shown&&rows.length){ if(!em){ em=document.createElement('div'); em.id='bpwcEmpty'; em.className='cl-empty'; em.textContent='Nessun risultato'; list.appendChild(em) } }
+  else if(em) em.remove();
+ }
+
+ /* ---------- scheda cliente rapida ---------- */
+ var psheet=null;
+ function closeP(){ if(psheet){psheet.remove();psheet=null} }
+ async function profile(phone,hint){
+  closeP();
+  var k=key(phone),c=null; try{ customerDirectory.forEach(function(x){ if(!c&&key(x.phone)===k) c=x }) }catch(e){}
+  var last=ordersFor(phone)[0]||null,cl=client();
+  psheet=document.createElement('div'); psheet.id='bpWp';
+  psheet.innerHTML='<div class="bpwc-box"><div class="bpwc-h"><b>👤 '+esc((c&&c.name)||hint||phone)+'</b><small>'+esc(phone)+'</small></div><div class="bpwc-body" id="bpwpB">…</div><div class="bpwc-f" id="bpwpF"></div></div>';
+  document.body.appendChild(psheet);
+  var mine=psheet;
+  psheet.addEventListener('click',function(e){ if(e.target===mine) closeP() });
+  if(!last&&c&&c.lastOrderId&&cl){ try{ var r=await cl.from('orders').select('*').eq('id',c.lastOrderId).maybeSingle(); if(r&&r.data) last=r.data }catch(e){} }
+  var items=last?await itemsOf(last):[];
+  if(psheet!==mine) return;
+  var addr=(c&&c.address)||(last&&last.address)||'',note='';
+  try{ if(last) note=splitTimeAndNotes(last.notes).cleanNotes||'' }catch(e){}
+  var h='<div class="bpwp-r">📍 <b>'+(addr?esc(addr):'—')+'</b></div>';
+  h+='<div class="bpwp-r">📝 '+(note?esc(note):'<span class="bpwc-mute">nessuna nota</span>')+'</div>';
+  if(c&&c.ordersCount) h+='<div class="bpwp-r">🔢 Ordini: <b>'+c.ordersCount+'</b></div>';
+  var op=openProbs(phone);
+  if(op.length) h+='<div class="bpwc-lbl">⚠️ Problemi aperti</div>'+op.map(function(p){return '<div class="bpwp-r"><span>'+esc(kindLbl(p.kind))+(p.oid?' · #'+esc(p.oid):'')+(p.note?' · '+esc(p.note):'')+'</span> <button type="button" class="bpwp-rs" data-pr="'+esc(p.id)+'">✅ Risolto</button></div>'}).join('');
+  h+='<button type="button" class="bpwp-pb" data-pb="1">⚠️ Segnala un problema</button>';
+  if(last){
+   var dd=new Date(last.created_at),ds=isNaN(dd)?'':dd.toLocaleDateString('it-IT',{day:'2-digit',month:'2-digit'});
+   h+='<div class="bpwc-lbl">Ultimo ordine · #'+last.id+(ds?' · '+ds:'')+' · '+fmt(last.total)+'</div>';
+   h+=items.length?items.map(function(x){return '<div class="bpwp-it">'+esc(itemLine(x))+'</div>'}).join(''):'<div class="bpwc-mute">Nessun prodotto</div>';
+  }else h+='<div class="bpwc-mute">Nessun ordine registrato per questo numero.</div>';
+  psheet.querySelector('#bpwpB').innerHTML=h;
+  psheet.querySelector('#bpwpB').addEventListener('click',function(e){ if(e.target.getAttribute('data-pb')){ closeP(); problemForm(phone,(c&&c.name)||hint||'',last&&last.id) } });
+  var f=psheet.querySelector('#bpwpF');
+  f.innerHTML='<a class="go" href="tel:'+esc(phone)+'">📞</a><button type="button" class="go" data-w="1">💬</button>'+(last&&items.length?'<button type="button" class="go solito" data-s="1">🔁 Il solito</button>':'')+'<button type="button" class="x">✕</button>';
+  f.addEventListener('click',function(e){
+   var b=e.target.closest('button'); if(!b) return;
+   if(b.getAttribute('data-w')){ closeP(); open({phone:phone,name:(c&&c.name)||hint||''}); return }
+   if(b.getAttribute('data-s')){
+    try{ repeatOrderIntoCart(last,items,true); if(typeof switchTab==='function') switchTab('new') }catch(er){ console.error(er); alert('Impossibile copiare l’ordine.') }
+    closeP(); return;
+   }
+   closeP();
+  });
+ }
+ window.bpCustProfile=profile;
+ function decorate(){
+  var t=$('callsTab'); if(!t||t.classList.contains('hidden')) return;
+  var list=$('clList'); if(!list) return;
+  var rows=[].slice.call(t.querySelectorAll('.cl-row')),firstDone=false;
+  rows.forEach(function(r){
+   var tel=r.querySelector('a[href^="tel:"]'); if(!tel) return;
+   var phone=decodeURIComponent(tel.getAttribute('href').slice(4)),main=r.querySelector('.cl-main'),act=r.querySelector('.cl-act'),k=key(phone);
+   if(act&&!act.querySelector('.bpwc-btn')){
+    var b=document.createElement('button'); b.type='button'; b.className='bpwc-btn'; b.textContent='💬'; b.title='Messaggio WhatsApp'; b.setAttribute('data-wa',phone); act.appendChild(b);
+   }
+   /* ordine di oggi */
+   var o=todayOrder(phone),el=r.querySelector('.bpwc-ord');
+   if(o&&main){
+    var ol=orderLineText(o),sig=o.id+'|'+ol.txt;
+    if(!el){ el=document.createElement('div'); el.className='bpwc-ord'; main.appendChild(el) }
+    if(el.getAttribute('data-sig')!==sig){
+     el.setAttribute('data-sig',sig); el.classList.toggle('late',!!ol.late);
+     el.innerHTML='<span>'+esc(ol.txt)+'</span> <button type="button" class="bpwc-pb" data-pb="'+esc(phone)+'|'+o.id+'">⚠️ Problema</button><div class="bpwc-it"></div>';
+     el.setAttribute('data-oid',o.id); if(r.getAttribute('data-bpwc-open')==='1') showItems(el,o);
+    }
+   }else if(el){ el.remove() }
+   /* chiamata persa: da richiamare / gestita */
+   var tag=r.querySelector('.bpwc-tag'),ms=r.classList.contains('miss')?missState(phone):null;
+   if(ms&&main){
+    if(!tag){ tag=document.createElement('div'); tag.className='bpwc-tag'; main.appendChild(tag) }
+    var h=ms.done?'<span class="ok">✅ Gestita</span>':'<span class="todo">🔴 Da richiamare</span><button type="button" class="bpwc-cb" data-cb="'+esc(phone)+'">✅ Richiamato</button>';
+    if(tag.getAttribute('data-h')!==h){ tag.setAttribute('data-h',h); tag.innerHTML=h }
+    r.classList.toggle('bpwc-todo',!ms.done);
+   }else if(tag){ tag.remove(); r.classList.remove('bpwc-todo') }
+  });
+  var seenPr={};
+  rows.forEach(function(r){
+   var tel=r.querySelector('a[href^="tel:"]'),main=r.querySelector('.cl-main'); if(!tel||!main) return;
+   var ph=decodeURIComponent(tel.getAttribute('href').slice(4)),k=key(ph),pr=r.querySelector('.bpwc-pr');
+   var list=(!seenPr[k])?openProbs(ph):[]; seenPr[k]=1;
+   if(!list.length){ if(pr) pr.remove(); return }
+   var h=list.map(function(p){return '<div><span>⚠️ '+esc(kindLbl(p.kind))+(p.oid?' · #'+esc(p.oid):'')+(p.note?' · '+esc(p.note):'')+'</span> <button type="button" data-pr="'+esc(p.id)+'">✅ Risolto</button></div>'}).join('');
+   if(!pr){ pr=document.createElement('div'); pr.className='bpwc-pr'; main.appendChild(pr) }
+   if(pr.getAttribute('data-h')!==h){ pr.setAttribute('data-h',h); pr.innerHTML=h }
+  });
+  ensureSearch(); refine();
+  /* le perse non gestite in cima */
+  var todo=rows.filter(function(r){return r.classList.contains('bpwc-todo')&&r.style.display!=='none'});
+  var ref=list.firstElementChild;
+  todo.forEach(function(r){ if(r!==ref){ list.insertBefore(r,ref) } else { ref=r.nextElementSibling } });
+ }
+ async function showItems(el,o){
+  var box=el.querySelector('.bpwc-it'); if(!box) return;
+  box.textContent='…'; var it=await itemsOf(o);
+  box.innerHTML=it.length?it.map(function(x){return '<div>'+esc(itemLine(x))+'</div>'}).join(''):'<div>Nessun prodotto</div>';
+ }
+ document.addEventListener('click',function(e){
+  var wa=e.target.closest&&e.target.closest('#callsTab .bpwc-btn');
+  if(wa){ e.preventDefault(); e.stopPropagation(); var p=wa.getAttribute('data-wa'),nm=''; try{var r=wa.closest('.cl-row'),b=r.querySelector('.cl-main b'); nm=b?b.textContent:''; if(nm===p) nm=''}catch(er){} open({phone:p,name:nm}); return }
+  var pb=e.target.closest&&e.target.closest('#callsTab .bpwc-pb');
+  if(pb){ e.preventDefault(); e.stopPropagation(); var pa=(pb.getAttribute('data-pb')||'').split('|'),rw0=pb.closest('.cl-row'),b0=rw0&&rw0.querySelector('.cl-main b'),n0_=b0?b0.textContent:''; if(n0_===pa[0]) n0_=''; problemForm(pa[0],n0_,pa[1]); return }
+  var rs=e.target.closest&&e.target.closest('.bpwc-pr button[data-pr],#bpWp button[data-pr]');
+  if(rs){ e.preventDefault(); e.stopPropagation(); rs.disabled=true; var a0=A(); if(a0&&a0.kvSet) a0.kvSet('prob',resolveFn(rs.getAttribute('data-pr'))).then(function(){decorate();badge();var pp=$('bpWp'); if(pp&&rs.parentNode) rs.parentNode.remove()}); return }
+  var gx=e.target.closest&&e.target.closest('#callsTab .bpwc-x');
+  if(gx){ e.preventDefault(); e.stopPropagation(); var gk=gx.getAttribute('data-g'); OPENG[gk]=!OPENG[gk]; refine(); return }
+  var nm=e.target.closest&&e.target.closest('#callsTab .cl-main b');
+  if(nm){ var rw=nm.closest('.cl-row'),tl0=rw&&rw.querySelector('a[href^="tel:"]'); if(tl0){ e.preventDefault(); e.stopPropagation(); var ph0=decodeURIComponent(tl0.getAttribute('href').slice(4)); profile(ph0,nm.textContent===ph0?'':nm.textContent); return } }
+  var cb=e.target.closest&&e.target.closest('#callsTab .bpwc-cb');
+  if(cb){ e.preventDefault(); e.stopPropagation(); cb.disabled=true; markCb(cb.getAttribute('data-cb')).then(function(){decorate();badge()}); return }
+  var od=e.target.closest&&e.target.closest('#callsTab .bpwc-ord');
+  if(od){ var row=od.closest('.cl-row'),open_=row.getAttribute('data-bpwc-open')==='1'; row.setAttribute('data-bpwc-open',open_?'0':'1');
+   var box=od.querySelector('.bpwc-it'); if(open_){box.innerHTML=''} else { var oid=od.getAttribute('data-oid'),o=ordList().filter(function(x){return String(x.id)===oid})[0]; if(o) showItems(od,o) } }
+  var tl=e.target.closest&&e.target.closest('#callsTab .cl-row.bpwc-todo a[href^="tel:"]');
+  if(tl){ markCb(decodeURIComponent(tl.getAttribute('href').slice(4))).then(function(){decorate();badge()}) }
+ },true);
+
+ /* ---------- badge rosso su "Altro" ---------- */
+ function badge(){
+  var more=document.querySelector('.bpn-more,[data-more]'); if(!more) return;
+  var seen={},n=0; CALLS.forEach(function(c){
+   if(c.status!=='missed') return; var k=key(c.phone); if(seen[k]) return; seen[k]=1;
+   if(Date.now()-new Date(c.called_at).getTime()>864e5) return;
+   var s=missState(c.phone); if(s&&!s.done) n++;
+  });
+  n+=probs().filter(function(p){return !p.r}).length;
+  var b=more.querySelector('.bpwc-mb');
+  if(!allowed()||!n){ if(b) b.remove(); return }
+  if(!b){ b=document.createElement('b'); b.className='bpwc-mb'; more.style.position='relative'; more.appendChild(b) }
+  b.textContent=n;
+ }
+
+ /* ---------- bottoni WhatsApp nelle schede ordine ---------- */
+ function hookCards(){
+  document.querySelectorAll('#openOrders .order').forEach(function(card){
+   var h3=card.querySelector('h3'),m=h3&&/#(\d+)/.exec(h3.textContent); if(!m) return;
+   ['.bp-wa-menu-btn','.bp22-wa-cust'].forEach(function(sel){
+    var b=card.querySelector(sel); if(!b||b.getAttribute('data-bpwc')) return;
+    var nb=b.cloneNode(true); nb.setAttribute('data-bpwc','1'); b.parentNode.replaceChild(nb,b);
+    nb.onclick=function(ev){ ev.preventDefault(); ev.stopPropagation();
+     var o=ordList().filter(function(x){return String(x.id)===m[1]})[0]; if(o) open({phone:o.phone,name:o.customer_name,orderId:o.id}) };
+   });
+  });
+ }
+
+ var n0=0;
+ setInterval(function(){
+  if(document.hidden) return;
+  try{hookCards()}catch(e){}
+  if(!allowed()) return;
+  var t=$('callsTab'),vis=t&&!t.classList.contains('hidden');
+  if(Date.now()-lastFetch>(vis?20000:60000)) fetchCalls().then(function(){decorate();badge()});
+  try{decorate()}catch(e){console.warn('[wa-composer]',e)}
+  if(++n0%10===0) badge();
+ },900);
+})()}catch(e){console.error('[wa-composer]',e)}
+</script>
+<!-- BP-WACOMPOSER:END -->
 </body>
 </html>
